@@ -6,7 +6,7 @@ import { createBrowserRouter, RouterProvider} from "react-router";
 
 import { DefaultLayout } from './views/main/Layout';
 import {default as BaseMainPage} from './views/main/Main'
-
+import {BoardWidgetContext} from './views/main/service'
 
 
 
@@ -17,7 +17,11 @@ const routes = createBrowserRouter(
     {
       path: "/",
     //  errorElement: <NotFoundPage />,  
-      element:  <DefaultLayout />,
+      element: 
+      <BoardWidgetContext.Provider>
+          <DefaultLayout />
+      </BoardWidgetContext.Provider>
+     ,
       children: [
         { 
             index: true, element: <BaseMainPage />

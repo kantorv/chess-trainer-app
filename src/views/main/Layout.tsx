@@ -4,10 +4,12 @@ import Box from '@mui/material/Box';
 //import SideMenu from './components/SideMenu'; // TODO: make AnonymousSideMenu and AuthenticatedSideMenu
 import { Outlet, useLocation } from 'react-router';
 import {default as SideBar} from './Sidebar'
-
+import { BoardWidgetContext } from './service';
 
 const DefaultLayout = () => {
 
+    const svc = BoardWidgetContext.useActorRef()
+    
 
     return (
         <Box
