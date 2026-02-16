@@ -64,7 +64,7 @@ const boardWidgetMachine = setup({
     // ...
     entry: ({ context, event }) => console.log("mainsvc.entry", event),
     exit: ({ event }) => console.log("mainsvc.exit", event),
-    initial: "application",
+    initial: "idle",
     on: {
 
         'EVENTS.NAVIGATION.ROUTER.MATCH.UPDATE': [
