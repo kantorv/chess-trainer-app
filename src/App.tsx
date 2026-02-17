@@ -7,6 +7,7 @@ import { createBrowserRouter, RouterProvider } from "react-router";
 import { DefaultLayout } from './views/main/Layout';
 import { default as BaseMainPage } from './views/main/Main'
 import { default as BaseMainPage2 } from './views/main/Main2'
+import { default as AnalisysBoard  } from './views/main/Main3'
 import { BoardWidgetContext } from './views/main/service'
 
 
@@ -31,6 +32,10 @@ const routes = createBrowserRouter(
         {
           path: "/board2",
           element: <BaseMainPage2 />
+        },
+         {
+          path: "/anal1",
+          element: <AnalisysBoard />
         }
 
       ]

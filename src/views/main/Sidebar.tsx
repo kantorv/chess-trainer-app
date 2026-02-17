@@ -97,6 +97,37 @@ function SidebarLinks() {
                 </ListItemButton>
             </ListItem>
 
+
+
+            <ListItem
+                sx={{
+
+                 //   bgcolor: 'red',
+                   bgcolor: 'gray',
+
+                }}
+                secondaryAction={
+                    <IconButton
+                        onClick={() => navigate("/anal1")}
+
+                    ><ArrowForwardIosIcon />
+                    </IconButton>
+                }
+                disablePadding
+            >
+                <ListItemButton>
+                    <Avatar alt="Analisys"  
+                        sx={{
+                            mr: 1,
+                        }}
+                    >
+                        <DevicesRoundedIcon sx={{ fontSize: '1rem' }} />
+                    </Avatar>
+                    <ListItemText id={`Board3`} primary={`Analysis `} />
+                </ListItemButton>
+            </ListItem>
+
+
         </List>
     );
 }
