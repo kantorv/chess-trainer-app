@@ -1,34 +1,55 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+
+
+import { useEffect, useMemo } from 'react';
+//import * as Sentry from "@sentry/react";
+import { createBrowserRouter, RouterProvider } from "react-router";
+
+import { DefaultLayout } from './views/main/Layout';
+import { default as BaseMainPage } from './views/main/Main'
+import { default as BaseMainPage2 } from './views/main/Main2'
+import { default as AnalisysBoard  } from './views/main/Main3'
+import { BoardWidgetContext } from './views/main/service'
+
+
+
+
+const routes = createBrowserRouter(
+
+  [
+    {
+      path: "/",
+      //  errorElement: <NotFoundPage />,  
+      element:
+        <BoardWidgetContext.Provider>
+          <DefaultLayout />
+        </BoardWidgetContext.Provider>
+      ,
+      children: [
+        {
+          index: true, element: <BaseMainPage />
+
+        },
+        {
+          path: "/board2",
+          element: <BaseMainPage2 />
+        },
+         {
+          path: "/anal1",
+          element: <AnalisysBoard />
+        }
+
+      ]
+    }
+  ])
 
 function App() {
-  const [count, setCount] = useState(0)
+  //const [count, setCount] = useState(0)
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+    <RouterProvider
+      router={routes}
+
+    />
   )
 }
 
