@@ -5,25 +5,22 @@ import Box from '@mui/material/Box';
 
 import { BoardWidgetContext } from './service';
 
+import {default as Board1 } from './Board1'
+
 const Main = () => {
 
     
     return (
     <Box
+        data-testid="board1-wrapper"
         sx={{
-            display:"flex",
-            flexGrow:1,
-            background:"yellow",
-            alignItems:"center",
-            justifyContent:"center"
+           
+            
+          
 
         }}
     >
-        <Box
-            sx={{
-                
-            }}
-        >Main</Box>
+       <Board1 />
     </Box>
     )
 }
