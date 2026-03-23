@@ -3,16 +3,16 @@ import { useState } from 'react';
 import Box from '@mui/material/Box';
 //import SideMenu from './components/SideMenu'; // TODO: make AnonymousSideMenu and AuthenticatedSideMenu
 
-import { BoardWidgetContext } from './service';
+import { BoardWidgetContext } from '../../main/service';
 
-import {default as Board2 } from './Board2'
+import {default as Board1 } from './Board1'
 
 const Main = () => {
 
     
     return (
     <Box
-        data-testid="board2-wrapper"
+        data-testid="board1-wrapper"
         sx={{
            
             
@@ -20,7 +20,7 @@ const Main = () => {
 
         }}
     >
-       <Board2 />
+       <Board1 />
     </Box>
     )
 }

@@ -5,10 +5,10 @@ import { useEffect, useMemo } from 'react';
 import { createBrowserRouter, RouterProvider } from "react-router";
 
 import { DefaultLayout } from './views/main/Layout';
-import { default as BaseMainPage } from './views/main/Main'
-import { default as BaseMainPage2 } from './views/main/Main2'
-import { default as AnalisysBoard  } from './views/main/Main3'
-import { BoardWidgetContext } from './views/main/service'
+import { default as BasicExampe } from './views/demos/basic/Main'
+import { default as MovingPieceExample } from './views/demos/move/Main2'
+import { default as EngineEvaluationExample  } from './views/demos/engine/Main3'
+
 
 
 
@@ -20,22 +20,20 @@ const routes = createBrowserRouter(
       path: "/",
       //  errorElement: <NotFoundPage />,  
       element:
-        <BoardWidgetContext.Provider>
           <DefaultLayout />
-        </BoardWidgetContext.Provider>
       ,
       children: [
         {
-          index: true, element: <BaseMainPage />
+          index: true, element: <BasicExampe />
 
         },
         {
-          path: "/board2",
-          element: <BaseMainPage2 />
+          path: "/move",
+          element: <MovingPieceExample />
         },
          {
-          path: "/anal1",
-          element: <AnalisysBoard />
+          path: "/analyze",
+          element: <EngineEvaluationExample />
         }
 
       ]
