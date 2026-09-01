@@ -9,7 +9,7 @@ import { default as BasicExampe } from './views/demos/basic/Main'
 import { default as MovingPieceExample } from './views/demos/move/Main2'
 import { default as EngineEvaluationExample  } from './views/demos/engine/Main3'
 
-
+import { default as EnginePlayer1  } from './views/player/engine_basic/Main'
 
 
 
@@ -31,9 +31,13 @@ const routes = createBrowserRouter(
           path: "/move",
           element: <MovingPieceExample />
         },
-         {
+        {
           path: "/analyze",
           element: <EngineEvaluationExample />
+        },
+        {
+          path: "/player1",
+          element: <EnginePlayer1 />
         }
 
       ]

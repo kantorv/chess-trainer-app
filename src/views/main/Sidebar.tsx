@@ -128,6 +128,39 @@ function SidebarLinks() {
             </ListItem>
 
 
+
+
+            <ListItem
+                sx={{
+
+                 //   bgcolor: 'red',
+                   bgcolor: 'gray',
+                   mt:1
+
+                }}
+                secondaryAction={
+                    <IconButton
+                    //    onClick={() => navigate("/analyze")}
+
+                    ><ArrowForwardIosIcon />
+                    </IconButton>
+                }
+                disablePadding
+            >
+                <ListItemButton  onClick={() => navigate("/player1")}>
+                    <Avatar alt="Analisys"  
+                        sx={{
+                            mr: 1,
+                        }}
+                    >
+                        <DevicesRoundedIcon sx={{ fontSize: '1rem' }} />
+                    </Avatar>
+                    <ListItemText id={`Player1`} primary={`Play with engine 1`} />
+                </ListItemButton>
+            </ListItem>
+
+
+
         </List>
     );
 }
