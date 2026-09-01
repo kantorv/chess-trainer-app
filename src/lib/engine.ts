@@ -7,7 +7,14 @@
  * Description of the universal chess interface (UCI)  https://gist.github.com/aliostad/f4470274f39d29b788c1b09519e67372/
  */
 
-const stockfish = new Worker('/stockfish/stockfish.wasm.js');
+/**
+ * Path to the Stockfish worker script. The `stockfish.wasm.js` + `stockfish.wasm`
+ * pair lives in `public/stockfish/`, so Vite serves it from the site root.
+ */
+const STOCKFISH_WORKER_URL = '/stockfish/stockfish.wasm.js';
+
+/** Callback registered with {@link Engine.onMessage}; returns an unsubscribe fn. */
+type EngineMessageCallback = (messageData: EngineMessage) => void;
 
 type EngineMessage = {
   /** stockfish engine message in UCI format*/
@@ -28,16 +35,24 @@ type EngineMessage = {
 
 export default class Engine {
   stockfish: Worker;
-  onMessage: (callback: (messageData: EngineMessage) => void) => void;
+  /**
+   * Subscribe to engine output. Returns an unsubscribe function — always call it
+   * on React unmount so listeners don't accumulate across position changes / re-renders.
+   */
+  onMessage: (callback: EngineMessageCallback) => () => void;
   isReady: boolean;
 
   constructor() {
-    this.stockfish = stockfish;
+    // One dedicated worker per Engine instance. Do NOT hoist this to module
+    // scope: a shared worker leaks across route changes and cannot be torn down.
+    this.stockfish = new Worker(STOCKFISH_WORKER_URL);
     this.isReady = false;
     this.onMessage = (callback) => {
-      this.stockfish.addEventListener('message', (e) => {
+      const listener = (e: MessageEvent<string>) => {
         callback(this.transformSFMessageData(e));
-      });
+      };
+      this.stockfish.addEventListener('message', listener);
+      return () => this.stockfish.removeEventListener('message', listener);
     };
     this.init();
   }
@@ -87,6 +102,7 @@ export default class Engine {
 
   terminate() {
     this.isReady = false;
-    this.stockfish.postMessage('quit'); // Run this before chessboard unmounting.
+    this.stockfish.postMessage('quit'); // ask Stockfish to shut down cleanly
+    this.stockfish.terminate(); // then kill the worker thread. Run this on chessboard unmount.
   }
 }

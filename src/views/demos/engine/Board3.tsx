@@ -1,124 +1,134 @@
-import { useState,useRef,useEffect,useMemo } from 'react';
-import { Chess, type  Square } from 'chess.js';
-import { Chessboard,  type PieceDropHandlerArgs  } from 'react-chessboard';
-import {default as Engine} from '../../../lib/engine' 
+import { useEffect, useRef, useState } from 'react';
+import { Chess } from 'chess.js';
+import {
+  Chessboard,
+  type ChessboardOptions,
+  type PieceDropHandlerArgs,
+} from 'react-chessboard';
+import Engine from '../../../lib/engine';
 
+/** How deep Stockfish searches after each move. */
+const ENGINE_DEPTH = 18;
+/** Ignore the noisy shallow updates the engine streams while it thinks. */
+const MIN_REPORT_DEPTH = 10;
 
-
+/**
+ * Demo 3 — Analysis board.
+ *
+ * Same move loop as Demo 2, plus a Stockfish worker that evaluates every new
+ * position. The engine's suggested move is drawn on the board as an arrow via
+ * `options.arrows`.
+ *
+ * The evaluation / mate / best-line values are held in state here (the data
+ * layer). Rendering them is a UI concern and is intentionally left out of this
+ * board component.
+ *
+ * Engine lifecycle rules (see .claude/rules/chessboard.md):
+ *  - one `Engine` (one Worker) per mounted board, created lazily in a ref;
+ *  - subscribe with `engine.onMessage` in an effect and call the returned
+ *    unsubscribe on cleanup — never subscribe inside a per-move function;
+ *  - `engine.terminate()` on unmount.
+ */
 function Board3() {
-const engine = useMemo(() => new Engine(), []);
+  const engineRef = useRef<Engine | null>(null);
+  if (engineRef.current === null) {
+    engineRef.current = new Engine();
+  }
+  const engine = engineRef.current;
 
-    // create a chess game using a ref to always have access to the latest game state within closures and maintain the game state across renders
-    const chessGameRef = useRef(new Chess());
-    const chessGame = chessGameRef.current;
+  const chessGameRef = useRef(new Chess());
+  const chessGame = chessGameRef.current;
 
-    // track the current position of the chess game in state to trigger a re-render of the chessboard
-    const [chessPosition, setChessPosition] = useState(chessGame.fen());
+  const [chessPosition, setChessPosition] = useState(chessGame.fen());
+  const [positionEvaluation, setPositionEvaluation] = useState(0);
+  const [depth, setDepth] = useState(ENGINE_DEPTH);
+  const [bestLine, setBestLine] = useState('');
+  const [possibleMate, setPossibleMate] = useState('');
 
-    // store engine variables
-    const [positionEvaluation, setPositionEvaluation] = useState(0);
-    const [depth, setDepth] = useState(10);
-    const [bestLine, setBestLine] = useState('');
-    const [possibleMate, setPossibleMate] = useState('');
-
-    // when the chess game position changes, find the best move
-    useEffect(() => {
-      if (!(chessGame.isGameOver() || chessGame.isDraw())) {
-        findBestMove();
-      }
-    }, [chessGame.fen()]);
-
-    // find the best move
-    function findBestMove() {
-      engine.evaluatePosition(chessGame.fen(), 18);
-      engine.onMessage(({
-        positionEvaluation,
-        possibleMate,
-        pv,
-        depth
-      }) => {
-        // ignore messages with a depth less than 10
-        if (depth && depth < 10) {
+  // Subscribe to engine output exactly once per Engine instance.
+  useEffect(() => {
+    const unsubscribe = engine.onMessage(
+      ({ positionEvaluation, possibleMate, pv, depth }) => {
+        if (depth && depth < MIN_REPORT_DEPTH) {
           return;
         }
 
-        // update the position evaluation
+        // Stockfish reports the score from the side-to-move's perspective;
+        // normalise so that a positive number always favours White.
         if (positionEvaluation) {
-          setPositionEvaluation((chessGame.turn() === 'w' ? 1 : -1) * Number(positionEvaluation) / 100);
+          setPositionEvaluation(
+            ((chessGame.turn() === 'w' ? 1 : -1) *
+              Number(positionEvaluation)) /
+              100,
+          );
         }
+        if (possibleMate) setPossibleMate(possibleMate);
+        if (depth) setDepth(depth);
+        if (pv) setBestLine(pv);
+      },
+    );
 
-        // update the possible mate, depth and best line
-        if (possibleMate) {
-          setPossibleMate(possibleMate);
-        }
-        if (depth) {
-          setDepth(depth);
-        }
-        if (pv) {
-          setBestLine(pv);
-        }
-      });
-    }
+    return unsubscribe;
+  }, [engine, chessGame]);
 
-    // handle piece drop
-    function onPieceDrop({
-      sourceSquare,
-      targetSquare
-    }: PieceDropHandlerArgs) {
-      // type narrow targetSquare potentially being null (e.g. if dropped off board)
-      if (!targetSquare) {
-        return false;
-      }
-
-      // try to make the move
-      try {
-        chessGame.move({
-          from: sourceSquare,
-          to: targetSquare,
-          promotion: 'q' // always promote to a queen for example simplicity
-        });
-        setPossibleMate('');
-
-        // update the game state
-        setChessPosition(chessGame.fen());
-
-        // stop the engine (it will be restarted by the useEffect running findBestMove)
-        engine.stop();
-
-        // reset the best line
-        setBestLine('');
-
-        // if the game is over, return false
-        if (chessGame.isGameOver() || chessGame.isDraw()) {
-          return false;
-        }
-
-        // return true as the move was successful
-        return true;
-      } catch {
-        // return false as the move was not successful
-        return false;
-      }
-    }
-
-    // get the best move
-    const bestMove = bestLine?.split(' ')?.[0];
-
-    // set the chessboard options, using arrows to show the best move
-    const chessboardOptions = {
-      arrows: bestMove ? [{
-        startSquare: bestMove.substring(0, 2) as Square,
-        endSquare: bestMove.substring(2, 4) as Square,
-        color: 'rgb(0, 128, 0)'
-      }] : undefined,
-      position: chessPosition,
-      onPieceDrop,
-      id: 'analysis-board'
+  // Tear the worker down on unmount (and on StrictMode remount).
+  useEffect(() => {
+    return () => {
+      engine.terminate();
+      engineRef.current = null;
     };
-  
+  }, [engine]);
+
+  // Re-evaluate whenever the position changes and the game is still live.
+  useEffect(() => {
+    if (!(chessGame.isGameOver() || chessGame.isDraw())) {
+      engine.evaluatePosition(chessPosition, ENGINE_DEPTH);
+    }
+  }, [engine, chessGame, chessPosition]);
+
+  function onPieceDrop({ sourceSquare, targetSquare }: PieceDropHandlerArgs) {
+    if (!targetSquare) {
+      return false;
+    }
+
+    try {
+      chessGame.move({
+        from: sourceSquare,
+        to: targetSquare,
+        promotion: 'q', // demo simplification — see .claude/rules/chessboard.md
+      });
+    } catch {
+      return false;
+    }
+
+    // New position: stop the in-flight search and clear stale engine output.
+    // The evaluate effect above kicks off a fresh search.
+    engine.stop();
+    setPossibleMate('');
+    setBestLine('');
+    setChessPosition(chessGame.fen());
+    return true;
+  }
+
+  // Best move comes back as the first token of the principal variation, e.g. "e2e4".
+  const bestMove = bestLine.split(' ')[0];
+
+  const chessboardOptions: ChessboardOptions = {
+    id: 'analysis-board',
+    position: chessPosition,
+    onPieceDrop,
+    arrows: bestMove
+      ? [
+          {
+            startSquare: bestMove.substring(0, 2),
+            endSquare: bestMove.substring(2, 4),
+            color: 'rgb(0, 128, 0)',
+          },
+        ]
+      : undefined,
+  };
 
   return <Chessboard options={chessboardOptions} />;
 }
 
-
-export default Board3
+export default Board3;
