@@ -1,7 +1,7 @@
 import { useState,useRef,useEffect,useMemo } from 'react';
 import { Chess, type  Square } from 'chess.js';
 import { Chessboard,  type PieceDropHandlerArgs  } from 'react-chessboard';
-import {default as Engine} from '../../lib/engine' 
+import {default as Engine} from '../../../lib/engine' 
 
 
 

@@ -48,7 +48,7 @@ function SidebarLinks() {
                 }}
                 secondaryAction={
                     <IconButton
-                        onClick={() => navigate("/")}
+                     //   onClick={() => navigate("/")}
 
                     ><ArrowForwardIosIcon />
                     </IconButton>
@@ -56,15 +56,15 @@ function SidebarLinks() {
                 disablePadding
             >
                 <ListItemButton
-
+                     onClick={() => navigate("/")}
                 >
-                    <Avatar alt="Board1"
+                    <Avatar alt="Basic"
                         sx={{
                             mr: 1,
                         }}>
                         <DevicesRoundedIcon sx={{ fontSize: '1rem' }} />
                     </Avatar>
-                    <ListItemText id={`Board1`} primary={`Board1`} />
+                    <ListItemText id={`Basic1`} primary={`Basic Board`} />
                 </ListItemButton>
             </ListItem>
 
@@ -78,22 +78,22 @@ function SidebarLinks() {
                 }}
                 secondaryAction={
                     <IconButton
-                        onClick={() => navigate("/board2")}
+                       // onClick={() => navigate("/move")}
 
                     ><ArrowForwardIosIcon />
                     </IconButton>
                 }
                 disablePadding
             >
-                <ListItemButton>
-                    <Avatar alt="Board2"  
+                <ListItemButton  onClick={() => navigate("/move")}>
+                    <Avatar alt="Moving"  
                         sx={{
                             mr: 1,
                         }}
                     >
                         <DevicesRoundedIcon sx={{ fontSize: '1rem' }} />
                     </Avatar>
-                    <ListItemText id={`Board2`} primary={`Board2`} />
+                    <ListItemText id={`Moving`} primary={`Moving example`} />
                 </ListItemButton>
             </ListItem>
 
@@ -108,14 +108,14 @@ function SidebarLinks() {
                 }}
                 secondaryAction={
                     <IconButton
-                        onClick={() => navigate("/anal1")}
+                    //    onClick={() => navigate("/analyze")}
 
                     ><ArrowForwardIosIcon />
                     </IconButton>
                 }
                 disablePadding
             >
-                <ListItemButton>
+                <ListItemButton  onClick={() => navigate("/analyze")}>
                     <Avatar alt="Analisys"  
                         sx={{
                             mr: 1,
@@ -123,9 +123,42 @@ function SidebarLinks() {
                     >
                         <DevicesRoundedIcon sx={{ fontSize: '1rem' }} />
                     </Avatar>
-                    <ListItemText id={`Board3`} primary={`Analysis `} />
+                    <ListItemText id={`Board3`} primary={`Engine evaluation demo`} />
                 </ListItemButton>
             </ListItem>
+
+
+
+
+            <ListItem
+                sx={{
+
+                 //   bgcolor: 'red',
+                   bgcolor: 'gray',
+                   mt:1
+
+                }}
+                secondaryAction={
+                    <IconButton
+                    //    onClick={() => navigate("/analyze")}
+
+                    ><ArrowForwardIosIcon />
+                    </IconButton>
+                }
+                disablePadding
+            >
+                <ListItemButton  onClick={() => navigate("/player1")}>
+                    <Avatar alt="Analisys"  
+                        sx={{
+                            mr: 1,
+                        }}
+                    >
+                        <DevicesRoundedIcon sx={{ fontSize: '1rem' }} />
+                    </Avatar>
+                    <ListItemText id={`Player1`} primary={`Play with engine 1`} />
+                </ListItemButton>
+            </ListItem>
+
 
 
         </List>

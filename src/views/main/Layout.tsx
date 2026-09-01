@@ -2,14 +2,16 @@
 import { useState, useRef , useEffect, useMemo} from 'react';
 import Box from '@mui/material/Box';
 //import SideMenu from './components/SideMenu'; // TODO: make AnonymousSideMenu and AuthenticatedSideMenu
-import { Outlet, useLocation } from 'react-router';
+import { Outlet, useLocation, useMatches , type UIMatch} from 'react-router';
 import { default as SideBar } from './Sidebar'
 import { BoardWidgetContext } from './service';
 
-const DefaultLayout = () => {
+const DefaultLayoutViewport = () => {
 
     const svc = BoardWidgetContext.useActorRef()
 
+
+    // MANUALLY FIXING BOARD VIEWPORT SIZE IN PIXELS
     const ref = useRef<HTMLDivElement>(null)
     const [bodyDimentions, setBodyDimentions] = useState<Rect>({ width: 0, height: 0 })
    // const [boardDimentions, setBoardDimentions] = useState<Rect>({ width: 0, height: 0 })
@@ -36,6 +38,30 @@ const DefaultLayout = () => {
         return output
 
     },[bodyDimentions])
+
+
+
+
+    const matches = useMatches(); 
+    const [curPath, setCurPath] = useState<string>("");
+
+    const updateLocationFn = (match:UIMatch)=>svc.send({
+        type:"EVENTS.NAVIGATION.ROUTER.MATCH.UPDATE", 
+        match:match
+    })
+
+    
+    useEffect(()=>{
+        console.log("[TemplatesReadonlyWidgetLayout] matches update", matches);
+        const last_match =  matches.pop()
+        if(undefined === last_match) return
+        if (curPath === last_match.pathname) return
+        setCurPath(last_match.pathname) 
+
+        console.log("[TemplatesReadonlyWidgetLayout][updateLocationFn] called", last_match);
+        updateLocationFn(last_match)
+    },[matches])
+
 
 
   
@@ -163,5 +189,11 @@ const DefaultLayout = () => {
     )
 }
 
+
+
+const DefaultLayout = ()=>        
+            <BoardWidgetContext.Provider>
+                <DefaultLayoutViewport />
+            </BoardWidgetContext.Provider>
 
 export { DefaultLayout }
