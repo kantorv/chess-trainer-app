@@ -10,16 +10,17 @@ import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
 import { useTranslation } from "react-i18next";
-import { Chess, DEFAULT_POSITION } from "chess.js";
 import { Chessboard, type ChessboardOptions } from "react-chessboard";
 import {
   EmptyPgnError,
   PgnParseError,
-  finalFenOf,
   parsePgnGames,
   pgnTag,
   type ParsedGame,
 } from "../../../lib/pgn";
+import { RightPanel } from "../../main/rightPanel";
+import MoveList from "./MoveList";
+import { useGameNavigation } from "./useGameNavigation";
 
 /**
  * Load PGN — every way a game gets into the app: a file picker, a drop target,
@@ -29,10 +30,10 @@ import {
  * the move list will consume; this component is only the UI around it, plus a
  * read-only board showing the loaded game.
  *
- * The ingestion controls render inline here on purpose: the shell's panel slot
- * is a sibling sub-task, and this screen moves its controls into that slot once
- * it lands. Until then everything shares the square board area, so the column
- * scrolls.
+ * The ingestion controls share the square board area, so this column scrolls.
+ * The shell's right-hand aside holds the move list instead — registered through
+ * `<RightPanel>` (see `views/main/rightPanel.tsx`), which keeps the panel part
+ * of this screen's own tree and so able to share its ply state by closure.
  */
 
 /** An input that stays clickable — and so uploadable in tests — while unseen. */
@@ -51,19 +52,6 @@ const hiddenInputSx = {
 function LoadPgn() {
   const { t } = useTranslation();
 
-  /*
-    Board wiring per .claude/rules/chessboard.md: `chess.js` lives in a ref, and
-    the position is mirrored into state as a FEN string — setting that string is
-    what re-renders the controlled <Chessboard>.
-  */
-  const chessGameRef = useRef(new Chess());
-  /*
-    Seeded from the constant rather than from `chessGameRef.current.fen()`: the
-    two are the same string for a fresh game, and reading a ref during render is
-    what `react-hooks/refs` (rightly) objects to on the older boards.
-  */
-  const [chessPosition, setChessPosition] = useState(DEFAULT_POSITION);
-
   const [games, setGames] = useState<readonly ParsedGame[]>([]);
   const [selected, setSelected] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -72,6 +60,16 @@ function LoadPgn() {
 
   /* What the paste box last submitted, so blurring an untouched box is a no-op. */
   const lastPastedRef = useRef("");
+
+  const current = games[selected];
+
+  /*
+    Ply navigation for the game on screen: the board's position and arrow both
+    come from the selected half-move, and the panel's move list drives it. No
+    `chess.js` instance here on purpose — every ply already carries the FEN of
+    the position after it (`lib/pgn.ts`), so nothing needs re-simulating.
+  */
+  const { ply, fen, arrows, goToPly } = useGameNavigation(current);
 
   /** The name to show for a game — its players, or a numbered fallback. */
   const titleOf = (game: ParsedGame, index: number) => {
@@ -89,15 +87,12 @@ function LoadPgn() {
       .filter((value): value is string => value !== undefined)
       .join(" · ");
 
-  const showGame = (game: ParsedGame) => {
-    /*
-      The position after the last move — proof the whole game parsed, and the
-      most informative single frame while stepping through the moves is still
-      the navigation sub-task's to build.
-    */
-    chessGameRef.current = new Chess(finalFenOf(game));
-    setChessPosition(chessGameRef.current.fen());
-  };
+  /*
+    A freshly loaded game opens on its final position — the most informative
+    single frame, and proof the whole game parsed. Stepping back from there is
+    what the arrow keys and the move list are for; Home returns to ply 0.
+  */
+  const showGame = (game: ParsedGame) => goToPly(game.moves.length);
 
   const selectGame = (index: number) => {
     setSelected(index);
@@ -133,6 +128,7 @@ function LoadPgn() {
       // A malformed PGN is a message in the panel, not a thrown error.
       setGames([]);
       setError(messageFor(cause));
+      goToPly(0);
     }
   };
 
@@ -183,11 +179,16 @@ function LoadPgn() {
     loadFromText(pgnText);
   };
 
-  const current = games[selected];
-
   const chessboardOptions: ChessboardOptions = {
     id: "load-pgn-board",
-    position: chessPosition,
+    position: fen,
+    /*
+      The move that produced this position. External arrows are never cleared
+      by the board itself (.claude/rules/chessboard.md §3.4), so this is the
+      whole set for the current ply, recomputed on every change — at ply 0 it
+      is empty.
+    */
+    arrows,
     // Read-only: this screen shows a loaded game. Dragging a piece here would
     // desync the board from the PGN it is displaying.
     allowDragging: false,
@@ -301,6 +302,17 @@ function LoadPgn() {
       >
         <Chessboard options={chessboardOptions} />
       </Box>
+
+      {/*
+        The move list goes into the shell's right-hand aside. Registered only
+        while a game is loaded, so an empty screen still shows the shell's own
+        Analysis placeholder rather than an empty panel.
+      */}
+      {current !== undefined && (
+        <RightPanel>
+          <MoveList game={current} currentPly={ply} onSelectPly={goToPly} />
+        </RightPanel>
+      )}
     </Box>
   );
 }

@@ -32,6 +32,13 @@ const en = {
     analysisTitle: "Analysis",
     analysisPlaceholder: "Evaluation and move list will appear here.",
   },
+  /** The move list panel: chrome only — SAN itself is language-independent. */
+  moveList: {
+    title: "Moves",
+    /** Ply 0, a selectable entry of its own. */
+    startPosition: "Start position",
+    noMoves: "This game has no moves.",
+  },
   /** The Load PGN screen: the four ingestion controls, the picker, its errors. */
   loadPgn: {
     dropHint: "Drop a .pgn file here",

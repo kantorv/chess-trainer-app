@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import i18n from "../../../i18n";
 import AppThemeWithLang from "../../../theme/AppThemeWithLang";
 import { finalFenOf, parsePgnGames } from "../../../lib/pgn";
+import { RightPanelProvider } from "../../main/rightPanel";
 import LoadPgn from "./LoadPgn";
 
 /*
@@ -42,10 +43,18 @@ const secondGame = [
 
 const twoGames = `${singleGame}\n\n${secondGame}\n`;
 
+/*
+  The provider, but no outlet: this file is about the ingestion controls, and
+  the screen's `<RightPanel>` needs a slot to register into. With no outlet
+  rendered the move list has nowhere to portal to and stays out of the way —
+  `LoadPgnNavigation.test.tsx` is where the panel itself is exercised.
+*/
 const renderScreen = () =>
   render(
     <AppThemeWithLang>
-      <LoadPgn />
+      <RightPanelProvider>
+        <LoadPgn />
+      </RightPanelProvider>
     </AppThemeWithLang>,
   );
 
