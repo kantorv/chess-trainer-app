@@ -6,8 +6,8 @@ import {
   clampPly,
   fenAtPly,
   lastPlyOf,
-} from "../../../lib/gameNavigation";
-import type { ParsedGame } from "../../../lib/pgn";
+} from "../../lib/gameNavigation";
+import type { Game } from "../../lib/gameModel";
 
 /**
  * Ply state for one screen: which half-move is selected, the position and the
@@ -43,7 +43,7 @@ export type GameNavigation = {
 };
 
 export const useGameNavigation = (
-  game: ParsedGame | undefined,
+  game: Game | undefined,
 ): GameNavigation => {
   const [requestedPly, setRequestedPly] = useState(0);
 

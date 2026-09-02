@@ -2,16 +2,12 @@ import { useRef, useState, type ChangeEvent, type DragEvent, type FormEvent } fr
 import Box from "@mui/material/Box";
 import { useTranslation } from "react-i18next";
 import { Chessboard, type ChessboardOptions } from "react-chessboard";
-import {
-  EmptyPgnError,
-  PgnParseError,
-  parsePgnGames,
-  type ParsedGame,
-} from "../../../lib/pgn";
+import { EmptyPgnError, PgnParseError, parsePgnGames } from "../../../lib/pgn";
+import type { Game } from "../../../lib/gameModel";
 import { RightPanel } from "../../main/rightPanel";
 import GamePanel from "./GamePanel";
 import PgnIngest from "./PgnIngest";
-import { useGameNavigation } from "./useGameNavigation";
+import { useGameNavigation } from "../../shared/useGameNavigation";
 
 /**
  * Load PGN — a loaded game on a board, with everything about that game in the
@@ -37,7 +33,7 @@ import { useGameNavigation } from "./useGameNavigation";
 function LoadPgn() {
   const { t } = useTranslation();
 
-  const [games, setGames] = useState<readonly ParsedGame[]>([]);
+  const [games, setGames] = useState<readonly Game[]>([]);
   const [selected, setSelected] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [pgnText, setPgnText] = useState("");
@@ -62,7 +58,7 @@ function LoadPgn() {
     single frame, and proof the whole game parsed. Stepping back from there is
     what the controls and the arrow keys are for; the start is one click away.
   */
-  const showGame = (game: ParsedGame) => goToPly(game.moves.length);
+  const showGame = (game: Game) => goToPly(game.moves.length);
 
   const selectGame = (index: number) => {
     setSelected(index);

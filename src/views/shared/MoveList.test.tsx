@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import i18n from "../../../i18n";
-import AppThemeWithLang from "../../../theme/AppThemeWithLang";
-import { parsePgnGames, type ParsedGame } from "../../../lib/pgn";
+import i18n from "../../i18n";
+import AppThemeWithLang from "../../theme/AppThemeWithLang";
+import { parsePgnGames } from "../../lib/pgn";
+import type { Game } from "../../lib/gameModel";
 import MoveList from "./MoveList";
 
 /*
@@ -11,7 +12,7 @@ import MoveList from "./MoveList";
   which is the point of taking the game as a prop.
 */
 
-const game: ParsedGame = parsePgnGames(
+const game: Game = parsePgnGames(
   [`[White "Alice"]`, `[Black "Bob"]`, "", "1. e4 e5 2. Nf3 Nc6 3. Bb5 1-0"].join(
     "\n",
   ),

@@ -3,8 +3,8 @@ import Box from "@mui/material/Box";
 import ButtonBase from "@mui/material/ButtonBase";
 import Typography from "@mui/material/Typography";
 import { useTranslation } from "react-i18next";
-import { moveRowsOf } from "../../../lib/gameNavigation";
-import type { ParsedGame, ParsedMove } from "../../../lib/pgn";
+import { moveRowsOf } from "../../lib/gameNavigation";
+import type { Game, GameMove } from "../../lib/gameModel";
 
 /**
  * The lichess-style move list: numbered pairs, the current ply highlighted,
@@ -18,7 +18,7 @@ import type { ParsedGame, ParsedMove } from "../../../lib/pgn";
  */
 
 type MoveListProps = {
-  game: ParsedGame;
+  game: Game;
   /** The selected half-move; 0 is the starting position. */
   currentPly: number;
   onSelectPly: (ply: number) => void;
@@ -69,7 +69,7 @@ function MoveCell({
   onSelect,
   activeRef,
 }: {
-  move: ParsedMove | null;
+  move: GameMove | null;
   isCurrent: boolean;
   onSelect: (ply: number) => void;
   activeRef: Ref<HTMLButtonElement>;
