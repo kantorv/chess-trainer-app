@@ -4,6 +4,15 @@ import react from '@vitejs/plugin-react'
 
 // https://vite.dev/config/
 export default defineConfig({
+  /*
+    The app is published as a GitHub Pages *project* site at
+    https://kantorv.github.io/chess-trainer-app/, so every asset URL and the
+    router basename have to carry that sub-path. Vite rewrites `/src/...` and
+    the hashed asset links in index.html against this at build time; in dev
+    (and under Vitest) it stays `/`. `src/App.tsx` feeds the same value to
+    react-router as `import.meta.env.BASE_URL`.
+  */
+  base: '/chess-trainer-app/',
   plugins: [react()],
   test: {
     environment: 'jsdom',

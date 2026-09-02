@@ -1,0 +1,36 @@
+name: CI
+
+# The build + typecheck gate, closed by a machine rather than by whoever
+# remembers to run `yarn build` locally. `development` is the integration branch
+# every feature PR targets, so it is the one push trigger worth having.
+on:
+  pull_request:
+  push:
+    branches: [development]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Matches the Node the reference workflows pin. This repo pins nothing
+          # in-tree (no .nvmrc, no engines) — local dev Node comes from fnm.
+          node-version: 24
+          cache: yarn
+
+      - run: yarn install --frozen-lockfile
+
+      # `tsc -b` over the app *and* the tests, then the production build.
+      - run: yarn build
+
+      # `--coverage` is a readout here, not a gate: vite.config.ts has a
+      # coverage block but no thresholds, so the numbers are reported without
+      # failing CI. Add thresholds there if the team wants it enforced.
+      - run: yarn test:run --coverage
+
+      # `yarn lint` is deliberately NOT run: CLAUDE.md documents that it exits
+      # non-zero on pre-existing findings in the board / XState modules.
