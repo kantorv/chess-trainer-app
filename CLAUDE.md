@@ -4,9 +4,13 @@ A Vite + React 19 + TypeScript chess trainer. Four board screens sit inside one
 app shell; the boards themselves are `react-chessboard` v5 driven by `chess.js`
 and a Stockfish WASM worker.
 
-Board work has its own rules file — read
-[`.claude/rules/chessboard.md`](.claude/rules/chessboard.md) before adding or
-changing a board screen.
+Board work has its own rules — [`.claude/rules/chessboard.md`](.claude/rules/chessboard.md)
+holds the project conventions and, in its §0, the index to everything else.
+The `react-chessboard` options API and type reference are loaded every session
+alongside it; the full upstream docs and all 53 Storybook examples are vendored
+under [`docs/vendor/react-chessboard/`](docs/vendor/react-chessboard/) for
+on-demand reading. **Never read `node_modules` source or web-search for a
+react-chessboard question** — it is already on disk.
 
 ## Commands
 

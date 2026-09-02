@@ -1,0 +1,856 @@
+<!-- VENDORED UPSTREAM REFERENCE — do not hand-edit.
+     Source: react-chessboard@5.12.1 docs/D_OptionsApi.mdx
+     Regenerate per docs/vendor/react-chessboard/README.md.
+     Project conventions live in .claude/rules/chessboard.md and win on conflict. -->
+
+# Options API
+
+This page will explain how to use the options API for React Chessboard. It includes sections for each option for the component that also contain relevant examples of how to use them.
+
+The component has a number of options that you can use to customise the component. These are passed in via the `options` prop to the `Chessboard` component. (or the `ChessboardProvider` component if you are using spare pieces or other features that require the context provider).
+
+The code for these examples can be viewed by clicking the "Show code" button in the bottom right of the interactive examples. The code can also be viewed in the [GitHub repository](https://github.com/Clariity/react-chessboard/tree/main/docs/stories/options).
+
+| Option                                                             | Description                                                         |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------- |
+| [allowAutoScroll](#optionsallowautoscroll)                         | Controls auto-scrolling when dragging pieces near window edges      |
+| [allowDragging](#optionsallowdragging)                             | Controls whether pieces can be dragged on the board                 |
+| [allowDragOffBoard](#optionsallowdragoffboard)                     | Controls whether pieces can be dragged off the board                |
+| [allowDrawingArrows](#optionsallowdrawingarrows)                   | Controls whether arrows can be drawn by right-clicking and dragging |
+| [alphaNotationStyle](#optionsalphanotationstyle)                   | Controls styling of the alpha notation (a-h)                        |
+| [animationDurationInMs](#optionsanimationdurationinms)             | Controls duration of piece movement animations                      |
+| [arrows](#optionsarrows)                                           | Array of arrows to display on the board                             |
+| [arrowOptions](#optionsarrowoptions)                               | Controls styling and behavior of arrows                             |
+| [boardOrientation](#optionsboardorientation)                       | Sets orientation of the board ('white' or 'black')                  |
+| [boardStyle](#optionsboardstyle)                                   | Controls styling of the main board container                        |
+| [canDragPiece](#optionscandragpiece)                               | Function to determine if a piece can be dragged                     |
+| [chessboardColumns](#optionschessboardcolumns)                     | Number of columns on the board                                      |
+| [chessboardRows](#optionschessboardrows)                           | Number of rows on the board                                         |
+| [clearArrowsOnClick](#optionscleararrowsonclick)                   | Controls whether arrows are cleared on board click                  |
+| [clearArrowsOnPositionChange](#optionscleararrowsonpositionchange) | Controls whether arrows are cleared on position change              |
+| [darkSquareNotationStyle](#optionsdarksquarenotationstyle)         | Controls styling of notation on dark squares                        |
+| [darkSquareStyle](#optionsdarksquarestyle)                         | Controls styling of dark squares                                    |
+| [dragActivationDistance](#optionsdragactivationdistance)           | Distance in pixels before drag activation                           |
+| [draggingPieceGhostStyle](#optionsdraggingpieceghoststyle)         | Controls styling of ghost piece while dragging                      |
+| [draggingPieceStyle](#optionsdraggingpiecestyle)                   | Controls styling of piece being dragged                             |
+| [dropSquareStyle](#optionsdropsquarestyle)                         | Controls styling of squares when dragging over them                 |
+| [id](#optionsid)                                                   | Sets the id of the chessboard component                             |
+| [lightSquareNotationStyle](#optionslightsquarenotationstyle)       | Controls styling of notation on light squares                       |
+| [lightSquareStyle](#optionslightsquarestyle)                       | Controls styling of light squares                                   |
+| [numericNotationStyle](#optionsnumericnotationstyle)               | Controls styling of numeric notation (1-8)                          |
+| [onArrowsChange](#optionsonarrowschange)                           | Handler for when internal arrows change                             |
+| [onMouseOutSquare](#optionsonmouseoutsquare)                       | Handler for mouse leaving a square                                  |
+| [onMouseOverSquare](#optionsonmouseoversquare)                     | Handler for mouse entering a square                                 |
+| [onPieceClick](#optionsonpiececlick)                               | Handler for clicking a piece                                        |
+| [onPieceDrag](#optionsonpiecedrag)                                 | Handler for starting to drag a piece                                |
+| [onPieceDragCancel](#optionsonpiecedragcancel)                     | Handler for when a piece drag is cancelled                          |
+| [onPieceDrop](#optionsonpiecedrop)                                 | Handler for dropping a piece                                        |
+| [onSquareClick](#optionsonsquareclick)                             | Handler for clicking a square                                       |
+| [onSquareMouseDown](#optionsonsquaremousedown)                     | Handler for mouse button down on a square                           |
+| [onSquareMouseUp](#optionsonsquaremouseup)                         | Handler for mouse button up on a square                             |
+| [onSquareRightClick](#optionsonsquarerightclick)                   | Handler for right-clicking a square                                 |
+| [pieces](#optionspieces)                                           | Object mapping piece types to React components                      |
+| [position](#optionsposition)                                       | Current position on the board (FEN string or position object)       |
+| [showAnimations](#optionsshowanimations)                           | Controls whether piece movements are animated                       |
+| [showNotation](#optionsshownotation)                               | Controls whether board notation is displayed                        |
+| [squareRenderer](#optionssquarerenderer)                           | Controls the rendering of squares on the board                      |
+| [squareStyle](#optionssquarestyle)                                 | Base styling applied to all squares                                 |
+| [squareStyles](#optionssquarestyles)                               | Object mapping squares to custom styles                             |
+
+## Options
+
+### `options.allowAutoScroll`
+
+Controls whether dragging a piece near the edge of the window will automatically scroll the window.
+
+**Default value:** `false`
+
+**TypeScript type:** `boolean`
+
+**Standard use case:** Enabling auto-scrolling when dragging pieces near the edge of the window. Could be used if the board is larger than the window.
+
+> Live example: [`stories/options/AllowAutoScroll.stories.tsx`](../../docs/vendor/react-chessboard/stories/options/AllowAutoScroll.stories.tsx)
+
+### `options.allowDragging`
+
+Controls whether pieces can be dragged.
+
+When set to true, pieces can be dragged and dropped, and by default will have `cursor: grab` style. When set to false, the pieces can no longer be dragged, and by default will have the `cursor: pointer` style.
+
+**Default value:** `true`
+
+**TypeScript type:** `boolean`
+
+**Standard use case:** Disabling drag and drop functionality for the entire board.
+
+> Live example: [`stories/options/AllowDragging.stories.tsx`](../../docs/vendor/react-chessboard/stories/options/AllowDragging.stories.tsx)
+
+### `options.allowDragOffBoard`
+
+Controls whether pieces can be dragged off the board.
+
+**Default value:** `true`
+
+**TypeScript type:** `boolean`
+
+**Standard use case:** Disabling the ability to drag pieces off the board.
+
+> **⚠️ Warning**
+>
+> Due to how Storybook renders canvases in iframes, and how the `preventDragOffBoard` modifier works by calculating the position of the piece and the board, this story example will not work in the Storybook preview.
+>
+> As a result, if your application adjusts the position of the board in a similar way with iframes, you may face similar issues. To see the example in action, please run the example in your own project.
+>
+> Live example: [`stories/options/AllowDragOffBoard.stories.tsx`](../../docs/vendor/react-chessboard/stories/options/AllowDragOffBoard.stories.tsx)
+### `options.allowDrawingArrows`
+
+Controls whether additional arrows can be added by holding down the right mouse button and dragging the mouse over the board.
+
+**Default value:** `true`
+
+**TypeScript type:** `boolean`
+
+**Standard use case:** Disabling the ability to add arrows to the board.
+
+> Live example: [`stories/options/AllowDrawingArrows.stories.tsx`](../../docs/vendor/react-chessboard/stories/options/AllowDrawingArrows.stories.tsx)
+
+### `options.alphaNotationStyle`
+
+Controls the styling of the alpha notation (a-h) on the board. If you wish to instead hide the notation, set [`showNotation`](#optionsshownotation) to `false`.
+
+If you wish to display different styles of notation on different coloured squares, you can use the [`darkSquareNotationStyle`](#optionsdarksquarenotationstyle) and [`lightSquareNotationStyle`](#optionslightsquarenotationstyle) props.
+
+**Default value:**
+
+```tsx
+{
+  fontSize: "13px",
+  position: "absolute",
+  bottom: 1,
+  right: 4,
+  userSelect: 'none',
+}
+```
+
+**TypeScript type:** `React.CSSProperties`
+
+**Standard use case:** Customizing the appearance of the board notation coordinates.
+
+> Live example: [`stories/options/AlphaNotationStyle.stories.tsx`](../../docs/vendor/react-chessboard/stories/options/AlphaNotationStyle.stories.tsx)
+
+### `options.animationDurationInMs`
+
+Controls the duration of piece movement animations in milliseconds.
+
+**Default value:** `300`
+
+**TypeScript type:** `number`
+
+**Standard use case:** Adjusting the speed of piece movements to match your application's feel.
+
+> Live example: [`stories/options/AnimationDurationInMs.stories.tsx`](../../docs/vendor/react-chessboard/stories/options/AnimationDurationInMs.stories.tsx)
+
+### `options.arrows`
+
+Controls the base set of arrows on the board. By default, additional arrows can be added by holding down the right mouse button and dragging the mouse over the board. You can disable this by setting [`allowDrawingArrows`](#optionsallowdrawingarrows) to `false`.
+
+By default, these arrows will not be automatically cleared when a square is clicked or a piece is dragged. Instead, you will need to clear them manually using the [`onSquareClick`](#optionsonsquareclick) or [`onPieceDrag`](#optionsonpiecedrag) prop and pass in a new value for this prop.
+
+**Default value:** `[]`
+
+**TypeScript type:**
+
+```typescript
+{
+  startSquare: string;
+  endSquare: string;
+  color: string;
+}
+[];
+```
+
+**Standard use case:** Adding arrows to the board to indicate possible moves or attacks.
+
+> Live example: [`stories/options/Arrows.stories.tsx`](../../docs/vendor/react-chessboard/stories/options/Arrows.stories.tsx)
+
+### `options.arrowOptions`
+
+Controls the appearance and behavior of arrows on the board. This includes settings for arrow colors, width, length, and opacity.
+
+#### Arrow colors
+
+- `colors.default`: Sets the default arrow color when no modifiers are held down when drawing an arrow
+- `colors.shift`: Sets the arrow color when shift is held down when drawing an arrow
+- `colors.ctrl`: Sets the arrow color when control is held down when drawing an arrow
+- `colors.alt`: Sets the arrow color when alt is held down when drawing an arrow
+- `colors.meta`: Sets the arrow color when meta (Windows/Cmd) is held down when drawing an arrow
+
+When drawing an arrow, you can hold down modifier keys to change the arrow color. The precedence from highest to lowest is: Alt > Shift > Control > Meta > Default.
+
+> **Note regarding the `meta` key:** On Windows, the `meta` key maps to the Windows key. Browsers cannot prevent the OS from opening the Start menu when the Windows key is released. While you can still safely map a color to `meta` (it will draw the arrow), be aware that the Start menu will still open on release. This modifier is primarily most useful for macOS users where it maps to the `Command` key.
+
+#### Arrow length
+
+- `arrowLengthReducerDenominator`: Controls how much the arrow length is reduced. The lower the denominator, the greater the reduction (e.g. 8 = 1/8 of a square width removed, 4 = 1/4 of a square width removed)
+- `sameTargetArrowLengthReducerDenominator`: Works the same way but specifically for arrows targeting the same square, using a greater reduction to avoid overlaps
+- `arrowStartOffset`: Controls how far from the center of the start square the arrow begins, as a fraction of square width (0 = center, 0.5 = edge). Values between 0.3-0.4 give a chess.com-like look where the arrow starts near the base of the piece. Values above 0.5 will start outside the square.
+
+#### Arrow width
+
+- `arrowWidthDenominator`: Controls the width of the arrow. The lower the denominator, the greater the width (e.g. 5 = 1/5 of a square width, 10 = 1/10 of a square width)
+- `activeArrowWidthMultiplier`: Sets the multiplier for the arrow width when it is being drawn
+
+#### Arrow opacity
+
+- `opacity`: Controls the opacity of arrows when not being drawn
+- `activeOpacity`: Controls the opacity of arrows when they are being drawn
+
+**Default value:**
+
+```tsx
+{
+  colors: {
+    default: "#ffaa00", // yellow
+    shift: "#4caf50", // green
+    ctrl: "#f44336", // red
+    alt: "#9c27b0", // purple
+    meta: "#fbbf24", // amber/yellowish
+  },
+  arrowLengthReducerDenominator: 8,
+  sameTargetArrowLengthReducerDenominator: 4,
+  arrowWidthDenominator: 5,
+  activeArrowWidthMultiplier: 0.9,
+  opacity: 0.65,
+  activeOpacity: 0.5,
+  arrowStartOffset: 0,
+}
+```
+
+**TypeScript type:**
+
+```typescript
+{
+  colors?: {
+    default?: string;
+    shift?: string;
+    ctrl?: string;
+    alt?: string;
+    meta?: string;
+  },
+  arrowLengthReducerDenominator: number,
+  sameTargetArrowLengthReducerDenominator: number,
+  arrowWidthDenominator: number,
+  activeArrowWidthMultiplier: number,
+  opacity: number,
+  activeOpacity: number
+  arrowStartOffset: number,
+}
+```
+
+**Standard use case:** Customizing the appearance of arrows to match your application's theme or to make them more or less prominent.
+
+> Live example: [`stories/options/ArrowOptions.stories.tsx`](../../docs/vendor/react-chessboard/stories/options/ArrowOptions.stories.tsx)
+
+### `options.boardOrientation`
+
+Controls the orientation of the board. When set to "black", the board is flipped so black pieces are at the bottom.
+
+**Default value:** `"white"`
+
+**TypeScript type:** `"white" | "black"`
+
+**Standard use case:** Allowing players to view the board from the perspective of the pieces they are playing with.
+
+> Live example: [`stories/options/BoardOrientation.stories.tsx`](../../docs/vendor/react-chessboard/stories/options/BoardOrientation.stories.tsx)
+
+### `options.boardStyle`
+
+Controls the styling of the entire chessboard container.
+
+**Default value:**
+
+```tsx
+{
+  display: "grid",
+  gridTemplateColumns: `repeat(${chessboardColumns}, 1fr)`,
+  overflow: "hidden",
+  width: '100%',
+  height: '100%',
+  position: 'relative',
+}
+```
+
+**TypeScript type:** `React.CSSProperties`
+
+**Standard use case:** Adding custom styling like borders, shadows, or rounded corners to the board.
+
+> Live example: [`stories/options/BoardStyle.stories.tsx`](../../docs/vendor/react-chessboard/stories/options/BoardStyle.stories.tsx)
+
+### `options.canDragPiece`
+
+Controls whether a piece can be dragged.
+
+**Default value:** `undefined`
+
+**TypeScript type:**
+
+```typescript
+({
+  isSparePiece: boolean;
+  piece: { pieceType: string };
+  square: string | null;
+}) => boolean;
+```
+
+**Standard use case:** Restricting piece dragging to certain pieces or squares.
+
+> Live example: [`stories/options/CanDragPiece.stories.tsx`](../../docs/vendor/react-chessboard/stories/options/CanDragPiece.stories.tsx)
+
+### `options.chessboardColumns`
+
+Controls the number of columns on the chessboard. If you set either of the row or column options above `9`, you will need to use the `positionObject` notation for the `position` prop, as `fen` notation only supports single digit columns.
+
+**Default value:** `8`
+
+**TypeScript type:** `number`
+
+**Standard use case:** Creating custom chess variants with different board sizes.
+
+> Live example: [`stories/options/ChessboardColumns.stories.tsx`](../../docs/vendor/react-chessboard/stories/options/ChessboardColumns.stories.tsx)
+
+### `options.chessboardRows`
+
+Controls the number of rows on the chessboard. If you set either of the row or column options above `9`, you will need to use the `positionObject` notation for the `position` prop, as `fen` notation only supports single digit columns.
+
+**Default value:** `8`
+
+**TypeScript type:** `number`
+
+**Standard use case:** Creating custom chess variants with different board sizes.
+
+> Live example: [`stories/options/ChessboardRows.stories.tsx`](../../docs/vendor/react-chessboard/stories/options/ChessboardRows.stories.tsx)
+
+### `options.clearArrowsOnClick`
+
+Controls whether **internal** arrows are cleared when a square is clicked. If you are passing in external arrows via the [`arrows`](#optionsarrows) prop, these will not be automatically cleared when a square is clicked. Instead, you will need to clear them manually using the [`onSquareClick`](#optionsonsquareclick) prop and pass in a new value for the [`arrows`](#optionsarrows) prop.
+
+**Default value:** `true`
+
+**TypeScript type:** `boolean`
+
+**Standard use case:** Disabling the ability to clear internal arrows when a square is clicked.
+
+> Live example: [`stories/options/ClearArrowsOnClick.stories.tsx`](../../docs/vendor/react-chessboard/stories/options/ClearArrowsOnClick.stories.tsx)
+
+### `options.clearArrowsOnPositionChange`
+
+Controls whether **internal** arrows are cleared when the position changes. If you are passing in external arrows via the [`arrows`](#optionsarrows) prop, these will not be automatically cleared when the position changes. Instead, you will need to clear them manually when updating the position and pass in a new value for the [`arrows`](#optionsarrows) prop.
+
+**Default value:** `true`
+
+**TypeScript type:** `boolean`
+
+**Standard use case:** Disabling the ability to clear internal arrows when the position changes.
+
+> Live example: [`stories/options/ClearArrowsOnPositionChange.stories.tsx`](../../docs/vendor/react-chessboard/stories/options/ClearArrowsOnPositionChange.stories.tsx)
+
+### `options.darkSquareNotationStyle`
+
+Controls the styling of notation on dark squares. If you wish to instead hide the notation, set [`showNotation`](#optionsshownotation) to `false`.
+
+This is separate from the [`alphaNotationStyle`](#optionsalphanotationstyle) prop, which controls the styling of the notation on all alpha squares.
+
+[`alphaNotationStyle`](#optionsalphanotationstyle) and [`numericNotationStyle`](#optionsnumericnotationstyle) will take precedence over this style for any clashing properties.
+
+**Default value:**
+
+```tsx
+{
+  color: "#F0D9B5",
+}
+```
+
+**TypeScript type:** `React.CSSProperties`
+
+**Standard use case:** Ensuring notation is readable on dark squares by adjusting color and size.
+
+> Live example: [`stories/options/DarkSquareNotationStyle.stories.tsx`](../../docs/vendor/react-chessboard/stories/options/DarkSquareNotationStyle.stories.tsx)
+
+### `options.darkSquareStyle`
+
+Controls the styling of dark squares on the board.
+
+**Default value:**
+
+```tsx
+{
+  backgroundColor: "#B58863",
+}
+```
+
+**TypeScript type:** `React.CSSProperties`
+
+**Standard use case:** Customizing the appearance of dark squares to match your application's theme.
+
+> Live example: [`stories/options/DarkSquareStyle.stories.tsx`](../../docs/vendor/react-chessboard/stories/options/DarkSquareStyle.stories.tsx)
+
+### `options.dragActivationDistance`
+
+Controls the distance in pixels that the mouse needs to move before a piece can be dragged. Note that setting this to `0` will cause issues with the `onPieceClick` event firing because the click will be registered as a drag instead.
+
+**Default value:** `1`
+
+**TypeScript type:** `number`
+
+**Standard use case:** Preventing accidental piece dragging when clicking on a piece.
+
+> Live example: [`stories/options/DragActivationDistance.stories.tsx`](../../docs/vendor/react-chessboard/stories/options/DragActivationDistance.stories.tsx)
+
+### `options.draggingPieceStyle`
+
+Controls the styling of the piece being dragged. This allows you to customise the appearance of the piece while it's being dragged, such as scaling it up, adding a shadow, or rotating it.
+
+**Default value:**
+
+```tsx
+{
+  transform: 'scale(1.2)',
+}
+```
+
+**TypeScript type:** `React.CSSProperties`
+
+**Standard use case:** Enhancing the visual feedback when dragging pieces, such as making the dragged piece larger or adding effects to make it stand out.
+
+> Live example: [`stories/options/DraggingPieceStyle.stories.tsx`](../../docs/vendor/react-chessboard/stories/options/DraggingPieceStyle.stories.tsx)
+
+### `options.draggingPieceGhostStyle`
+
+Controls the styling of the ghost piece that remains in the original square while dragging. This allows you to customize the appearance of the ghost piece, such as its opacity or blur effect.
+
+**Default value:**
+
+```tsx
+{
+  opacity: 0.5,
+}
+```
+
+**TypeScript type:** `React.CSSProperties`
+
+**Standard use case:** Customizing the visual feedback of the ghost piece to make it more or less prominent while dragging.
+
+> Live example: [`stories/options/DraggingPieceGhostStyle.stories.tsx`](../../docs/vendor/react-chessboard/stories/options/DraggingPieceGhostStyle.stories.tsx)
+
+### `options.dropSquareStyle`
+
+Controls the styling of squares when a piece is being dragged over them.
+
+**Default value:**
+
+```tsx
+{
+  boxShadow: 'inset 0px 0px 0px 1px black',
+}
+```
+
+**TypeScript type:** `React.CSSProperties`
+
+**Standard use case:** Making it clear to users which squares are valid drop targets.
+
+> Live example: [`stories/options/DropSquareStyle.stories.tsx`](../../docs/vendor/react-chessboard/stories/options/DropSquareStyle.stories.tsx)
+
+### `options.id`
+
+Sets the id of the chessboard component. This is useful for handling multiple chessboards on the same page or directly targeting the chessboard component with JS or CSS.
+
+**Default value:** `"chessboard"`
+
+**TypeScript type:** `string`
+
+**Standard use case:** Handling multiple chessboards on the same page or directly targeting the chessboard component with JS or CSS.
+
+### `options.lightSquareNotationStyle`
+
+Controls the styling of notation on light squares. If you wish to instead hide the notation, set [`showNotation`](#optionsshownotation) to `false`.
+
+This is separate from the [`alphaNotationStyle`](#optionsalphanotationstyle) prop, which controls the styling of the notation on all alpha squares.
+
+[`alphaNotationStyle`](#optionsalphanotationstyle) and [`numericNotationStyle`](#optionsnumericnotationstyle) will take precedence over this style for any clashing properties.
+
+**Default value:**
+
+```tsx
+{
+  color: "#B58863",
+}
+```
+
+**TypeScript type:** `React.CSSProperties`
+
+**Standard use case:** Ensuring notation is readable on light squares by adjusting color and size.
+
+> Live example: [`stories/options/LightSquareNotationStyle.stories.tsx`](../../docs/vendor/react-chessboard/stories/options/LightSquareNotationStyle.stories.tsx)
+
+### `options.lightSquareStyle`
+
+Controls the styling of light squares on the board.
+
+**Default value:**
+
+```tsx
+{
+  backgroundColor: "#F0D9B5",
+}
+```
+
+**TypeScript type:** `React.CSSProperties`
+
+**Standard use case:** Customizing the appearance of light squares to match your application's theme.
+
+> Live example: [`stories/options/LightSquareStyle.stories.tsx`](../../docs/vendor/react-chessboard/stories/options/LightSquareStyle.stories.tsx)
+
+### `options.numericNotationStyle`
+
+Controls the styling of the numeric notation (1-8) on the board. If you wish to instead hide the notation, set [`showNotation`](#optionsshownotation) to `false`.
+
+If you wish to display different styles of notation on different coloured squares, you can use the [`darkSquareNotationStyle`](#optionsdarksquarenotationstyle) and [`lightSquareNotationStyle`](#optionslightsquarenotationstyle) props.
+
+**Default value:**
+
+```tsx
+{
+  fontSize: "13px",
+  position: "absolute",
+  top: 2,
+  left: 2,
+  userSelect: 'none',
+}
+```
+
+**TypeScript type:** `React.CSSProperties`
+
+**Standard use case:** Customizing the appearance of the board notation coordinates.
+
+> Live example: [`stories/options/NumericNotationStyle.stories.tsx`](../../docs/vendor/react-chessboard/stories/options/NumericNotationStyle.stories.tsx)
+
+### `options.onArrowsChange`
+
+Handler for when internal arrows change. This is useful for updating external state or re-rendering when arrows are added or removed.
+
+**Default value:** `undefined`
+
+**TypeScript type:**
+
+```typescript
+({
+  arrows: Arrow[];
+}) => void;
+```
+
+**Standard use case:** Updating the state of arrows when they are added or removed.
+
+> Live example: [`stories/options/OnArrowsChange.stories.tsx`](../../docs/vendor/react-chessboard/stories/options/OnArrowsChange.stories.tsx)
+
+### `options.onMouseOutSquare`
+
+Callback function triggered when the mouse leaves a square. Entering a drag state will trigger this event, but whilst dragging, no further events will be triggered until the drag ends and the mouse leaves a square again.
+
+**Default value:** `undefined`
+
+**TypeScript type:**
+
+```typescript
+({
+  piece: { pieceType: string } | null;
+  square: string;
+}) => void;
+```
+
+**Standard use case:** Implementing hover effects or tooltips for squares.
+
+> Live example: [`stories/options/OnMouseOutSquare.stories.tsx`](../../docs/vendor/react-chessboard/stories/options/OnMouseOutSquare.stories.tsx)
+
+### `options.onMouseOverSquare`
+
+Callback function triggered when the mouse enters a square.
+
+**Default value:** `undefined`
+
+**TypeScript type:**
+
+```typescript
+({
+  piece: { pieceType: string } | null;
+  square: string;
+}) => void;
+```
+
+**Standard use case:** Implementing hover effects or tooltips for squares.
+
+> Live example: [`stories/options/OnMouseOverSquare.stories.tsx`](../../docs/vendor/react-chessboard/stories/options/OnMouseOverSquare.stories.tsx)
+
+### `options.onPieceClick`
+
+Callback function triggered when a piece is clicked. This callback will only be triggered if [`allowDragging`](#optionsallowdragging) is set to `false`.
+
+**Default value:** `undefined`
+
+**TypeScript type:**
+
+```typescript
+({
+  isSparePiece: boolean;
+  piece: { pieceType: string };
+  square: string | null;
+}) => void;
+```
+
+**Standard use case:** Implementing custom piece selection or movement logic such as click to move.
+
+> Live example: [`stories/options/OnPieceClick.stories.tsx`](../../docs/vendor/react-chessboard/stories/options/OnPieceClick.stories.tsx)
+
+### `options.onPieceDrag`
+
+Callback function triggered when a piece drag operation starts.
+
+**Default value:** `undefined`
+
+**TypeScript type:**
+
+```typescript
+({
+  isSparePiece: boolean;
+  piece: { pieceType: string };
+  square: string | null;
+}) => void;
+```
+
+**Standard use case:** Implementing custom drag and drop behavior or validation.
+
+> Live example: [`stories/options/OnPieceDrag.stories.tsx`](../../docs/vendor/react-chessboard/stories/options/OnPieceDrag.stories.tsx)
+
+### `options.onPieceDragCancel`
+
+Callback function triggered when a piece drag operation is cancelled. A drag is cancelled by pressing Escape or right-clicking, but not by dropping a piece outside the board.
+
+**Default value:** `undefined`
+
+**TypeScript type:**
+
+```typescript
+() => void;
+```
+
+**Standard use case:** Resetting UI state when the user cancels a drag without making a move.
+
+> Live example: [`stories/options/OnPieceDragCancel.stories.tsx`](../../docs/vendor/react-chessboard/stories/options/OnPieceDragCancel.stories.tsx)
+
+### `options.onPieceDrop`
+
+Callback function triggered when a piece is dropped. Return `true` to indicate a successful move to set some internal state. Return `false` to indicate a failed move to reset the internal state.
+
+**Default value:** `undefined`
+
+**TypeScript type:**
+
+```typescript
+({
+  piece: { isSparePiece: boolean, pieceType: string, position: string };
+  sourceSquare: string;
+  targetSquare: string | null;
+}) => boolean;
+```
+
+**Standard use case:** Validating moves or implementing custom move logic.
+
+> Live example: [`stories/options/OnPieceDrop.stories.tsx`](../../docs/vendor/react-chessboard/stories/options/OnPieceDrop.stories.tsx)
+
+### `options.onSquareClick`
+
+Callback function triggered when a square is clicked.
+
+**Default value:** `undefined`
+
+**TypeScript type:**
+
+```typescript
+({
+  piece: { pieceType: string } | null;
+  square: string;
+}) => void;
+```
+
+**Standard use case:** Implementing custom square selection or movement logic.
+
+> Live example: [`stories/options/OnSquareClick.stories.tsx`](../../docs/vendor/react-chessboard/stories/options/OnSquareClick.stories.tsx)
+
+### `options.onSquareMouseDown`
+
+Callback function triggered when a mouse button is pressed down on a square.
+
+**Default value:** `undefined`
+
+**TypeScript type:**
+
+```typescript
+({
+  piece: { pieceType: string } | null;
+  square: string;
+}, e: React.MouseEvent) => void;
+```
+
+**Standard use case:** Implementing custom interactions or visual feedback on mouse down events.
+
+> Live example: [`stories/options/OnSquareMouseDown.stories.tsx`](../../docs/vendor/react-chessboard/stories/options/OnSquareMouseDown.stories.tsx)
+
+### `options.onSquareMouseUp`
+
+Callback function triggered when a mouse button is released on a square.
+
+**Default value:** `undefined`
+
+**TypeScript type:**
+
+```typescript
+({
+  piece: { pieceType: string } | null;
+  square: string;
+}, e: React.MouseEvent) => void;
+```
+
+**Standard use case:** Implementing custom interactions or visual feedback on mouse up events.
+
+> Live example: [`stories/options/OnSquareMouseUp.stories.tsx`](../../docs/vendor/react-chessboard/stories/options/OnSquareMouseUp.stories.tsx)
+
+### `options.onSquareRightClick`
+
+Callback function triggered when a square is right-clicked.
+
+**Default value:** `undefined`
+
+**TypeScript type:**
+
+```typescript
+({
+  piece: { pieceType: string } | null;
+  square: string;
+}) => void;
+```
+
+**Standard use case:** Implementing context menus or alternative interaction methods.
+
+> Live example: [`stories/options/OnSquareRightClick.stories.tsx`](../../docs/vendor/react-chessboard/stories/options/OnSquareRightClick.stories.tsx)
+
+### `options.pieces`
+
+Custom piece renderers for each piece type. You can use this to fully replace the default piece SVGs, extend the default piece SVGs to add custom piece SVGs for new piece types, or replace individual piece SVGs.
+
+**Default value:** Default chess piece SVGs
+
+**TypeScript type:**
+
+```typescript
+Record<
+  string,
+  (props?: {
+    fill?: string;
+    square?: string;
+    svgStyle?: React.CSSProperties;
+  }) => React.JSX.Element
+>;
+```
+
+**Standard use case:** Using custom piece designs or implementing different piece sets.
+
+> Live example: [`stories/options/Pieces.stories.tsx`](../../docs/vendor/react-chessboard/stories/options/Pieces.stories.tsx)
+
+### `options.position`
+
+The current position of the board in FEN notation or an object of square coordinates to piece type.
+
+**Default value:** `"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"`
+
+**TypeScript type:** `string | { [square: string]: { pieceType: string } }`
+
+**Standard use case:** Setting up specific chess positions or updating the board state.
+
+> Live example: [`stories/options/Position.stories.tsx`](../../docs/vendor/react-chessboard/stories/options/Position.stories.tsx)
+
+### `options.showAnimations`
+
+Controls whether piece movements are animated.
+
+**Default value:** `true`
+
+**TypeScript type:** `boolean`
+
+**Standard use case:** Disabling animations for performance, accessibility, or design reasons.
+
+> Live example: [`stories/options/ShowAnimations.stories.tsx`](../../docs/vendor/react-chessboard/stories/options/ShowAnimations.stories.tsx)
+
+### `options.showNotation`
+
+Controls whether board coordinates are displayed.
+
+**Default value:** `true`
+
+**TypeScript type:** `boolean`
+
+**Standard use case:** Hiding notation for a cleaner look or when space is limited.
+
+> Live example: [`stories/options/ShowNotation.stories.tsx`](../../docs/vendor/react-chessboard/stories/options/ShowNotation.stories.tsx)
+
+### `options.squareRenderer`
+
+Controls the rendering of squares on the board. This allows you to fully replace the default square rendering with your own custom rendering.
+
+**Default value:** `undefined`
+
+**TypeScript type:**
+
+```typescript
+({
+  piece: { pieceType: string } | null;
+  square: string;
+  children?: React.ReactNode;
+}) => React.JSX.Element;
+```
+
+**Standard use case:** Customizing the appearance of squares to match your application's theme.
+
+> Live example: [`stories/options/SquareRenderer.stories.tsx`](../../docs/vendor/react-chessboard/stories/options/SquareRenderer.stories.tsx)
+
+### `options.squareStyle`
+
+Controls the styling of all squares on the board, regardless of their colour.
+
+**Default value:**
+
+```tsx
+{
+  aspectRatio: "1/1",
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "center",
+  position: "relative",
+}
+```
+
+**TypeScript type:** `React.CSSProperties`
+
+**Standard use case:** Customizing the size or appearance of all squares uniformly.
+
+> Live example: [`stories/options/SquareStyle.stories.tsx`](../../docs/vendor/react-chessboard/stories/options/SquareStyle.stories.tsx)
+
+### `options.squareStyles`
+
+Controls the styling of individual squares on the board. This style will go over the top of any existing styles set with the [`squareStyle`](#optionssquarestyle) prop. This allows you to achieve effects like a background color over light and dark squares without needing to know whether the square is light or dark.
+
+**Default value:** `{}`
+
+**TypeScript type:** `Record<string, React.CSSProperties>`
+
+**Standard use case:** Customizing the appearance of specific squares such as for right clicks on squares or premoves.
+
+> Live example: [`stories/options/SquareStyles.stories.tsx`](../../docs/vendor/react-chessboard/stories/options/SquareStyles.stories.tsx)
