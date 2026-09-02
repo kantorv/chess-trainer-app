@@ -3,6 +3,7 @@ import GridViewRoundedIcon from "@mui/icons-material/GridViewRounded";
 import TouchAppRoundedIcon from "@mui/icons-material/TouchAppRounded";
 import InsightsRoundedIcon from "@mui/icons-material/InsightsRounded";
 import SmartToyRoundedIcon from "@mui/icons-material/SmartToyRounded";
+import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
 import type { NavFolderId } from "./navFolders";
 
 export type NavItem = {
@@ -16,7 +17,7 @@ export type NavItem = {
 };
 
 /**
- * The four board screens, in one place. The sidebar builds its tree from this
+ * Every screen, in one place. The sidebar builds its tree from this
  * rather than repeating a list item per route, so adding a screen is one entry
  * here plus the route in `App.tsx` and a string in both catalogs.
  */
@@ -44,6 +45,12 @@ export const navItems: readonly NavItem[] = [
     labelKey: "nav.playEngine",
     icon: SmartToyRoundedIcon,
     folder: "basic-examples",
+  },
+  {
+    to: "/games/load-pgn",
+    labelKey: "nav.loadPgn",
+    icon: UploadFileRoundedIcon,
+    folder: "games",
   },
 ];
 

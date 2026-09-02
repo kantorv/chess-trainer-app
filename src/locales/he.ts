@@ -17,8 +17,10 @@ const he: typeof en = {
     movingPiece: "דוגמת הזזת כלים",
     engineEvaluation: "הדגמת הערכת מנוע",
     playEngine: "משחק מול המנוע 1",
+    loadPgn: "טעינת PGN",
     folders: {
       basicExamples: "דוגמאות בסיסיות",
+      games: "משחקים",
     },
   },
   language: {
@@ -28,6 +30,23 @@ const he: typeof en = {
   panel: {
     analysisTitle: "ניתוח",
     analysisPlaceholder: "ההערכה ורשימת המהלכים יופיעו כאן.",
+  },
+  loadPgn: {
+    dropHint: "גררו לכאן קובץ PGN",
+    chooseFile: "בחרו קובץ PGN",
+    pasteLabel: "או הדביקו טקסט PGN",
+    load: "טעינה",
+    gamesTitle: "המשחקים בקובץ",
+    gameFallback: "משחק {{number}}",
+    versus: "נגד",
+    movesLoaded: "מהלכים: {{total}}",
+    emptyState: "עדיין לא נטען משחק.",
+    errors: {
+      empty: "לא נמצא PGN בקלט.",
+      parse: "לא ניתן לקרוא את ה-PGN הזה. {{detail}}",
+      parseGame: "לא ניתן לקרוא את משחק {{number}} בקובץ. {{detail}}",
+      file: "לא ניתן לקרוא את הקובץ.",
+    },
   },
   footer: {
     source: "מקור",

@@ -6,7 +6,7 @@ import { Link, MemoryRouter } from "react-router";
 import i18n from "../../i18n";
 import AppThemeWithLang from "../../theme/AppThemeWithLang";
 import SideBar from "./Sidebar";
-import { navItems } from "./navItems";
+import { navItems, navItemsInFolder } from "./navItems";
 import { navFolders } from "./navFolders";
 import type { NavTreeNode } from "./navTree";
 
@@ -90,7 +90,7 @@ describe("sidebar navigation", () => {
 });
 
 describe("the folder tree", () => {
-  it("groups every screen under the Basic Examples folder, open on first render", () => {
+  it("renders a row per folder, each open on first render", () => {
     renderAt("/");
 
     const folder = basicExamples();
@@ -107,10 +107,16 @@ describe("the folder tree", () => {
     renderAt("/");
     const user = userEvent.setup();
 
+    // Collapsing one folder hides that folder's screens and nobody else's, so
+    // the count to expect is whatever lives in the other folders.
+    const elsewhere = navItems.length - navItemsInFolder("basic-examples").length;
+
     await user.click(basicExamples());
     expect(basicExamples()).toHaveAttribute("aria-expanded", "false");
     // `Collapse` unmounts its body when the shut animation ends, not on click.
-    await waitFor(() => expect(screen.queryAllByRole("link")).toHaveLength(0));
+    await waitFor(() =>
+      expect(screen.queryAllByRole("link")).toHaveLength(elsewhere),
+    );
 
     await user.click(basicExamples());
     expect(basicExamples()).toHaveAttribute("aria-expanded", "true");
