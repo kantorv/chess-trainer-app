@@ -16,6 +16,10 @@ const en = {
     movingPiece: "Moving example",
     engineEvaluation: "Engine evaluation demo",
     playEngine: "Play with engine 1",
+    /** Sidebar folders — groupings over the routes, never routes themselves. */
+    folders: {
+      basicExamples: "Basic Examples",
+    },
   },
   language: {
     en: "English",
