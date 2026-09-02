@@ -3,6 +3,7 @@ import GridViewRoundedIcon from "@mui/icons-material/GridViewRounded";
 import TouchAppRoundedIcon from "@mui/icons-material/TouchAppRounded";
 import InsightsRoundedIcon from "@mui/icons-material/InsightsRounded";
 import SmartToyRoundedIcon from "@mui/icons-material/SmartToyRounded";
+import SportsEsportsRoundedIcon from "@mui/icons-material/SportsEsportsRounded";
 import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
 import type { NavFolderId } from "./navFolders";
 
@@ -45,6 +46,12 @@ export const navItems: readonly NavItem[] = [
     labelKey: "nav.playEngine",
     icon: SmartToyRoundedIcon,
     folder: "basic-examples",
+  },
+  {
+    to: "/engine/play",
+    labelKey: "nav.playWithEngine",
+    icon: SportsEsportsRoundedIcon,
+    folder: "engine",
   },
   {
     to: "/games/load-pgn",
