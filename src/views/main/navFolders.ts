@@ -1,6 +1,7 @@
 import type { SvgIconComponent } from "@mui/icons-material";
 import FolderRoundedIcon from "@mui/icons-material/FolderRounded";
 import FolderSpecialRoundedIcon from "@mui/icons-material/FolderSpecialRounded";
+import HandymanRoundedIcon from "@mui/icons-material/HandymanRounded";
 import MemoryRoundedIcon from "@mui/icons-material/MemoryRounded";
 
 /**
@@ -17,7 +18,7 @@ import MemoryRoundedIcon from "@mui/icons-material/MemoryRounded";
  * not), give it a `labelKey` present in both `en.ts` and `he.ts`, and set
  * `folder` on the screens that join it.
  */
-export type NavFolderId = "basic-examples" | "engine" | "games";
+export type NavFolderId = "basic-examples" | "engine" | "games" | "tools";
 
 export type NavFolder = {
   id: NavFolderId;
@@ -44,5 +45,10 @@ export const navFolders: readonly NavFolder[] = [
     id: "games",
     labelKey: "nav.folders.games",
     icon: FolderSpecialRoundedIcon,
+  },
+  {
+    id: "tools",
+    labelKey: "nav.folders.tools",
+    icon: HandymanRoundedIcon,
   },
 ];

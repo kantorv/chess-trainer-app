@@ -18,11 +18,13 @@ const en = {
     playEngine: "Play with engine 1",
     playWithEngine: "Play with Engine",
     loadPgn: "Load PGN",
+    analysisBoard: "Analysis Board",
     /** Sidebar folders — groupings over the routes, never routes themselves. */
     folders: {
       basicExamples: "Basic Examples",
       engine: "Engine",
       games: "Games",
+      tools: "Tools",
     },
   },
   language: {
@@ -65,6 +67,34 @@ const en = {
       termination: "Termination",
     },
   },
+  /** The evaluation bar — `views/shared/EvalBar.tsx`, on two screens. */
+  board: {
+    evalBar: "Evaluation",
+  },
+  /** The engine's lines — `views/shared/BestVariations.tsx`, on two screens. */
+  variations: {
+    title: "Best variations",
+    depth: "Depth {{depth}}",
+    thinking: "Waiting for the engine…",
+    partial: "{{shown}} of {{requested}} lines so far.",
+  },
+  /** The promotion picker — `views/shared/PromotionPicker.tsx`, on two screens. */
+  promotion: {
+    title: "Choose a piece",
+    pieces: {
+      q: "Queen",
+      r: "Rook",
+      n: "Knight",
+      b: "Bishop",
+    },
+  },
+  /** What `views/shared/OptionSlider.tsx` says about an option it cannot drive. */
+  engineOption: {
+    /** Shown under a control the running engine build does not have. */
+    unsupported: "This engine build has no \"{{option}}\" option.",
+    /** Shown under a control the build declares but pins to a single value. */
+    fixed: "This engine build fixes {{option}} at {{value}}.",
+  },
   moveList: {
     title: "Moves",
     /** Ply 0, a selectable entry of its own. */
@@ -101,8 +131,6 @@ const en = {
       engine: "Engine",
       lines: "Variations",
     },
-    /** Accessible name of the evaluation bar; the score is appended to it. */
-    evalBar: "Evaluation",
     status: {
       yourTurn: "Your move",
       engineTurn: "The engine is thinking…",
@@ -120,29 +148,68 @@ const en = {
       multiPv: "Variations to show",
       threads: "Threads",
       hash: "Hash (MB)",
-      /** Shown under a control the running engine build does not have. */
-      unsupported: "This engine build has no \"{{option}}\" option.",
-      /** Shown under a control the build declares but pins to a single value. */
-      fixed: "This engine build fixes {{option}} at {{value}}.",
       playAs: "Play as",
       white: "White",
       black: "Black",
       evalBar: "Show evaluation bar",
       newGame: "New game",
     },
-    variations: {
-      title: "Best variations",
-      depth: "Depth {{depth}}",
-      thinking: "Waiting for the engine…",
-      partial: "{{shown}} of {{requested}} lines so far.",
+  },
+  /**
+   * The Analysis Board. Chrome only: SAN, the FEN and the scores are notation
+   * and stay language-independent.
+   */
+  analysis: {
+    tabs: {
+      moves: "Moves",
+      engine: "Engine",
+      lines: "Variations",
+      position: "Position",
     },
-    promotion: {
-      title: "Choose a piece",
-      pieces: {
-        q: "Queen",
-        r: "Rook",
-        n: "Knight",
-        b: "Bishop",
+    /** The variation tree, where a move list has to say more than "Moves". */
+    tree: {
+      title: "Moves and variations",
+      empty: "Play a move, or set a position up from the Position tab.",
+      /** Read by a screen reader before a side line's moves. */
+      variation: "Variation",
+    },
+    settings: {
+      title: "Analysis",
+      engineOn: "Analyse with the engine",
+      /** Said where the lines would be, when the engine is switched off. */
+      engineOff: "The engine is off. Switch it on to analyse this position.",
+      depth: "Search depth",
+      moveTime: "Move time",
+      moveTimeValue: "{{seconds}}s",
+      moveTimeNone: "No limit",
+      multiPv: "Variations to show",
+      evalBar: "Show evaluation bar",
+      clear: "Clear the board",
+    },
+    position: {
+      pgnTitle: "Load a game",
+      chooseFile: "Choose a .pgn file",
+      dropHint: "Drop a .pgn file here",
+      pasteLabel: "Or paste PGN text",
+      loadPgn: "Load PGN",
+      gamesTitle: "Games in this file",
+      gameFallback: "Game {{number}}",
+      versus: "vs",
+      fenTitle: "Set a position up",
+      fenLabel: "Paste a FEN",
+      loadFen: "Set position",
+      currentTitle: "This position",
+      currentFen: "Current FEN",
+      currentPgn: "Current PGN",
+      copy: "Copy",
+      copied: "Copied",
+      copyFailed: "Could not copy — select the text and copy it by hand.",
+      errors: {
+        emptyPgn: "No PGN found in that input.",
+        pgn: "Could not read this PGN. {{detail}}",
+        pgnGame: "Could not read game {{number}} in this file. {{detail}}",
+        fen: "Could not read this FEN. {{detail}}",
+        file: "Could not read that file.",
       },
     },
   },

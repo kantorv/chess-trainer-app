@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import i18n from "../../../i18n";
-import AppThemeWithLang from "../../../theme/AppThemeWithLang";
+import i18n from "../../i18n";
+import AppThemeWithLang from "../../theme/AppThemeWithLang";
 import PromotionPicker from "./PromotionPicker";
 
 /*

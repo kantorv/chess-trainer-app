@@ -61,18 +61,26 @@ export const arrowsAtPly = (game: Game, ply: number): Arrow[] => {
 };
 
 /**
- * Where the game's move numbering starts, read off the initial FEN. Almost
- * always "White, move 1" — but a PGN with a `FEN` tag can start from Black to
- * move, or from move 24, and printing `1.` there would be a lie.
+ * Where move numbering starts, read off a starting FEN. Almost always "White,
+ * move 1" — but a position set up from a FEN can start from Black to move, or
+ * from move 24, and printing `1.` there would be a lie.
+ *
+ * Exported because the variation tree numbers its moves by the same rule
+ * (`lib/gameTree.ts` `plyLabel`), and two copies of it would drift.
  */
-const numberingOf = (game: Game) => {
-  const [, turn, , , , fullmove] = initialFenOf(game).split(/\s+/);
+export const startNumbering = (
+  fen: string,
+): { whiteFirst: boolean; firstNumber: number } => {
+  const [, turn, , , , fullmove] = fen.split(/\s+/);
   const first = Number.parseInt(fullmove ?? "", 10);
   return {
     whiteFirst: turn !== "b",
     firstNumber: Number.isFinite(first) && first > 0 ? first : 1,
   };
 };
+
+/** The same, for a game — its numbering comes from its own initial position. */
+const numberingOf = (game: Game) => startNumbering(initialFenOf(game));
 
 /**
  * The moves grouped into numbered pairs, so the list can render two columns

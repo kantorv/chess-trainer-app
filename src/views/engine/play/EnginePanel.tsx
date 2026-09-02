@@ -6,9 +6,9 @@ import Tabs from "@mui/material/Tabs";
 import Typography from "@mui/material/Typography";
 import { useTranslation } from "react-i18next";
 import { formatScore } from "../../../lib/engineAnalysis";
+import BestVariations from "../../shared/BestVariations";
 import BoardControls from "../../shared/BoardControls";
 import MoveList from "../../shared/MoveList";
-import BestVariations from "./BestVariations";
 import EngineSettings from "./EngineSettings";
 import type { PlayWithEngineState } from "./usePlayWithEngine";
 

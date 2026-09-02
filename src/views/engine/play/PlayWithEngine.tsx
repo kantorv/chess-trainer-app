@@ -10,8 +10,8 @@ import EvalBar, {
   EVAL_BAR_GAP_PX,
   EVAL_BAR_TOTAL_PX,
 } from "../../shared/EvalBar";
+import PromotionPicker from "../../shared/PromotionPicker";
 import EnginePanel from "./EnginePanel";
-import PromotionPicker from "./PromotionPicker";
 import { usePlayWithEngine } from "./usePlayWithEngine";
 
 /**
@@ -94,7 +94,7 @@ function PlayWithEngine() {
             <EvalBar
               score={topLine?.score ?? null}
               orientation={state.orientation}
-              label={t("playEngine.evalBar")}
+              label={t("board.evalBar")}
             />
           </Box>
         )}

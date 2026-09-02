@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { DEFAULT_POSITION } from "chess.js";
-import i18n from "../../../i18n";
-import AppThemeWithLang from "../../../theme/AppThemeWithLang";
-import { pvToSan } from "../../../lib/engineAnalysis";
+import i18n from "../../i18n";
+import AppThemeWithLang from "../../theme/AppThemeWithLang";
+import { pvToSan } from "../../lib/engineAnalysis";
 import BestVariations from "./BestVariations";
-import type { Analysis, EngineLine } from "./usePlayWithEngine";
+import type { Analysis, EngineLine } from "../../lib/engineAnalysis";
 
 const line = (
   multipv: number,

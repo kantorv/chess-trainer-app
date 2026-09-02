@@ -32,6 +32,71 @@ export type Score =
 export type Turn = "w" | "b";
 
 /**
+ * One line of the engine's current thinking, already read into display terms.
+ *
+ * Here rather than on a screen because more than one screen collects these now —
+ * Play with Engine and the Analysis Board — and the view that renders them
+ * (`views/shared/BestVariations.tsx`) must not have to import a type from
+ * whichever screen happens to own it.
+ */
+export type EngineLine = {
+  /** 1-based rank among the `MultiPV` lines; 1 is the engine's choice. */
+  multipv: number;
+  score: Score | null;
+  depth: number;
+  /** The principal variation in SAN, replayed from the analysed position. */
+  san: string[];
+};
+
+/** What the engine is currently saying about one position. */
+export type Analysis = {
+  /** The position these lines describe. Empty before the first result. */
+  fen: string;
+  /** The deepest ply reached so far in this search. */
+  depth: number;
+  lines: EngineLine[];
+};
+
+/** Nothing said yet — the state before a search, and after one is abandoned. */
+export const EMPTY_ANALYSIS: Analysis = { fen: "", depth: 0, lines: [] };
+
+/**
+ * The most lines either screen offers to ask the engine for.
+ *
+ * A UI bound, not an engine one: this build declares `MultiPV min 1 max 500`, and
+ * a slider carrying all 500 puts the range anybody actually uses — the first few
+ * lines — inside a few pixels at its left end. It is applied through
+ * `OptionSlider`'s `maxOffered`, which only ever *narrows* the engine's range, so
+ * a build declaring fewer than this still wins and the control can never offer a
+ * value the engine would refuse.
+ */
+export const MAX_VARIATIONS_OFFERED = 10;
+
+/**
+ * Fold one `info` line into an existing analysis.
+ *
+ * The rule worth naming: a result for a **different position replaces the whole
+ * set** rather than merging into it. Two positions' lines are not comparable, and
+ * half of each would be nonsense on screen. Both engine screens collect results
+ * the same way, so the fold lives here and is tested directly.
+ */
+export const withEngineLine = (
+  previous: Analysis,
+  fen: string,
+  line: EngineLine,
+): Analysis => {
+  const isSamePosition = previous.fen === fen;
+  const lines = isSamePosition ? [...previous.lines] : [];
+  lines[line.multipv - 1] = line;
+
+  return {
+    fen,
+    depth: isSamePosition ? Math.max(previous.depth, line.depth) : line.depth,
+    lines,
+  };
+};
+
+/**
  * Turn one `info` line's raw numbers into a {@link Score} in White's
  * perspective, or `null` when the line carried no score at all.
  *
