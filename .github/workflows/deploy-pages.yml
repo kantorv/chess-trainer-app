@@ -1,0 +1,94 @@
+# Builds the Vite app and deploys dist/ to GitHub Pages.
+#
+# Two triggers, each for a different reason:
+#
+#   push (main, filtered) — the ordinary path. A merged PR that touched the
+#     app republishes the site.
+#   workflow_dispatch     — everything else. release.yml's publish-pages job
+#     fires exactly this trigger with --ref main (a GITHUB_TOKEN push emits no
+#     workflow runs, so the `push` trigger never sees the release's version
+#     bump), and it is also how a human re-runs or recovers a deploy.
+#
+# THE REF IS THE WHOLE POINT, and it is why this is not a `workflow_call`: a
+# called workflow runs in the caller's context, so `github.ref` would stay
+# `refs/pull/<n>/merge` from release.yml's pull_request trigger, and the
+# `github-pages` environment only allows `main`. A dispatch creates its own
+# run at `refs/heads/main`.
+#
+# PRECONDITION, not fixable from this repository: Settings -> Pages -> Build
+# and deployment -> Source must be "GitHub Actions". Until a human does that,
+# actions/deploy-pages fails with "Get Pages site failed".
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "public/**"
+      - "index.html"
+      - "package.json"
+      - "yarn.lock"
+      - "vite.config.ts"
+      - "tsconfig*.json"
+      - ".github/workflows/deploy-pages.yml"
+  workflow_dispatch:
+
+# Serialize deploys without cancelling one in flight: a half-deployed Pages
+# site is worse than a slightly stale one.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    name: Build the Vite app
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: yarn
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Build
+        run: yarn build
+
+      # GitHub Pages serves no SPA fallback: a hard load of a client-side
+      # route (e.g. /chess-trainer-app/analyze) would 404. Serving index.html
+      # for unknown paths lets react-router's browser router boot and render
+      # the right route from window.location — the URL is preserved, no
+      # redirect dance needed.
+      - name: SPA fallback for client-side routes
+        run: cp dist/index.html dist/404.html
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v6
+
+      - name: Upload dist/ as a Pages artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: dist
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v5
