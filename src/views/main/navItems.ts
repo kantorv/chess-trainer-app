@@ -5,6 +5,7 @@ import InsightsRoundedIcon from "@mui/icons-material/InsightsRounded";
 import SmartToyRoundedIcon from "@mui/icons-material/SmartToyRounded";
 import SportsEsportsRoundedIcon from "@mui/icons-material/SportsEsportsRounded";
 import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
+import AccountTreeRoundedIcon from "@mui/icons-material/AccountTreeRounded";
 import type { NavFolderId } from "./navFolders";
 
 export type NavItem = {
@@ -58,6 +59,12 @@ export const navItems: readonly NavItem[] = [
     labelKey: "nav.loadPgn",
     icon: UploadFileRoundedIcon,
     folder: "games",
+  },
+  {
+    to: "/tools/analysis",
+    labelKey: "nav.analysisBoard",
+    icon: AccountTreeRoundedIcon,
+    folder: "tools",
   },
 ];
 
