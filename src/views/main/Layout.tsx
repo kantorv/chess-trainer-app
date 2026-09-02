@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { default as SideBar } from './Sidebar';
 import { Footer } from './Footer';
 import { BoardWidgetContext } from './service';
+import { RightPanelOutlet, RightPanelProvider } from './rightPanel';
 import { ForceLTR } from '../../theme/ForceLTR';
 import ColorModeIconDropdown from '../../theme/ColorModeIconDropdown';
 import LanguageSwitch from '../../theme/LanguageSwitch';
@@ -86,10 +87,29 @@ const Header = () => {
     );
 };
 
+/**
+ * What the right-hand aside shows until a route puts something there — see
+ * `rightPanel.tsx`. Unchanged from when the shell rendered these two lines
+ * inline: a route that registers nothing must see exactly this.
+ */
+const AnalysisPlaceholder = () => {
+    const { t } = useTranslation();
+
+    return (
+        <>
+            <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                {t("panel.analysisTitle")}
+            </Typography>
+            <Typography variant="body2" sx={{ color: "text.secondary", mt: 0.5 }}>
+                {t("panel.analysisPlaceholder")}
+            </Typography>
+        </>
+    );
+};
+
 const DefaultLayoutViewport = () => {
 
     const svc = BoardWidgetContext.useActorRef()
-    const { t } = useTranslation();
 
     // The board area is sized in pixels because `react-chessboard` fills its
     // container and has no intrinsic size. `ref` sits on the padded board
@@ -287,12 +307,17 @@ const DefaultLayoutViewport = () => {
                                 borderColor: "divider",
                             }}
                         >
-                           <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                               {t("panel.analysisTitle")}
-                           </Typography>
-                           <Typography variant="body2" sx={{ color: "text.secondary", mt: 0.5 }}>
-                               {t("panel.analysisPlaceholder")}
-                           </Typography>
+                            {/*
+                                The per-route panel slot. A route renders
+                                `<RightPanel>` (see `rightPanel.tsx`) to fill
+                                this aside with its own content; with none
+                                registered — all four board screens today — the
+                                outlet renders the Analysis placeholder and the
+                                aside is exactly what it always was. The aside
+                                itself stays outside ForceLTR and mirrors under
+                                Hebrew, panel content included.
+                            */}
+                            <RightPanelOutlet fallback={<AnalysisPlaceholder />} />
 
                         </Box>
 
@@ -316,7 +341,13 @@ const DefaultLayoutViewport = () => {
 
 const DefaultLayout = ()=>
             <BoardWidgetContext.Provider>
-                <DefaultLayoutViewport />
+                {/*
+                    Above the viewport, so the aside's outlet and every route
+                    behind the `<Outlet />` share one slot.
+                */}
+                <RightPanelProvider>
+                    <DefaultLayoutViewport />
+                </RightPanelProvider>
             </BoardWidgetContext.Provider>
 
 export { DefaultLayout }
