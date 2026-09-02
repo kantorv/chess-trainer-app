@@ -31,6 +31,11 @@ const he: typeof en = {
     analysisTitle: "ניתוח",
     analysisPlaceholder: "ההערכה ורשימת המהלכים יופיעו כאן.",
   },
+  moveList: {
+    title: "מהלכים",
+    startPosition: "עמדת הפתיחה",
+    noMoves: "אין מהלכים במשחק הזה.",
+  },
   loadPgn: {
     dropHint: "גררו לכאן קובץ PGN",
     chooseFile: "בחרו קובץ PGN",

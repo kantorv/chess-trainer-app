@@ -46,9 +46,10 @@ change by whether it *adds* to that count, not by the exit code.
 | `src/theme/` | The look: `themePrimitives.ts` (tokens), `AppThemeWithLang.tsx` (the provider), `rtlCache.ts`, `ForceLTR.tsx`, and the two header controls. |
 | `src/views/main/` | The app shell — `Layout.tsx` (header + sidebar + board area), `Sidebar.tsx`, the nav registries (`navItems.ts`, `navFolders.ts`, `navTree.ts`), and the XState `service.ts`. |
 | `src/views/demos/`, `src/views/player/` | The four board screens. |
-| `src/views/games/load_pgn/` | The Load PGN screen: file / drop / paste ingestion and the multi-game picker. |
+| `src/views/games/load_pgn/` | The Load PGN screen: file / drop / paste ingestion and the multi-game picker, plus the move list (`MoveList.tsx`) and the ply state and keyboard stepping behind it (`useGameNavigation.ts`). |
 | `src/lib/engine.ts` | The Stockfish worker wrapper. |
 | `src/lib/pgn.ts` | PGN ingestion and the `ParsedGame` model (tag pairs, plus moves carrying `san` / `from` / `to` / `fen` / `ply`). Pure data — the Load PGN screen fills it, the move list reads it. |
+| `src/lib/gameNavigation.ts` | Walking a `ParsedGame`: `clampPly` / `fenAtPly` / `arrowsAtPly` / `moveRowsOf`. A ply is a half-move index, 0 being the starting position; each ply's FEN is read off the move that already carries it, so nothing re-simulates a game. |
 | `src/lib/treeManager.ts` | Read-only tree walks (`traverse` / `toArray` / `collectIds` / `findBy` / `getPath`). The seam for anything tree-shaped; `navTree.ts` is its only consumer. |
 
 ## Theming, direction and language
@@ -70,6 +71,13 @@ Two consequences worth knowing before you touch this:
   and the engine still report it as bottom-left. `Layout.tsx` wraps the board
   area in `ForceLTR` for exactly this. Use the same escape hatch for any other
   subtree that must stay LTR.
+- **Pinning a single *token* to LTR takes the `dir` attribute, not CSS.** Under
+  Hebrew these styles go through the RTL emotion cache, whose stylis plugin
+  flips `direction: ltr` into `direction: rtl` exactly as it flips the paddings
+  — an `sx` declaration is reversed into the bug it was meant to prevent. The
+  move list's SAN cells carry `dir="ltr"` for this reason; `unicode-bidi` is
+  untouched by the plugin and can stay in `sx`. `ForceLTR` is the other option
+  but it is a whole provider stack — too much for a handful of inline tokens.
 
 ## Sidebar navigation
 
