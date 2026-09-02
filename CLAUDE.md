@@ -40,9 +40,10 @@ change by whether it *adds* to that count, not by the exit code.
 | `src/i18n.ts` | i18next setup, plus `supportedLanguages` / `rtlLanguages` / `asAppLanguage()`. |
 | `src/locales/` | Inline `en` / `he` catalogs. `he` is typed `typeof en`, so a missing key is a compile error. |
 | `src/theme/` | The look: `themePrimitives.ts` (tokens), `AppThemeWithLang.tsx` (the provider), `rtlCache.ts`, `ForceLTR.tsx`, and the two header controls. |
-| `src/views/main/` | The app shell — `Layout.tsx` (header + sidebar + board area), `Sidebar.tsx`, `navItems.ts`, and the XState `service.ts`. |
+| `src/views/main/` | The app shell — `Layout.tsx` (header + sidebar + board area), `Sidebar.tsx`, the nav registries (`navItems.ts`, `navFolders.ts`, `navTree.ts`), and the XState `service.ts`. |
 | `src/views/demos/`, `src/views/player/` | The four board screens. |
 | `src/lib/engine.ts` | The Stockfish worker wrapper. |
+| `src/lib/treeManager.ts` | Read-only tree walks (`traverse` / `toArray` / `collectIds` / `findBy` / `getPath`). The seam for anything tree-shaped; `navTree.ts` is its only consumer. |
 
 ## Theming, direction and language
 
@@ -63,3 +64,33 @@ Two consequences worth knowing before you touch this:
   and the engine still report it as bottom-left. `Layout.tsx` wraps the board
   area in `ForceLTR` for exactly this. Use the same escape hatch for any other
   subtree that must stay LTR.
+
+## Sidebar navigation
+
+The sidebar is a folder tree over the routes. Folders group screens; routes
+stay global, so a folder never appears in a URL and `App.tsx` is untouched by
+one. Four layers, each consumed by the next:
+
+| Layer | File | What it owns |
+| --- | --- | --- |
+| Walks | `src/lib/treeManager.ts` | Depth-first reads over any tree. The only place tree traversal is written. |
+| Data | `navFolders.ts` + `navItems.ts` | The authored folder tree (`{ id, labelKey, icon, children? }`) and the screens, each naming its `folder`. |
+| Builder | `navTree.ts` | Pure `buildNavTree` — sub-folders before that folder's own screens at every level — plus `folderPath` (the breadcrumb, and the chain the sidebar re-opens). |
+| Renderer | `Sidebar.tsx` | A recursive `TreeRow`. Folders are `aria-expanded` toggles, screens are links. |
+
+Consequences worth knowing:
+
+- **Nesting a folder is a data edit.** Add it to `navFolders` (at any depth),
+  give it a `labelKey` present in both catalogs, and point screens at it. The
+  renderer already recurses — `navTree.test.ts` and `Sidebar.test.tsx` both
+  carry fixtures nested deeper than anything shipped.
+- **Folders start open and are never persisted.** `Sidebar.tsx` tracks what the
+  reader *collapsed*, so absent means open and no map needs seeding. Navigating
+  re-opens the active screen's ancestors — adjusted during render against the
+  previous pathname, not in an effect, which `react-hooks/set-state-in-effect`
+  rejects.
+- **The active state is an exact path match.** `"/"` is a prefix of every other
+  route, so `startsWith` would light the basic board up everywhere.
+- **The sidebar mirrors; only the board does not.** Depth is indented with
+  `paddingInlineStart`, which follows the direction on its own — never
+  `paddingLeft`, and never wrap this subtree in `ForceLTR`.
