@@ -21,7 +21,7 @@ these instead.
 
 | File | Covers |
 | --- | --- |
-| **this file** | project conventions, the engine wrapper, the demo boards, v4→v5 |
+| **this file** | project conventions, the engine wrapper, the demo boards, v4→v5, testing a board |
 | [`react-chessboard-options-api.md`](./react-chessboard-options-api.md) | **every `options.*` key** — type, default, purpose. All 43 of them. |
 | [`react-chessboard-types-and-helpers.md`](./react-chessboard-types-and-helpers.md) | exported helpers (`generateBoard`, `fenStringToPositionObject`, `chessColumnToColumnIndex`, `getRelativeCoords`, …) and every handler-arg / data type (`PieceDropHandlerArgs`, `SquareHandlerArgs`, `PieceRenderObject`, `FenPieceString`, …) |
 
@@ -317,3 +317,27 @@ Full detail: `docs/vendor/react-chessboard/G_UpgradeToV5.mdx`.
       `terminate()` on unmount, score normalized by turn.
 - [ ] Any `setTimeout` / async work cleared on unmount.
 - [ ] `tsc -b` clean.
+
+---
+
+## 8. Testing a board screen
+
+**Stub `<Chessboard>` in Vitest.** jsdom has no layout engine, so the board
+measures a zero-sized square and throws `Square width not found` from a mount
+effect — an uncaught exception that fails the whole test file, not just the
+assertion that touched it. Tests are about the screen *around* the board, so
+mock the component and assert the position it was handed:
+
+```tsx
+vi.mock('react-chessboard', () => ({
+  Chessboard: ({ options }: { options: { position?: string } }) => (
+    <div data-testid="board" data-position={options.position} />
+  ),
+}));
+```
+
+The type-only `import type { ChessboardOptions }` in the component under test is
+erased at compile time, so the mock does not have to provide it. Anything that
+depends on the board actually rendering — sizing, drag, arrows — belongs in a
+browser check, not in jsdom. `views/games/load_pgn/LoadPgn.test.tsx` is the
+worked example.

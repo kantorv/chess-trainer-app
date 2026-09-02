@@ -46,7 +46,9 @@ change by whether it *adds* to that count, not by the exit code.
 | `src/theme/` | The look: `themePrimitives.ts` (tokens), `AppThemeWithLang.tsx` (the provider), `rtlCache.ts`, `ForceLTR.tsx`, and the two header controls. |
 | `src/views/main/` | The app shell — `Layout.tsx` (header + sidebar + board area), `Sidebar.tsx`, the nav registries (`navItems.ts`, `navFolders.ts`, `navTree.ts`), and the XState `service.ts`. |
 | `src/views/demos/`, `src/views/player/` | The four board screens. |
+| `src/views/games/load_pgn/` | The Load PGN screen: file / drop / paste ingestion and the multi-game picker. |
 | `src/lib/engine.ts` | The Stockfish worker wrapper. |
+| `src/lib/pgn.ts` | PGN ingestion and the `ParsedGame` model (tag pairs, plus moves carrying `san` / `from` / `to` / `fen` / `ply`). Pure data — the Load PGN screen fills it, the move list reads it. |
 | `src/lib/treeManager.ts` | Read-only tree walks (`traverse` / `toArray` / `collectIds` / `findBy` / `getPath`). The seam for anything tree-shaped; `navTree.ts` is its only consumer. |
 
 ## Theming, direction and language
