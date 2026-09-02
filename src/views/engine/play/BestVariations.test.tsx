@@ -97,6 +97,33 @@ describe("the best variations view", () => {
     );
   });
 
+  it("drops the ranks left over from a wider search when MultiPV is lowered", () => {
+    /*
+      Lowering MultiPV re-searches the *same* position, so the analysis state is
+      kept rather than replaced and the old ranks are still in the array — the
+      engine has simply stopped reporting them. Asking for one line must show
+      one line, not three, two of which no longer move.
+    */
+    renderVariations(
+      {
+        fen: DEFAULT_POSITION,
+        depth: 14,
+        lines: [
+          line(1, 94, "e2e4 e7e6"),
+          line(2, 77, "c2c4 e7e6"),
+          line(3, 53, "d2d4 g8f6"),
+        ],
+      },
+      1,
+    );
+
+    expect(screen.getByTestId("variation-1")).toBeInTheDocument();
+    expect(screen.queryByTestId("variation-2")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("variation-3")).not.toBeInTheDocument();
+    // One of one is a complete set, so nothing calls it partial either.
+    expect(screen.queryByTestId("variations-partial")).not.toBeInTheDocument();
+  });
+
   it("says nothing about a partial set once every requested line is in", () => {
     renderVariations(
       {

@@ -24,12 +24,26 @@ type EngineMessageCallback = (messageData: EngineMessage) => void;
 /**
  * One option the running worker declared during the `uci` handshake.
  *
- * Read, never assumed. Which options exist is a property of the *binary* in
- * `public/stockfish/`, not of the UCI spec — the build shipped here declares
- * `Threads`, `MultiPV` and `Skill Level` but has no `Hash` and no `UCI_Elo` at
- * all. A settings UI that hardcoded the usual list would show knobs that
- * silently do nothing, so it reads {@link Engine.options} instead and can say
- * honestly which ones this engine does not have.
+ * Read, never assumed. Which options exist — and which of them will take a
+ * value — is a property of the *binary* in `public/stockfish/`, not of the UCI
+ * spec. Asked `uci`, the build shipped here answers with, among others:
+ *
+ * ```
+ * option name Threads type spin default 1 min 1 max 1
+ * option name Hash type spin default 16 min 16 max 16
+ * option name MultiPV type spin default 1 min 1 max 500
+ * option name Skill Level type spin default 20 min 0 max 20
+ * ```
+ *
+ * So `Threads` and `Hash` are declared but **pinned** — `min` equals `max`, one
+ * legal value each — while `MultiPV` and `Skill Level` are genuinely
+ * adjustable, and there is no `UCI_Elo` or `UCI_LimitStrength` at all. Three
+ * states, not two. A settings UI that hardcoded the usual list would show knobs
+ * that silently do nothing, so it reads {@link Engine.options} instead and can
+ * say honestly which ones this engine does not have and which ones it has
+ * already made up its mind about. {@link Engine.setOption} enforces the same
+ * distinction on the wire — see {@link Engine.isSettable}, where the pinned case
+ * turns out not to be mere tidiness.
  */
 export type EngineOption = {
   name: string;

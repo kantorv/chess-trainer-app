@@ -11,9 +11,10 @@ import type { Analysis } from "./usePlayWithEngine";
  * depth the search has reached.
  *
  * Presentational — it takes the analysis the screen collected and renders it, so
- * it can be driven straight from a fixture. Lines arrive out of order and fill in
- * as the search deepens, so gaps in the `MultiPV` set are normal and are simply
- * not rendered.
+ * it can be driven straight from a fixture. Lines arrive one rank at a time and
+ * fill in as the search deepens, so a `MultiPV` set with gaps in it is normal;
+ * what reaches the screen is the ranks that are both present and still asked
+ * for, which is `requested`'s second job (see below).
  *
  * SAN and the scores are Latin text in a panel that mirrors under Hebrew, so
  * every token carries `dir="ltr"` — an **attribute**, never a CSS declaration,
@@ -23,7 +24,11 @@ import type { Analysis } from "./usePlayWithEngine";
 
 type BestVariationsProps = {
   analysis: Analysis;
-  /** How many lines the engine was asked for, so a partial set can say so. */
+  /**
+   * The current `MultiPV` — how many lines the engine was asked for. It both
+   * bounds what is rendered (ranks above it are leftovers from a wider search)
+   * and lets a set that has not filled up yet say so.
+   */
   requested: number;
 };
 
@@ -36,8 +41,20 @@ const sanSx = {
 function BestVariations({ analysis, requested }: BestVariationsProps) {
   const { t } = useTranslation();
 
-  // The array is indexed by MultiPV rank, so a set still filling in has holes.
-  const lines = analysis.lines.filter((line) => line !== undefined);
+  /*
+    The array is indexed by MultiPV rank, which leaves two kinds of entry that
+    must not reach the screen.
+
+    A set still *filling in* has holes, because lines arrive one rank at a time.
+    A set left over from a *wider* search has ranks above the current `MultiPV`:
+    lowering the setting re-searches the same position, so the analysis state is
+    kept rather than replaced, and the ranks the engine has stopped reporting
+    would otherwise sit there looking live while only rank 1 moved. Asking for
+    one line has to show one line.
+  */
+  const lines = analysis.lines.filter(
+    (line) => line !== undefined && line.multipv <= requested,
+  );
 
   return (
     <Box data-testid="best-variations">
