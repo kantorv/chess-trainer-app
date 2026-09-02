@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { navItems } from "../views/main/navItems";
+import { navLabelKeys } from "../views/main/navTree";
 import en from "./en";
 import he from "./he";
 
@@ -41,12 +41,15 @@ describe("translation catalogs", () => {
 
   it("covers every nav entry in both languages", () => {
     /*
-      Read off the nav registry rather than listed by hand: the assertion is
-      that the catalogs cover the navigation, and a hardcoded list only ever
-      says they covered it on the day it was written. A screen added to
-      `navItems` without its label still fails here, which is the point.
+      Read off the nav tree rather than listed by hand: the assertion is that
+      the catalogs cover the navigation, and a hardcoded list only ever says
+      they covered it on the day it was written. A screen *or a folder* added
+      without its label still fails here, which is the point.
     */
-    for (const { labelKey } of navItems) {
+    const keys = navLabelKeys();
+    expect(keys.length).toBeGreaterThan(0);
+
+    for (const labelKey of keys) {
       expect(read(en, labelKey), `en is missing ${labelKey}`).toBeTypeOf("string");
       expect(read(he, labelKey), `he is missing ${labelKey}`).toBeTypeOf("string");
     }

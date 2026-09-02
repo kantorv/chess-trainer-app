@@ -17,6 +17,9 @@ const he: typeof en = {
     movingPiece: "דוגמת הזזת כלים",
     engineEvaluation: "הדגמת הערכת מנוע",
     playEngine: "משחק מול המנוע 1",
+    folders: {
+      basicExamples: "דוגמאות בסיסיות",
+    },
   },
   language: {
     en: "English",
