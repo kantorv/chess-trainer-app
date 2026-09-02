@@ -6,6 +6,8 @@
     "module": "ESNext",
     "types": ["node"],
     "skipLibCheck": true,
+    // vite.config.ts reads the app version out of package.json for the footer.
+    "resolveJsonModule": true,
 
     /* Bundler mode */
     "moduleResolution": "bundler",

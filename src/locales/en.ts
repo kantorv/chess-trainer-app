@@ -30,6 +30,10 @@ const en = {
     analysisTitle: "Analysis",
     analysisPlaceholder: "Evaluation and move list will appear here.",
   },
+  footer: {
+    /** Label on the link out to the project's source repository. */
+    source: "Source",
+  },
 };
 
 export default en;
