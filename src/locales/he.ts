@@ -29,6 +29,9 @@ const he: typeof en = {
     analysisTitle: "ניתוח",
     analysisPlaceholder: "ההערכה ורשימת המהלכים יופיעו כאן.",
   },
+  footer: {
+    source: "מקור",
+  },
 };
 
 export default he;

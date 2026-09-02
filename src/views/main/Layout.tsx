@@ -7,10 +7,20 @@ import Typography from '@mui/material/Typography';
 import { Link as RouterLink, Outlet, useMatches, type UIMatch } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { default as SideBar } from './Sidebar';
+import { Footer } from './Footer';
 import { BoardWidgetContext } from './service';
 import { ForceLTR } from '../../theme/ForceLTR';
 import ColorModeIconDropdown from '../../theme/ColorModeIconDropdown';
 import LanguageSwitch from '../../theme/LanguageSwitch';
+
+/**
+ * Board inset in pixels — the MUI `p: 2` (2 × the 8px spacing unit) that used
+ * to live only on `views/player/engine_basic/Main.tsx`, now applied once here
+ * in the shell so all four board screens get the same breathing room. Kept as
+ * a raw number, not `theme.spacing(2)`: `cssVariables` is on, so that returns a
+ * `calc(var(--mui-spacing))` string the resize maths cannot subtract.
+ */
+const BOARD_INSET_PX = 16;
 
 const Header = () => {
     const { t } = useTranslation();
@@ -81,32 +91,56 @@ const DefaultLayoutViewport = () => {
     const svc = BoardWidgetContext.useActorRef()
     const { t } = useTranslation();
 
-
-    // MANUALLY FIXING BOARD VIEWPORT SIZE IN PIXELS
+    // The board area is sized in pixels because `react-chessboard` fills its
+    // container and has no intrinsic size. `ref` sits on the padded board
+    // viewport (the row that holds the square + the analysis aside), so the
+    // measurement already excludes the header, the footer and the sidebar —
+    // whatever is left is what the square has to fit inside.
     const ref = useRef<HTMLDivElement>(null)
     const [bodyDimentions, setBodyDimentions] = useState<Rect>({ width: 0, height: 0 })
-   // const [boardDimentions, setBoardDimentions] = useState<Rect>({ width: 0, height: 0 })
-
 
     useEffect(() => {
-        if (!ref.current) return;
-        const _bounds = ref.current.getBoundingClientRect()
-        console.log("PrintViewWidget ref", _bounds)
-        const { width, height } = _bounds
-        if (width === 0 || height === 0) return;
-        setBodyDimentions({ width, height })
-    }, [ref]);
+        const el = ref.current;
+        if (!el) return;
+
+        const measure = () => {
+            const { width, height } = el.getBoundingClientRect();
+            if (width === 0 || height === 0) return;
+            setBodyDimentions((prev) =>
+                prev.width === width && prev.height === height
+                    ? prev
+                    : { width, height },
+            );
+        };
+
+        measure();
+
+        // Preferred: observe the measured element itself, so any layout change
+        // that resizes it re-squares the board.
+        const observer = new ResizeObserver(measure);
+        observer.observe(el);
+        // Also listen for window resizes directly — cheap, and covers
+        // environments whose layout engine does not drive the observer.
+        window.addEventListener("resize", measure);
+
+        return () => {
+            observer.disconnect();
+            window.removeEventListener("resize", measure);
+        };
+    }, []);
 
 
-    const boardDimentions = useMemo(()=>{
+    const boardDimentions = useMemo<Rect>(()=>{
         const { width, height } = bodyDimentions
         if (width === 0 || height === 0) return { width: 0, height: 0 };
-        const minorSide =  Math.min(bodyDimentions.width,bodyDimentions.height)
-        const output:Rect = {
-            width:minorSide,
-            height: minorSide
+        // Strip the inset from both edges before squaring: the square plus its
+        // surrounding inset then never exceeds the available body area, at any
+        // window size.
+        const minorSide = Math.max(0, Math.min(width, height) - BOARD_INSET_PX * 2)
+        return {
+            width: minorSide,
+            height: minorSide,
         }
-        return output
 
     },[bodyDimentions])
 
@@ -155,7 +189,6 @@ const DefaultLayoutViewport = () => {
             <Header />
 
             <Box
-                 ref={ref}
                  data-testid="layout-wrapper"
                 sx={{
                     display: "flex",
@@ -163,7 +196,7 @@ const DefaultLayoutViewport = () => {
                     flexGrow: 1,
                     // Without this the row refuses to shrink below its content
                     // and pushes the shell past the viewport instead of
-                    // clipping — which would also make the measurement above
+                    // clipping — which would also make the measurement below
                     // read a taller box than the one actually on screen.
                     minHeight: 0,
                     overflow: "hidden",
@@ -191,35 +224,54 @@ const DefaultLayoutViewport = () => {
                     }}
                 >
                    <Box
+                        ref={ref}
+                        data-testid="layout-board-viewport"
                         sx={{
                             display: "flex",
                             flexGrow:1,
                             minHeight: 0,
+                            // The shell-level board inset (was `p: 2` on one
+                            // Main wrapper only). Measured together with the box
+                            // in `getBoundingClientRect`, then subtracted back
+                            // out when the square is computed.
+                            p: `${BOARD_INSET_PX}px`,
+                            overflow: "hidden",
                         }}
                    >
-                         <Box
-                            data-testid="layout-board-square-body"
+                        <Box
                             sx={{
-
-                                width:`${boardDimentions.width}px`,
-                                height: `${boardDimentions.height}px`
-
+                                flexShrink: 0,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
                             }}
                         >
-                            {/*
-                                The board must never mirror: files run a-h left
-                                to right in every language, and flipping them
-                                would put a1 bottom-right while chess.js and the
-                                engine still report a1 as bottom-left. ForceLTR
-                                pins this subtree to the unflipped emotion cache
-                                and an LTR theme. It fills the square rather than
-                                wrapping it, so the container-sizing contract in
-                                .claude/rules/chessboard.md still holds.
-                            */}
-                            <ForceLTR sx={{ width: "100%", height: "100%" }}>
-                                <Outlet />
-                            </ForceLTR>
+                             <Box
+                                data-testid="layout-board-square-body"
+                                // A plain inline style, not `sx`: this is a
+                                // per-pixel value with no theme token in it, and
+                                // it changes on every resize — no reason to mint
+                                // a fresh emotion class each time.
+                                style={{
+                                    width: `${boardDimentions.width}px`,
+                                    height: `${boardDimentions.height}px`,
+                                }}
+                            >
+                                {/*
+                                    The board must never mirror: files run a-h left
+                                    to right in every language, and flipping them
+                                    would put a1 bottom-right while chess.js and the
+                                    engine still report a1 as bottom-left. ForceLTR
+                                    pins this subtree to the unflipped emotion cache
+                                    and an LTR theme. It fills the square rather than
+                                    wrapping it, so the container-sizing contract in
+                                    .claude/rules/chessboard.md still holds.
+                                */}
+                                <ForceLTR sx={{ width: "100%", height: "100%" }}>
+                                    <Outlet />
+                                </ForceLTR>
 
+                            </Box>
                         </Box>
 
                          <Box
@@ -253,6 +305,8 @@ const DefaultLayoutViewport = () => {
 
 
             </Box>
+
+            <Footer />
 
         </Box>
     )
