@@ -6,7 +6,12 @@ import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  // `docs/vendor/**` is upstream source vendored verbatim for reference (see
+  // docs/vendor/react-chessboard/README.md). It is never built or imported —
+  // the story files even import from the upstream repo's own `src/`, which
+  // does not exist here — so linting it only adds ~94 findings we would never
+  // act on. tsc already skips it: every tsconfig project includes only `src`.
+  globalIgnores(['dist', 'docs/vendor']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [

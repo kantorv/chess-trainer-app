@@ -1,16 +1,43 @@
 # Chessboard rules & patterns
 
-Reference for creating and operating chess boards in this project. Read this
-before adding a new board screen or customizing an existing one.
+How **this project** builds and operates chess boards, and the index to
+everything else. Read this before adding a new board screen or customizing an
+existing one.
 
 - **UI library:** [`react-chessboard`](https://react-chessboard.vercel.app/?path=/docs/get-started--docs) **v5** (`^5.12.1`)
 - **Rules engine:** [`chess.js`](https://www.npmjs.com/package/chess.js) **v1** (`^1.4.0`)
 - **Analysis engine:** Stockfish WASM worker, wrapped by [`src/lib/engine.ts`](../../src/lib/engine.ts)
 - **React 19** is required by react-chessboard v5.
 
-Local type definitions worth reading directly:
-`node_modules/react-chessboard/dist/ChessboardProvider.d.ts` (the full
-`ChessboardOptions` type) and `.../dist/types.d.ts` (handler arg types).
+---
+
+## 0. Where to look
+
+Everything about the library is already on disk. **Do not read `node_modules`
+source and do not web-search for react-chessboard questions** — answer from
+these instead.
+
+**Loaded every session** (no need to open anything — it is already in context):
+
+| File | Covers |
+| --- | --- |
+| **this file** | project conventions, the engine wrapper, the demo boards, v4→v5, testing a board |
+| [`react-chessboard-options-api.md`](./react-chessboard-options-api.md) | **every `options.*` key** — type, default, purpose. All 43 of them. |
+| [`react-chessboard-types-and-helpers.md`](./react-chessboard-types-and-helpers.md) | exported helpers (`generateBoard`, `fenStringToPositionObject`, `chessColumnToColumnIndex`, `getRelativeCoords`, …) and every handler-arg / data type (`PieceDropHandlerArgs`, `SquareHandlerArgs`, `PieceRenderObject`, `FenPieceString`, …) |
+
+**On disk, read on demand** — [`docs/vendor/react-chessboard/`](../../docs/vendor/react-chessboard/),
+routed by its [`INDEX.md`](../../docs/vendor/react-chessboard/INDEX.md):
+
+| Need | Open |
+| --- | --- |
+| A worked, compiling example of one option | `stories/options/<OptionName>.stories.tsx` |
+| A full feature pattern (promotion picker, premoves, puzzles, multiplayer, 3D) | `stories/advanced-examples/` |
+| The core interaction patterns (click-to-move, spare pieces, play-vs-random) | `stories/basic-examples/` |
+| Narrative walkthroughs of the above | `B_BasicExamples.mdx`, `C_AdvancedExamples.mdx` |
+| The full v4→v5 migration detail (§6 here is the summary) | `G_UpgradeToV5.mdx` |
+
+On conflict **this file wins** — the two vendored rules files are upstream
+reference and say nothing about how we wire things up.
 
 ---
 
@@ -56,6 +83,9 @@ Rules:
 - **`ChessboardProvider`** is only needed for spare pieces / drag-from-palette
   setups or when you need `useChessboardContext`. Plain boards just use
   `<Chessboard>`.
+- **The board must never mirror.** `Layout.tsx` wraps the board area in
+  `ForceLTR` — files run a–h left to right in every language. See the root
+  `CLAUDE.md` for why.
 
 ### Minimal state pattern (use this for any interactive board)
 
@@ -77,6 +107,10 @@ Chess(fen)`) and then `setChessPosition(...)`.
 ---
 
 ## 3. Operations
+
+> Option types, defaults and per-option examples are in
+> [`react-chessboard-options-api.md`](./react-chessboard-options-api.md).
+> This section is only the **project-specific** wiring around them.
 
 ### 3.1 Move by drag — `onPieceDrop`
 
@@ -122,17 +156,18 @@ First click on an own piece: compute legal targets with
 `chessGame.moves({ square, verbose: true })` and paint them via `squareStyles`.
 Second click: if it matches a legal target, `chessGame.move(...)`; otherwise
 treat it as selecting a new piece. Clear `moveFrom` + `optionSquares` after a
-move. (Full worked example: the upstream `ClickToMove` story.)
+move.
 
 `moves({ square })` types `square` as `chess.js` `Square` — cast with
 `square as Square` when calling it.
 
+Full worked example: `stories/basic-examples/ClickToMove.stories.tsx`.
+
 ### 3.3 Highlighting squares — `squareStyles`
 
-`options.squareStyles: Record<string, React.CSSProperties>` layers on top of
-`squareStyle` / light / dark styles, keyed by square id (`"e4"`). Use it for:
-legal-move dots, last-move highlight, selected square, check indicator,
-right-click marks. Example legal-move dot:
+Keyed by square id (`"e4"`), layered on top of the light/dark square styles.
+Use it for legal-move dots, last-move highlight, selected square, check
+indicator, right-click marks. The legal-move dot idiom used across the demos:
 
 ```tsx
 newSquares[move.to] = {
@@ -141,28 +176,15 @@ newSquares[move.to] = {
 };
 ```
 
-### 3.4 Arrows — `options.arrows`
+### 3.4 Arrows
 
-```tsx
-arrows: [{ startSquare: 'e2', endSquare: 'e4', color: 'rgb(0, 128, 0)' }]
-```
+Arrows **you pass in** via `options.arrows` are external / controlled: they are
+NOT auto-cleared on click or position change. Recompute the array yourself when
+the position changes — see `Board3` deriving a single arrow from the engine's
+best move. User-drawn (right-drag) arrows are separate and follow
+`clearArrowsOnClick` / `clearArrowsOnPositionChange`.
 
-- Type: `{ startSquare: string; endSquare: string; color: string }[]`.
-- Arrows you pass in are **external / controlled**: they are NOT auto-cleared on
-  click or position change. Recompute the array yourself when the position
-  changes (see `Board3` deriving one arrow from the engine's best move).
-- Users can also draw arrows by right-drag; disable with
-  `allowDrawingArrows: false`. Internal (user-drawn) arrows follow
-  `clearArrowsOnClick` / `clearArrowsOnPositionChange` (both default `true`) and
-  `onArrowsChange`.
-
-### 3.5 Board orientation / flipping
-
-`options.boardOrientation: 'white' | 'black'` (default `'white'`). Keep it in
-state and toggle to implement a "flip board" control. Set it to the side the
-human is playing.
-
-### 3.6 Promotion
+### 3.5 Promotion
 
 **v5 removed all built-in promotion UI** (`onPromotionPieceSelect`,
 `showPromotionDialog`, `autoPromoteToQueen`, …). You must handle it yourself:
@@ -176,43 +198,8 @@ human is playing.
 3. On pick, `chessGame.move({ from, to, promotion })` and clear the stash.
 
 The demos currently hardcode `promotion: 'q'` for simplicity — that is a
-**demo-only shortcut**, not the pattern for the real app. (Worked example:
-upstream `PiecePromotion` story.)
-
-### 3.7 Styling the board
-
-| Option | Purpose | Default |
-| --- | --- | --- |
-| `lightSquareStyle` / `darkSquareStyle` | square colours | `#F0D9B5` / `#B58863` |
-| `squareStyle` | applied to every square | flex-centre, `aspectRatio: 1/1` |
-| `squareStyles` | per-square overrides (see 3.3) | `{}` |
-| `boardStyle` | outer container (border, radius, shadow) | CSS grid, `100% x 100%` |
-| `darkSquareNotationStyle` / `lightSquareNotationStyle` | coordinate colour per square colour | — |
-| `alphaNotationStyle` / `numericNotationStyle` | coordinate font/position (a–h vs 1–8) | 13px absolute |
-| `showNotation` | show / hide coordinates | `true` |
-| `draggingPieceStyle` / `draggingPieceGhostStyle` | the lifted piece / its ghost | `scale(1.2)` / `opacity .5` |
-| `dropSquareStyle` | hovered drop target | inset 1px black |
-| `animationDurationInMs` / `showAnimations` | move animation | `300` / `true` |
-
-All `*Style` options are plain `React.CSSProperties`.
-
-### 3.8 Custom pieces / board size
-
-- `options.pieces: PieceRenderObject` — `Record<pieceType, (props?) => JSX>`
-  where `pieceType` is `"wP"`, `"bK"`, … Spread `defaultPieces` and override
-  individual keys, or replace wholesale. Also how you add glyphs for
-  non-standard piece types in variants.
-- `options.chessboardRows` / `chessboardColumns` (default `8`). **Above 9 you
-  must use the position-object form of `position`**, not FEN (FEN columns are
-  single-digit).
-
-### 3.9 Other handlers
-
-`onPieceClick` (only fires when `allowDragging: false`), `onPieceDrag`,
-`onPieceDragCancel` (Esc / right-click, *not* off-board drop),
-`onSquareMouseDown/Up`, `onMouseOverSquare` / `onMouseOutSquare`,
-`onSquareRightClick`, `canDragPiece({ piece, square, isSparePiece }) => boolean`
-(restrict which pieces can be picked up, e.g. only the side to move).
+**demo-only shortcut**, not the pattern for the real app. Worked example:
+`stories/advanced-examples/PiecePromotion.stories.tsx`.
 
 ---
 
@@ -287,7 +274,9 @@ promotion), `ponder`, `positionEvaluation` (centipawns, **string**),
 | `/player1` | [`views/player/engine_basic/Board.tsx`](../../src/views/player/engine_basic/Board.tsx) | (composed) | Play *against* the engine — engine moves are applied automatically |
 
 The `MainN.tsx` files next to each board are layout-only wrappers (an MUI `Box`
-with a `data-testid`); the board component is the unit of interest.
+with a `data-testid`); the board component is the unit of interest. Each
+"upstream story" column entry names a file in
+`docs/vendor/react-chessboard/stories/`.
 
 ---
 
@@ -305,13 +294,14 @@ If you paste a v4 snippet from the web, translate it:
 - `boardWidth` — **removed**, board is responsive (size the container).
 - All promotion props (`onPromotionPieceSelect`, `showPromotionDialog`,
   `autoPromoteToQueen`, `promotionToSquare`, …) — **removed**, handle promotion
-  externally (§3.6).
-- Premove props — **removed**, handle externally.
+  externally (§3.5).
+- Premove props — **removed**, handle externally
+  (`stories/advanced-examples/Premoves.stories.tsx`).
 - Props are no longer passed individually — everything goes inside `options`.
 - Handler signatures changed to single named-arg objects, e.g.
   `onPieceDrop({ sourceSquare, targetSquare, piece })` returning `boolean`.
 
-Full table: react-chessboard docs → "Upgrading to V5".
+Full detail: `docs/vendor/react-chessboard/G_UpgradeToV5.mdx`.
 
 ---
 
@@ -327,3 +317,27 @@ Full table: react-chessboard docs → "Upgrading to V5".
       `terminate()` on unmount, score normalized by turn.
 - [ ] Any `setTimeout` / async work cleared on unmount.
 - [ ] `tsc -b` clean.
+
+---
+
+## 8. Testing a board screen
+
+**Stub `<Chessboard>` in Vitest.** jsdom has no layout engine, so the board
+measures a zero-sized square and throws `Square width not found` from a mount
+effect — an uncaught exception that fails the whole test file, not just the
+assertion that touched it. Tests are about the screen *around* the board, so
+mock the component and assert the position it was handed:
+
+```tsx
+vi.mock('react-chessboard', () => ({
+  Chessboard: ({ options }: { options: { position?: string } }) => (
+    <div data-testid="board" data-position={options.position} />
+  ),
+}));
+```
+
+The type-only `import type { ChessboardOptions }` in the component under test is
+erased at compile time, so the mock does not have to provide it. Anything that
+depends on the board actually rendering — sizing, drag, arrows — belongs in a
+browser check, not in jsdom. `views/games/load_pgn/LoadPgn.test.tsx` is the
+worked example.

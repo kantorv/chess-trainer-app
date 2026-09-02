@@ -10,6 +10,7 @@ import { default as MovingPieceExample } from './views/demos/move/Main2'
 import { default as EngineEvaluationExample  } from './views/demos/engine/Main3'
 
 import { default as EnginePlayer1  } from './views/player/engine_basic/Main'
+import { default as LoadPgnScreen  } from './views/games/load_pgn/Main'
 
 
 
@@ -38,6 +39,10 @@ const routes = createBrowserRouter(
         {
           path: "/player1",
           element: <EnginePlayer1 />
+        },
+        {
+          path: "/games/load-pgn",
+          element: <LoadPgnScreen />
         }
 
       ]

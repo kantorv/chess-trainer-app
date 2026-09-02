@@ -17,8 +17,10 @@ const he: typeof en = {
     movingPiece: "דוגמת הזזת כלים",
     engineEvaluation: "הדגמת הערכת מנוע",
     playEngine: "משחק מול המנוע 1",
+    loadPgn: "טעינת PGN",
     folders: {
       basicExamples: "דוגמאות בסיסיות",
+      games: "משחקים",
     },
   },
   language: {
@@ -28,6 +30,59 @@ const he: typeof en = {
   panel: {
     analysisTitle: "ניתוח",
     analysisPlaceholder: "ההערכה ורשימת המהלכים יופיעו כאן.",
+  },
+  gamePanel: {
+    tabs: {
+      moves: "מהלכים",
+      info: "פרטים",
+      load: "טעינת PGN",
+    },
+    controls: {
+      first: "עמדת פתיחה",
+      previous: "המהלך הקודם",
+      next: "המהלך הבא",
+      last: "העמדה הסופית",
+      flip: "היפוך הלוח",
+    },
+    info: {
+      empty: "טענו משחק כדי לראות את פרטיו.",
+      event: "אירוע",
+      site: "מקום",
+      date: "תאריך",
+      round: "סיבוב",
+      white: "לבן",
+      black: "שחור",
+      result: "תוצאה",
+      eco: "ECO",
+      opening: "פתיחה",
+      timeControl: "בקרת זמן",
+      termination: "סיום",
+    },
+  },
+  moveList: {
+    title: "מהלכים",
+    startPosition: "עמדת הפתיחה",
+    noMoves: "אין מהלכים במשחק הזה.",
+  },
+  loadPgn: {
+    dropHint: "גררו לכאן קובץ PGN",
+    chooseFile: "בחרו קובץ PGN",
+    pasteLabel: "או הדביקו טקסט PGN",
+    load: "טעינה",
+    gamesTitle: "המשחקים בקובץ",
+    gameFallback: "משחק {{number}}",
+    versus: "נגד",
+    movesLoaded: "מהלכים: {{total}}",
+    emptyState: "עדיין לא נטען משחק.",
+    errors: {
+      empty: "לא נמצא PGN בקלט.",
+      parse: "לא ניתן לקרוא את ה-PGN הזה. {{detail}}",
+      parseGame: "לא ניתן לקרוא את משחק {{number}} בקובץ. {{detail}}",
+      file: "לא ניתן לקרוא את הקובץ.",
+    },
+  },
+  footer: {
+    source: "מקור",
   },
 };
 

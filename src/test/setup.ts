@@ -17,6 +17,17 @@ if (!window.matchMedia) {
   }));
 }
 
+// jsdom ships no ResizeObserver, and `Layout` constructs one to keep the board
+// square in sync with its container. A no-op stub is enough — the layout tests
+// drive re-measurement through the `resize` event listener instead.
+if (!globalThis.ResizeObserver) {
+  globalThis.ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  } as unknown as typeof globalThis.ResizeObserver;
+}
+
 afterEach(() => {
   cleanup();
   localStorage.clear();

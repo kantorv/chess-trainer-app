@@ -1,9 +1,20 @@
 /// <reference types="vitest/config" />
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import pkg from './package.json' with { type: 'json' }
 
 // https://vite.dev/config/
 export default defineConfig({
+  /*
+    The footer shows the app version. Reading it from package.json here — and
+    exposing it as a compile-time constant rather than importing package.json
+    into the client bundle — means the CTA-5 release automation's `version`
+    bump reaches the UI with no code change. Vitest honours `define` too, so
+    tests see the same value.
+  */
+  define: {
+    __APP_VERSION__: JSON.stringify(pkg.version),
+  },
   /*
     The app is published as a GitHub Pages *project* site at
     https://kantorv.github.io/chess-trainer-app/, so every asset URL and the

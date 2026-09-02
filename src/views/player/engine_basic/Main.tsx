@@ -13,10 +13,8 @@ const Main = () => {
     <Box
         data-testid="player-engine-wrapper"
         sx={{
-           
-            p:2
-          
-
+            // The board inset now lives once in the app shell (Layout.tsx,
+            // BOARD_INSET_PX) so all four board screens share it.
         }}
     >
        <Board />

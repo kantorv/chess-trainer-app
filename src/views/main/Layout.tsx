@@ -7,10 +7,51 @@ import Typography from '@mui/material/Typography';
 import { Link as RouterLink, Outlet, useMatches, type UIMatch } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { default as SideBar } from './Sidebar';
+import { Footer } from './Footer';
 import { BoardWidgetContext } from './service';
+import { RightPanelOutlet, RightPanelProvider } from './rightPanel';
 import { ForceLTR } from '../../theme/ForceLTR';
 import ColorModeIconDropdown from '../../theme/ColorModeIconDropdown';
 import LanguageSwitch from '../../theme/LanguageSwitch';
+
+/**
+ * Board inset in pixels — the MUI `p: 2` (2 × the 8px spacing unit) that used
+ * to live only on `views/player/engine_basic/Main.tsx`, now applied once here
+ * in the shell so all four board screens get the same breathing room. Kept as
+ * a raw number, not `theme.spacing(2)`: `cssVariables` is on, so that returns a
+ * `calc(var(--mui-spacing))` string the resize maths cannot subtract.
+ */
+const BOARD_INSET_PX = 16;
+
+/**
+ * The nav rail's width, in pixels.
+ *
+ * It used to be `flex: 3` against the body's `flex: 9` — a quarter of the
+ * window, which is a sensible rail at 1024px and a 460px slab at 1850px. Its
+ * content is fixed-width (an icon, a label, one level of indent), so it takes a
+ * fixed width and the board area keeps everything the rail does not need.
+ */
+const SIDEBAR_WIDTH_PX = 240;
+
+/**
+ * The right-hand panel's width bounds, in pixels.
+ *
+ * The panel takes whatever the board square leaves, between these two. That is
+ * what keeps the row full: the square is a square, so on a wide window it runs
+ * out of height long before it runs out of width, and a fixed-width panel would
+ * strand the difference as a gap in the middle of the screen.
+ *
+ * Only the **minimum** enters the square's maths, which is what keeps the two
+ * from chasing each other: the square is sized against `width - PANEL_MIN`, a
+ * function of the window alone, and the panel then grows into the remainder. A
+ * panel width that depended on the square — and a square measured against the
+ * panel — is a cycle with no fixed point.
+ *
+ * The maximum stops a very wide window from turning the panel into a field of
+ * empty space; past it the row centres what it has.
+ */
+const PANEL_MIN_WIDTH_PX = 320;
+const PANEL_MAX_WIDTH_PX = 560;
 
 const Header = () => {
     const { t } = useTranslation();
@@ -76,37 +117,89 @@ const Header = () => {
     );
 };
 
+/**
+ * What the right-hand aside shows until a route puts something there — see
+ * `rightPanel.tsx`. Unchanged from when the shell rendered these two lines
+ * inline: a route that registers nothing must see exactly this.
+ */
+const AnalysisPlaceholder = () => {
+    const { t } = useTranslation();
+
+    return (
+        <>
+            <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                {t("panel.analysisTitle")}
+            </Typography>
+            <Typography variant="body2" sx={{ color: "text.secondary", mt: 0.5 }}>
+                {t("panel.analysisPlaceholder")}
+            </Typography>
+        </>
+    );
+};
+
 const DefaultLayoutViewport = () => {
 
     const svc = BoardWidgetContext.useActorRef()
-    const { t } = useTranslation();
 
-
-    // MANUALLY FIXING BOARD VIEWPORT SIZE IN PIXELS
+    // The board area is sized in pixels because `react-chessboard` fills its
+    // container and has no intrinsic size. `ref` sits on the padded board
+    // viewport (the row that holds the square + the analysis aside), so the
+    // measurement already excludes the header, the footer and the sidebar —
+    // whatever is left is what the square has to fit inside.
     const ref = useRef<HTMLDivElement>(null)
     const [bodyDimentions, setBodyDimentions] = useState<Rect>({ width: 0, height: 0 })
-   // const [boardDimentions, setBoardDimentions] = useState<Rect>({ width: 0, height: 0 })
-
 
     useEffect(() => {
-        if (!ref.current) return;
-        const _bounds = ref.current.getBoundingClientRect()
-        console.log("PrintViewWidget ref", _bounds)
-        const { width, height } = _bounds
-        if (width === 0 || height === 0) return;
-        setBodyDimentions({ width, height })
-    }, [ref]);
+        const el = ref.current;
+        if (!el) return;
+
+        const measure = () => {
+            const { width, height } = el.getBoundingClientRect();
+            if (width === 0 || height === 0) return;
+            setBodyDimentions((prev) =>
+                prev.width === width && prev.height === height
+                    ? prev
+                    : { width, height },
+            );
+        };
+
+        measure();
+
+        // Preferred: observe the measured element itself, so any layout change
+        // that resizes it re-squares the board.
+        const observer = new ResizeObserver(measure);
+        observer.observe(el);
+        // Also listen for window resizes directly — cheap, and covers
+        // environments whose layout engine does not drive the observer.
+        window.addEventListener("resize", measure);
+
+        return () => {
+            observer.disconnect();
+            window.removeEventListener("resize", measure);
+        };
+    }, []);
 
 
-    const boardDimentions = useMemo(()=>{
+    const boardDimentions = useMemo<Rect>(()=>{
         const { width, height } = bodyDimentions
         if (width === 0 || height === 0) return { width: 0, height: 0 };
-        const minorSide =  Math.min(bodyDimentions.width,bodyDimentions.height)
-        const output:Rect = {
-            width:minorSide,
-            height: minorSide
+        // Strip the inset from both edges before squaring, and the panel's
+        // minimum from the width: the panel is a sibling inside this row, so
+        // the board never had more than `width - PANEL_MIN_WIDTH_PX` to work
+        // with. Taking it off here is what lets the square grow into the rest —
+        // measured against the row alone it would be sized against space the
+        // panel is standing in, and would overflow it.
+        const minorSide = Math.max(
+            0,
+            Math.min(
+                width - PANEL_MIN_WIDTH_PX - BOARD_INSET_PX * 2,
+                height - BOARD_INSET_PX * 2,
+            ),
+        )
+        return {
+            width: minorSide,
+            height: minorSide,
         }
-        return output
 
     },[bodyDimentions])
 
@@ -155,7 +248,6 @@ const DefaultLayoutViewport = () => {
             <Header />
 
             <Box
-                 ref={ref}
                  data-testid="layout-wrapper"
                 sx={{
                     display: "flex",
@@ -163,7 +255,7 @@ const DefaultLayoutViewport = () => {
                     flexGrow: 1,
                     // Without this the row refuses to shrink below its content
                     // and pushes the shell past the viewport instead of
-                    // clipping — which would also make the measurement above
+                    // clipping — which would also make the measurement below
                     // read a taller box than the one actually on screen.
                     minHeight: 0,
                     overflow: "hidden",
@@ -172,8 +264,8 @@ const DefaultLayoutViewport = () => {
                 <Box
                     data-testid="layout-sidebar-container"
                     sx={{
-
-                        flex: 3,
+                        width: `${SIDEBAR_WIDTH_PX}px`,
+                        flexShrink: 0,
                         display: "flex",
                         flexDirection: "column"
                     }}
@@ -185,62 +277,114 @@ const DefaultLayoutViewport = () => {
                 <Box
                    data-testid="layout-body-container"
                     sx={{
-                        flex: 9,
+                        // Everything the rail does not take. `minWidth: 0` so a
+                        // wide board or panel cannot push this past the window.
+                        flexGrow: 1,
+                        minWidth: 0,
                         display: "flex",
                         flexDirection: "column"
                     }}
                 >
                    <Box
+                        ref={ref}
+                        data-testid="layout-board-viewport"
                         sx={{
                             display: "flex",
                             flexGrow:1,
                             minHeight: 0,
+                            // Only bites once the panel is at its maximum and
+                            // the square at its height: then, and only then, is
+                            // there anything left over to centre.
+                            justifyContent: "center",
+                            // The shell-level board inset (was `p: 2` on one
+                            // Main wrapper only). Measured together with the box
+                            // in `getBoundingClientRect`, then subtracted back
+                            // out when the square is computed.
+                            p: `${BOARD_INSET_PX}px`,
+                            overflow: "hidden",
                         }}
                    >
-                         <Box
-                            data-testid="layout-board-square-body"
+                        <Box
                             sx={{
-
-                                width:`${boardDimentions.width}px`,
-                                height: `${boardDimentions.height}px`
-
+                                flexShrink: 0,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
                             }}
                         >
-                            {/*
-                                The board must never mirror: files run a-h left
-                                to right in every language, and flipping them
-                                would put a1 bottom-right while chess.js and the
-                                engine still report a1 as bottom-left. ForceLTR
-                                pins this subtree to the unflipped emotion cache
-                                and an LTR theme. It fills the square rather than
-                                wrapping it, so the container-sizing contract in
-                                .claude/rules/chessboard.md still holds.
-                            */}
-                            <ForceLTR sx={{ width: "100%", height: "100%" }}>
-                                <Outlet />
-                            </ForceLTR>
+                             <Box
+                                data-testid="layout-board-square-body"
+                                // A plain inline style, not `sx`: this is a
+                                // per-pixel value with no theme token in it, and
+                                // it changes on every resize — no reason to mint
+                                // a fresh emotion class each time.
+                                style={{
+                                    width: `${boardDimentions.width}px`,
+                                    height: `${boardDimentions.height}px`,
+                                }}
+                            >
+                                {/*
+                                    The board must never mirror: files run a-h left
+                                    to right in every language, and flipping them
+                                    would put a1 bottom-right while chess.js and the
+                                    engine still report a1 as bottom-left. ForceLTR
+                                    pins this subtree to the unflipped emotion cache
+                                    and an LTR theme. It fills the square rather than
+                                    wrapping it, so the container-sizing contract in
+                                    .claude/rules/chessboard.md still holds.
+                                */}
+                                <ForceLTR sx={{ width: "100%", height: "100%" }}>
+                                    <Outlet />
+                                </ForceLTR>
 
+                            </Box>
                         </Box>
 
                          <Box
                             component="aside"
                             data-testid="layout-board-square-sidebar"
                             sx={{
+                                /*
+                                  Takes the width the square leaves, within its
+                                  bounds — so the row has no gap down the middle
+                                  on a wide window, where the square is bound by
+                                  height long before it is bound by width.
+                                */
                                 flexGrow: 1,
-                                minWidth: 0,
-                                overflow: "auto",
+                                flexShrink: 0,
+                                minWidth: `${PANEL_MIN_WIDTH_PX}px`,
+                                maxWidth: `${PANEL_MAX_WIDTH_PX}px`,
+                                /*
+                                  A column, and it does not scroll itself: a
+                                  panel that wants a section pinned to the foot
+                                  of the aside — the Load PGN controls under the
+                                  move list — needs the height to divide up, and
+                                  a scrolling parent would let the pinned part
+                                  slide off instead. Panels scroll their own
+                                  sections; the fallback placeholder is two
+                                  lines and needs neither.
+                                */
+                                display: "flex",
+                                flexDirection: "column",
+                                minHeight: 0,
+                                overflow: "hidden",
                                 p: 2,
                                 bgcolor: "background.paper",
                                 borderInlineStart: "1px solid",
                                 borderColor: "divider",
                             }}
                         >
-                           <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                               {t("panel.analysisTitle")}
-                           </Typography>
-                           <Typography variant="body2" sx={{ color: "text.secondary", mt: 0.5 }}>
-                               {t("panel.analysisPlaceholder")}
-                           </Typography>
+                            {/*
+                                The per-route panel slot. A route renders
+                                `<RightPanel>` (see `rightPanel.tsx`) to fill
+                                this aside with its own content; with none
+                                registered — all four board screens today — the
+                                outlet renders the Analysis placeholder and the
+                                aside is exactly what it always was. The aside
+                                itself stays outside ForceLTR and mirrors under
+                                Hebrew, panel content included.
+                            */}
+                            <RightPanelOutlet fallback={<AnalysisPlaceholder />} />
 
                         </Box>
 
@@ -254,6 +398,8 @@ const DefaultLayoutViewport = () => {
 
             </Box>
 
+            <Footer />
+
         </Box>
     )
 }
@@ -262,7 +408,13 @@ const DefaultLayoutViewport = () => {
 
 const DefaultLayout = ()=>
             <BoardWidgetContext.Provider>
-                <DefaultLayoutViewport />
+                {/*
+                    Above the viewport, so the aside's outlet and every route
+                    behind the `<Outlet />` share one slot.
+                */}
+                <RightPanelProvider>
+                    <DefaultLayoutViewport />
+                </RightPanelProvider>
             </BoardWidgetContext.Provider>
 
 export { DefaultLayout }

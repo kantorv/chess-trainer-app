@@ -23,12 +23,13 @@ describe("translation catalogs", () => {
   });
 
   it("leaves no string untranslated in Hebrew", () => {
-    // Identical by design: the brand mark is an initialism, and language names
-    // are always written in their own language.
+    // Identical by design: the brand mark and the ECO opening-code label are
+    // initialisms, and language names are always written in their own language.
     const identicalOnPurpose = new Set([
       "app.brandMark",
       "language.en",
       "language.he",
+      "gamePanel.info.eco",
     ]);
 
     const untranslated = leafKeys(en).filter(
