@@ -42,7 +42,13 @@ const routes = createBrowserRouter(
 
       ]
     }
-  ])
+  ],
+  {
+    // In a GitHub Pages project-site build this is "/chess-trainer-app/"
+    // (Vite's `base`); in dev and under Vitest it is "/". Keeps route
+    // matching and generated links under the deployed sub-path.
+    basename: import.meta.env.BASE_URL,
+  })
 
 function App() {
   //const [count, setCount] = useState(0)
