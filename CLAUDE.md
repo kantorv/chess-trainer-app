@@ -44,9 +44,12 @@ change by whether it *adds* to that count, not by the exit code.
 | `src/i18n.ts` | i18next setup, plus `supportedLanguages` / `rtlLanguages` / `asAppLanguage()`. |
 | `src/locales/` | Inline `en` / `he` catalogs. `he` is typed `typeof en`, so a missing key is a compile error. |
 | `src/theme/` | The look: `themePrimitives.ts` (tokens), `AppThemeWithLang.tsx` (the provider), `rtlCache.ts`, `ForceLTR.tsx`, and the two header controls. |
-| `src/views/main/` | The app shell — `Layout.tsx` (header + sidebar + board area), `Sidebar.tsx`, the nav registries (`navItems.ts`, `navFolders.ts`, `navTree.ts`), and the XState `service.ts`. |
+| `src/views/main/` | The app shell — `Layout.tsx` (header + sidebar + board area; the nav rail and the right-hand panel are fixed-width, and the board square is what is left over), `rightPanel.tsx` (the route-fillable panel slot), `Sidebar.tsx`, the nav registries (`navItems.ts`, `navFolders.ts`, `navTree.ts`), and the XState `service.ts`. |
 | `src/views/demos/`, `src/views/player/` | The four board screens. |
+| `src/views/games/load_pgn/` | The Load PGN screen. `LoadPgn.tsx` owns the state and fills the board square; `GamePanel.tsx` is the whole of the shell panel — the Moves / Info / Load PGN tabs (`MoveList.tsx`, `GameInfo.tsx`, `PgnIngest.tsx`) over the board controls (`BoardControls.tsx`). Ply state and keyboard stepping live in `useGameNavigation.ts`. |
 | `src/lib/engine.ts` | The Stockfish worker wrapper. |
+| `src/lib/pgn.ts` | PGN ingestion and the `ParsedGame` model (tag pairs, plus moves carrying `san` / `from` / `to` / `fen` / `ply`). Pure data — the Load PGN screen fills it, the move list reads it. |
+| `src/lib/gameNavigation.ts` | Walking a `ParsedGame`: `clampPly` / `fenAtPly` / `arrowsAtPly` / `moveRowsOf`. A ply is a half-move index, 0 being the starting position; each ply's FEN is read off the move that already carries it, so nothing re-simulates a game. |
 | `src/lib/treeManager.ts` | Read-only tree walks (`traverse` / `toArray` / `collectIds` / `findBy` / `getPath`). The seam for anything tree-shaped; `navTree.ts` is its only consumer. |
 
 ## Theming, direction and language
@@ -68,6 +71,13 @@ Two consequences worth knowing before you touch this:
   and the engine still report it as bottom-left. `Layout.tsx` wraps the board
   area in `ForceLTR` for exactly this. Use the same escape hatch for any other
   subtree that must stay LTR.
+- **Pinning a single *token* to LTR takes the `dir` attribute, not CSS.** Under
+  Hebrew these styles go through the RTL emotion cache, whose stylis plugin
+  flips `direction: ltr` into `direction: rtl` exactly as it flips the paddings
+  — an `sx` declaration is reversed into the bug it was meant to prevent. The
+  move list's SAN cells carry `dir="ltr"` for this reason; `unicode-bidi` is
+  untouched by the plugin and can stay in `sx`. `ForceLTR` is the other option
+  but it is a whole provider stack — too much for a handful of inline tokens.
 
 ## Sidebar navigation
 
