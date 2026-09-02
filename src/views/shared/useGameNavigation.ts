@@ -6,8 +6,8 @@ import {
   clampPly,
   fenAtPly,
   lastPlyOf,
-} from "../../../lib/gameNavigation";
-import type { ParsedGame } from "../../../lib/pgn";
+} from "../../lib/gameNavigation";
+import type { Game } from "../../lib/gameModel";
 
 /**
  * Ply state for one screen: which half-move is selected, the position and the
@@ -20,8 +20,8 @@ import type { ParsedGame } from "../../../lib/pgn";
 
 /**
  * True for anything the reader is typing into. Arrow keys belong to the caret
- * there, not to the move list, so the handler stays out of the way — the paste
- * box on this very screen is the case that matters.
+ * there, not to the move list, so the handler stays out of the way — the Load
+ * PGN screen's paste box is the case that matters.
  */
 const isTextEntry = (target: EventTarget | null): boolean => {
   if (!(target instanceof HTMLElement)) return false;
@@ -43,7 +43,7 @@ export type GameNavigation = {
 };
 
 export const useGameNavigation = (
-  game: ParsedGame | undefined,
+  game: Game | undefined,
 ): GameNavigation => {
   const [requestedPly, setRequestedPly] = useState(0);
 
@@ -62,9 +62,10 @@ export const useGameNavigation = (
 
   useEffect(() => {
     /*
-      Bound on `document` but tied to this hook's mount, and this hook is used
-      by the Load PGN screen alone — navigating to any of the four board
-      screens unmounts it and the listener goes with it.
+      Bound on `document` but tied to this hook's mount. Both screens that use
+      it — Load PGN and Play with Engine — are routes, so only one is ever
+      mounted: there is no second listener to collide with, and navigating away
+      unmounts the hook and takes its listener with it.
 
       Nothing loaded means nothing to step through, so no listener at all: the
       arrow keys keep scrolling the screen's own column until there is a game.

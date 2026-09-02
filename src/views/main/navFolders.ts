@@ -1,6 +1,7 @@
 import type { SvgIconComponent } from "@mui/icons-material";
 import FolderRoundedIcon from "@mui/icons-material/FolderRounded";
 import FolderSpecialRoundedIcon from "@mui/icons-material/FolderSpecialRounded";
+import MemoryRoundedIcon from "@mui/icons-material/MemoryRounded";
 
 /**
  * Folders are the groupings in the sidebar. Each screen names exactly one of
@@ -16,7 +17,7 @@ import FolderSpecialRoundedIcon from "@mui/icons-material/FolderSpecialRounded";
  * not), give it a `labelKey` present in both `en.ts` and `he.ts`, and set
  * `folder` on the screens that join it.
  */
-export type NavFolderId = "basic-examples" | "games";
+export type NavFolderId = "basic-examples" | "engine" | "games";
 
 export type NavFolder = {
   id: NavFolderId;
@@ -33,6 +34,11 @@ export const navFolders: readonly NavFolder[] = [
     id: "basic-examples",
     labelKey: "nav.folders.basicExamples",
     icon: FolderRoundedIcon,
+  },
+  {
+    id: "engine",
+    labelKey: "nav.folders.engine",
+    icon: MemoryRoundedIcon,
   },
   {
     id: "games",

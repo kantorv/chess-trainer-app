@@ -11,6 +11,7 @@ import { default as EngineEvaluationExample  } from './views/demos/engine/Main3'
 
 import { default as EnginePlayer1  } from './views/player/engine_basic/Main'
 import { default as LoadPgnScreen  } from './views/games/load_pgn/Main'
+import { default as PlayWithEngineScreen  } from './views/engine/play/Main'
 
 
 
@@ -39,6 +40,10 @@ const routes = createBrowserRouter(
         {
           path: "/player1",
           element: <EnginePlayer1 />
+        },
+        {
+          path: "/engine/play",
+          element: <PlayWithEngineScreen />
         },
         {
           path: "/games/load-pgn",

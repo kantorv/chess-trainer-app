@@ -1,39 +1,19 @@
-import { Chess, DEFAULT_POSITION, type Square } from "chess.js";
+import { Chess } from "chess.js";
+import { gameFromChess, type Game } from "./gameModel";
 
 /**
- * PGN ingestion and the parsed-game model.
+ * PGN ingestion: text in, {@link Game} out.
  *
- * The Load PGN screen owns this module; the move list / navigation consumes it.
- * Everything here is plain data and pure functions — no React, no live
- * `chess.js` instance handed out — so both sides and their tests can use it
- * freely and neither has to reach into the other's components.
+ * The *model* those games are expressed in lives in `lib/gameModel.ts` and is
+ * shared with the live game the engine screen grows — this module is only one
+ * of its two producers, and owns nothing but the parsing. Everything here is
+ * pure, so the Load PGN screen and its tests can use it freely.
  *
  * The split between the two parsing steps is deliberate: cutting a file into
  * games is a *text* concern (games are separated by a blank line before the
  * next `[Event ...]` tag pair), while `chess.js` `loadPgn` only ever takes one
  * game at a time.
  */
-
-/** PGN tag pairs, e.g. `{ White: "Alice", Result: "1-0" }`. */
-export type PgnHeaders = Record<string, string>;
-
-/** One half-move of a parsed game. */
-export type ParsedMove = {
-  /** Standard algebraic notation, as written in the PGN — `"Nf3"`, `"O-O"`. */
-  san: string;
-  from: Square;
-  to: Square;
-  /** The position *after* this move, so a viewer can jump straight to it. */
-  fen: string;
-  /** 1-based half-move number: White's first move is 1, Black's reply 2. */
-  ply: number;
-};
-
-/** A single game: its tag pairs, and its moves in order. */
-export type ParsedGame = {
-  headers: PgnHeaders;
-  moves: ParsedMove[];
-};
 
 /**
  * Raised instead of letting a `chess.js` parse error escape into the UI.
@@ -71,26 +51,6 @@ export class EmptyPgnError extends PgnParseError {
 }
 
 /**
- * The placeholder values the PGN spec uses for "unknown". They are not worth
- * showing in a game picker, so `pgnTag` reports them as absent.
- */
-const PLACEHOLDER_TAGS = new Set(["", "?", "??", "???", "-", "????.??.??", "*"]);
-
-/**
- * A tag's value, or `undefined` when it is missing or a spec placeholder.
- * `chess.js` fills the seven-tag roster with those placeholders even for a PGN
- * that carried no tags at all, so reading `headers.White` directly would put a
- * literal "?" in the UI.
- */
-export const pgnTag = (
-  headers: PgnHeaders,
-  key: string,
-): string | undefined => {
-  const value = headers[key]?.trim();
-  return value === undefined || PLACEHOLDER_TAGS.has(value) ? undefined : value;
-};
-
-/**
  * Cut PGN text into one chunk per game.
  *
  * Purely textual: a new game starts at an `[Event ...]` tag that follows a
@@ -111,7 +71,7 @@ export const splitPgnGames = (pgn: string): string[] =>
  * error — so every caller has one thing to catch. `gameNumber` is threaded
  * through only so a multi-game failure can name which game went wrong.
  */
-export const parsePgnGame = (pgn: string, gameNumber?: number): ParsedGame => {
+export const parsePgnGame = (pgn: string, gameNumber?: number): Game => {
   const chess = new Chess();
 
   try {
@@ -123,18 +83,9 @@ export const parsePgnGame = (pgn: string, gameNumber?: number): ParsedGame => {
     );
   }
 
-  return {
-    headers: chess.getHeaders(),
-    moves: chess.history({ verbose: true }).map((move, index) => ({
-      san: move.san,
-      from: move.from,
-      to: move.to,
-      // `Move.after` is the FEN once the move has been made — exactly the
-      // position a move list wants to show when this ply is selected.
-      fen: move.after,
-      ply: index + 1,
-    })),
-  };
+  // The parsed tag pairs win over the snapshot's own `FEN` reconstruction:
+  // a PGN that set up a position states it in its headers already.
+  return gameFromChess(chess, chess.getHeaders());
 };
 
 /**
@@ -142,7 +93,7 @@ export const parsePgnGame = (pgn: string, gameNumber?: number): ParsedGame => {
  * {@link PgnParseError} on the first game that fails (with its 1-based number),
  * and {@link EmptyPgnError} on input that holds no game at all.
  */
-export const parsePgnGames = (pgn: string): ParsedGame[] => {
+export const parsePgnGames = (pgn: string): Game[] => {
   const chunks = splitPgnGames(pgn);
   if (chunks.length === 0) {
     throw new EmptyPgnError();
@@ -154,14 +105,3 @@ export const parsePgnGames = (pgn: string): ParsedGame[] => {
     parsePgnGame(chunk, chunks.length > 1 ? index + 1 : undefined),
   );
 };
-
-/**
- * The position the game starts from — the standard opening position unless the
- * PGN set one up with a `FEN` tag.
- */
-export const initialFenOf = (game: ParsedGame): string =>
-  pgnTag(game.headers, "FEN") ?? DEFAULT_POSITION;
-
-/** The position after the last move, or the starting one for a moveless game. */
-export const finalFenOf = (game: ParsedGame): string =>
-  game.moves.at(-1)?.fen ?? initialFenOf(game);

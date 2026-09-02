@@ -2,13 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   EmptyPgnError,
   PgnParseError,
-  finalFenOf,
-  initialFenOf,
   parsePgnGame,
   parsePgnGames,
-  pgnTag,
   splitPgnGames,
 } from "./pgn";
+import { finalFenOf, gameTag, initialFenOf } from "./gameModel";
 
 const game = (white: string, black: string, moves: string, result = "1-0") =>
   [
@@ -133,17 +131,17 @@ describe("parsePgnGames", () => {
   });
 });
 
-describe("pgnTag", () => {
+describe("gameTag", () => {
   it("reads a real value", () => {
-    expect(pgnTag({ White: "Alice" }, "White")).toBe("Alice");
+    expect(gameTag({ White: "Alice" }, "White")).toBe("Alice");
   });
 
   it("treats the spec's placeholders and missing tags alike", () => {
     // chess.js fills the seven-tag roster with these even for a tagless PGN.
-    expect(pgnTag({ White: "?" }, "White")).toBeUndefined();
-    expect(pgnTag({ Date: "????.??.??" }, "Date")).toBeUndefined();
-    expect(pgnTag({ Result: "*" }, "Result")).toBeUndefined();
-    expect(pgnTag({}, "Event")).toBeUndefined();
+    expect(gameTag({ White: "?" }, "White")).toBeUndefined();
+    expect(gameTag({ Date: "????.??.??" }, "Date")).toBeUndefined();
+    expect(gameTag({ Result: "*" }, "Result")).toBeUndefined();
+    expect(gameTag({}, "Event")).toBeUndefined();
   });
 });
 

@@ -45,12 +45,43 @@ change by whether it *adds* to that count, not by the exit code.
 | `src/locales/` | Inline `en` / `he` catalogs. `he` is typed `typeof en`, so a missing key is a compile error. |
 | `src/theme/` | The look: `themePrimitives.ts` (tokens), `AppThemeWithLang.tsx` (the provider), `rtlCache.ts`, `ForceLTR.tsx`, and the two header controls. |
 | `src/views/main/` | The app shell — `Layout.tsx` (header + sidebar + board area; the nav rail and the right-hand panel are fixed-width, and the board square is what is left over), `rightPanel.tsx` (the route-fillable panel slot), `Sidebar.tsx`, the nav registries (`navItems.ts`, `navFolders.ts`, `navTree.ts`), and the XState `service.ts`. |
-| `src/views/demos/`, `src/views/player/` | The four board screens. |
-| `src/views/games/load_pgn/` | The Load PGN screen. `LoadPgn.tsx` owns the state and fills the board square; `GamePanel.tsx` is the whole of the shell panel — the Moves / Info / Load PGN tabs (`MoveList.tsx`, `GameInfo.tsx`, `PgnIngest.tsx`) over the board controls (`BoardControls.tsx`). Ply state and keyboard stepping live in `useGameNavigation.ts`. |
-| `src/lib/engine.ts` | The Stockfish worker wrapper. |
-| `src/lib/pgn.ts` | PGN ingestion and the `ParsedGame` model (tag pairs, plus moves carrying `san` / `from` / `to` / `fen` / `ply`). Pure data — the Load PGN screen fills it, the move list reads it. |
-| `src/lib/gameNavigation.ts` | Walking a `ParsedGame`: `clampPly` / `fenAtPly` / `arrowsAtPly` / `moveRowsOf`. A ply is a half-move index, 0 being the starting position; each ply's FEN is read off the move that already carries it, so nothing re-simulates a game. |
+| `src/views/demos/`, `src/views/player/` | The four demo board screens. |
+| `src/views/shared/` | The panel pieces both game screens use: `MoveList.tsx`, `BoardControls.tsx`, `useGameNavigation.ts`, `EvalBar.tsx`. They take props and know nothing about which screen is rendering them. |
+| `src/views/engine/play/` | The Play with Engine screen. `PlayWithEngine.tsx` is layout (eval bar + board) and board options; **all the behaviour is in `usePlayWithEngine.ts`**; `EnginePanel.tsx` is the Game / Engine / Variations tab strip over the shared board controls, with `EngineSettings.tsx`, `BestVariations.tsx` and `PromotionPicker.tsx` under it. |
+| `src/views/games/load_pgn/` | The Load PGN screen. `LoadPgn.tsx` owns the state and fills the board square; `GamePanel.tsx` is the whole of the shell panel — the Moves / Info / Load PGN tabs (`GameInfo.tsx`, `PgnIngest.tsx`, and the shared `MoveList`) over the shared board controls. |
+| `src/lib/engine.ts` | The Stockfish worker wrapper: search, UCI option discovery, and the protocol discipline that keeps the engine alive (see the chessboard rules §4). |
+| `src/lib/engineAnalysis.ts` | Reading the engine's numbers: `scoreFromUci` (the one place a score is normalised to White's perspective), `formatScore`, `evalBarFraction`, `pvToSan`, `numberedVariation`. Pure. |
+| `src/lib/gameModel.ts` | **The shared game model** — `Game` / `GameMove` / `GameHeaders`, plus `gameTag` / `initialFenOf` / `finalFenOf` and the `gameFromChess` snapshot. Both game screens speak this, which is why they share one move list and one navigation hook. |
+| `src/lib/pgn.ts` | PGN ingestion only: text in, `Game` out. One of the model's two producers; `gameFromChess` is the other. |
+| `src/lib/gameNavigation.ts` | Walking a `Game`: `clampPly` / `fenAtPly` / `arrowsAtPly` / `moveRowsOf`. A ply is a half-move index, 0 being the starting position; each ply's FEN is read off the move that already carries it, so nothing re-simulates a game. |
 | `src/lib/treeManager.ts` | Read-only tree walks (`traverse` / `toArray` / `collectIds` / `findBy` / `getPath`). The seam for anything tree-shaped; `navTree.ts` is its only consumer. |
+
+## One game model, two producers
+
+A game parsed out of a PGN and a game growing move by move against the engine
+are **the same type** — `Game` in [`src/lib/gameModel.ts`](src/lib/gameModel.ts).
+That is not a coincidence to be tidied away later; it is what lets the move
+list, the ply navigation and the board controls in `src/views/shared/` serve
+both screens with no branching and no second copy.
+
+The model is plain data. Every move carries the FEN of the position *after* it,
+so a viewer jumps to a ply by reading a string — nothing re-simulates a game.
+The two producers are `parsePgnGames` (`lib/pgn.ts`) and `gameFromChess`
+(`lib/gameModel.ts`), and the second is a **snapshot**: it copies a live
+`chess.js` instance, so handing the result to a component is safe while the
+instance behind it keeps being mutated.
+
+Consequences:
+
+- **A new game screen writes no move list.** Produce a `Game`, hand it to
+  `useGameNavigation` and `MoveList`, and the numbered pairs, the current-ply
+  highlight, the jump targets and the keyboard stepping all come with it.
+- **A growing game and a fixed one navigate identically**, because
+  `useGameNavigation` clamps the requested ply on *read*. A move arriving while
+  the reader is back at an earlier ply does not yank the board forward.
+- **`lib/pgn.ts` owns parsing, not the model.** Anything about what a game *is*
+  belongs in `gameModel.ts`, or the engine screen ends up importing a module
+  named after a file format it never reads.
 
 ## Theming, direction and language
 

@@ -21,7 +21,7 @@ these instead.
 
 | File | Covers |
 | --- | --- |
-| **this file** | project conventions, the engine wrapper, the demo boards, v4→v5, testing a board |
+| **this file** | project conventions, the engine wrapper and its protocol discipline, the board screens, v4→v5, testing a board |
 | [`react-chessboard-options-api.md`](./react-chessboard-options-api.md) | **every `options.*` key** — type, default, purpose. All 43 of them. |
 | [`react-chessboard-types-and-helpers.md`](./react-chessboard-types-and-helpers.md) | exported helpers (`generateBoard`, `fenStringToPositionObject`, `chessColumnToColumnIndex`, `getRelativeCoords`, …) and every handler-arg / data type (`PieceDropHandlerArgs`, `SquareHandlerArgs`, `PieceRenderObject`, `FenPieceString`, …) |
 
@@ -217,14 +217,56 @@ deploys to GitHub Pages at `/chess-trainer-app/`, where a bare
 | Method | Notes |
 | --- | --- |
 | `new Engine()` | Spawns a **dedicated Worker**. One per mounted board. |
-| `evaluatePosition(fen, depth = 12)` | `position fen …` + `go depth …`. Depth is clamped to 24. |
+| `search(fen, { depth = 12, movetime })` | The one to use. Depth is clamped to 24; `movetime` is milliseconds and is omitted when 0. **May not start immediately** — see §4.1. |
+| `evaluatePosition(fen, depth = 12)` | `search(fen, { depth })`. Kept for the two demo boards. |
 | `onMessage(cb) => unsubscribe` | Parsed UCI messages. **Returns an unsubscribe fn — you must call it.** |
+| `setOption(name, value) => boolean` | Buffered, not posted (§4.1). `false` means this build will not take it — either it has no such option or it has pinned it. |
+| `whenOptionsReady(cb) => unsubscribe` | Runs `cb` once `options` is complete, immediately if the handshake already landed. |
+| `options` / `supportsOption(name)` | What the **running worker** declared, from its own `uci` reply. |
 | `stop()` | `stop` — engine returns bestmove for the depth reached so far. |
 | `terminate()` | `quit` + `worker.terminate()`. Call on unmount. |
 
 Parsed message shape (`EngineMessage`): `bestMove` (`"e2e4"` or `"e7e8q"` with
 promotion), `ponder`, `positionEvaluation` (centipawns, **string**),
-`possibleMate`, `pv` (best line, space-separated moves), `depth` (number).
+`possibleMate`, `pv` (best line, space-separated moves), `depth` (number),
+`multipv` (1-based line rank), and `fen` — **the position this result is for**.
+
+`fen` has no UCI equivalent; the wrapper stamps it on. Without it you cannot tell
+a result for the position on screen from one still draining out of the search it
+replaced, which is how a screen ends up playing a move computed for a position
+the player has navigated away from.
+
+### 4.1 The protocol discipline — why `search` and `setOption` are deferred
+
+**The build in `public/stockfish/` abandons a running search if it receives a
+`setoption` while searching.** Not an error, not an ignored command: no
+`bestmove`, no further `info`, and the board never evaluates again. It is silent,
+so it does not look like a protocol bug — it looks like a broken worker.
+
+`Engine` therefore buffers everything and posts it only when the engine can take
+it. Nothing goes out before `uciok` (until the engine lists its options there is
+no way to tell a real one from a name this build has never heard of), and nothing
+goes out while a search is running (a `stop` goes instead, and the `bestmove`
+that ends the search resumes the queue). Options are applied to an idle engine,
+and a waiting search starts only afterwards — so a search always runs under the
+settings that were asked for.
+
+Consequences for a caller:
+
+- **Call `search()` whenever the position changes; do not sequence it yourself.**
+  A second call before the first has started replaces it, so rapid stepping
+  through a game does not build a queue of searches nobody is looking at.
+- **A pinned option is never sent.** An option whose `min` equals its `max` has
+  one legal value, so posting it can only be a no-op — except that
+  `setoption name Threads value 1`, this build's *own declared default*, is
+  itself fatal to it. `setOption` returns `false` for those.
+- **Never hardcode the option roster.** `Threads` and `Hash` exist here but are
+  pinned (`min 1 max 1`, `min 16 max 16`); there is no `UCI_Elo` and no
+  `UCI_LimitStrength`, so strength is `Skill Level` only and any Elo figure shown
+  is an estimate, never a setting. Read `engine.options` and render three states:
+  absent, pinned, and adjustable. `views/engine/play/EngineSettings.tsx` is the
+  worked example, and doing it this way means swapping the binary changes the UI
+  with no code change.
 
 ### Rules for using it from React
 
@@ -265,9 +307,16 @@ promotion), `ponder`, `positionEvaluation` (centipawns, **string**),
    useEffect(() => () => { engineRef.current?.terminate(); engineRef.current = null; }, []);
    ```
 
-4. **Normalize the score.** Stockfish reports `cp` / `mate` from the
-   **side-to-move's** perspective. To show "+ = White is better":
-   `(chessGame.turn() === 'w' ? 1 : -1) * Number(positionEvaluation) / 100`.
+4. **Normalize the score — through `lib/engineAnalysis.ts`, not by hand.**
+   Stockfish reports `cp` / `mate` from the **side-to-move's** perspective, so
+   the same number means White on one turn and Black on the next. `scoreFromUci`
+   is the single place that flip happens; `formatScore` and `evalBarFraction`
+   then assume White's perspective, and a mate prints as `M5`, never as the
+   five-figure centipawn number it would otherwise imply.
+
+   Pass the turn of **the position that was searched** (read it off that FEN),
+   not `chessGame.turn()` — on a screen where the board can show an earlier ply
+   those are different, and mixing them inverts every evaluation shown.
 
 5. **Filter shallow updates.** The engine streams partial results while it
    searches; ignore messages below a threshold depth (~10) to reduce churn.
@@ -278,19 +327,40 @@ promotion), `ponder`, `positionEvaluation` (centipawns, **string**),
 
 ---
 
-## 5. The four demo boards
+## 5. The board screens
 
 | Route | File | Based on upstream story | Demonstrates |
 | --- | --- | --- | --- |
 | `/` | [`views/demos/basic/Board1.tsx`](../../src/views/demos/basic/Board1.tsx) | `Default` | Bare static board, `ChessboardOptions` typing |
 | `/move` | [`views/demos/move/Board2.tsx`](../../src/views/demos/move/Board2.tsx) | `PlayVsRandom` | The core loop: ref-owned `chess.js` + controlled `position` + `onPieceDrop`; vs. a random mover |
 | `/analyze` | [`views/demos/engine/Board3.tsx`](../../src/views/demos/engine/Board3.tsx) | `AnalysisBoard` | Stockfish eval per position, best move drawn as an `arrows` entry |
-| `/player1` | [`views/player/engine_basic/Board.tsx`](../../src/views/player/engine_basic/Board.tsx) | (composed) | Play *against* the engine — engine moves are applied automatically |
+| `/player1` | [`views/player/engine_basic/Board.tsx`](../../src/views/player/engine_basic/Board.tsx) | (composed) | Play *against* the engine — engine moves are applied automatically. The **minimal** reference for the engine-move loop; deliberately left alone by CTA-12 |
+| `/engine/play` | [`views/engine/play/PlayWithEngine.tsx`](../../src/views/engine/play/PlayWithEngine.tsx) | (composed) | The full screen: eval bar, move list, MultiPV variations, live UCI settings, a real promotion picker |
 
 The `MainN.tsx` files next to each board are layout-only wrappers (an MUI `Box`
 with a `data-testid`); the board component is the unit of interest. Each
 "upstream story" column entry names a file in
 `docs/vendor/react-chessboard/stories/`.
+
+The first four are **demos** — the smallest thing that shows one idea, and worth
+keeping small. `/engine/play` is a real screen; when the two disagree about how
+much to handle (promotion is the standing example), the demo's shortcut is the
+one that stays.
+
+**Two rules the Play with Engine screen is built on, worth reusing:**
+
+- **Search the position on screen, not the live one.** The player can step back
+  at any time. Everything shown — evaluation, variations, depth — describes the
+  ply being looked at, so that is what gets searched; the engine's move is played
+  only when the search that produced it was for the live position. Dragging is
+  disabled off the live position, because a drag there would apply to a position
+  nobody is looking at.
+- **Anything sharing the board square with the board takes width out of it.** The
+  shell hands the screen a square and knows nothing about an eval bar
+  (`Layout.tsx` is not changed for one). Bar width + gap must come to exactly the
+  constant subtracted from the board's side, and the board box needs
+  `flexShrink: 0`, or flex shaves the difference off and the board stops being
+  square.
 
 ---
 

@@ -10,7 +10,7 @@ import Typography from "@mui/material/Typography";
 import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
 import { useTranslation } from "react-i18next";
 import type { ChangeEvent, FormEvent } from "react";
-import { pgnTag, type ParsedGame } from "../../../lib/pgn";
+import { gameTag, type Game } from "../../../lib/gameModel";
 
 /**
  * The Load PGN tab: every way a game gets into the app — a file picker, a paste
@@ -36,7 +36,7 @@ const hiddenInputSx = {
 } as const;
 
 type PgnIngestProps = {
-  games: readonly ParsedGame[];
+  games: readonly Game[];
   selected: number;
   error: string | null;
   pgnText: string;
@@ -63,18 +63,18 @@ function PgnIngest({
   const current = games[selected];
 
   /** The name to show for a game — its players, or a numbered fallback. */
-  const titleOf = (game: ParsedGame, index: number) => {
-    const white = pgnTag(game.headers, "White");
-    const black = pgnTag(game.headers, "Black");
+  const titleOf = (game: Game, index: number) => {
+    const white = gameTag(game.headers, "White");
+    const black = gameTag(game.headers, "Black");
     return white || black
       ? `${white ?? "?"} ${t("loadPgn.versus")} ${black ?? "?"}`
       : t("loadPgn.gameFallback", { number: index + 1 });
   };
 
   /** The identifying tags under the name, placeholders already dropped. */
-  const subtitleOf = (game: ParsedGame) =>
+  const subtitleOf = (game: Game) =>
     (["Event", "Date", "Result"] as const)
-      .map((key) => pgnTag(game.headers, key))
+      .map((key) => gameTag(game.headers, key))
       .filter((value): value is string => value !== undefined)
       .join(" · ");
 
