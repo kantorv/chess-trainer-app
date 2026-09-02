@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Chess } from 'chess.js';
 import {
   Chessboard,
@@ -25,10 +25,10 @@ const ENGINE_DEPTH = 12;
  */
 function Board4() {
   const engineRef = useRef<Engine | null>(null);
-  if (engineRef.current === null) {
-    engineRef.current = new Engine();
-  }
-  const engine = engineRef.current;
+  // Resolved at call time, not during render: StrictMode's mount → unmount →
+  // remount terminates the worker and re-runs the effects with no render in
+  // between, so an engine read during render would be dead from then on.
+  const getEngine = useCallback(() => (engineRef.current ??= new Engine()), []);
 
   const chessGameRef = useRef(new Chess());
   const chessGame = chessGameRef.current;
@@ -38,7 +38,7 @@ function Board4() {
 
   // Apply the engine's chosen move when it arrives.
   useEffect(() => {
-    const unsubscribe = engine.onMessage(({ bestMove }) => {
+    const unsubscribe = getEngine().onMessage(({ bestMove }) => {
       // Only act on a bestmove that it is actually the engine's turn to play.
       if (
         !bestMove ||
@@ -63,15 +63,15 @@ function Board4() {
     });
 
     return unsubscribe;
-  }, [engine, chessGame]);
+  }, [getEngine, chessGame]);
 
   // Tear the worker down on unmount (and on StrictMode remount).
   useEffect(() => {
     return () => {
-      engine.terminate();
+      engineRef.current?.terminate();
       engineRef.current = null;
     };
-  }, [engine]);
+  }, []);
 
   function onPieceDrop({ sourceSquare, targetSquare }: PieceDropHandlerArgs) {
     // Reject drops off the board and any attempt to move on the engine's turn.
@@ -93,7 +93,7 @@ function Board4() {
 
     if (!chessGame.isGameOver()) {
       setIsEngineThinking(true);
-      engine.evaluatePosition(chessGame.fen(), ENGINE_DEPTH);
+      getEngine().evaluatePosition(chessGame.fen(), ENGINE_DEPTH);
     }
     return true;
   }

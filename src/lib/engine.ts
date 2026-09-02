@@ -9,9 +9,14 @@
 
 /**
  * Path to the Stockfish worker script. The `stockfish.wasm.js` + `stockfish.wasm`
- * pair lives in `public/stockfish/`, so Vite serves it from the site root.
+ * pair lives in `public/stockfish/`, which Vite serves under the configured
+ * `base` — `/chess-trainer-app/` for the GitHub Pages project site, `/` under
+ * Vitest. It must be built from `BASE_URL` (which always ends in a slash) and
+ * never hardcoded to the site root: a bare `/stockfish/...` 404s under a
+ * sub-path deployment, and `new Worker()` reports that only as an async error
+ * event, so the board goes quiet instead of throwing.
  */
-const STOCKFISH_WORKER_URL = '/stockfish/stockfish.wasm.js';
+const STOCKFISH_WORKER_URL = `${import.meta.env.BASE_URL}stockfish/stockfish.wasm.js`;
 
 /** Callback registered with {@link Engine.onMessage}; returns an unsubscribe fn. */
 type EngineMessageCallback = (messageData: EngineMessage) => void;
@@ -47,6 +52,14 @@ export default class Engine {
     // scope: a shared worker leaks across route changes and cannot be torn down.
     this.stockfish = new Worker(STOCKFISH_WORKER_URL);
     this.isReady = false;
+    // A worker that fails to load (wrong path, bad MIME type) never throws —
+    // it just never answers. Say so, so the next silent board is one search away.
+    this.stockfish.addEventListener('error', (event) => {
+      console.error(
+        `Stockfish worker failed to load from ${STOCKFISH_WORKER_URL}`,
+        event.message || event,
+      );
+    });
     this.onMessage = (callback) => {
       const listener = (e: MessageEvent<string>) => {
         callback(this.transformSFMessageData(e));

@@ -206,7 +206,11 @@ The demos currently hardcode `promotion: 'q'` for simplicity — that is a
 ## 4. Stockfish engine integration
 
 Wrapper: [`src/lib/engine.ts`](../../src/lib/engine.ts). Worker script + wasm
-live in `public/stockfish/` and are served from `/stockfish/stockfish.wasm.js`.
+live in `public/stockfish/`, served under Vite's `base` — so the worker URL is
+built from `import.meta.env.BASE_URL`, never hardcoded to the site root. The app
+deploys to GitHub Pages at `/chess-trainer-app/`, where a bare
+`/stockfish/stockfish.wasm.js` 404s; `new Worker()` reports that as an async
+`error` event rather than throwing, so the board simply never evaluates.
 
 ### API
 
@@ -224,31 +228,41 @@ promotion), `ponder`, `positionEvaluation` (centipawns, **string**),
 
 ### Rules for using it from React
 
-1. **Create the engine lazily in a ref**, not `useMemo`, not module scope:
+1. **Create the engine lazily in a ref, resolved at call time — never during
+   render**, not `useMemo`, not module scope:
 
    ```tsx
    const engineRef = useRef<Engine | null>(null);
-   if (engineRef.current === null) engineRef.current = new Engine();
-   const engine = engineRef.current;
+   const getEngine = useCallback(() => (engineRef.current ??= new Engine()), []);
    ```
 
    Module-scope workers leak across route changes and can never be torn down.
+   Reading the engine during render (`const engine = engineRef.current`) looks
+   equivalent but dies under StrictMode: its mount → unmount → remount runs the
+   cleanups and then the effects again **with no render in between**, so every
+   effect keeps the instance that rule 3 just terminated and the board is silent
+   for the rest of the session. `getEngine()` rebuilds it instead. Call it from
+   the effects and the move handlers; the engine is then absent from their
+   dependency arrays.
 
 2. **Subscribe in an effect, unsubscribe on cleanup.** Never call
    `engine.onMessage(...)` inside a per-move function — that adds a new listener
    every move and never removes it.
 
+   Declare this effect **first**, so on a StrictMode remount it is the one that
+   rebuilds the worker before the evaluate effect asks it for a search.
+
    ```tsx
    useEffect(() => {
-     const unsubscribe = engine.onMessage((msg) => { /* setState */ });
+     const unsubscribe = getEngine().onMessage((msg) => { /* setState */ });
      return unsubscribe;
-   }, [engine, chessGame]);
+   }, [getEngine, chessGame]);
    ```
 
 3. **Terminate on unmount** (also covers StrictMode's mount→unmount→remount):
 
    ```tsx
-   useEffect(() => () => { engine.terminate(); engineRef.current = null; }, [engine]);
+   useEffect(() => () => { engineRef.current?.terminate(); engineRef.current = null; }, []);
    ```
 
 4. **Normalize the score.** Stockfish reports `cp` / `mate` from the
