@@ -144,9 +144,10 @@ describe("board square reflow on window resize", () => {
     renderShell();
     const square = screen.getByTestId("layout-board-square-body");
 
-    // min(800, 600) minus the p:2 inset on both edges (2 * 16px).
+    // min(800 - 320 - 32, 600 - 32): the fixed 320px panel comes off the width
+    // before squaring, and the p:2 inset off both edges (2 * 16px).
     await waitFor(() =>
-      expect(square).toHaveStyle({ width: "568px", height: "568px" }),
+      expect(square).toHaveStyle({ width: "448px", height: "448px" }),
     );
 
     grbc.mockReturnValue(rect(500, 400));
@@ -154,9 +155,9 @@ describe("board square reflow on window resize", () => {
       window.dispatchEvent(new Event("resize"));
     });
 
-    // min(500, 400) - 32.
+    // min(500 - 320 - 32, 400 - 32) — width-bound at this size.
     await waitFor(() =>
-      expect(square).toHaveStyle({ width: "368px", height: "368px" }),
+      expect(square).toHaveStyle({ width: "148px", height: "148px" }),
     );
   });
 
@@ -259,7 +260,7 @@ describe("route-driven right panel slot", () => {
     });
     await waitFor(() =>
       expect(screen.getByTestId("layout-board-square-body")).toHaveStyle({
-        width: "368px",
+        width: "148px",
       }),
     );
 
@@ -272,5 +273,68 @@ describe("route-driven right panel slot", () => {
     renderShell(panelRoutes);
 
     expect(nearestCache(screen.getByTestId("panel-content"))).toBe("muirtl");
+  });
+});
+
+describe("fixed-width rails", () => {
+  it("gives the nav rail and the panel fixed widths, and the board area the rest", () => {
+    renderShell();
+
+    // Both are `width` + `flexShrink: 0` rather than flex ratios, so neither
+    // grows with the window and the board keeps every pixel they do not need.
+    expect(screen.getByTestId("layout-sidebar-container")).toHaveStyle({
+      width: "240px",
+      flexShrink: "0",
+    });
+    expect(screen.getByTestId("layout-board-square-sidebar")).toHaveStyle({
+      width: "320px",
+      flexShrink: "0",
+    });
+  });
+
+  it("does not scroll the aside itself, so a panel can pin content to its foot", () => {
+    renderShell();
+
+    // The Load PGN panel divides this height between a scrolling move list and
+    // the ingestion controls beneath it; a scrolling aside would let the
+    // controls slide out of view under a long game instead.
+    expect(screen.getByTestId("layout-board-square-sidebar")).toHaveStyle({
+      display: "flex",
+      flexDirection: "column",
+      overflow: "hidden",
+    });
+  });
+
+  it("still squares the board against height when height is the binding side", async () => {
+    const grbc = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect");
+    // Wide and short: the panel leaves 1200 - 320 - 32 = 848 of width, but only
+    // 400 - 32 = 368 of height, so the square is height-bound.
+    grbc.mockReturnValue(rect(1200, 400));
+
+    renderShell();
+
+    await waitFor(() =>
+      expect(screen.getByTestId("layout-board-square-body")).toHaveStyle({
+        width: "368px",
+        height: "368px",
+      }),
+    );
+    grbc.mockRestore();
+  });
+
+  it("never sizes the square below zero when the panel outgrows the row", async () => {
+    const grbc = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect");
+    // Narrower than the panel alone — the width term goes negative.
+    grbc.mockReturnValue(rect(200, 600));
+
+    renderShell();
+
+    await waitFor(() =>
+      expect(screen.getByTestId("layout-board-square-body")).toHaveStyle({
+        width: "0px",
+        height: "0px",
+      }),
+    );
+    grbc.mockRestore();
   });
 });

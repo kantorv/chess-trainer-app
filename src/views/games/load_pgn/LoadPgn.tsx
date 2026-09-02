@@ -30,10 +30,20 @@ import { useGameNavigation } from "./useGameNavigation";
  * the move list will consume; this component is only the UI around it, plus a
  * read-only board showing the loaded game.
  *
- * The ingestion controls share the square board area, so this column scrolls.
- * The shell's right-hand aside holds the move list instead — registered through
- * `<RightPanel>` (see `views/main/rightPanel.tsx`), which keeps the panel part
- * of this screen's own tree and so able to share its ply state by closure.
+ * The screen fills two of the shell's regions and draws no columns of its own:
+ *
+ * - the **board square** holds the board and nothing else, so it takes the
+ *   largest square the shell can give it;
+ * - the **right-hand aside** (`<RightPanel>`) holds the move list, and under it,
+ *   pinned to the foot of the panel, every ingestion affordance — file picker,
+ *   drop target, paste box and multi-game picker.
+ *
+ * Putting the controls in the panel rather than under the board is what lets the
+ * board be as large as it is: the square is then bounded by the window, not by
+ * whatever height a control strip needed. `<RightPanel>` portals its content out
+ * of this component's tree, so the controls, the move list and the board all
+ * still share this screen's state by closure — nothing is threaded through the
+ * shell.
  */
 
 /** An input that stays clickable — and so uploadable in tests — while unseen. */
@@ -194,126 +204,186 @@ function LoadPgn() {
     allowDragging: false,
   };
 
+  /*
+    Dropping a PGN works over the board and over the controls alike. They are
+    two separate subtrees once the panel is portalled out, so a single drop
+    target cannot span them and both get the handlers.
+  */
+  const dropTargetProps = {
+    onDragOver,
+    onDragLeave,
+    onDrop,
+  };
+
   return (
-    <Box
-      data-testid="load-pgn-screen"
-      onDragOver={onDragOver}
-      onDragLeave={onDragLeave}
-      onDrop={onDrop}
-      sx={{
-        height: "100%",
-        overflow: "auto",
-        display: "flex",
-        flexDirection: "column",
-        gap: 1.5,
-        p: 1,
-        borderRadius: 1,
-        border: "2px dashed",
-        borderColor: isDragOver ? "primary.main" : "divider",
-        bgcolor: isDragOver ? "action.hover" : "transparent",
-      }}
-    >
-      <Stack direction="row" spacing={1} sx={{ alignItems: "center", flexWrap: "wrap" }}>
-        <Button
-          component="label"
-          variant="contained"
-          size="small"
-          startIcon={<UploadFileRoundedIcon />}
-        >
-          {t("loadPgn.chooseFile")}
-          <Box
-            component="input"
-            type="file"
-            accept=".pgn"
-            data-testid="pgn-file-input"
-            aria-label={t("loadPgn.chooseFile")}
-            onChange={onFileChosen}
-            sx={hiddenInputSx}
-          />
-        </Button>
-        <Typography variant="body2" sx={{ color: "text.secondary" }}>
-          {t("loadPgn.dropHint")}
-        </Typography>
-      </Stack>
-
-      <Box component="form" onSubmit={submitPasted}>
-        <TextField
-          fullWidth
-          multiline
-          minRows={3}
-          size="small"
-          label={t("loadPgn.pasteLabel")}
-          value={pgnText}
-          onChange={(event) => setPgnText(event.target.value)}
-          onBlur={onPasteBlur}
-        />
-        <Button type="submit" size="small" sx={{ mt: 1 }}>
-          {t("loadPgn.load")}
-        </Button>
-      </Box>
-
-      {error !== null && (
-        <Alert severity="error" data-testid="pgn-error">
-          {error}
-        </Alert>
-      )}
-
-      {games.length > 1 && (
-        <Box>
-          <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-            {t("loadPgn.gamesTitle")}
-          </Typography>
-          <List dense disablePadding data-testid="pgn-game-picker">
-            {games.map((game, index) => (
-              <ListItemButton
-                // Games in a file have no id of their own, and the list is
-                // rebuilt wholesale on every load — the index is stable for as
-                // long as this array exists.
-                key={index}
-                selected={index === selected}
-                onClick={() => selectGame(index)}
-              >
-                <ListItemText
-                  primary={titleOf(game, index)}
-                  secondary={subtitleOf(game)}
-                />
-              </ListItemButton>
-            ))}
-          </List>
-        </Box>
-      )}
-
-      <Typography variant="body2" data-testid="pgn-summary" sx={{ color: "text.secondary" }}>
-        {current === undefined
-          ? t("loadPgn.emptyState")
-          : `${titleOf(current, selected)} — ${t("loadPgn.movesLoaded", {
-              total: current.moves.length,
-            })}`}
-      </Typography>
-
+    <>
+      {/*
+        The shell's square, filled edge to edge by the board. The drag highlight
+        is an `outline`, not a `border`: an outline is painted outside the box
+        model, so switching it on does not shrink the board by its own width.
+        It takes its colour from `currentColor`.
+      */}
       <Box
+        data-testid="load-pgn-screen"
+        {...dropTargetProps}
         sx={{
           width: "100%",
-          maxWidth: 420,
-          aspectRatio: "1 / 1",
-          alignSelf: "center",
-          flexShrink: 0,
+          height: "100%",
+          borderRadius: 1,
+          outline: isDragOver ? "2px dashed" : "none",
+          outlineOffset: "-2px",
+          color: isDragOver ? "primary.main" : "inherit",
         }}
       >
         <Chessboard options={chessboardOptions} />
       </Box>
 
-      {/*
-        The move list goes into the shell's right-hand aside. Registered only
-        while a game is loaded, so an empty screen still shows the shell's own
-        Analysis placeholder rather than an empty panel.
-      */}
-      {current !== undefined && (
-        <RightPanel>
-          <MoveList game={current} currentPly={ply} onSelectPly={goToPly} />
-        </RightPanel>
-      )}
-    </Box>
+      <RightPanel>
+        {/*
+          The panel's full height, split in two: the move list takes what is
+          left and scrolls, the ingestion controls sit at the foot and keep
+          their natural height. The aside is a flex column that does not scroll
+          itself (see `Layout.tsx`), which is what pins the controls there
+          rather than letting them slide away under a long game.
+        */}
+        <Box
+          data-testid="load-pgn-panel"
+          sx={{
+            flexGrow: 1,
+            minHeight: 0,
+            display: "flex",
+            flexDirection: "column",
+            gap: 1,
+          }}
+        >
+          {/* Empty until a game loads — the "nothing loaded yet" line lives with
+              the controls below, where the reader is already looking. */}
+          <Box sx={{ flexGrow: 1, minHeight: 0, overflow: "auto" }}>
+            {current !== undefined && (
+              <MoveList game={current} currentPly={ply} onSelectPly={goToPly} />
+            )}
+          </Box>
+
+          <Box
+            data-testid="load-pgn-controls"
+            {...dropTargetProps}
+            sx={{
+              flexShrink: 0,
+              display: "flex",
+              flexDirection: "column",
+              gap: 1,
+              pt: 1,
+              borderTop: "1px solid",
+              borderColor: isDragOver ? "primary.main" : "divider",
+              bgcolor: isDragOver ? "action.hover" : "transparent",
+              borderRadius: isDragOver ? 1 : 0,
+            }}
+          >
+            <Stack
+              direction="row"
+              spacing={1}
+              sx={{ alignItems: "center", flexWrap: "wrap" }}
+            >
+              <Button
+                component="label"
+                variant="contained"
+                size="small"
+                startIcon={<UploadFileRoundedIcon />}
+              >
+                {t("loadPgn.chooseFile")}
+                <Box
+                  component="input"
+                  type="file"
+                  accept=".pgn"
+                  data-testid="pgn-file-input"
+                  aria-label={t("loadPgn.chooseFile")}
+                  onChange={onFileChosen}
+                  sx={hiddenInputSx}
+                />
+              </Button>
+              <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                {t("loadPgn.dropHint")}
+              </Typography>
+            </Stack>
+
+            {/* Load sits beside the paste box, not under it — the panel is
+                narrow, but vertical room is what the controls have least of. */}
+            <Box
+              component="form"
+              onSubmit={submitPasted}
+              sx={{ display: "flex", gap: 1, alignItems: "flex-start" }}
+            >
+              <TextField
+                multiline
+                minRows={2}
+                // Without a cap a pasted game grows this box to its own length
+                // and squeezes the move list out of the panel.
+                maxRows={4}
+                size="small"
+                label={t("loadPgn.pasteLabel")}
+                value={pgnText}
+                onChange={(event) => setPgnText(event.target.value)}
+                onBlur={onPasteBlur}
+                sx={{ flexGrow: 1, minWidth: 0 }}
+              />
+              <Button type="submit" size="small" variant="outlined">
+                {t("loadPgn.load")}
+              </Button>
+            </Box>
+
+            {error !== null && (
+              <Alert severity="error" data-testid="pgn-error">
+                {error}
+              </Alert>
+            )}
+
+            {games.length > 1 && (
+              <Box>
+                <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                  {t("loadPgn.gamesTitle")}
+                </Typography>
+                <List
+                  dense
+                  disablePadding
+                  data-testid="pgn-game-picker"
+                  // A file with many games scrolls its picker rather than
+                  // pushing the paste box and the move list out of the panel.
+                  sx={{ maxHeight: 160, overflow: "auto" }}
+                >
+                  {games.map((game, index) => (
+                    <ListItemButton
+                      // Games in a file have no id of their own, and the list
+                      // is rebuilt wholesale on every load — the index is
+                      // stable for as long as this array exists.
+                      key={index}
+                      selected={index === selected}
+                      onClick={() => selectGame(index)}
+                    >
+                      <ListItemText
+                        primary={titleOf(game, index)}
+                        secondary={subtitleOf(game)}
+                      />
+                    </ListItemButton>
+                  ))}
+                </List>
+              </Box>
+            )}
+
+            <Typography
+              variant="body2"
+              data-testid="pgn-summary"
+              sx={{ color: "text.secondary" }}
+            >
+              {current === undefined
+                ? t("loadPgn.emptyState")
+                : `${titleOf(current, selected)} — ${t("loadPgn.movesLoaded", {
+                    total: current.moves.length,
+                  })}`}
+            </Typography>
+          </Box>
+        </Box>
+      </RightPanel>
+    </>
   );
 }
 

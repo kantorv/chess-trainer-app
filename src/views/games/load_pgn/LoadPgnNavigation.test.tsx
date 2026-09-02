@@ -57,7 +57,9 @@ const game = parsePgnGames(pgn)[0];
 
 /**
  * The screen inside the shell's panel slot — `<RightPanel>` needs the provider,
- * and the outlet is what gives its portal a host to land in.
+ * and the outlet is what gives its portal a host to land in. The screen fills
+ * that slot from the moment it mounts (the ingestion controls live there), so
+ * the `fallback` below is only ever proof that it *is* filled.
  */
 const renderScreen = () =>
   render(
@@ -95,10 +97,13 @@ beforeEach(async () => {
 });
 
 describe("stepping through a loaded game", () => {
-  it("shows the shell placeholder until a game is loaded", () => {
+  it("fills the panel with the ingestion controls, and no move list, until a game is loaded", () => {
     renderScreen();
 
-    expect(screen.getByTestId("panel-fallback")).toBeInTheDocument();
+    // The screen owns the panel from the start — the shell's Analysis
+    // placeholder never shows on this route.
+    expect(screen.queryByTestId("panel-fallback")).not.toBeInTheDocument();
+    expect(screen.getByTestId("load-pgn-controls")).toBeInTheDocument();
     expect(screen.queryByTestId("move-list")).not.toBeInTheDocument();
     // Nothing to step through yet, so the arrow keys still belong to the page.
     expect(fireEvent.keyDown(document.body, { key: "ArrowLeft" })).toBe(true);
@@ -108,8 +113,9 @@ describe("stepping through a loaded game", () => {
     renderScreen();
     await pasteAndLoad(pgn);
 
-    expect(screen.queryByTestId("panel-fallback")).not.toBeInTheDocument();
     expect(screen.getByTestId("move-list")).toBeInTheDocument();
+    // The controls stay put underneath it — loading a game does not replace them.
+    expect(screen.getByTestId("load-pgn-controls")).toBeInTheDocument();
     expect(currentPly()).toBe(5);
     expect(board()).toHaveAttribute("data-position", fenAtPly(game, 5));
   });

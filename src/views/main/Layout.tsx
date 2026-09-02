@@ -23,6 +23,27 @@ import LanguageSwitch from '../../theme/LanguageSwitch';
  */
 const BOARD_INSET_PX = 16;
 
+/**
+ * The nav rail's width, in pixels.
+ *
+ * It used to be `flex: 3` against the body's `flex: 9` — a quarter of the
+ * window, which is a sensible rail at 1024px and a 460px slab at 1850px. Its
+ * content is fixed-width (an icon, a label, one level of indent), so it takes a
+ * fixed width and the board area keeps everything the rail does not need.
+ */
+const SIDEBAR_WIDTH_PX = 240;
+
+/**
+ * The right-hand panel's width, in pixels.
+ *
+ * Fixed for the same reason as the rail, and load-bearing for the board: the
+ * square is computed by taking this off the row's width first, so the board can
+ * fill everything left over instead of being sized against space the panel is
+ * standing in. A flexible panel would make that width unknowable at the moment
+ * the square is measured.
+ */
+const PANEL_WIDTH_PX = 320;
+
 const Header = () => {
     const { t } = useTranslation();
 
@@ -153,10 +174,19 @@ const DefaultLayoutViewport = () => {
     const boardDimentions = useMemo<Rect>(()=>{
         const { width, height } = bodyDimentions
         if (width === 0 || height === 0) return { width: 0, height: 0 };
-        // Strip the inset from both edges before squaring: the square plus its
-        // surrounding inset then never exceeds the available body area, at any
-        // window size.
-        const minorSide = Math.max(0, Math.min(width, height) - BOARD_INSET_PX * 2)
+        // Strip the inset from both edges before squaring, and the panel from
+        // the width: the panel is a sibling inside this row, so the board only
+        // ever had `width - PANEL_WIDTH_PX` to work with. Taking it off here is
+        // what lets the square grow to fill the rest — measured against the row
+        // alone it would be sized against space the panel is standing in, and
+        // capped well below what actually fits.
+        const minorSide = Math.max(
+            0,
+            Math.min(
+                width - PANEL_WIDTH_PX - BOARD_INSET_PX * 2,
+                height - BOARD_INSET_PX * 2,
+            ),
+        )
         return {
             width: minorSide,
             height: minorSide,
@@ -225,8 +255,8 @@ const DefaultLayoutViewport = () => {
                 <Box
                     data-testid="layout-sidebar-container"
                     sx={{
-
-                        flex: 3,
+                        width: `${SIDEBAR_WIDTH_PX}px`,
+                        flexShrink: 0,
                         display: "flex",
                         flexDirection: "column"
                     }}
@@ -238,7 +268,10 @@ const DefaultLayoutViewport = () => {
                 <Box
                    data-testid="layout-body-container"
                     sx={{
-                        flex: 9,
+                        // Everything the rail does not take. `minWidth: 0` so a
+                        // wide board or panel cannot push this past the window.
+                        flexGrow: 1,
+                        minWidth: 0,
                         display: "flex",
                         flexDirection: "column"
                     }}
@@ -298,9 +331,23 @@ const DefaultLayoutViewport = () => {
                             component="aside"
                             data-testid="layout-board-square-sidebar"
                             sx={{
-                                flexGrow: 1,
+                                width: `${PANEL_WIDTH_PX}px`,
+                                flexShrink: 0,
                                 minWidth: 0,
-                                overflow: "auto",
+                                /*
+                                  A column, and it does not scroll itself: a
+                                  panel that wants a section pinned to the foot
+                                  of the aside — the Load PGN controls under the
+                                  move list — needs the height to divide up, and
+                                  a scrolling parent would let the pinned part
+                                  slide off instead. Panels scroll their own
+                                  sections; the fallback placeholder is two
+                                  lines and needs neither.
+                                */
+                                display: "flex",
+                                flexDirection: "column",
+                                minHeight: 0,
+                                overflow: "hidden",
                                 p: 2,
                                 bgcolor: "background.paper",
                                 borderInlineStart: "1px solid",
