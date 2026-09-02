@@ -1,14 +1,85 @@
-
-import { useState, useRef , useEffect, useMemo} from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
+import AppBar from '@mui/material/AppBar';
 import Box from '@mui/material/Box';
-//import SideMenu from './components/SideMenu'; // TODO: make AnonymousSideMenu and AuthenticatedSideMenu
-import { Outlet, useLocation, useMatches , type UIMatch} from 'react-router';
-import { default as SideBar } from './Sidebar'
+import Stack from '@mui/material/Stack';
+import Toolbar from '@mui/material/Toolbar';
+import Typography from '@mui/material/Typography';
+import { Link as RouterLink, Outlet, useMatches, type UIMatch } from 'react-router';
+import { useTranslation } from 'react-i18next';
+import { default as SideBar } from './Sidebar';
 import { BoardWidgetContext } from './service';
+import { ForceLTR } from '../../theme/ForceLTR';
+import ColorModeIconDropdown from '../../theme/ColorModeIconDropdown';
+import LanguageSwitch from '../../theme/LanguageSwitch';
+
+const Header = () => {
+    const { t } = useTranslation();
+
+    return (
+        <AppBar
+            position="static"
+            elevation={0}
+            data-testid="layout-header"
+            sx={{
+                flexShrink: 0,
+                color: 'text.primary',
+                bgcolor: 'background.translucent',
+                backdropFilter: 'blur(8px)',
+                borderBottom: '1px solid',
+                borderColor: 'divider',
+            }}
+        >
+            <Toolbar variant="dense" sx={{ gap: 2, minHeight: 56 }}>
+                <Box
+                    component={RouterLink}
+                    to="/"
+                    sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1.25,
+                        color: 'text.primary',
+                        textDecoration: 'none',
+                        // Pushes everything after it to the far end of the bar,
+                        // in whichever direction "far end" currently means.
+                        marginInlineEnd: 'auto',
+                    }}
+                >
+                    <Box
+                        sx={{
+                            display: 'grid',
+                            placeItems: 'center',
+                            width: 30,
+                            height: 30,
+                            borderRadius: '9px',
+                            bgcolor: 'text.primary',
+                            color: 'background.paper',
+                            fontSize: 12,
+                            fontWeight: 800,
+                        }}
+                    >
+                        {t('app.brandMark')}
+                    </Box>
+                    <Typography
+                        component="span"
+                        sx={{ fontWeight: 800, letterSpacing: '-0.01em' }}
+                    >
+                        {t('app.brandText')}
+                    </Typography>
+                </Box>
+
+                <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+                    <LanguageSwitch />
+                    <ColorModeIconDropdown />
+                </Stack>
+            </Toolbar>
+        </AppBar>
+    );
+};
 
 const DefaultLayoutViewport = () => {
 
     const svc = BoardWidgetContext.useActorRef()
+    const { t } = useTranslation();
 
 
     // MANUALLY FIXING BOARD VIEWPORT SIZE IN PIXELS
@@ -42,21 +113,21 @@ const DefaultLayoutViewport = () => {
 
 
 
-    const matches = useMatches(); 
+    const matches = useMatches();
     const [curPath, setCurPath] = useState<string>("");
 
     const updateLocationFn = (match:UIMatch)=>svc.send({
-        type:"EVENTS.NAVIGATION.ROUTER.MATCH.UPDATE", 
+        type:"EVENTS.NAVIGATION.ROUTER.MATCH.UPDATE",
         match:match
     })
 
-    
+
     useEffect(()=>{
         console.log("[TemplatesReadonlyWidgetLayout] matches update", matches);
         const last_match =  matches.pop()
         if(undefined === last_match) return
         if (curPath === last_match.pathname) return
-        setCurPath(last_match.pathname) 
+        setCurPath(last_match.pathname)
 
         console.log("[TemplatesReadonlyWidgetLayout][updateLocationFn] called", last_match);
         updateLocationFn(last_match)
@@ -64,63 +135,43 @@ const DefaultLayoutViewport = () => {
 
 
 
-  
+
 
     return (
         <Box
             data-testid="layout-root"
             component="div"
-            sx={[
-                (theme) => ({
-
-                    display: "flex",
-                    background: "gray",
-                    height: "100vh",
-                    width: "100vw",
-
-                    //     height: `calc(100vh - ${theme.spacing(2)})`,
-                    //     width: `calc(100vw - ${theme.spacing(2)})`,
-                    //     p:theme.spacing(0.5),
-                    //    m:theme.spacing(0.5),
-                    //     background: "green",
-                    // m: 1,
-                    flexGrow: 0,
-
-                    overflow: "hidden",
-                    justifyContent: "center",
-
-                })
-            ]}
-
+            sx={{
+                display: "flex",
+                flexDirection: "column",
+                bgcolor: "background.default",
+                color: "text.primary",
+                height: "100vh",
+                width: "100vw",
+                flexGrow: 0,
+                overflow: "hidden",
+            }}
         >
+            <Header />
 
             <Box
                  ref={ref}
                  data-testid="layout-wrapper"
-                sx={[
-                    (theme) => ({
-                      //  p: theme.spacing(0.5),
-                        //m:theme.spacing(0.5),
-                        display: "flex",
-
-
-                        background: "aliceblue",
-                        // height: `calc(100% - ${theme.spacing(4)})`,
-                        // width: `calc(100% - ${theme.spacing(4)})`,
-                        //     background: "green",
-                        // m: 1,
-                        flexGrow: 1,
-
-                        overflow: "hidden",
-
-
-                    })
-                ]}
+                sx={{
+                    display: "flex",
+                    bgcolor: "background.default",
+                    flexGrow: 1,
+                    // Without this the row refuses to shrink below its content
+                    // and pushes the shell past the viewport instead of
+                    // clipping — which would also make the measurement above
+                    // read a taller box than the one actually on screen.
+                    minHeight: 0,
+                    overflow: "hidden",
+                }}
             >
                 <Box
                     data-testid="layout-sidebar-container"
                     sx={{
-
 
                         flex: 3,
                         display: "flex",
@@ -134,9 +185,6 @@ const DefaultLayoutViewport = () => {
                 <Box
                    data-testid="layout-body-container"
                     sx={{
-                        
-                        //  overflow: "auto",
-                       // background:"blue",
                         flex: 9,
                         display: "flex",
                         flexDirection: "column"
@@ -146,6 +194,7 @@ const DefaultLayoutViewport = () => {
                         sx={{
                             display: "flex",
                             flexGrow:1,
+                            minHeight: 0,
                         }}
                    >
                          <Box
@@ -154,31 +203,51 @@ const DefaultLayoutViewport = () => {
 
                                 width:`${boardDimentions.width}px`,
                                 height: `${boardDimentions.height}px`
-                                
+
                             }}
                         >
-                            <Outlet />
+                            {/*
+                                The board must never mirror: files run a-h left
+                                to right in every language, and flipping them
+                                would put a1 bottom-right while chess.js and the
+                                engine still report a1 as bottom-left. ForceLTR
+                                pins this subtree to the unflipped emotion cache
+                                and an LTR theme. It fills the square rather than
+                                wrapping it, so the container-sizing contract in
+                                .claude/rules/chessboard.md still holds.
+                            */}
+                            <ForceLTR sx={{ width: "100%", height: "100%" }}>
+                                <Outlet />
+                            </ForceLTR>
 
                         </Box>
 
                          <Box
+                            component="aside"
                             data-testid="layout-board-square-sidebar"
                             sx={{
-
-
-                                 flexGrow:1,
-                                  
-                                background:"maroon"
+                                flexGrow: 1,
+                                minWidth: 0,
+                                overflow: "auto",
+                                p: 2,
+                                bgcolor: "background.paper",
+                                borderInlineStart: "1px solid",
+                                borderColor: "divider",
                             }}
                         >
-                           <p>Right sidebar</p>
+                           <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                               {t("panel.analysisTitle")}
+                           </Typography>
+                           <Typography variant="body2" sx={{ color: "text.secondary", mt: 0.5 }}>
+                               {t("panel.analysisPlaceholder")}
+                           </Typography>
 
                         </Box>
 
 
 
                    </Box>
-                  
+
 
                 </Box>
 
@@ -191,7 +260,7 @@ const DefaultLayoutViewport = () => {
 
 
 
-const DefaultLayout = ()=>        
+const DefaultLayout = ()=>
             <BoardWidgetContext.Provider>
                 <DefaultLayoutViewport />
             </BoardWidgetContext.Provider>

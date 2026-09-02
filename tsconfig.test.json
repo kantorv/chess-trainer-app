@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.app.json",
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.test.tsbuildinfo",
+    // `types` replaces rather than extends the inherited list, so `vite/client`
+    // has to be repeated here — without it the `./index.css` side-effect import
+    // in main.tsx has no declaration and this project alone fails to compile.
+    "types": [
+      "vite/client",
+      "vitest/globals",
+      "node",
+      "@testing-library/jest-dom"
+    ]
+  },
+  "include": ["src"],
+  "exclude": []
+}
