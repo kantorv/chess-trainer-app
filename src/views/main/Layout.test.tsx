@@ -277,18 +277,27 @@ describe("route-driven right panel slot", () => {
 });
 
 describe("fixed-width rails", () => {
-  it("gives the nav rail and the panel fixed widths, and the board area the rest", () => {
+  it("pins the nav rail to a fixed width rather than a share of the window", () => {
     renderShell();
 
-    // Both are `width` + `flexShrink: 0` rather than flex ratios, so neither
-    // grows with the window and the board keeps every pixel they do not need.
     expect(screen.getByTestId("layout-sidebar-container")).toHaveStyle({
       width: "240px",
       flexShrink: "0",
     });
+  });
+
+  it("lets the panel take whatever the square leaves, within its bounds", () => {
+    renderShell();
+
+    // Not a fixed width: the square is a square, so on a wide window it runs
+    // out of height long before width, and a fixed panel would strand the
+    // difference as a gap down the middle. Only the *minimum* is what the
+    // square is sized against, which is what keeps the two from chasing
+    // each other.
     expect(screen.getByTestId("layout-board-square-sidebar")).toHaveStyle({
-      width: "320px",
-      flexShrink: "0",
+      flexGrow: "1",
+      minWidth: "320px",
+      maxWidth: "560px",
     });
   });
 

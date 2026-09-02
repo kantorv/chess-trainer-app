@@ -34,15 +34,24 @@ const BOARD_INSET_PX = 16;
 const SIDEBAR_WIDTH_PX = 240;
 
 /**
- * The right-hand panel's width, in pixels.
+ * The right-hand panel's width bounds, in pixels.
  *
- * Fixed for the same reason as the rail, and load-bearing for the board: the
- * square is computed by taking this off the row's width first, so the board can
- * fill everything left over instead of being sized against space the panel is
- * standing in. A flexible panel would make that width unknowable at the moment
- * the square is measured.
+ * The panel takes whatever the board square leaves, between these two. That is
+ * what keeps the row full: the square is a square, so on a wide window it runs
+ * out of height long before it runs out of width, and a fixed-width panel would
+ * strand the difference as a gap in the middle of the screen.
+ *
+ * Only the **minimum** enters the square's maths, which is what keeps the two
+ * from chasing each other: the square is sized against `width - PANEL_MIN`, a
+ * function of the window alone, and the panel then grows into the remainder. A
+ * panel width that depended on the square — and a square measured against the
+ * panel — is a cycle with no fixed point.
+ *
+ * The maximum stops a very wide window from turning the panel into a field of
+ * empty space; past it the row centres what it has.
  */
-const PANEL_WIDTH_PX = 320;
+const PANEL_MIN_WIDTH_PX = 320;
+const PANEL_MAX_WIDTH_PX = 560;
 
 const Header = () => {
     const { t } = useTranslation();
@@ -174,16 +183,16 @@ const DefaultLayoutViewport = () => {
     const boardDimentions = useMemo<Rect>(()=>{
         const { width, height } = bodyDimentions
         if (width === 0 || height === 0) return { width: 0, height: 0 };
-        // Strip the inset from both edges before squaring, and the panel from
-        // the width: the panel is a sibling inside this row, so the board only
-        // ever had `width - PANEL_WIDTH_PX` to work with. Taking it off here is
-        // what lets the square grow to fill the rest — measured against the row
-        // alone it would be sized against space the panel is standing in, and
-        // capped well below what actually fits.
+        // Strip the inset from both edges before squaring, and the panel's
+        // minimum from the width: the panel is a sibling inside this row, so
+        // the board never had more than `width - PANEL_MIN_WIDTH_PX` to work
+        // with. Taking it off here is what lets the square grow into the rest —
+        // measured against the row alone it would be sized against space the
+        // panel is standing in, and would overflow it.
         const minorSide = Math.max(
             0,
             Math.min(
-                width - PANEL_WIDTH_PX - BOARD_INSET_PX * 2,
+                width - PANEL_MIN_WIDTH_PX - BOARD_INSET_PX * 2,
                 height - BOARD_INSET_PX * 2,
             ),
         )
@@ -283,6 +292,10 @@ const DefaultLayoutViewport = () => {
                             display: "flex",
                             flexGrow:1,
                             minHeight: 0,
+                            // Only bites once the panel is at its maximum and
+                            // the square at its height: then, and only then, is
+                            // there anything left over to centre.
+                            justifyContent: "center",
                             // The shell-level board inset (was `p: 2` on one
                             // Main wrapper only). Measured together with the box
                             // in `getBoundingClientRect`, then subtracted back
@@ -331,9 +344,16 @@ const DefaultLayoutViewport = () => {
                             component="aside"
                             data-testid="layout-board-square-sidebar"
                             sx={{
-                                width: `${PANEL_WIDTH_PX}px`,
+                                /*
+                                  Takes the width the square leaves, within its
+                                  bounds — so the row has no gap down the middle
+                                  on a wide window, where the square is bound by
+                                  height long before it is bound by width.
+                                */
+                                flexGrow: 1,
                                 flexShrink: 0,
-                                minWidth: 0,
+                                minWidth: `${PANEL_MIN_WIDTH_PX}px`,
+                                maxWidth: `${PANEL_MAX_WIDTH_PX}px`,
                                 /*
                                   A column, and it does not scroll itself: a
                                   panel that wants a section pinned to the foot
