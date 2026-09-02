@@ -10,6 +10,7 @@ import RestartAltRoundedIcon from "@mui/icons-material/RestartAltRounded";
 import { useTranslation } from "react-i18next";
 import type { EngineOption } from "../../../lib/engine";
 import OptionSlider from "../../shared/OptionSlider";
+import { MAX_VARIATIONS_OFFERED } from "../../../lib/engineAnalysis";
 import {
   approximateElo,
   SETTING_UCI_OPTION,
@@ -156,7 +157,8 @@ function EngineSettings({
         label={t("playEngine.settings.multiPv")}
         value={settings.multiPv}
         fallbackMin={1}
-        fallbackMax={5}
+        fallbackMax={MAX_VARIATIONS_OFFERED}
+        maxOffered={MAX_VARIATIONS_OFFERED}
         onChange={(multiPv) => onChange({ multiPv })}
       />
 

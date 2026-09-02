@@ -3,6 +3,7 @@ import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import i18n from "../../../i18n";
 import AppThemeWithLang from "../../../theme/AppThemeWithLang";
+import { MAX_VARIATIONS_OFFERED } from "../../../lib/engineAnalysis";
 import { RightPanelOutlet, RightPanelProvider } from "../../main/rightPanel";
 import AnalysisBoard from "./AnalysisBoard";
 
@@ -508,6 +509,19 @@ describe("Analysis Board — the two switches", () => {
     await userEvent.click(screen.getByTestId("analysis-setting-engine"));
 
     expect(engine().lastSearch).toBe(position());
+  });
+
+  it("offers up to ten variations, not the 500 this build would accept", async () => {
+    renderScreen();
+    await openTab("engine");
+
+    const slider = screen
+      .getByTestId("engine-setting-multipv")
+      .querySelector("input")!;
+
+    expect(slider).toHaveAttribute("min", "1");
+    expect(slider).toHaveAttribute("max", String(MAX_VARIATIONS_OFFERED));
+    expect(MAX_VARIATIONS_OFFERED).toBe(10);
   });
 
   it("shows and hides the evaluation bar, independently of the engine", async () => {

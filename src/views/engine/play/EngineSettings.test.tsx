@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import i18n from "../../../i18n";
 import AppThemeWithLang from "../../../theme/AppThemeWithLang";
 import type { EngineOption } from "../../../lib/engine";
+import { MAX_VARIATIONS_OFFERED } from "../../../lib/engineAnalysis";
 import EngineSettings from "./EngineSettings";
 import {
   approximateElo,
@@ -120,6 +121,31 @@ describe("the engine settings tab", () => {
     expect(
       screen.queryByTestId("engine-setting-multipv-unsupported"),
     ).not.toBeInTheDocument();
+  });
+
+  it("caps the variations slider below the 500 this build would accept", () => {
+    renderSettings();
+
+    const slider = screen
+      .getByTestId("engine-setting-multipv")
+      .querySelector("input")!;
+
+    // The engine declares min 1 max 500; a slider with 500 stops would put the
+    // useful range in a few pixels, so the UI narrows it.
+    expect(slider).toHaveAttribute("min", "1");
+    expect(slider).toHaveAttribute("max", String(MAX_VARIATIONS_OFFERED));
+    expect(MAX_VARIATIONS_OFFERED).toBe(10);
+  });
+
+  it("still defers to a build that declares fewer lines than the cap", () => {
+    // The cap only ever narrows: an engine offering 3 is the one that decides.
+    renderSettings({
+      engineOptions: new Map([spin("MultiPV", 1, 3), spin("Skill Level", 0, 20)]),
+    });
+
+    expect(
+      screen.getByTestId("engine-setting-multipv").querySelector("input"),
+    ).toHaveAttribute("max", "3");
   });
 
   it("disables an option this engine build does not have, and says why", () => {

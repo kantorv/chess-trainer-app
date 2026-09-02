@@ -7,6 +7,7 @@ import Typography from "@mui/material/Typography";
 import RestartAltRoundedIcon from "@mui/icons-material/RestartAltRounded";
 import { useTranslation } from "react-i18next";
 import type { EngineOption } from "../../../lib/engine";
+import { MAX_VARIATIONS_OFFERED } from "../../../lib/engineAnalysis";
 import OptionSlider from "../../shared/OptionSlider";
 import {
   ANALYSIS_UCI_OPTION,
@@ -162,7 +163,8 @@ function AnalysisSettings({
         label={t("analysis.settings.multiPv")}
         value={settings.multiPv}
         fallbackMin={1}
-        fallbackMax={5}
+        fallbackMax={MAX_VARIATIONS_OFFERED}
+        maxOffered={MAX_VARIATIONS_OFFERED}
         onChange={(multiPv) => onChange({ multiPv })}
       />
 

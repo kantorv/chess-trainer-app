@@ -48,6 +48,16 @@ export type OptionSliderProps = {
   /** Bounds to use before the handshake lands and the engine's own arrive. */
   fallbackMin: number;
   fallbackMax: number;
+  /**
+   * Cap the top of the slider *below* what the engine would accept.
+   *
+   * For the rare option whose declared range is far wider than anything worth
+   * offering: this build takes `MultiPV` up to 500, and a slider with 500 stops
+   * is one where the useful range — the first handful of lines — is a few pixels
+   * wide. Only ever narrows; a build declaring a smaller `max` than this still
+   * wins, so the control never offers a value the engine would refuse.
+   */
+  maxOffered?: number;
   step?: number;
   onChange: (next: number) => void;
   /** Overrides the plain number shown beside the label. */
@@ -61,6 +71,7 @@ function OptionSlider({
   value,
   fallbackMin,
   fallbackMax,
+  maxOffered,
   step = 1,
   onChange,
   valueLabel,
@@ -84,6 +95,15 @@ function OptionSlider({
       : undefined;
 
   const testId = `engine-setting-${optionName.replace(/\s+/g, "-").toLowerCase()}`;
+
+  /*
+    The engine's own bounds when it gave them; the fallbacks are only ever used
+    before the handshake lands. `maxOffered` then narrows the top — never widens
+    it, so whichever of the two is lower is the one the reader can reach.
+  */
+  const min = option?.min ?? fallbackMin;
+  const engineMax = option?.max ?? fallbackMax;
+  const max = maxOffered === undefined ? engineMax : Math.min(engineMax, maxOffered);
 
   return (
     <Box
@@ -117,10 +137,8 @@ function OptionSlider({
         disabled={unsupported || fixedAt !== undefined}
         aria-label={label}
         value={value}
-        // The engine's own bounds when it gave them; the fallback is only ever
-        // used before the handshake lands.
-        min={option?.min ?? fallbackMin}
-        max={option?.max ?? fallbackMax}
+        min={min}
+        max={max}
         step={step}
         onChange={(_event, next) => onChange(next as number)}
       />
