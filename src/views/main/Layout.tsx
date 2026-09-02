@@ -23,6 +23,36 @@ import LanguageSwitch from '../../theme/LanguageSwitch';
  */
 const BOARD_INSET_PX = 16;
 
+/**
+ * The nav rail's width, in pixels.
+ *
+ * It used to be `flex: 3` against the body's `flex: 9` — a quarter of the
+ * window, which is a sensible rail at 1024px and a 460px slab at 1850px. Its
+ * content is fixed-width (an icon, a label, one level of indent), so it takes a
+ * fixed width and the board area keeps everything the rail does not need.
+ */
+const SIDEBAR_WIDTH_PX = 240;
+
+/**
+ * The right-hand panel's width bounds, in pixels.
+ *
+ * The panel takes whatever the board square leaves, between these two. That is
+ * what keeps the row full: the square is a square, so on a wide window it runs
+ * out of height long before it runs out of width, and a fixed-width panel would
+ * strand the difference as a gap in the middle of the screen.
+ *
+ * Only the **minimum** enters the square's maths, which is what keeps the two
+ * from chasing each other: the square is sized against `width - PANEL_MIN`, a
+ * function of the window alone, and the panel then grows into the remainder. A
+ * panel width that depended on the square — and a square measured against the
+ * panel — is a cycle with no fixed point.
+ *
+ * The maximum stops a very wide window from turning the panel into a field of
+ * empty space; past it the row centres what it has.
+ */
+const PANEL_MIN_WIDTH_PX = 320;
+const PANEL_MAX_WIDTH_PX = 560;
+
 const Header = () => {
     const { t } = useTranslation();
 
@@ -153,10 +183,19 @@ const DefaultLayoutViewport = () => {
     const boardDimentions = useMemo<Rect>(()=>{
         const { width, height } = bodyDimentions
         if (width === 0 || height === 0) return { width: 0, height: 0 };
-        // Strip the inset from both edges before squaring: the square plus its
-        // surrounding inset then never exceeds the available body area, at any
-        // window size.
-        const minorSide = Math.max(0, Math.min(width, height) - BOARD_INSET_PX * 2)
+        // Strip the inset from both edges before squaring, and the panel's
+        // minimum from the width: the panel is a sibling inside this row, so
+        // the board never had more than `width - PANEL_MIN_WIDTH_PX` to work
+        // with. Taking it off here is what lets the square grow into the rest —
+        // measured against the row alone it would be sized against space the
+        // panel is standing in, and would overflow it.
+        const minorSide = Math.max(
+            0,
+            Math.min(
+                width - PANEL_MIN_WIDTH_PX - BOARD_INSET_PX * 2,
+                height - BOARD_INSET_PX * 2,
+            ),
+        )
         return {
             width: minorSide,
             height: minorSide,
@@ -225,8 +264,8 @@ const DefaultLayoutViewport = () => {
                 <Box
                     data-testid="layout-sidebar-container"
                     sx={{
-
-                        flex: 3,
+                        width: `${SIDEBAR_WIDTH_PX}px`,
+                        flexShrink: 0,
                         display: "flex",
                         flexDirection: "column"
                     }}
@@ -238,7 +277,10 @@ const DefaultLayoutViewport = () => {
                 <Box
                    data-testid="layout-body-container"
                     sx={{
-                        flex: 9,
+                        // Everything the rail does not take. `minWidth: 0` so a
+                        // wide board or panel cannot push this past the window.
+                        flexGrow: 1,
+                        minWidth: 0,
                         display: "flex",
                         flexDirection: "column"
                     }}
@@ -250,6 +292,10 @@ const DefaultLayoutViewport = () => {
                             display: "flex",
                             flexGrow:1,
                             minHeight: 0,
+                            // Only bites once the panel is at its maximum and
+                            // the square at its height: then, and only then, is
+                            // there anything left over to centre.
+                            justifyContent: "center",
                             // The shell-level board inset (was `p: 2` on one
                             // Main wrapper only). Measured together with the box
                             // in `getBoundingClientRect`, then subtracted back
@@ -298,9 +344,30 @@ const DefaultLayoutViewport = () => {
                             component="aside"
                             data-testid="layout-board-square-sidebar"
                             sx={{
+                                /*
+                                  Takes the width the square leaves, within its
+                                  bounds — so the row has no gap down the middle
+                                  on a wide window, where the square is bound by
+                                  height long before it is bound by width.
+                                */
                                 flexGrow: 1,
-                                minWidth: 0,
-                                overflow: "auto",
+                                flexShrink: 0,
+                                minWidth: `${PANEL_MIN_WIDTH_PX}px`,
+                                maxWidth: `${PANEL_MAX_WIDTH_PX}px`,
+                                /*
+                                  A column, and it does not scroll itself: a
+                                  panel that wants a section pinned to the foot
+                                  of the aside — the Load PGN controls under the
+                                  move list — needs the height to divide up, and
+                                  a scrolling parent would let the pinned part
+                                  slide off instead. Panels scroll their own
+                                  sections; the fallback placeholder is two
+                                  lines and needs neither.
+                                */
+                                display: "flex",
+                                flexDirection: "column",
+                                minHeight: 0,
+                                overflow: "hidden",
                                 p: 2,
                                 bgcolor: "background.paper",
                                 borderInlineStart: "1px solid",

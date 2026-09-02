@@ -57,7 +57,9 @@ const game = parsePgnGames(pgn)[0];
 
 /**
  * The screen inside the shell's panel slot — `<RightPanel>` needs the provider,
- * and the outlet is what gives its portal a host to land in.
+ * and the outlet is what gives its portal a host to land in. The screen fills
+ * that slot from the moment it mounts (the ingestion controls live there), so
+ * the `fallback` below is only ever proof that it *is* filled.
  */
 const renderScreen = () =>
   render(
@@ -79,6 +81,11 @@ const currentPly = () =>
       ?.replace("move-ply-", ""),
   );
 
+/** The panel jumps to Moves when a game parses; come back for the controls. */
+const openLoadTab = async () => {
+  await userEvent.setup().click(screen.getByTestId("game-panel-tab-load"));
+};
+
 const pasteAndLoad = async (text: string) => {
   const user = userEvent.setup();
   const box = screen.getByLabelText(i18n.t("loadPgn.pasteLabel"));
@@ -95,10 +102,13 @@ beforeEach(async () => {
 });
 
 describe("stepping through a loaded game", () => {
-  it("shows the shell placeholder until a game is loaded", () => {
+  it("fills the panel with the ingestion controls, and no move list, until a game is loaded", () => {
     renderScreen();
 
-    expect(screen.getByTestId("panel-fallback")).toBeInTheDocument();
+    // The screen owns the panel from the start — the shell's Analysis
+    // placeholder never shows on this route.
+    expect(screen.queryByTestId("panel-fallback")).not.toBeInTheDocument();
+    expect(screen.getByTestId("load-pgn-controls")).toBeInTheDocument();
     expect(screen.queryByTestId("move-list")).not.toBeInTheDocument();
     // Nothing to step through yet, so the arrow keys still belong to the page.
     expect(fireEvent.keyDown(document.body, { key: "ArrowLeft" })).toBe(true);
@@ -108,8 +118,13 @@ describe("stepping through a loaded game", () => {
     renderScreen();
     await pasteAndLoad(pgn);
 
-    expect(screen.queryByTestId("panel-fallback")).not.toBeInTheDocument();
+    // A parsed game switches the panel to Moves on its own — that is the tab
+    // the reader wants next, and the ingestion controls have done their job.
+    expect(screen.getByTestId("game-panel-content-moves")).toBeInTheDocument();
     expect(screen.getByTestId("move-list")).toBeInTheDocument();
+    expect(screen.queryByTestId("load-pgn-controls")).not.toBeInTheDocument();
+    // The board controls sit below every tab, so they are still there.
+    expect(screen.getByTestId("board-controls")).toBeInTheDocument();
     expect(currentPly()).toBe(5);
     expect(board()).toHaveAttribute("data-position", fenAtPly(game, 5));
   });
@@ -215,14 +230,18 @@ describe("stepping through a loaded game", () => {
     const user = userEvent.setup();
     renderScreen();
     await pasteAndLoad(pgn);
+    const finalPosition = board().getAttribute("data-position");
 
+    await openLoadTab();
     const box = screen.getByLabelText(i18n.t("loadPgn.pasteLabel"));
     await user.click(box);
 
     // Typed into the paste box, the key belongs to the caret, not the panel —
     // and the handler must not preventDefault on it either.
     expect(fireEvent.keyDown(box, { key: "ArrowLeft" })).toBe(true);
-    expect(currentPly()).toBe(5);
+    // Read off the board rather than the move list: the list belongs to the
+    // Moves tab, and this test is standing on the Load PGN one.
+    expect(board()).toHaveAttribute("data-position", finalPosition);
   });
 
   it("only preventDefaults the keys it actually handles", async () => {
@@ -249,6 +268,7 @@ describe("stepping through a loaded game", () => {
     expect(currentPly()).toBe(0);
 
     const second = parsePgnGames(twoGames)[1];
+    await openLoadTab();
     await user.click(
       screen.getAllByRole("button", { name: /Carol vs Dan/ })[0],
     );

@@ -33,6 +33,36 @@ const en = {
     analysisPlaceholder: "Evaluation and move list will appear here.",
   },
   /** The move list panel: chrome only — SAN itself is language-independent. */
+  gamePanel: {
+    tabs: {
+      moves: "Moves",
+      info: "Info",
+      load: "Load PGN",
+    },
+    /** Accessible names for the icon-only board controls. */
+    controls: {
+      first: "Start position",
+      previous: "Previous move",
+      next: "Next move",
+      last: "Final position",
+      flip: "Flip board",
+    },
+    info: {
+      empty: "Load a game to see its details.",
+      /** Labels for the PGN tags worth naming; anything else shows its raw tag. */
+      event: "Event",
+      site: "Site",
+      date: "Date",
+      round: "Round",
+      white: "White",
+      black: "Black",
+      result: "Result",
+      eco: "ECO",
+      opening: "Opening",
+      timeControl: "Time control",
+      termination: "Termination",
+    },
+  },
   moveList: {
     title: "Moves",
     /** Ply 0, a selectable entry of its own. */

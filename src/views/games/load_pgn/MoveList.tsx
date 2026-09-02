@@ -101,10 +101,12 @@ function MoveList({ game, currentPly, onSelectPly }: MoveListProps) {
 
   useEffect(() => {
     /*
-      The aside around this list is the scroll container (`Layout.tsx` sets
-      `overflow: auto` on it), so `block: "nearest"` scrolls that and nothing
-      else. Optional call: jsdom implements no scrolling at all and leaves
-      `scrollIntoView` undefined.
+      `block: "nearest"` scrolls the nearest scrollable ancestor and stops
+      there — the box `LoadPgn` wraps this list in, which is the half of the
+      panel above the ingestion controls. The aside itself does not scroll (see
+      `Layout.tsx`), which is what keeps those controls pinned to its foot while
+      this list moves. Optional call: jsdom implements no scrolling at all and
+      leaves `scrollIntoView` undefined.
     */
     activeRef.current?.scrollIntoView?.({ block: "nearest" });
   }, [currentPly]);

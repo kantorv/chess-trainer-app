@@ -1,53 +1,38 @@
 import { useRef, useState, type ChangeEvent, type DragEvent, type FormEvent } from "react";
-import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
-import List from "@mui/material/List";
-import ListItemButton from "@mui/material/ListItemButton";
-import ListItemText from "@mui/material/ListItemText";
-import Stack from "@mui/material/Stack";
-import TextField from "@mui/material/TextField";
-import Typography from "@mui/material/Typography";
-import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
 import { useTranslation } from "react-i18next";
 import { Chessboard, type ChessboardOptions } from "react-chessboard";
 import {
   EmptyPgnError,
   PgnParseError,
   parsePgnGames,
-  pgnTag,
   type ParsedGame,
 } from "../../../lib/pgn";
 import { RightPanel } from "../../main/rightPanel";
-import MoveList from "./MoveList";
+import GamePanel from "./GamePanel";
+import PgnIngest from "./PgnIngest";
 import { useGameNavigation } from "./useGameNavigation";
 
 /**
- * Load PGN — every way a game gets into the app: a file picker, a drop target,
- * a paste box, and a picker for multi-game files.
+ * Load PGN — a loaded game on a board, with everything about that game in the
+ * shell's right-hand panel.
  *
- * Parsing itself lives in `src/lib/pgn.ts`, which owns the `ParsedGame` model
- * the move list will consume; this component is only the UI around it, plus a
- * read-only board showing the loaded game.
+ * The screen fills two of the shell's regions and draws no columns of its own:
  *
- * The ingestion controls share the square board area, so this column scrolls.
- * The shell's right-hand aside holds the move list instead — registered through
- * `<RightPanel>` (see `views/main/rightPanel.tsx`), which keeps the panel part
- * of this screen's own tree and so able to share its ply state by closure.
+ * - the **board square** holds the board and nothing else, so it takes the
+ *   largest square the shell can give it;
+ * - the **right-hand panel** (`<RightPanel>`) holds `GamePanel` — the
+ *   Moves / Info / Load PGN tabs, and the board controls under them.
+ *
+ * Keeping the controls in the panel rather than under the board is what lets
+ * the board be as large as it is: the square is bounded by the window, not by
+ * whatever height a control strip needed. `<RightPanel>` portals its content
+ * out of this component's tree, so the panel still shares this screen's state
+ * by closure — nothing is threaded through the shell.
+ *
+ * This component owns the state and the parsing seam; the panel's pieces are
+ * presentational and take props, so each renders against a fixture on its own.
  */
-
-/** An input that stays clickable — and so uploadable in tests — while unseen. */
-const hiddenInputSx = {
-  position: "absolute",
-  width: 1,
-  height: 1,
-  padding: 0,
-  margin: -1,
-  overflow: "hidden",
-  clip: "rect(0 0 0 0)",
-  whiteSpace: "nowrap",
-  border: 0,
-} as const;
 
 function LoadPgn() {
   const { t } = useTranslation();
@@ -57,6 +42,7 @@ function LoadPgn() {
   const [error, setError] = useState<string | null>(null);
   const [pgnText, setPgnText] = useState("");
   const [isDragOver, setIsDragOver] = useState(false);
+  const [orientation, setOrientation] = useState<"white" | "black">("white");
 
   /* What the paste box last submitted, so blurring an untouched box is a no-op. */
   const lastPastedRef = useRef("");
@@ -65,32 +51,16 @@ function LoadPgn() {
 
   /*
     Ply navigation for the game on screen: the board's position and arrow both
-    come from the selected half-move, and the panel's move list drives it. No
-    `chess.js` instance here on purpose — every ply already carries the FEN of
-    the position after it (`lib/pgn.ts`), so nothing needs re-simulating.
+    come from the selected half-move, and the panel drives it. No `chess.js`
+    instance here on purpose — every ply already carries the FEN of the position
+    after it (`lib/pgn.ts`), so nothing needs re-simulating.
   */
-  const { ply, fen, arrows, goToPly } = useGameNavigation(current);
-
-  /** The name to show for a game — its players, or a numbered fallback. */
-  const titleOf = (game: ParsedGame, index: number) => {
-    const white = pgnTag(game.headers, "White");
-    const black = pgnTag(game.headers, "Black");
-    return white || black
-      ? `${white ?? "?"} ${t("loadPgn.versus")} ${black ?? "?"}`
-      : t("loadPgn.gameFallback", { number: index + 1 });
-  };
-
-  /** The identifying tags under the name, placeholders already dropped. */
-  const subtitleOf = (game: ParsedGame) =>
-    (["Event", "Date", "Result"] as const)
-      .map((key) => pgnTag(game.headers, key))
-      .filter((value): value is string => value !== undefined)
-      .join(" · ");
+  const { ply, lastPly, fen, arrows, goToPly } = useGameNavigation(current);
 
   /*
     A freshly loaded game opens on its final position — the most informative
     single frame, and proof the whole game parsed. Stepping back from there is
-    what the arrow keys and the move list are for; Home returns to ply 0.
+    what the controls and the arrow keys are for; the start is one click away.
   */
   const showGame = (game: ParsedGame) => goToPly(game.moves.length);
 
@@ -179,9 +149,13 @@ function LoadPgn() {
     loadFromText(pgnText);
   };
 
+  const flipBoard = () =>
+    setOrientation((side) => (side === "white" ? "black" : "white"));
+
   const chessboardOptions: ChessboardOptions = {
     id: "load-pgn-board",
     position: fen,
+    boardOrientation: orientation,
     /*
       The move that produced this position. External arrows are never cleared
       by the board itself (.claude/rules/chessboard.md §3.4), so this is the
@@ -194,126 +168,71 @@ function LoadPgn() {
     allowDragging: false,
   };
 
+  /*
+    Dropping a PGN works over the board and over the panel alike. They are two
+    separate subtrees once the panel is portalled out, so a single drop target
+    cannot span them and both get the handlers.
+  */
+  const dropTargetProps = { onDragOver, onDragLeave, onDrop };
+
   return (
-    <Box
-      data-testid="load-pgn-screen"
-      onDragOver={onDragOver}
-      onDragLeave={onDragLeave}
-      onDrop={onDrop}
-      sx={{
-        height: "100%",
-        overflow: "auto",
-        display: "flex",
-        flexDirection: "column",
-        gap: 1.5,
-        p: 1,
-        borderRadius: 1,
-        border: "2px dashed",
-        borderColor: isDragOver ? "primary.main" : "divider",
-        bgcolor: isDragOver ? "action.hover" : "transparent",
-      }}
-    >
-      <Stack direction="row" spacing={1} sx={{ alignItems: "center", flexWrap: "wrap" }}>
-        <Button
-          component="label"
-          variant="contained"
-          size="small"
-          startIcon={<UploadFileRoundedIcon />}
-        >
-          {t("loadPgn.chooseFile")}
-          <Box
-            component="input"
-            type="file"
-            accept=".pgn"
-            data-testid="pgn-file-input"
-            aria-label={t("loadPgn.chooseFile")}
-            onChange={onFileChosen}
-            sx={hiddenInputSx}
-          />
-        </Button>
-        <Typography variant="body2" sx={{ color: "text.secondary" }}>
-          {t("loadPgn.dropHint")}
-        </Typography>
-      </Stack>
-
-      <Box component="form" onSubmit={submitPasted}>
-        <TextField
-          fullWidth
-          multiline
-          minRows={3}
-          size="small"
-          label={t("loadPgn.pasteLabel")}
-          value={pgnText}
-          onChange={(event) => setPgnText(event.target.value)}
-          onBlur={onPasteBlur}
-        />
-        <Button type="submit" size="small" sx={{ mt: 1 }}>
-          {t("loadPgn.load")}
-        </Button>
-      </Box>
-
-      {error !== null && (
-        <Alert severity="error" data-testid="pgn-error">
-          {error}
-        </Alert>
-      )}
-
-      {games.length > 1 && (
-        <Box>
-          <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-            {t("loadPgn.gamesTitle")}
-          </Typography>
-          <List dense disablePadding data-testid="pgn-game-picker">
-            {games.map((game, index) => (
-              <ListItemButton
-                // Games in a file have no id of their own, and the list is
-                // rebuilt wholesale on every load — the index is stable for as
-                // long as this array exists.
-                key={index}
-                selected={index === selected}
-                onClick={() => selectGame(index)}
-              >
-                <ListItemText
-                  primary={titleOf(game, index)}
-                  secondary={subtitleOf(game)}
-                />
-              </ListItemButton>
-            ))}
-          </List>
-        </Box>
-      )}
-
-      <Typography variant="body2" data-testid="pgn-summary" sx={{ color: "text.secondary" }}>
-        {current === undefined
-          ? t("loadPgn.emptyState")
-          : `${titleOf(current, selected)} — ${t("loadPgn.movesLoaded", {
-              total: current.moves.length,
-            })}`}
-      </Typography>
-
+    <>
+      {/*
+        The shell's square, filled edge to edge by the board. The drag highlight
+        is an `outline`, not a `border`: an outline is painted outside the box
+        model, so switching it on does not shrink the board by its own width.
+        It takes its colour from `currentColor`.
+      */}
       <Box
+        data-testid="load-pgn-screen"
+        {...dropTargetProps}
         sx={{
           width: "100%",
-          maxWidth: 420,
-          aspectRatio: "1 / 1",
-          alignSelf: "center",
-          flexShrink: 0,
+          height: "100%",
+          borderRadius: 1,
+          outline: isDragOver ? "2px dashed" : "none",
+          outlineOffset: "-2px",
+          color: isDragOver ? "primary.main" : "inherit",
         }}
       >
         <Chessboard options={chessboardOptions} />
       </Box>
 
-      {/*
-        The move list goes into the shell's right-hand aside. Registered only
-        while a game is loaded, so an empty screen still shows the shell's own
-        Analysis placeholder rather than an empty panel.
-      */}
-      {current !== undefined && (
-        <RightPanel>
-          <MoveList game={current} currentPly={ply} onSelectPly={goToPly} />
-        </RightPanel>
-      )}
-    </Box>
+      <RightPanel>
+        <Box
+          {...dropTargetProps}
+          sx={{
+            flexGrow: 1,
+            minHeight: 0,
+            display: "flex",
+            flexDirection: "column",
+            borderRadius: 1,
+            bgcolor: isDragOver ? "action.hover" : "transparent",
+          }}
+        >
+          <GamePanel
+            game={current}
+            ply={ply}
+            lastPly={lastPly}
+            onSelectPly={goToPly}
+            onFlip={flipBoard}
+            ingest={
+              <PgnIngest
+                games={games}
+                selected={selected}
+                error={error}
+                pgnText={pgnText}
+                onPgnTextChange={setPgnText}
+                onFileChosen={onFileChosen}
+                onSubmit={submitPasted}
+                onPasteBlur={onPasteBlur}
+                onSelectGame={selectGame}
+              />
+            }
+          />
+        </Box>
+      </RightPanel>
+    </>
   );
 }
 

@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import i18n from "../../../i18n";
 import AppThemeWithLang from "../../../theme/AppThemeWithLang";
 import { finalFenOf, parsePgnGames } from "../../../lib/pgn";
-import { RightPanelProvider } from "../../main/rightPanel";
+import { RightPanelOutlet, RightPanelProvider } from "../../main/rightPanel";
 import LoadPgn from "./LoadPgn";
 
 /*
@@ -44,16 +44,17 @@ const secondGame = [
 const twoGames = `${singleGame}\n\n${secondGame}\n`;
 
 /*
-  The provider, but no outlet: this file is about the ingestion controls, and
-  the screen's `<RightPanel>` needs a slot to register into. With no outlet
-  rendered the move list has nowhere to portal to and stays out of the way —
-  `LoadPgnNavigation.test.tsx` is where the panel itself is exercised.
+  Provider *and* outlet: the ingestion controls this file drives live in the
+  shell's right-hand panel now, so without an outlet they would have nowhere to
+  portal to and none of the queries below would find them.
+  `LoadPgnNavigation.test.tsx` is where the move list above them is exercised.
 */
 const renderScreen = () =>
   render(
     <AppThemeWithLang>
       <RightPanelProvider>
         <LoadPgn />
+        <RightPanelOutlet />
       </RightPanelProvider>
     </AppThemeWithLang>,
   );
@@ -65,6 +66,14 @@ const pasteAndLoad = async (pgn: string) => {
   await user.click(box);
   await user.paste(pgn);
   await user.click(screen.getByRole("button", { name: i18n.t("loadPgn.load") }));
+};
+
+/**
+ * The panel switches to Moves as soon as a game parses, so every assertion
+ * about the ingestion controls after a load has to come back to their tab.
+ */
+const openLoadTab = async () => {
+  await userEvent.setup().click(screen.getByTestId("game-panel-tab-load"));
 };
 
 const pgnFile = (contents: string) =>
@@ -87,14 +96,16 @@ describe("the Load PGN screen", () => {
     renderScreen();
     await pasteAndLoad(singleGame);
 
-    expect(summary()).toHaveTextContent("Alice vs Bob");
-    expect(summary()).toHaveTextContent("Moves: 3");
-    expect(screen.queryByTestId("pgn-error")).not.toBeInTheDocument();
     // The board is showing the game, not the opening position it started on.
     expect(screen.getByTestId("pgn-board")).toHaveAttribute(
       "data-position",
       finalFenOf(parsePgnGames(singleGame)[0]),
     );
+
+    await openLoadTab();
+    expect(summary()).toHaveTextContent("Alice vs Bob");
+    expect(summary()).toHaveTextContent("Moves: 3");
+    expect(screen.queryByTestId("pgn-error")).not.toBeInTheDocument();
   });
 
   it("loads pasted text on blur, without waiting for the button", async () => {
@@ -106,6 +117,7 @@ describe("the Load PGN screen", () => {
     await user.paste(singleGame);
     await user.tab();
 
+    await openLoadTab();
     expect(summary()).toHaveTextContent("Alice vs Bob");
   });
 
@@ -136,7 +148,15 @@ describe("the Load PGN screen", () => {
 
     await user.upload(screen.getByTestId("pgn-file-input"), pgnFile(singleGame));
 
-    await waitFor(() => expect(summary()).toHaveTextContent("Alice vs Bob"));
+    // FileReader is async, so wait for the parse to land before going back.
+    await waitFor(() =>
+      expect(screen.getByTestId("pgn-board")).toHaveAttribute(
+        "data-position",
+        finalFenOf(parsePgnGames(singleGame)[0]),
+      ),
+    );
+    await openLoadTab();
+    expect(summary()).toHaveTextContent("Alice vs Bob");
   });
 
   it("loads a .pgn file dropped onto the screen", async () => {
@@ -146,7 +166,14 @@ describe("the Load PGN screen", () => {
       dataTransfer: { files: [pgnFile(singleGame)], types: ["Files"] },
     });
 
-    await waitFor(() => expect(summary()).toHaveTextContent("Alice vs Bob"));
+    await waitFor(() =>
+      expect(screen.getByTestId("pgn-board")).toHaveAttribute(
+        "data-position",
+        finalFenOf(parsePgnGames(singleGame)[0]),
+      ),
+    );
+    await openLoadTab();
+    expect(summary()).toHaveTextContent("Alice vs Bob");
   });
 
   it("keeps the browser from opening the dragged file itself", () => {
@@ -161,6 +188,7 @@ describe("the Load PGN screen", () => {
   it("shows no picker for a single-game file", async () => {
     renderScreen();
     await pasteAndLoad(singleGame);
+    await openLoadTab();
 
     expect(screen.queryByTestId("pgn-game-picker")).not.toBeInTheDocument();
   });
@@ -169,6 +197,7 @@ describe("the Load PGN screen", () => {
     const user = userEvent.setup();
     renderScreen();
     await pasteAndLoad(twoGames);
+    await openLoadTab();
 
     const picker = screen.getByTestId("pgn-game-picker");
     const entries = within(picker).getAllByRole("button");
@@ -178,9 +207,11 @@ describe("the Load PGN screen", () => {
     expect(entries[0]).toHaveTextContent("Club night");
     expect(entries[1]).toHaveTextContent("Carol vs Dan");
 
-    // The first game loads on its own; picking the second switches to it.
+    // The first game loads on its own; picking the second switches to it —
+    // which counts as a new game, so the panel jumps to Moves again.
     expect(summary()).toHaveTextContent("Alice vs Bob");
     await user.click(entries[1]);
+    await openLoadTab();
     expect(summary()).toHaveTextContent("Carol vs Dan");
     expect(summary()).toHaveTextContent("Moves: 2");
     expect(screen.getByTestId("pgn-board")).toHaveAttribute(
@@ -192,6 +223,7 @@ describe("the Load PGN screen", () => {
   it("falls back to a numbered name for games with no players", async () => {
     renderScreen();
     await pasteAndLoad("1. e4 e5 *\n\n[Event \"x\"]\n\n1. d4 *");
+    await openLoadTab();
 
     const entries = within(screen.getByTestId("pgn-game-picker")).getAllByRole(
       "button",
