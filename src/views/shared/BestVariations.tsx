@@ -2,8 +2,11 @@ import Box from "@mui/material/Box";
 import Chip from "@mui/material/Chip";
 import Typography from "@mui/material/Typography";
 import { useTranslation } from "react-i18next";
-import { formatScore, numberedVariation } from "../../../lib/engineAnalysis";
-import type { Analysis } from "./usePlayWithEngine";
+import {
+  formatScore,
+  numberedVariation,
+  type Analysis,
+} from "../../lib/engineAnalysis";
 
 /**
  * The Variations tab: the top lines the engine is considering for the position
@@ -68,19 +71,19 @@ function BestVariations({ analysis, requested }: BestVariationsProps) {
         }}
       >
         <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-          {t("playEngine.variations.title")}
+          {t("variations.title")}
         </Typography>
         <Chip
           size="small"
           variant="outlined"
           data-testid="analysis-depth"
-          label={t("playEngine.variations.depth", { depth: analysis.depth })}
+          label={t("variations.depth", { depth: analysis.depth })}
         />
       </Box>
 
       {lines.length === 0 ? (
         <Typography variant="body2" sx={{ color: "text.secondary" }}>
-          {t("playEngine.variations.thinking")}
+          {t("variations.thinking")}
         </Typography>
       ) : (
         <Box
@@ -133,7 +136,7 @@ function BestVariations({ analysis, requested }: BestVariationsProps) {
           data-testid="variations-partial"
           sx={{ color: "text.secondary", display: "block", mt: 1 }}
         >
-          {t("playEngine.variations.partial", {
+          {t("variations.partial", {
             shown: lines.length,
             requested,
           })}

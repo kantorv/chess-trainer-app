@@ -80,7 +80,7 @@ function PromotionPicker({
       <Box
         data-testid="promotion-picker"
         role="group"
-        aria-label={t("playEngine.promotion.title")}
+        aria-label={t("promotion.title")}
         sx={{
           position: "absolute",
           // One square is an eighth of the board, in both directions.
@@ -105,7 +105,7 @@ function PromotionPicker({
             <ButtonBase
               key={piece}
               data-testid={`promotion-choice-${piece}`}
-              aria-label={t(`playEngine.promotion.pieces.${piece}`)}
+              aria-label={t(`promotion.pieces.${piece}`)}
               onClick={() => onSelect(piece)}
               sx={{
                 width: "100%",

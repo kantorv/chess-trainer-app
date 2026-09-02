@@ -22,8 +22,12 @@ import type { Game } from "../../lib/gameModel";
  * True for anything the reader is typing into. Arrow keys belong to the caret
  * there, not to the move list, so the handler stays out of the way — the Load
  * PGN screen's paste box is the case that matters.
+ *
+ * Exported for the analysis board's own navigation hook
+ * (`views/tools/analysis/useTreeNavigation.ts`), which walks a tree rather than
+ * a ply but owes the reader's caret exactly the same courtesy.
  */
-const isTextEntry = (target: EventTarget | null): boolean => {
+export const isTextEntry = (target: EventTarget | null): boolean => {
   if (!(target instanceof HTMLElement)) return false;
   if (target.isContentEditable) return true;
   return ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName);

@@ -2,9 +2,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Chess, type Square } from "chess.js";
 import Engine, { type EngineOption } from "../../../lib/engine";
 import {
+  EMPTY_ANALYSIS,
   pvToSan,
   scoreFromUci,
-  type Score,
+  withEngineLine,
+  type Analysis,
   type Turn,
 } from "../../../lib/engineAnalysis";
 import { gameFromChess, type Game } from "../../../lib/gameModel";
@@ -87,26 +89,12 @@ export const SETTING_UCI_OPTION = {
 export const approximateElo = (skillLevel: number): number =>
   Math.round(1350 + (skillLevel / 20) * (2850 - 1350));
 
-/** One line of the engine's current thinking. */
-export type EngineLine = {
-  /** 1-based rank among the `MultiPV` lines; 1 is the engine's choice. */
-  multipv: number;
-  score: Score | null;
-  depth: number;
-  /** The principal variation in SAN, replayed from the analysed position. */
-  san: string[];
-};
-
-/** What the engine is currently saying about the position on screen. */
-export type Analysis = {
-  /** The position these lines describe. Empty before the first result. */
-  fen: string;
-  /** The deepest ply reached so far in this search. */
-  depth: number;
-  lines: EngineLine[];
-};
-
-const EMPTY_ANALYSIS: Analysis = { fen: "", depth: 0, lines: [] };
+/**
+ * What the engine is saying, and one line of it. Defined in
+ * `lib/engineAnalysis.ts` — two screens collect these now — and re-exported here
+ * so this hook stays the one import a reader of this screen needs.
+ */
+export type { Analysis, EngineLine } from "../../../lib/engineAnalysis";
 
 /**
  * A snapshot of an untouched game, taken once.
@@ -180,25 +168,14 @@ export const usePlayWithEngine = () => {
         const score = scoreFromUci(message, turnOf(searchedFen));
         const rank = multipv ?? 1;
 
-        setAnalysis((previous) => {
-          // A result for a different position replaces the whole set rather
-          // than merging into it — the lines of two positions are not
-          // comparable, and half of each would be nonsense.
-          const isSamePosition = previous.fen === searchedFen;
-          const lines = isSamePosition ? [...previous.lines] : [];
-          lines[rank - 1] = {
+        setAnalysis((previous) =>
+          withEngineLine(previous, searchedFen, {
             multipv: rank,
             score,
             depth,
             san: pvToSan(searchedFen, pv),
-          };
-
-          return {
-            fen: searchedFen,
-            depth: isSamePosition ? Math.max(previous.depth, depth) : depth,
-            lines,
-          };
-        });
+          }),
+        );
       }
 
       if (!bestMove) return;
