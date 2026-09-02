@@ -336,6 +336,7 @@ Consequences for a caller:
 | `/analyze` | [`views/demos/engine/Board3.tsx`](../../src/views/demos/engine/Board3.tsx) | `AnalysisBoard` | Stockfish eval per position, best move drawn as an `arrows` entry |
 | `/player1` | [`views/player/engine_basic/Board.tsx`](../../src/views/player/engine_basic/Board.tsx) | (composed) | Play *against* the engine — engine moves are applied automatically. The **minimal** reference for the engine-move loop; deliberately left alone by CTA-12 |
 | `/engine/play` | [`views/engine/play/PlayWithEngine.tsx`](../../src/views/engine/play/PlayWithEngine.tsx) | (composed) | The full screen: eval bar, move list, MultiPV variations, live UCI settings, a real promotion picker |
+| `/tools/analysis` | [`views/tools/analysis/AnalysisBoard.tsx`](../../src/views/tools/analysis/AnalysisBoard.tsx) | (composed) | Analysis: a **variation tree** (`lib/gameTree.ts`), PGN/FEN set-up and export, both colours movable, engine and eval bar switched independently |
 
 The `MainN.tsx` files next to each board are layout-only wrappers (an MUI `Box`
 with a `data-testid`); the board component is the unit of interest. Each
@@ -343,9 +344,9 @@ with a `data-testid`); the board component is the unit of interest. Each
 `docs/vendor/react-chessboard/stories/`.
 
 The first four are **demos** — the smallest thing that shows one idea, and worth
-keeping small. `/engine/play` is a real screen; when the two disagree about how
-much to handle (promotion is the standing example), the demo's shortcut is the
-one that stays.
+keeping small. `/engine/play` and `/tools/analysis` are real screens; when the
+two kinds disagree about how much to handle (promotion is the standing example),
+the demo's shortcut is the one that stays.
 
 **Two rules the Play with Engine screen is built on, worth reusing:**
 
@@ -361,6 +362,18 @@ one that stays.
   constant subtracted from the board's side, and the board box needs
   `flexShrink: 0`, or flex shaves the difference off and the board stops being
   square.
+
+**And two the Analysis Board adds:**
+
+- **An analysis board never moves a piece by itself.** It reads `info` lines and
+  ignores `bestmove` entirely — the branch that plays one does not exist in
+  `useAnalysisBoard`. That is why it is a separate hook rather than
+  `usePlayWithEngine` with a mode flag: the two differ on whether the engine
+  moves, whether both colours are draggable, and whether searching is
+  unconditional, which is all of the behaviour there is.
+- **A screen that can branch navigates by node, not by ply.** See the root
+  `CLAUDE.md` on the tree; the shared `BoardControls` still take a ply, and
+  `useTreeNavigation` derives one from the line the reader is standing on.
 
 ---
 

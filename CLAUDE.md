@@ -46,13 +46,16 @@ change by whether it *adds* to that count, not by the exit code.
 | `src/theme/` | The look: `themePrimitives.ts` (tokens), `AppThemeWithLang.tsx` (the provider), `rtlCache.ts`, `ForceLTR.tsx`, and the two header controls. |
 | `src/views/main/` | The app shell — `Layout.tsx` (header + sidebar + board area; the nav rail and the right-hand panel are fixed-width, and the board square is what is left over), `rightPanel.tsx` (the route-fillable panel slot), `Sidebar.tsx`, the nav registries (`navItems.ts`, `navFolders.ts`, `navTree.ts`), and the XState `service.ts`. |
 | `src/views/demos/`, `src/views/player/` | The four demo board screens. |
-| `src/views/shared/` | The panel pieces both game screens use: `MoveList.tsx`, `BoardControls.tsx`, `useGameNavigation.ts`, `EvalBar.tsx`. They take props and know nothing about which screen is rendering them. |
-| `src/views/engine/play/` | The Play with Engine screen. `PlayWithEngine.tsx` is layout (eval bar + board) and board options; **all the behaviour is in `usePlayWithEngine.ts`**; `EnginePanel.tsx` is the Game / Engine / Variations tab strip over the shared board controls, with `EngineSettings.tsx`, `BestVariations.tsx` and `PromotionPicker.tsx` under it. |
+| `src/views/shared/` | The panel pieces the game screens share: `MoveList.tsx`, `BoardControls.tsx`, `useGameNavigation.ts`, `EvalBar.tsx`, `BestVariations.tsx`, `PromotionPicker.tsx`, `OptionSlider.tsx`. They take props and know nothing about which screen is rendering them, and their catalog keys are top-level (`moveList.*`, `variations.*`, `promotion.*`, `engineOption.*`, `board.*`) rather than under any one screen's. |
+| `src/views/engine/play/` | The Play with Engine screen. `PlayWithEngine.tsx` is layout (eval bar + board) and board options; **all the behaviour is in `usePlayWithEngine.ts`**; `EnginePanel.tsx` is the Game / Engine / Variations tab strip over the shared board controls, with `EngineSettings.tsx` under it. |
 | `src/views/games/load_pgn/` | The Load PGN screen. `LoadPgn.tsx` owns the state and fills the board square; `GamePanel.tsx` is the whole of the shell panel — the Moves / Info / Load PGN tabs (`GameInfo.tsx`, `PgnIngest.tsx`, and the shared `MoveList`) over the shared board controls. |
+| `src/views/tools/analysis/` | The Analysis Board. `AnalysisBoard.tsx` is layout (eval bar + board), board options and the PGN/FEN ingestion state; **the behaviour is in `useAnalysisBoard.ts`**, the navigation in `useTreeNavigation.ts`; `AnalysisPanel.tsx` is the Moves / Engine / Variations / Position tab strip, with `VariationTree.tsx`, `AnalysisSettings.tsx` and `PositionSetup.tsx` under it. |
 | `src/lib/engine.ts` | The Stockfish worker wrapper: search, UCI option discovery, and the protocol discipline that keeps the engine alive (see the chessboard rules §4). |
-| `src/lib/engineAnalysis.ts` | Reading the engine's numbers: `scoreFromUci` (the one place a score is normalised to White's perspective), `formatScore`, `evalBarFraction`, `pvToSan`, `numberedVariation`. Pure. |
-| `src/lib/gameModel.ts` | **The shared game model** — `Game` / `GameMove` / `GameHeaders`, plus `gameTag` / `initialFenOf` / `finalFenOf` and the `gameFromChess` snapshot. Both game screens speak this, which is why they share one move list and one navigation hook. |
-| `src/lib/pgn.ts` | PGN ingestion only: text in, `Game` out. One of the model's two producers; `gameFromChess` is the other. |
+| `src/lib/engineAnalysis.ts` | Reading the engine's numbers: `scoreFromUci` (the one place a score is normalised to White's perspective), `formatScore`, `evalBarFraction`, `pvToSan`, `numberedVariation`, plus the `Analysis` / `EngineLine` shape both engine screens collect into and the `withEngineLine` fold. Pure. |
+| `src/lib/gameModel.ts` | **The shared game model** — `Game` / `GameMove` / `GameHeaders`, plus `gameTag` / `initialFenOf` / `finalFenOf` and the `gameFromChess` snapshot. One *line* of play; all three game screens speak it. |
+| `src/lib/gameTree.ts` | **The variation tree** — `GameTree` / `VariationNode`, `addMove` (the branch), `mainline` / `lineOf` / `pathTo` / `fenAtNode`, `treeToPgn`, and the `treeFromGame` ⇄ `mainlineGame` bridge that makes a `Game` a walk over a tree. Read the next section before touching it. |
+| `src/lib/pgn.ts` | PGN ingestion only: text in, a `Game` (`parsePgnGames`, mainline only — what `chess.js` gives) or a `GameTree` (`parsePgnTrees`, side lines kept) out. |
+| `src/lib/fen.ts` | FEN ingestion: `parseFen` validates and normalises a pasted position, or throws `FenParseError`. |
 | `src/lib/gameNavigation.ts` | Walking a `Game`: `clampPly` / `fenAtPly` / `arrowsAtPly` / `moveRowsOf`. A ply is a half-move index, 0 being the starting position; each ply's FEN is read off the move that already carries it, so nothing re-simulates a game. |
 | `src/lib/treeManager.ts` | Read-only tree walks (`traverse` / `toArray` / `collectIds` / `findBy` / `getPath`). The seam for anything tree-shaped; `navTree.ts` is its only consumer. |
 
@@ -82,6 +85,42 @@ Consequences:
 - **`lib/pgn.ts` owns parsing, not the model.** Anything about what a game *is*
   belongs in `gameModel.ts`, or the engine screen ends up importing a module
   named after a file format it never reads.
+
+## A `Game` is one line; a `GameTree` is all of them
+
+The Analysis Board needs something `Game` cannot express: playing a different
+move from an earlier ply has to **keep both continuations**. That is a tree, and
+it lives in [`src/lib/gameTree.ts`](src/lib/gameTree.ts) — not as a replacement
+for `Game` but as the shape `Game` is a *walk over*:
+
+```
+GameTree ──mainlineGame()──▶ Game ──▶ MoveList / useGameNavigation / BoardControls
+   ▲                                   (Load PGN and Play with Engine, unchanged)
+   └──treeFromGame()─────── Game
+```
+
+`mainlineGame` is the first-child walk. Both bridges are tested in both
+directions, so "the linear reading still works" is an assertion rather than a
+hope — which is what let the tree arrive without touching the two shipped
+screens.
+
+The rules the whole thing rests on:
+
+- **`children[0]` is the mainline at every level; everything after it is a side
+  line.** `mainline`, `lineOf`, `treeToPgn` and `VariationTree` are all just that
+  one rule applied.
+- **Replaying a move that is already there is not a new variation.** `addMove`
+  returns the existing node and the *same tree by reference*, so stepping back
+  and playing the mainline move again follows the line rather than duplicating
+  it, and nothing re-renders.
+- **A node id is the navigation state, not a ply.** Clicking a move inside a side
+  line does not move along the current line, it changes *which line is current* —
+  "ply 3" cannot say that. `useTreeNavigation` therefore holds the id and derives
+  the ply, which is what lets the shared `BoardControls` drive a tree unmodified.
+- **`chess.js` `loadPgn` discards `( ... )` side lines.** So there are two
+  parsers: `parsePgnGames` (mainline, for the Load PGN screen) and
+  `parsePgnTrees` (side lines kept), and only the second round-trips with
+  `treeToPgn`.
 
 ## Theming, direction and language
 
