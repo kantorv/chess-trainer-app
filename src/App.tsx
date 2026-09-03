@@ -13,6 +13,7 @@ import { default as EnginePlayer1  } from './views/player/engine_basic/Main'
 import { default as LoadPgnScreen  } from './views/games/load_pgn/Main'
 import { default as PlayWithEngineScreen  } from './views/engine/play/Main'
 import { default as AnalysisBoardScreen  } from './views/tools/analysis/Main'
+import { default as BoardEditorScreen  } from './views/tools/editor/Main'
 
 
 
@@ -53,6 +54,10 @@ const routes = createBrowserRouter(
         {
           path: "/tools/analysis",
           element: <AnalysisBoardScreen />
+        },
+        {
+          path: "/tools/editor",
+          element: <BoardEditorScreen />
         }
 
       ]

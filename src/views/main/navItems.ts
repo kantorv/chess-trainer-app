@@ -6,6 +6,7 @@ import SmartToyRoundedIcon from "@mui/icons-material/SmartToyRounded";
 import SportsEsportsRoundedIcon from "@mui/icons-material/SportsEsportsRounded";
 import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
 import AccountTreeRoundedIcon from "@mui/icons-material/AccountTreeRounded";
+import DashboardCustomizeRoundedIcon from "@mui/icons-material/DashboardCustomizeRounded";
 import type { NavFolderId } from "./navFolders";
 
 export type NavItem = {
@@ -64,6 +65,12 @@ export const navItems: readonly NavItem[] = [
     to: "/tools/analysis",
     labelKey: "nav.analysisBoard",
     icon: AccountTreeRoundedIcon,
+    folder: "tools",
+  },
+  {
+    to: "/tools/editor",
+    labelKey: "nav.boardEditor",
+    icon: DashboardCustomizeRoundedIcon,
     folder: "tools",
   },
 ];
