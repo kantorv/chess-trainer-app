@@ -11,6 +11,10 @@
     /* Bundler mode */
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
+    // `src/data/mates.json` is imported as a module — the mates library is data
+    // rather than code, and Vite inlines a JSON import at build time exactly as
+    // it does a TypeScript one.
+    "resolveJsonModule": true,
     "verbatimModuleSyntax": true,
     "moduleDetection": "force",
     "noEmit": true,

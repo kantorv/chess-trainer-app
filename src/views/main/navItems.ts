@@ -4,6 +4,7 @@ import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
 import AccountTreeRoundedIcon from "@mui/icons-material/AccountTreeRounded";
 import DashboardCustomizeRoundedIcon from "@mui/icons-material/DashboardCustomizeRounded";
 import VisibilityOffRoundedIcon from "@mui/icons-material/VisibilityOffRounded";
+import ViewListRoundedIcon from "@mui/icons-material/ViewListRounded";
 import type { NavFolderId } from "./navFolders";
 
 export type NavItem = {
@@ -39,6 +40,30 @@ export const navItems: readonly NavItem[] = [
     labelKey: "nav.loadPgn",
     icon: UploadFileRoundedIcon,
     folder: "games",
+  },
+  /*
+    Three entries, and three is all there will ever be: a position is a row in
+    `src/data/mates.json` reached at `/mates/<category>/<id>`, not a nav entry.
+    A fourth *category* is one more entry here plus its folder — a registration,
+    not a code change to anything that renders.
+  */
+  {
+    to: "/mates/basic",
+    labelKey: "nav.matesBasic",
+    icon: ViewListRoundedIcon,
+    folder: "mates-basic",
+  },
+  {
+    to: "/mates/advanced",
+    labelKey: "nav.matesAdvanced",
+    icon: ViewListRoundedIcon,
+    folder: "mates-advanced",
+  },
+  {
+    to: "/mates/complex",
+    labelKey: "nav.matesComplex",
+    icon: ViewListRoundedIcon,
+    folder: "mates-complex",
   },
   {
     to: "/tools/analysis",

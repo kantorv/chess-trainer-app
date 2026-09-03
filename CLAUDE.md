@@ -62,6 +62,9 @@ change by whether it *adds* to that count, not by the exit code.
 | `src/lib/positionEditor.ts` | A position *being edited*: `fenFields` / `fenFromFields` (the six fields apart and back together, which is what makes the editor's side-to-move, castling and en passant controls round-trip), `enPassantOptions`, and `positionProblems` — **non-throwing** legality reporting, because a half-edited board is illegal by definition. Pure. |
 | `src/lib/gameNavigation.ts` | Walking a `Game`: `clampPly` / `fenAtPly` / `arrowsAtPly` / `moveRowsOf`. A ply is a half-move index, 0 being the starting position; each ply's FEN is read off the move that already carries it, so nothing re-simulates a game. |
 | `src/lib/pieceMask.ts` | **Piece masking** — the `PieceMask` (true type → the type drawn in its place, all twelve), the presets, `maskedPieces` (the board's `options.pieces`) and `maskSan` / `maskSanLine` (the notation). Pure, and the only place the mask exists. |
+| `src/data/mates.json` | **The mates library** — the category list and a flat list of positions, each naming its category. The only file adding a mate touches. |
+| `src/lib/matesCatalog.ts` | Reading that file: the types (`MateCategoryId`, `MatePosition`, `LocalizedText`), the non-throwing `loadMatesCatalog` (every FEN through `parseFen`, ids unique, category known, bad rows dropped into `problems`), `localizedText` (the `en` fallback), the by-category lookups, and `sideToMoveOf`. Pure, and the only place that knows what the JSON looks like. |
+| `src/views/mates/` | The Mates section. `list/MatesList.tsx` is **one component behind all three routes** — the category is a route parameter — and `detail/MateDetail.tsx` is one position on a board with the two hand-offs. Neither knows anything about JSON. |
 | `src/lib/treeManager.ts` | Read-only tree walks (`traverse` / `toArray` / `collectIds` / `findBy` / `getPath`). The seam for anything tree-shaped; `navTree.ts` is its only consumer. |
 
 ## One game model, two producers
@@ -177,6 +180,52 @@ Loading a **game** deliberately does not: a PGN opens at ply 0, where the side t
 move says nothing about which side is being studied. Neither do the editor's
 resets or its side-to-move field, for the same reason in reverse — arranging a
 position is not being handed one, and a viewpoint the reader chose is theirs.
+
+## A library is data; only its chrome is code
+
+The Mates section (`/mates/basic`, `/mates/advanced`, `/mates/complex`, and
+`/mates/<category>/<id>` for one position) is a browsable library of checkmate
+positions. **Adding one is an entry in
+[`src/data/mates.json`](src/data/mates.json) and nothing else** — no
+TypeScript, no locale key, no component edit. Four layers, each the only owner
+of its concern:
+
+```
+mates.json ──loadMatesCatalog()──▶ MatesCatalog ──▶ MatesList / MateDetail ──?fen=──▶ Analysis Board
+  (data)        (lib/matesCatalog.ts)                      (views/mates/)            / Play with Engine
+```
+
+The rules it rests on:
+
+- **A position's name lives in the data, not in `src/locales`.** `he` is typed
+  `typeof en`, so a catalog key is a two-file edit and a compile error until
+  both are done — right for chrome the app *ships*, wrong for content it
+  *lists*. Names and descriptions are `{ en, he }` fields on the entry with an
+  `en` fallback; only the folder labels, screen labels and button labels are in
+  the locale catalogs.
+- **A category id is data, not a type.** `MateCategoryId` is a plain `string`
+  alias on purpose: narrowing it to the three shipped ids would make a fourth
+  category a code edit, and the ids arrive from a route parameter anyway. What
+  *is* checked is that a position's category is one the catalog declares.
+- **A malformed entry is reported, never thrown.** A bad FEN or a missing name
+  drops that row into `problems` and the rest of the catalog still loads — a
+  library that cannot render one card must not take the other five down with
+  it, and a `throw` at module scope would take the whole app down.
+- **The mating side is to move in every shipped position**, asserted over the
+  whole catalog in `matesCatalog.test.ts`. Load-bearing rather than cosmetic:
+  `/engine/play` derives `playAs` and the board orientation from the incoming
+  FEN's side to move, so an entry with the defender to move would open the board
+  backwards and have the engine move the instant the screen loaded.
+- **Three nav entries, however big the library gets.** The sidebar has a Mates
+  folder with Basic / Advanced / Complex sub-folders — the first shipped use of
+  nesting, and a pure data edit, because `buildNavTree` and `Sidebar.tsx` both
+  already recursed. A position is a route, not a nav entry; the sidebar's active
+  state stays an exact path match, so a detail page does not light its category
+  up and carries its own way back instead.
+
+The hand-off is the Board Editor's mechanism verbatim — `?fen=` on
+`/tools/analysis` and `/engine/play`, validated with `parseFen` and taken as
+*initial* state. No new transport was built for it.
 
 ## A mask is a costume, never a rule
 
