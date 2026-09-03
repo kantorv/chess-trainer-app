@@ -337,6 +337,7 @@ Consequences for a caller:
 | `/player1` | [`views/player/engine_basic/Board.tsx`](../../src/views/player/engine_basic/Board.tsx) | (composed) | Play *against* the engine — engine moves are applied automatically. The **minimal** reference for the engine-move loop; deliberately left alone by CTA-12 |
 | `/engine/play` | [`views/engine/play/PlayWithEngine.tsx`](../../src/views/engine/play/PlayWithEngine.tsx) | (composed) | The full screen: eval bar, move list, MultiPV variations, live UCI settings, a real promotion picker |
 | `/tools/analysis` | [`views/tools/analysis/AnalysisBoard.tsx`](../../src/views/tools/analysis/AnalysisBoard.tsx) | (composed) | Analysis: a **variation tree** (`lib/gameTree.ts`), PGN/FEN set-up and export, both colours movable, engine and eval bar switched independently |
+| `/tools/editor` | [`views/tools/editor/BoardEditor.tsx`](../../src/views/tools/editor/BoardEditor.tsx) | `SparePieces` | Position editing: `ChessboardProvider` + spare-piece palettes, `{ skipValidation: true }`, illegal positions reported rather than refused, hand-off to the Analysis Board |
 
 The `MainN.tsx` files next to each board are layout-only wrappers (an MUI `Box`
 with a `data-testid`); the board component is the unit of interest. Each
@@ -344,9 +345,9 @@ with a `data-testid`); the board component is the unit of interest. Each
 `docs/vendor/react-chessboard/stories/`.
 
 The first four are **demos** — the smallest thing that shows one idea, and worth
-keeping small. `/engine/play` and `/tools/analysis` are real screens; when the
-two kinds disagree about how much to handle (promotion is the standing example),
-the demo's shortcut is the one that stays.
+keeping small. `/engine/play`, `/tools/analysis` and `/tools/editor` are real
+screens; when the two kinds disagree about how much to handle (promotion is the
+standing example), the demo's shortcut is the one that stays.
 
 **Two rules the Play with Engine screen is built on, worth reusing:**
 
@@ -374,6 +375,23 @@ the demo's shortcut is the one that stays.
 - **A screen that can branch navigates by node, not by ply.** See the root
   `CLAUDE.md` on the tree; the shared `BoardControls` still take a ply, and
   `useTreeNavigation` derives one from the line the reader is standing on.
+
+**And two the Board Editor adds:**
+
+- **Spare pieces mean `ChessboardProvider`, and the options move with them.**
+  Every option that would have gone on `<Chessboard>` goes on the provider
+  instead and the board itself takes no props (§2, and
+  `stories/basic-examples/SparePieces.stories.tsx`) — a `SparePiece` can only
+  reach the drag context from inside it. `onPieceDrop` then does the whole job:
+  `piece.isSparePiece` says whether it came from a palette, and a `null`
+  `targetSquare` — anywhere off the board, the palettes and the trash included —
+  is a deletion. The provider renders no element, so it costs the layout nothing.
+- **A board being edited is illegal on the way to being legal.** It is a
+  `chess.js` built with `{ skipValidation: true }`, only ever `put` to and
+  `remove`d from, and `lib/positionEditor.ts` *reports* what is wrong instead of
+  refusing it — see the root `CLAUDE.md`. The one thing `chess.js` still refuses
+  is a second king of one colour, so `put` returning `false` is a real branch and
+  the drop has to put back whatever it lifted.
 
 ---
 
@@ -438,3 +456,14 @@ erased at compile time, so the mock does not have to provide it. Anything that
 depends on the board actually rendering — sizing, drag, arrows — belongs in a
 browser check, not in jsdom. `views/games/load_pgn/LoadPgn.test.tsx` is the
 worked example.
+
+**Stub whatever the screen actually imports.** A spare-piece screen reaches for
+three exports, not one: the options go to `ChessboardProvider`, the palettes are
+`SparePiece`s, and `<Chessboard>` takes nothing — so the stub keeps the options
+from the *provider* and the board renders what it finds there.
+`views/tools/editor/BoardEditor.test.tsx` is that version.
+
+jsdom's CSS parser also drops properties it does not implement — `aspect-ratio`
+among them — so a `toHaveStyle` assertion on one silently fails. Assert the
+constant that can drift (the width `calc`) and leave what the browser makes of
+it to a browser check.
