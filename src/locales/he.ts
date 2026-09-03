@@ -30,6 +30,7 @@ const he: typeof en = {
       matesBasic: "בסיסי",
       matesAdvanced: "מתקדם",
       matesComplex: "מורכב",
+      positions: "עמדות",
     },
   },
   home: {
@@ -317,6 +318,29 @@ const he: typeof en = {
       category: "אין קטגוריית מטים כזו.",
       position: "אין עמדה כזו בקטגוריה הזו.",
       back: "חזרה אל מטים בסיסיים",
+    },
+  },
+  positions: {
+    list: {
+      count: "עמדות: {{count}}",
+      empty: "אין עדיין עמדות בקטגוריה הזו.",
+      hint: "בחרו עמדה כדי לפתוח אותה על הלוח, ואז העבירו אותה ללוח הניתוח או שחקו אותה מול המנוע.",
+    },
+    detail: {
+      back: "חזרה אל {{category}}",
+      fen: "עמדה (FEN)",
+      openInAnalysis: "פתיחה בלוח הניתוח",
+      playWithEngine: "משחק מול המנוע",
+      openInEditor: "פתיחה בעורך העמדות",
+    },
+    sideToMove: {
+      w: "הלבן במסע",
+      b: "השחור במסע",
+    },
+    notFound: {
+      category: "אין קטגוריית סופי משחק כזו.",
+      position: "אין עמדה כזו בקטגוריה הזו.",
+      back: "חזרה אל עמדות סופי המשחק",
     },
   },
   footer: {

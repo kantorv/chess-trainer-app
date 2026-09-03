@@ -10,6 +10,7 @@ import { default as AnalysisBoardScreen  } from './views/tools/analysis/Main'
 import { default as BoardEditorScreen  } from './views/tools/editor/Main'
 import { default as MatesListScreen  } from './views/mates/list/Main'
 import { default as MateDetailScreen  } from './views/mates/detail/Main'
+import { default as PositionsScreen  } from './views/positions/Main'
 
 
 
@@ -59,6 +60,18 @@ const routes = createBrowserRouter(
         {
           path: "/mates/:category/:id",
           element: <MateDetailScreen />
+        },
+        // The endgame Positions library. **One** route, however deep the data
+        // nests: the segments are resolved against the catalog
+        // (`resolveLibraryPath`), which takes the longest prefix that names a
+        // category and reads whatever is left as a position id. So
+        // `/positions/queen-vs-rook`, `/positions/queen-vs-rook/rosettes` and
+        // `/positions/pawn-endgames/reti-study` all land here, and adding a
+        // category at any depth is a `src/data/positions.json` edit that this
+        // file never sees.
+        {
+          path: "/positions/*",
+          element: <PositionsScreen />
         }
 
       ]
