@@ -32,7 +32,17 @@ import { useGameNavigation } from "../../shared/useGameNavigation";
  * back. Dragging is disabled off the live position for the same reason: a drag
  * there would apply to a position that is not the one being looked at.
  *
- * **2. Engine lifecycle.** Lazy ref resolved at call time, subscribe in an effect
+ * **2. The game can start from a position that is not the starting one.** The
+ * Board Editor hands one over as a query parameter on this screen's route, so
+ * the optional `initialFen` seeds the game, is what "New game" goes back to, and
+ * — because a position set up with Black to move is one the reader means to play
+ * as Black — decides which colour they start on and which way the board faces.
+ * It is read *once*, as this hook's initial state: arriving at
+ * `/engine/play?fen=…` mounts the screen, so there is no later change to follow,
+ * and reading it in an effect instead would mean writing state from one. A FEN
+ * that will not parse is the caller's to reject.
+ *
+ * **3. Engine lifecycle.** Lazy ref resolved at call time, subscribe in an effect
  * with the returned unsubscribe, terminate on unmount — `.claude/rules/chessboard.md`
  * §4. The subscribe effect is declared first so a StrictMode remount rebuilds the
  * worker before anything asks it to search.
@@ -117,22 +127,36 @@ const isTerminal = (fen: string): boolean => {
   }
 };
 
-export const usePlayWithEngine = () => {
+export const usePlayWithEngine = (initialFen?: string) => {
   const engineRef = useRef<Engine | null>(null);
   // Resolved at call time, never during render: StrictMode's mount → unmount →
   // remount terminates the worker and re-runs the effects with no render in
   // between, so an engine captured during render would be dead from then on.
   const getEngine = useCallback(() => (engineRef.current ??= new Engine()), []);
 
-  const chessGameRef = useRef(new Chess());
+  const chessGameRef = useRef(new Chess(initialFen));
 
-  const [game, setGame] = useState<Game>(NEW_GAME);
-  const [settings, setSettings] = useState<EngineSettings>(
-    DEFAULT_ENGINE_SETTINGS,
+  /*
+    All three of these are seeded from `initialFen` on the first render and never
+    again. The snapshot is taken from a *separate* `new Chess` rather than from
+    the ref above: the ref must not be read during render (`react-hooks/refs`),
+    and a `Game` is plain data, so building one twice costs nothing.
+  */
+  const [game, setGame] = useState<Game>(() =>
+    initialFen === undefined ? NEW_GAME : gameFromChess(new Chess(initialFen)),
+  );
+  const [settings, setSettings] = useState<EngineSettings>(() =>
+    initialFen === undefined || turnOf(initialFen) === "w"
+      ? DEFAULT_ENGINE_SETTINGS
+      : { ...DEFAULT_ENGINE_SETTINGS, playAs: "black" },
   );
   const [analysis, setAnalysis] = useState<Analysis>(EMPTY_ANALYSIS);
   const [showEvalBar, setShowEvalBar] = useState(true);
-  const [orientation, setOrientation] = useState<"white" | "black">("white");
+  // Facing the side the human is playing — otherwise a game handed over with
+  // Black to move opens from behind the opponent's pieces.
+  const [orientation, setOrientation] = useState<"white" | "black">(() =>
+    initialFen !== undefined && turnOf(initialFen) === "b" ? "black" : "white",
+  );
   const [promotion, setPromotion] = useState<{
     from: Square;
     to: Square;
@@ -397,13 +421,19 @@ export const usePlayWithEngine = () => {
     [applyHumanMove, promotion],
   );
 
+  /*
+    Back to the position this screen opened on — which is the handed-over one
+    when there was one. Resetting to the standard start instead would throw away
+    the position the reader came here to play, and there is no way back to it.
+  */
   const newGame = useCallback(() => {
-    chessGameRef.current = new Chess();
-    setGame(NEW_GAME);
+    const fresh = new Chess(initialFen);
+    chessGameRef.current = fresh;
+    setGame(gameFromChess(fresh));
     setPromotion(null);
     setAnalysis(EMPTY_ANALYSIS);
     goToPly(0);
-  }, [goToPly]);
+  }, [goToPly, initialFen]);
 
   const flipBoard = useCallback(
     () => setOrientation((side) => (side === "white" ? "black" : "white")),

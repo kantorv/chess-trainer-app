@@ -1,10 +1,13 @@
+import { useMemo } from "react";
 import Box from "@mui/material/Box";
+import { useSearchParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import {
   Chessboard,
   type ChessboardOptions,
   type PieceDropHandlerArgs,
 } from "react-chessboard";
+import { parseFen } from "../../../lib/fen";
 import { RightPanel } from "../../main/rightPanel";
 import EvalBar, {
   EVAL_BAR_GAP_PX,
@@ -24,6 +27,15 @@ import { usePlayWithEngine } from "./usePlayWithEngine";
  * - the **right-hand panel** (`<RightPanel>`) holds `EnginePanel` — the Game /
  *   Engine / Variations tabs over the board controls.
  *
+ * ### Arriving from the Board Editor
+ *
+ * `/engine/play?fen=<position>` starts the game from that position, the same way
+ * `/tools/analysis` does — the FEN travels in the URL so the link survives being
+ * bookmarked, shared or reloaded. It is validated here with `parseFen`, and a
+ * parameter that will not pass is ignored rather than allowed to throw on
+ * someone else's mistyped link. The hook takes it as its *initial* state, so
+ * nothing is written from an effect.
+ *
  * All the behaviour lives in `usePlayWithEngine`; this component is the layout
  * and the board options. `<RightPanel>` portals the panel out of this tree, so
  * it still shares this screen's state by closure and nothing is threaded through
@@ -40,7 +52,26 @@ import { usePlayWithEngine } from "./usePlayWithEngine";
  */
 function PlayWithEngine() {
   const { t } = useTranslation();
-  const state = usePlayWithEngine();
+  const [searchParams] = useSearchParams();
+
+  /*
+    The position handed over by the Board Editor, if this is that arrival. Only
+    the first render's value is ever used (see `usePlayWithEngine`), but parsing
+    it on every render would build a `chess.js` instance for nothing.
+  */
+  const requested = searchParams.get("fen");
+  const initialFen = useMemo(() => {
+    if (requested === null) return undefined;
+    try {
+      return parseFen(requested);
+    } catch {
+      // A link nobody can read starts an ordinary game, as if the parameter had
+      // not been there at all.
+      return undefined;
+    }
+  }, [requested]);
+
+  const state = usePlayWithEngine(initialFen);
 
   const topLine = state.analysis.lines.find((line) => line !== undefined);
 

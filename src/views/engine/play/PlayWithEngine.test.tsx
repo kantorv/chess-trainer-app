@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router";
 import i18n from "../../../i18n";
 import AppThemeWithLang from "../../../theme/AppThemeWithLang";
 import { RightPanelOutlet, RightPanelProvider } from "../../main/rightPanel";
@@ -176,13 +177,19 @@ const engineReports = (
   });
 };
 
-const renderScreen = () =>
+/*
+  A router, because the screen reads its starting position off the URL — that is
+  how the Board Editor hands one over. `entry` is what a test arrives at.
+*/
+const renderScreen = (entry = "/engine/play") =>
   render(
     <AppThemeWithLang>
-      <RightPanelProvider>
-        <PlayWithEngine />
-        <RightPanelOutlet />
-      </RightPanelProvider>
+      <MemoryRouter initialEntries={[entry]}>
+        <RightPanelProvider>
+          <PlayWithEngine />
+          <RightPanelOutlet />
+        </RightPanelProvider>
+      </MemoryRouter>
     </AppThemeWithLang>,
   );
 
@@ -547,5 +554,54 @@ describe("Play with Engine — the panel", () => {
     unmount();
 
     expect(instance.terminated).toBe(true);
+  });
+});
+
+describe("Play with Engine — arriving from the Board Editor", () => {
+  // Black to move, and a mate in one for whoever plays it.
+  const handedOver = "6k1/5ppp/8/8/8/8/8/R5K1 b - - 0 1";
+
+  it("starts the game from the position handed over in the URL", () => {
+    renderScreen(`/engine/play?fen=${encodeURIComponent(handedOver)}`);
+
+    expect(position()).toBe(handedOver);
+    // It is a game, not a diagram: the engine is asked about that position, and
+    // a move played from it is the first of the list.
+    expect(engine().lastSearch).toBe(handedOver);
+    expect(drag("g8", "h8")).toBe(true);
+    expect(screen.getByTestId("move-ply-1")).toHaveTextContent("Kh8");
+  });
+
+  it("gives the reader the side to move, and turns the board to face it", () => {
+    renderScreen(`/engine/play?fen=${encodeURIComponent(handedOver)}`);
+
+    /*
+      A position set up with Black to move is one the reader means to play as
+      Black — otherwise the engine would move the moment the screen opened, from
+      a position they had just finished arranging.
+    */
+    expect(screen.getByTestId("board")).toHaveAttribute(
+      "data-orientation",
+      "black",
+    );
+    engineReplies("a1a8");
+    expect(screen.queryByTestId("move-ply-1")).not.toBeInTheDocument();
+  });
+
+  it("goes back to that position on a new game, not to the standard start", async () => {
+    renderScreen(`/engine/play?fen=${encodeURIComponent(handedOver)}`);
+    drag("g8", "h8");
+
+    await userEvent.click(screen.getByTestId("engine-panel-tab-engine"));
+    await userEvent.click(screen.getByTestId("engine-new-game"));
+
+    expect(screen.queryByTestId("move-ply-1")).not.toBeInTheDocument();
+    expect(position()).toBe(handedOver);
+  });
+
+  it("ignores a position it cannot read, rather than throwing on the link", () => {
+    renderScreen("/engine/play?fen=not-a-position");
+
+    expect(position()).toMatch(/^rnbqkbnr\/pppppppp/);
   });
 });
