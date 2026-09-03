@@ -45,13 +45,18 @@ import { useTreeNavigation } from "./useTreeNavigation";
  * screen is only ever an analysis whose FEN matches that position, so a set left
  * over from the previous one is never rendered under a new board.
  *
- * **3. An initial position can come from outside.** The Board Editor hands a
- * position over as a query parameter on this screen's route, so the optional
- * `initialFen` is read *once*, as this hook's initial state — arriving at
- * `/tools/analysis?fen=…` mounts the screen, so there is no later change to
- * follow, and reading it in an effect instead would mean writing state from one.
- * A position that will not parse is the caller's to reject; whatever arrives
- * here is used as-is.
+ * **3. An initial position — or a whole game — can come from outside.** The
+ * Board Editor hands a position over as a query parameter on this screen's
+ * route, and a User PGNs detail page hands over a game the same way; so the
+ * optional `initialFen` and `initialTree` are read *once*, as this hook's
+ * initial state — arriving at `/tools/analysis?fen=…` or `?game=…` mounts the
+ * screen, so there is no later change to follow, and reading either in an effect
+ * instead would mean writing state from one. What will not parse is the caller's
+ * to reject; whatever arrives here is used as-is.
+ *
+ * The two differ in one way, and it is the project's rule about it: **a position
+ * turns the board, a game does not.** An arriving game opens at ply 0 from
+ * White's side, exactly as `loadTree` leaves it.
  *
  * **4. Engine lifecycle.** Lazy ref resolved at call time, subscribe in an effect
  * with the returned unsubscribe, terminate on unmount —
@@ -102,7 +107,10 @@ const isTerminal = (fen: string): boolean => {
 /** A tree with nothing in it, taken once — plain data that nothing mutates. */
 const NEW_TREE: GameTree = emptyTree();
 
-export const useAnalysisBoard = (initialFen?: string) => {
+export const useAnalysisBoard = (
+  initialFen?: string,
+  initialTree?: GameTree,
+) => {
   const engineRef = useRef<Engine | null>(null);
   // Resolved at call time, never during render: StrictMode's mount → unmount →
   // remount terminates the worker and re-runs the effects with no render in
@@ -125,10 +133,15 @@ export const useAnalysisBoard = (initialFen?: string) => {
     return chess;
   }, []);
 
-  // Lazily, and only on the first render: see note 3 above.
-  const [tree, setTree] = useState<GameTree>(() =>
-    initialFen === undefined ? NEW_TREE : emptyTree(initialFen),
-  );
+  /*
+    Lazily, and only on the first render: see note 3 above. A whole game
+    (`?game=`) wins over a bare position (`?fen=`) when a link somehow carries
+    both, because a game is the more specific thing to have been handed.
+  */
+  const [tree, setTree] = useState<GameTree>(() => {
+    if (initialTree !== undefined) return initialTree;
+    return initialFen === undefined ? NEW_TREE : emptyTree(initialFen);
+  });
   const [settings, setSettings] = useState<AnalysisSettings>(
     DEFAULT_ANALYSIS_SETTINGS,
   );
@@ -139,7 +152,11 @@ export const useAnalysisBoard = (initialFen?: string) => {
   // `loadFen` for why a position you are handed turns the board and a game you
   // load does not.
   const [orientation, setOrientation] = useState<"white" | "black">(() =>
-    initialFen !== undefined && turnOf(initialFen) === "b" ? "black" : "white",
+    initialTree === undefined &&
+    initialFen !== undefined &&
+    turnOf(initialFen) === "b"
+      ? "black"
+      : "white",
   );
   const [promotion, setPromotion] = useState<{
     from: Square;

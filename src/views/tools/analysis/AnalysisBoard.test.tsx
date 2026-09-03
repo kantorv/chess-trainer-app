@@ -4,6 +4,8 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import i18n from "../../../i18n";
 import AppThemeWithLang from "../../../theme/AppThemeWithLang";
+import { initialFenOf } from "../../../lib/gameModel";
+import { pgnCatalog } from "../../../lib/pgnCatalog";
 import { MAX_VARIATIONS_OFFERED } from "../../../lib/engineAnalysis";
 import { RightPanelOutlet, RightPanelProvider } from "../../main/rightPanel";
 import AnalysisBoard from "./AnalysisBoard";
@@ -688,6 +690,62 @@ describe("Analysis Board — arriving from the Board Editor", () => {
 
   it("ignores a position it cannot read, rather than throwing on the link", () => {
     renderScreen("/tools/analysis?fen=not-a-position");
+
+    expect(position()).toMatch(/^rnbqkbnr\/pppppppp/);
+  });
+});
+
+describe("Analysis Board — arriving with a whole game", () => {
+  /*
+    The `?game=` hand-off from a User PGNs detail page. What crosses is a
+    reference into the catalog rather than the PGN itself — a game does not fit
+    in a URL — and this screen is the one destination that re-reads the text with
+    the *variation-aware* parser, because side lines are what an analysis board
+    is for.
+  */
+  const withVariations = pgnCatalog.items.find(
+    (item) => item.kind === "game" && item.pgn.includes("("),
+  )!;
+
+  const referenceTo = (item: typeof withVariations) =>
+    `pgn/${item.category}/${item.id}`;
+
+  it("opens on the game the reference names, at its starting position", async () => {
+    if (withVariations.kind !== "game") throw new Error("expected a game");
+    const entry = `/tools/analysis?game=${encodeURIComponent(referenceTo(withVariations))}`;
+    renderScreen(entry);
+
+    expect(position()).toBe(initialFenOf(withVariations.game));
+
+    await openTab("moves");
+    // A game does not turn the board (see the root CLAUDE.md), so it opens on
+    // White whatever the position's side to move is.
+    expect(screen.getByTestId("board")).toHaveAttribute(
+      "data-orientation",
+      "white",
+    );
+    expect(moveTokens()).toContain(withVariations.game.moves[0].san);
+  });
+
+  it("keeps the game's side lines, which the catalog's mainline does not have", async () => {
+    if (withVariations.kind !== "game") throw new Error("expected a game");
+    renderScreen(
+      `/tools/analysis?game=${encodeURIComponent(referenceTo(withVariations))}`,
+    );
+
+    await openTab("moves");
+    /*
+      `chess.js` `loadPgn` discards `( … )`, so the `Game` the catalog holds is
+      the mainline alone. This screen parses the PGN text again with
+      `parsePgnTree`, so the tree it shows is strictly larger.
+    */
+    expect(moveTokens().length).toBeGreaterThan(
+      withVariations.game.moves.length,
+    );
+  });
+
+  it("ignores a reference that names nothing, rather than throwing on the link", () => {
+    renderScreen("/tools/analysis?game=pgn/no-such-folder/no-such-game");
 
     expect(position()).toMatch(/^rnbqkbnr\/pppppppp/);
   });
