@@ -45,7 +45,15 @@ import { useTreeNavigation } from "./useTreeNavigation";
  * screen is only ever an analysis whose FEN matches that position, so a set left
  * over from the previous one is never rendered under a new board.
  *
- * **3. Engine lifecycle.** Lazy ref resolved at call time, subscribe in an effect
+ * **3. An initial position can come from outside.** The Board Editor hands a
+ * position over as a query parameter on this screen's route, so the optional
+ * `initialFen` is read *once*, as this hook's initial state — arriving at
+ * `/tools/analysis?fen=…` mounts the screen, so there is no later change to
+ * follow, and reading it in an effect instead would mean writing state from one.
+ * A position that will not parse is the caller's to reject; whatever arrives
+ * here is used as-is.
+ *
+ * **4. Engine lifecycle.** Lazy ref resolved at call time, subscribe in an effect
  * with the returned unsubscribe, terminate on unmount —
  * `.claude/rules/chessboard.md` §4. The subscribe effect is declared first so a
  * StrictMode remount rebuilds the worker before anything asks it to search.
@@ -94,7 +102,7 @@ const isTerminal = (fen: string): boolean => {
 /** A tree with nothing in it, taken once — plain data that nothing mutates. */
 const NEW_TREE: GameTree = emptyTree();
 
-export const useAnalysisBoard = () => {
+export const useAnalysisBoard = (initialFen?: string) => {
   const engineRef = useRef<Engine | null>(null);
   // Resolved at call time, never during render: StrictMode's mount → unmount →
   // remount terminates the worker and re-runs the effects with no render in
@@ -117,7 +125,10 @@ export const useAnalysisBoard = () => {
     return chess;
   }, []);
 
-  const [tree, setTree] = useState<GameTree>(NEW_TREE);
+  // Lazily, and only on the first render: see note 3 above.
+  const [tree, setTree] = useState<GameTree>(() =>
+    initialFen === undefined ? NEW_TREE : emptyTree(initialFen),
+  );
   const [settings, setSettings] = useState<AnalysisSettings>(
     DEFAULT_ANALYSIS_SETTINGS,
   );

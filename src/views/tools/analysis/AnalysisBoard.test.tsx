@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router";
 import i18n from "../../../i18n";
 import AppThemeWithLang from "../../../theme/AppThemeWithLang";
 import { MAX_VARIATIONS_OFFERED } from "../../../lib/engineAnalysis";
@@ -187,13 +188,19 @@ const engineReports = (info: {
   });
 };
 
-const renderScreen = () =>
+/*
+  A router, because the screen reads its initial position off the URL — that is
+  how the Board Editor hands one over. `entry` is what a test arrives at.
+*/
+const renderScreen = (entry = "/tools/analysis") =>
   render(
     <AppThemeWithLang>
-      <RightPanelProvider>
-        <AnalysisBoard />
-        <RightPanelOutlet />
-      </RightPanelProvider>
+      <MemoryRouter initialEntries={[entry]}>
+        <RightPanelProvider>
+          <AnalysisBoard />
+          <RightPanelOutlet />
+        </RightPanelProvider>
+      </MemoryRouter>
     </AppThemeWithLang>,
   );
 
@@ -613,6 +620,27 @@ describe("Analysis Board — promotion", () => {
 
     expect(screen.queryByTestId("promotion-picker")).not.toBeInTheDocument();
     expect(position()).toBe(before);
+  });
+});
+
+describe("Analysis Board — arriving from the Board Editor", () => {
+  const edited = "4k3/8/8/8/8/8/4Q3/4K3 w - - 0 1";
+
+  it("opens on the position handed over in the URL", () => {
+    renderScreen(`/tools/analysis?fen=${encodeURIComponent(edited)}`);
+
+    expect(position()).toBe(edited);
+    // And it is a game from that position, not a diagram: the engine is asked
+    // about it, and a move played from it is the first of the line.
+    expect(engine().lastSearch).toBe(edited);
+    drag("e2", "e7");
+    expect(moveTokens()).toEqual(["Qe7+"]);
+  });
+
+  it("ignores a position it cannot read, rather than throwing on the link", () => {
+    renderScreen("/tools/analysis?fen=not-a-position");
+
+    expect(position()).toMatch(/^rnbqkbnr\/pppppppp/);
   });
 });
 

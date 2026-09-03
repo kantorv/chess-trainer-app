@@ -1,17 +1,19 @@
 import {
+  useMemo,
   useState,
   type ChangeEvent,
   type DragEvent,
   type FormEvent,
 } from "react";
 import Box from "@mui/material/Box";
+import { useSearchParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import {
   Chessboard,
   type ChessboardOptions,
   type PieceDropHandlerArgs,
 } from "react-chessboard";
-import { FenParseError } from "../../../lib/fen";
+import { FenParseError, parseFen } from "../../../lib/fen";
 import type { GameTree } from "../../../lib/gameTree";
 import { EmptyPgnError, PgnParseError, parsePgnTrees } from "../../../lib/pgn";
 import { RightPanel } from "../../main/rightPanel";
@@ -34,6 +36,15 @@ import { useAnalysisBoard } from "./useAnalysisBoard";
  * - the **right-hand panel** (`<RightPanel>`) holds `AnalysisPanel` — the
  *   Moves / Engine / Variations / Position tabs over the board controls.
  *
+ * ### Arriving from the Board Editor
+ *
+ * `/tools/analysis?fen=<position>` opens on that position. The FEN travels in
+ * the URL rather than in router state so that the link survives being
+ * bookmarked, shared or reloaded, and it is validated here — `parseFen` is the
+ * gate, and a parameter that will not pass it is ignored rather than allowed to
+ * throw on someone else's mistyped link. The hook takes it as its *initial*
+ * state, so nothing is written from an effect.
+ *
  * All the behaviour lives in `useAnalysisBoard`; this component is the layout,
  * the board options, and the ingestion state that the Position tab and the drop
  * targets share. `<RightPanel>` portals the panel out of this tree, so it still
@@ -52,7 +63,26 @@ import { useAnalysisBoard } from "./useAnalysisBoard";
  */
 function AnalysisBoard() {
   const { t } = useTranslation();
-  const state = useAnalysisBoard();
+  const [searchParams] = useSearchParams();
+
+  /*
+    The position handed over by the Board Editor, if this is that arrival. Only
+    the first render's value is ever used (see `useAnalysisBoard`), but parsing
+    it on every render would build a `chess.js` instance for nothing.
+  */
+  const requested = searchParams.get("fen");
+  const initialFen = useMemo(() => {
+    if (requested === null) return undefined;
+    try {
+      return parseFen(requested);
+    } catch {
+      // A link nobody can read opens on the starting position, as if the
+      // parameter had not been there at all.
+      return undefined;
+    }
+  }, [requested]);
+
+  const state = useAnalysisBoard(initialFen);
 
   /*
     Ingestion state: what the reader has typed, what came out of the last
