@@ -78,11 +78,28 @@ export const useBoardEditor = () => {
     );
   }, []);
 
-  /** Replace the whole position — every reset and every load ends up here. */
-  const applyFen = useCallback((next: string) => {
-    boardRef.current.load(next, { skipValidation: true });
-    setFields(fenFields(next));
-  }, []);
+  /**
+   * Replace the whole position — every reset and every load ends up here.
+   *
+   * `faceSideToMove` turns the board to the side that has to answer the
+   * position. It is set for the two *loads* and not for the resets: a position
+   * arriving from outside is one you are about to look at from the side to move,
+   * while clearing the board or going back to the starting position is about the
+   * pieces and has no business overruling a viewpoint the reader chose. Editing
+   * the side-to-move field does not turn the board either, for the same reason —
+   * arranging a position is not being handed one.
+   */
+  const applyFen = useCallback(
+    (next: string, { faceSideToMove = false } = {}) => {
+      boardRef.current.load(next, { skipValidation: true });
+      const fields = fenFields(next);
+      setFields(fields);
+      if (faceSideToMove) {
+        setOrientation(fields.turn === "b" ? "black" : "white");
+      }
+    },
+    [],
+  );
 
   /**
    * The drop handler, and the whole of the editing mechanism.
@@ -207,13 +224,13 @@ export const useBoardEditor = () => {
    * position rather than a position the reader is halfway through building.
    */
   const loadFen = useCallback(
-    (text: string) => applyFen(parseFen(text)),
+    (text: string) => applyFen(parseFen(text), { faceSideToMove: true }),
     [applyFen],
   );
 
   /** Load a position that is already known good — a game's final position. */
   const loadPosition = useCallback(
-    (position: string) => applyFen(position),
+    (position: string) => applyFen(position, { faceSideToMove: true }),
     [applyFen],
   );
 

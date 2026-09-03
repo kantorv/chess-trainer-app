@@ -165,6 +165,15 @@ the engine would move the instant the screen opened, from a position they had
 just finished arranging. It is also what "New game" returns to; resetting to the
 standard start would throw the handed-over position away with no way back.
 
+**A position turns the board; a game does not.** All three screens face the side
+to move when a *position* arrives — a pasted FEN, a handed-over one, the final
+position of a game loaded into the editor — because a position is something you
+are about to answer, so the side that has to move is the side you look from.
+Loading a **game** deliberately does not: a PGN opens at ply 0, where the side to
+move says nothing about which side is being studied. Neither do the editor's
+resets or its side-to-move field, for the same reason in reverse — arranging a
+position is not being handed one, and a viewpoint the reader chose is theirs.
+
 ## Theming, direction and language
 
 `AppThemeWithLang` is the single owner of **both** axes. The color scheme

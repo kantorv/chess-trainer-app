@@ -317,6 +317,70 @@ describe("Board Editor — the position fields", () => {
   });
 });
 
+describe("Board Editor — which way the board faces", () => {
+  // A real position, Black to move.
+  const blackToMove = "2b2rk1/3n1ppp/3Rp3/6B1/1q2N3/1P4Q1/r1P2PPP/2KR4 b - - 0 1";
+
+  const orientation = () =>
+    screen.getByTestId("board").getAttribute("data-orientation");
+
+  it("turns to Black when a Black-to-move position is pasted", async () => {
+    renderScreen();
+    expect(orientation()).toBe("white");
+
+    await setUpFen(blackToMove);
+
+    // You are about to answer this position, so you look at it from the side
+    // that has to move.
+    expect(orientation()).toBe("black");
+    expect(position()).toBe(blackToMove);
+  });
+
+  it("turns back to White when a White-to-move position is pasted", async () => {
+    renderScreen();
+    await setUpFen(blackToMove);
+
+    await setUpFen("7k/8/8/8/8/8/8/K7 w - - 0 1");
+
+    expect(orientation()).toBe("white");
+  });
+
+  it("faces the side to move in a loaded game's final position", async () => {
+    renderScreen();
+    await openTab("pgn");
+
+    // 1. e4 leaves Black to move.
+    await pasteInto("editor-pgn-input", "1. e4");
+    await userEvent.click(screen.getByRole("button", { name: "Load PGN" }));
+
+    expect(orientation()).toBe("black");
+  });
+
+  it("leaves the reader's own viewpoint alone when the board is reset", async () => {
+    renderScreen();
+    await userEvent.click(screen.getByTestId("editor-reset-flip"));
+    expect(orientation()).toBe("black");
+
+    // A reset is about the pieces; it has no business overruling a viewpoint
+    // the reader chose for themselves.
+    await userEvent.click(screen.getByTestId("editor-reset-clear"));
+    expect(orientation()).toBe("black");
+
+    await userEvent.click(screen.getByTestId("editor-reset-start"));
+    expect(orientation()).toBe("black");
+  });
+
+  it("does not turn the board when the side-to-move field is edited", async () => {
+    renderScreen();
+
+    await userEvent.click(screen.getByTestId("editor-turn-b"));
+
+    // Arranging a position is not being handed one — the board staying put is
+    // what lets you set Black's move up while still looking from White.
+    expect(orientation()).toBe("white");
+  });
+});
+
 describe("Board Editor — resets", () => {
   it("goes back to the starting position", async () => {
     renderScreen();

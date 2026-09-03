@@ -135,7 +135,12 @@ export const useAnalysisBoard = (initialFen?: string) => {
   const [analysis, setAnalysis] = useState<Analysis>(EMPTY_ANALYSIS);
   const [engineOn, setEngineOn] = useState(true);
   const [showEvalBar, setShowEvalBar] = useState(true);
-  const [orientation, setOrientation] = useState<"white" | "black">("white");
+  // Facing the side to move in the position this screen opened on — see
+  // `loadFen` for why a position you are handed turns the board and a game you
+  // load does not.
+  const [orientation, setOrientation] = useState<"white" | "black">(() =>
+    initialFen !== undefined && turnOf(initialFen) === "b" ? "black" : "white",
+  );
   const [promotion, setPromotion] = useState<{
     from: Square;
     to: Square;
@@ -349,9 +354,22 @@ export const useAnalysisBoard = (initialFen?: string) => {
     [goToNode],
   );
 
-  /** Set a position up from a pasted FEN. Throws `FenParseError` on bad input. */
+  /**
+   * Set a position up from a pasted FEN. Throws `FenParseError` on bad input.
+   *
+   * It also turns the board to the side to move. A position arriving as a FEN is
+   * one you are about to answer — a study, a puzzle, a game handed over from the
+   * Board Editor — so the side that has to move is the side you are looking
+   * from. Loading a *game* (`loadTree`) deliberately does not: a PGN opens at
+   * ply 0, where the side to move says nothing about which side you are studying,
+   * and turning the board there would overrule a viewpoint the reader chose.
+   */
   const loadFen = useCallback(
-    (text: string) => loadTree(emptyTree(parseFen(text))),
+    (text: string) => {
+      const fen = parseFen(text);
+      loadTree(emptyTree(fen));
+      setOrientation(turnOf(fen) === "b" ? "black" : "white");
+    },
     [loadTree],
   );
 
