@@ -7,6 +7,7 @@ import {
   numberedVariation,
   type Analysis,
 } from "../../lib/engineAnalysis";
+import { maskSanLine, type PieceMask } from "../../lib/pieceMask";
 
 /**
  * The Variations tab: the top lines the engine is considering for the position
@@ -33,6 +34,13 @@ type BestVariationsProps = {
    * and lets a set that has not filled up yet say so.
    */
   requested: number;
+  /**
+   * Optional piece mask (`lib/pieceMask.ts`), for the same reason `MoveList`
+   * takes one: a variation printed in SAN names the pieces in it, and the
+   * engine's lines are full of moves by pieces the board is hiding. With a mask
+   * those moves are printed as coordinates. Without one nothing changes.
+   */
+  mask?: PieceMask;
 };
 
 const sanSx = {
@@ -41,7 +49,7 @@ const sanSx = {
   fontSize: "0.8125rem",
 } as const;
 
-function BestVariations({ analysis, requested }: BestVariationsProps) {
+function BestVariations({ analysis, requested, mask }: BestVariationsProps) {
   const { t } = useTranslation();
 
   /*
@@ -123,7 +131,14 @@ function BestVariations({ analysis, requested }: BestVariationsProps) {
                 data-testid={`variation-${line.multipv}-line`}
                 sx={{ ...sanSx, color: "text.secondary", minWidth: 0 }}
               >
-                {numberedVariation(analysis.fen, line.san)}
+                {numberedVariation(
+                  analysis.fen,
+                  // Every line starts from the analysed position, which is the
+                  // board the mask needs in order to name the squares.
+                  mask === undefined
+                    ? line.san
+                    : maskSanLine(mask, analysis.fen, line.san),
+                )}
               </Typography>
             </Box>
           ))}
