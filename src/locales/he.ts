@@ -349,7 +349,8 @@ const he: typeof en = {
       count: "משחקים: {{count}}",
       empty: "אין עדיין משחקים בקובץ הזה.",
       hint: "בחרו משחק כדי לשחזר אותו מסע אחר מסע, ואז העבירו אותו ללוח הניתוח או קחו את העמדה שעל המסך אל המנוע.",
-      moves: "{{count}} מסעים",
+      moves_one: "מסע {{count}}",
+      moves_other: "{{count}} מסעים",
     },
     detail: {
       back: "חזרה אל {{category}}",

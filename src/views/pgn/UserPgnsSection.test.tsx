@@ -6,6 +6,7 @@ import { MemoryRouter, Route, Routes, useSearchParams } from "react-router";
 import i18n from "../../i18n";
 import AppThemeWithLang from "../../theme/AppThemeWithLang";
 import { itemsInLibraryCategory } from "../../lib/libraryCatalog";
+import { matesSection } from "../library/section";
 import { pgnCatalog } from "../../lib/pgnCatalog";
 import { initialFenOf } from "../../lib/gameModel";
 import { fenAtPly } from "../../lib/gameNavigation";
@@ -66,7 +67,8 @@ const renderAt = (path: string) =>
     </AppThemeWithLang>,
   );
 
-const PLAYED = "chess-com-games-2026-08-30";
+const PLAYED =
+  "studies/lichess-study-zwischenzug-best-games-part1-by-lalala732-2026-04-12";
 const STUDY = "studies/lichess-study-queen-vs-rook-rosettes-by-methurst-2021-07-08";
 
 const played = itemsInLibraryCategory(PLAYED, pgnCatalog)[0];
@@ -87,17 +89,47 @@ describe("the User PGNs section", () => {
     }
 
     const panel = screen.getByTestId("layout-right-panel");
-    expect(panel).toHaveTextContent("Chess com games 2026-08-30");
+    expect(panel).toHaveTextContent("Zwischenzug best games [part1]");
     expect(panel).toHaveTextContent("Games: 9");
   });
 
-  it("captions a game card by its length rather than by whose move it is", () => {
-    // The one branch the item kind makes on the list screen. "White to play"
-    // would say nothing about a game you are about to replay.
+  it("gives a game card a footer of what the PGN tags actually say", () => {
+    /*
+      The one branch the item kind makes on the list screen. "White to play"
+      would say nothing about a game you are about to replay from move one, so a
+      game is footed with how it ended, how long it ran, where it was played and
+      what was opened.
+    */
     renderAt(`/pgn/${PLAYED}`);
 
-    expect(screen.getByTestId(`user-pgn-card-${played.id}`)).toHaveTextContent(
-      `${played.game.moves.length} moves`,
+    const footer = screen.getByTestId(`user-pgn-footer-${played.id}`);
+
+    expect(footer).toHaveTextContent("Jose Raul Capablanca - Savielly Tartakower");
+    expect(footer).toHaveTextContent(`1-0 · ${played.game.moves.length} moves`);
+    expect(footer).toHaveTextContent("New York, 1924");
+    expect(footer).toHaveTextContent("Horwitz Defense · A40");
+  });
+
+  it("collapses that footer to what a chapter with no game data has", () => {
+    // A rosettes chapter is a position and a comment: no players, no result, and
+    // an Event tag that only repeats the chapter's own name. Nothing is invented
+    // and no placeholder row is rendered.
+    renderAt(`/pgn/${STUDY}`);
+
+    const footer = screen.getByTestId("user-pgn-footer-chapter-1");
+
+    expect(footer).toHaveTextContent("Chapter 1");
+    // Singular, not "1 moves" — that chapter ships a single move.
+    expect(footer).toHaveTextContent("1 move");
+    expect(footer).not.toHaveTextContent("Queen vs Rook, Rosettes:");
+    expect(footer).not.toHaveTextContent("?");
+  });
+
+  it("captions a position card by whose move it is, unchanged", () => {
+    // The other side of the same branch, asserted here because this is the file
+    // that owns it: the two position sections are untouched by any of the above.
+    expect(matesSection.catalog.items.every((item) => item.kind === "position")).toBe(
+      true,
     );
   });
 
@@ -163,8 +195,8 @@ describe("the User PGNs section", () => {
     await userEvent.click(screen.getByTestId("user-pgn-tab-info"));
 
     const panel = screen.getByTestId("layout-right-panel");
-    expect(panel).toHaveTextContent("AlbertSimTL");
-    expect(panel).toHaveTextContent("Chess.com");
+    expect(panel).toHaveTextContent("Jose Raul Capablanca");
+    expect(panel).toHaveTextContent("New York, NY USA");
   });
 
   it.each([

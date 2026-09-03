@@ -12,11 +12,10 @@ import {
   findLibraryCategory,
   itemsInLibraryCategory,
   libraryItemFen,
-  localizedText,
-  sideToMoveOf,
   type LibraryItem,
 } from "../../lib/libraryCatalog";
 import { RightPanel } from "../main/rightPanel";
+import LibraryCardFooter from "./LibraryCardFooter";
 import { sectionHome, type LibrarySection } from "./section";
 
 /**
@@ -30,10 +29,11 @@ import { sectionHome, type LibrarySection } from "./section";
  * this screen knows nothing about JSON or PGN — it reads through
  * `lib/libraryCatalog.ts`.
  *
- * **The item kind is one branch, and only one**: the card's caption. A position
- * is captioned by whose move it is, because that is the question it asks; a game
- * is captioned by how long it is, because "White to play" says nothing about a
- * game you are about to replay. The preview board is not a branch at all —
+ * **The item kind is one branch, and only one**: the card's footer, which lives
+ * in `LibraryCardFooter`. A position is captioned by whose move it is, because
+ * that is the question it asks; a game by how it ended, how long it ran and
+ * where it was played, because "White to play" says nothing about a game you are
+ * about to replay from move one. The preview board is not a branch at all —
  * `libraryItemFen` gives both kinds their starting position.
  *
  * A card deep-links to `<routeBase>/<category path>/<id>`. The sidebar's active
@@ -125,18 +125,7 @@ function LibraryList({ section, categoryPath }: Props) {
                   <Chessboard options={previewOptions(section, item)} />
                 </Box>
               </Box>
-              <Box sx={{ px: 1.5, pb: 1.5 }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                  {localizedText(item.name, language)}
-                </Typography>
-                <Typography variant="caption" sx={{ color: "text.secondary" }}>
-                  {item.kind === "game"
-                    ? t(`${section.chromeKey}.list.moves`, {
-                        count: item.game.moves.length,
-                      })
-                    : t(`${section.chromeKey}.sideToMove.${sideToMoveOf(item)}`)}
-                </Typography>
-              </Box>
+              <LibraryCardFooter section={section} item={item} />
             </CardActionArea>
           </Card>
         ))}

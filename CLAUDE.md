@@ -67,12 +67,12 @@ change by whether it *adds* to that count, not by the exit code.
 | `src/lib/matesCatalog.ts` | A thin binding over the shared layer in the Mates section's own vocabulary (`findMateCategory`, `positionsInCategory`, `findMatePosition`), plus the shipped catalog. |
 | `src/data/positions.json` | **The endgame Positions library** — categories nested to any depth, each with its own `{ en, he }` name, and the positions inside them. The only file adding a category *or* a position touches. |
 | `src/lib/positionsCatalog.ts` | That file loaded, once, through the same shared loader. |
-| `src/data/pgn/` | **The User PGNs library** — the project's `.pgn` files themselves. One file is one folder, each game inside it one item. The only thing adding content touches. |
-| `src/data/pgn.json` | That section's *optional* manifest: renames, translates, nests and orders a folder. A file it says nothing about still appears. |
+| `src/data/pgn/` | **The User PGNs library** — the project's `.pgn` files themselves: three lichess study exports (queen-vs-rook rosettes, a custom puzzle set, and nine annotated master games). One file is one folder, each game inside it one item. The only thing adding content touches. |
+| `src/data/pgn.json` | That section's *optional* manifest: renames, translates, nests and orders a folder. Every field is an override — a file it says nothing about still appears, and one it nests but does not label is still named from its own `StudyName` tag, which the shipped entry for the master-games study relies on. |
 | `src/lib/pgnLibrary.ts` | **The second producer of a `LibraryCatalog`** — `loadPgnLibrary` turns `path -> PGN text` plus that manifest into categories and `LibraryGame` items, naming each from the file's `StudyName` / a game's `ChapterName` / its players. Non-throwing: a broken game, an empty file, a manifest naming a file that is not there all land in `problems`. Pure — it takes its files as a parameter. |
 | `src/lib/pgnCatalog.ts` | That loader over the shipped files, once: an eager `import.meta.glob('../data/pgn/*.pgn', { query: '?raw' })`, so Vite inlines the text at build time and the sidebar can be built from the result at module scope. |
 | `src/lib/gameReference.ts` | **The `?game=` carrier** — `pgn/<category path>/<id>`, formatted by `gameReferenceOf` and resolved by `resolveGameReference` through the same `resolveLibraryPath`. A game does not fit in a URL, so what travels is a reference into the catalog. |
-| `src/views/library/` | The section-agnostic screens all three libraries render: `LibraryList.tsx` (the card grid of preview boards plus the right-hand count and hint), `LibraryDetail.tsx` (which resolves the URL, renders the miss, and dispatches on the item's kind), `LibraryPositionDetail.tsx` (one position, read-only, facing the side to move, with the three `?fen=` hand-offs), `LibraryGameDetail.tsx` (the game replayed over the shared `MoveList` / `BoardControls` / `useGameNavigation`, with the `?game=` and `?fen=` hand-offs), `BackToCategory.tsx`, and `section.ts`, which is what tells one section from another — route base, catalog, chrome keys, test ids, `?game=` key. |
+| `src/views/library/` | The section-agnostic screens all three libraries render: `LibraryList.tsx` (the card grid of preview boards plus the right-hand count and hint), `LibraryDetail.tsx` (which resolves the URL, renders the miss, and dispatches on the item's kind), `LibraryPositionDetail.tsx` (one position, read-only, facing the side to move, with the three `?fen=` hand-offs), `LibraryGameDetail.tsx` (the game replayed over the shared `MoveList` / `BoardControls` / `useGameNavigation`, with the `?game=` and `?fen=` hand-offs), `LibraryCardFooter.tsx` and its pure `gameSummary.ts` (a card's footer, and the one branch the list screen makes on the item's kind), `BackToCategory.tsx`, and `section.ts`, which is what tells one section from another — route base, catalog, chrome keys, test ids, `?game=` key. |
 | `src/views/mates/` | The Mates section, as a **binding**: `list/MatesList.tsx` and `detail/MateDetail.tsx` read `/mates/:category(/:id)` and hand it to the two shared screens. Neither knows anything about JSON. |
 | `src/views/positions/` | The Positions section: `PositionsSection.tsx` is **one component behind every `/positions/*` URL**, resolving the splat through the catalog and rendering whichever shared screen the answer calls for. |
 | `src/views/pgn/` | The User PGNs section: `UserPgnsSection.tsx` is the same one component behind every `/pgn/*` URL, over a catalog whose items are games. |
@@ -244,7 +244,7 @@ by `kind`, and the two shared screens branch on it **exactly once each**:
 
 | Screen | The one branch |
 | --- | --- |
-| `LibraryList` | a card's caption — whose move it is (a position asks a question) or how long the game is (a game does not). The preview board is not a branch: `libraryItemFen` gives both kinds their starting position |
+| `LibraryList` | a card's footer (`LibraryCardFooter.tsx`) — whose move it is, because that is the question a position asks; or how a game ended, how long it ran, where it was played and what was opened (`gameSummary.ts`), because "White to play" says nothing about a game you are about to replay from move one. The preview board is not a branch: `libraryItemFen` gives both kinds their starting position |
 | `LibraryDetail` | which body to render — and it splits *before* either runs, because the game body uses hooks the position body does not, and a hook cannot live behind a condition |
 
 Two things follow that are worth knowing before touching the layer:
@@ -260,6 +260,14 @@ Two things follow that are worth knowing before touching the layer:
   pairs, the ply highlight, the jump targets and the keyboard stepping for free.
   That is the whole reason a game-shaped item cost a screen rather than a
   subsystem — see *One game model, two producers* above.
+- **A footer prints only what the data has.** `gameSummaryOf` drops every PGN
+  placeholder (`gameTag` already reports `"?"`, `"????.??.??"` and an unfinished
+  `"*"` result as absent) *and* drops an `Event` that only repeats the item's
+  own name — a lichess study writes `Event` as `"<study>: <chapter>"`, so for a
+  chapter named "Chapter 1" the event **is** the title with a prefix. So an
+  annotated master game fills four lines and a chapter that is a position and a
+  comment shows its name and its length and stops. Neither renders a
+  placeholder row.
 
 ## Handing a game on: `?game=`, beside `?fen=`
 

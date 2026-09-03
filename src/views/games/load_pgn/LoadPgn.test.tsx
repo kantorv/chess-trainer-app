@@ -256,7 +256,10 @@ describe("the Load PGN screen — arriving with a game", () => {
     reference is resolved through the catalog and taken as *initial* state,
     because arriving at the URL is what mounts the screen.
   */
-  const played = itemsInLibraryCategory("chess-com-games-2026-08-30", pgnCatalog)[0];
+  const played = itemsInLibraryCategory(
+    "studies/lichess-study-zwischenzug-best-games-part1-by-lalala732-2026-04-12",
+    pgnCatalog,
+  )[0];
   if (played.kind !== "game") throw new Error("expected a game");
 
   const reference = `pgn/${played.category}/${played.id}`;
@@ -285,7 +288,7 @@ describe("the Load PGN screen — arriving with a game", () => {
 
     await userEvent.click(screen.getByTestId("game-panel-tab-info"));
     expect(screen.getByTestId("game-panel-content-info")).toHaveTextContent(
-      "AlbertSimTL",
+      "Jose Raul Capablanca",
     );
   });
 

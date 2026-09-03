@@ -475,8 +475,14 @@ const en = {
       count: "Games: {{count}}",
       empty: "No games in this file yet.",
       hint: "Pick a game to replay it move by move, then hand it to the Analysis Board or take the position on screen to the engine.",
-      /** A game card's caption, and the line under the name on its detail page. */
-      moves: "{{count}} moves",
+      /**
+       * A game card's footer line, and the line under the name on its detail
+       * page. Plural forms rather than one string: the rosettes study ships a
+       * chapter that is a single move, and "1 moves" is the kind of thing a
+       * reader notices.
+       */
+      moves_one: "{{count}} move",
+      moves_other: "{{count}} moves",
     },
     /** The detail screen's panel. */
     detail: {
