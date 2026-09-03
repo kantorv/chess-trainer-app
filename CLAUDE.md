@@ -272,3 +272,14 @@ Consequences worth knowing:
 - **The sidebar mirrors; only the board does not.** Depth is indented with
   `paddingInlineStart`, which follows the direction on its own — never
   `paddingLeft`, and never wrap this subtree in `ForceLTR`.
+
+
+
+## Use the mui-mcp server to answer any MUI questions --
+
+- 1. call the "useMuiDocs" tool to fetch the docs of the package relevant in the question
+- 2. call the "fetchDocs" tool to fetch any additional docs if needed using ONLY the URLs present in the returned content.
+- 3. repeat steps 1-2 until you have fetched all relevant docs for the given question
+- 4. use the fetched content to answer the question
+
+
