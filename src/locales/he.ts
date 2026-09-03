@@ -6,8 +6,8 @@ import type en from "./en";
  */
 const he: typeof en = {
   app: {
-    brandMark: "CA",
-    brandText: "ניתוח שחמט",
+    brandMark: "CT",
+    brandText: "אפליקציית אימון שחמט",
   },
   nav: {
     ariaLabel: "ניווט ראשי",

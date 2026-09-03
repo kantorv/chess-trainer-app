@@ -5,8 +5,8 @@
  */
 const en = {
   app: {
-    brandMark: "CA",
-    brandText: "Chess Analyze",
+    brandMark: "CT",
+    brandText: "Chess Trainer App",
   },
   nav: {
     ariaLabel: "Main navigation",
