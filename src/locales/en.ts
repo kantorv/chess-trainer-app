@@ -12,10 +12,6 @@ const en = {
     ariaLabel: "Main navigation",
     toggleColorMode: "Toggle light and dark mode",
     switchLanguage: "Switch language",
-    basicBoard: "Basic board",
-    movingPiece: "Moving example",
-    engineEvaluation: "Engine evaluation demo",
-    playEngine: "Play with engine 1",
     playWithEngine: "Play with Engine",
     /**
      * The same screen as `playWithEngine`, with the pieces in disguise. The
@@ -28,12 +24,16 @@ const en = {
     boardEditor: "Board Editor",
     /** Sidebar folders — groupings over the routes, never routes themselves. */
     folders: {
-      basicExamples: "Basic Examples",
       engine: "Engine",
       maskedPieces: "Masked Pieces",
       games: "Games",
       tools: "Tools",
     },
+  },
+  /** The index screen — a landing page linking out to the real screens. */
+  home: {
+    title: "Get started",
+    subtitle: "Pick a board or tool to open.",
   },
   language: {
     en: "English",

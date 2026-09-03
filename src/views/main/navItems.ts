@@ -1,8 +1,4 @@
 import type { SvgIconComponent } from "@mui/icons-material";
-import GridViewRoundedIcon from "@mui/icons-material/GridViewRounded";
-import TouchAppRoundedIcon from "@mui/icons-material/TouchAppRounded";
-import InsightsRoundedIcon from "@mui/icons-material/InsightsRounded";
-import SmartToyRoundedIcon from "@mui/icons-material/SmartToyRounded";
 import SportsEsportsRoundedIcon from "@mui/icons-material/SportsEsportsRounded";
 import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
 import AccountTreeRoundedIcon from "@mui/icons-material/AccountTreeRounded";
@@ -26,30 +22,6 @@ export type NavItem = {
  * here plus the route in `App.tsx` and a string in both catalogs.
  */
 export const navItems: readonly NavItem[] = [
-  {
-    to: "/",
-    labelKey: "nav.basicBoard",
-    icon: GridViewRoundedIcon,
-    folder: "basic-examples",
-  },
-  {
-    to: "/move",
-    labelKey: "nav.movingPiece",
-    icon: TouchAppRoundedIcon,
-    folder: "basic-examples",
-  },
-  {
-    to: "/analyze",
-    labelKey: "nav.engineEvaluation",
-    icon: InsightsRoundedIcon,
-    folder: "basic-examples",
-  },
-  {
-    to: "/player1",
-    labelKey: "nav.playEngine",
-    icon: SmartToyRoundedIcon,
-    folder: "basic-examples",
-  },
   {
     to: "/engine/play",
     labelKey: "nav.playWithEngine",

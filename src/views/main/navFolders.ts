@@ -1,5 +1,4 @@
 import type { SvgIconComponent } from "@mui/icons-material";
-import FolderRoundedIcon from "@mui/icons-material/FolderRounded";
 import FolderSpecialRoundedIcon from "@mui/icons-material/FolderSpecialRounded";
 import HandymanRoundedIcon from "@mui/icons-material/HandymanRounded";
 import MemoryRoundedIcon from "@mui/icons-material/MemoryRounded";
@@ -20,7 +19,6 @@ import VisibilityOffRoundedIcon from "@mui/icons-material/VisibilityOffRounded";
  * `folder` on the screens that join it.
  */
 export type NavFolderId =
-  | "basic-examples"
   | "engine"
   | "masked-pieces"
   | "games"
@@ -37,11 +35,6 @@ export type NavFolder = {
 
 /** The folder tree, top to bottom. */
 export const navFolders: readonly NavFolder[] = [
-  {
-    id: "basic-examples",
-    labelKey: "nav.folders.basicExamples",
-    icon: FolderRoundedIcon,
-  },
   {
     id: "engine",
     labelKey: "nav.folders.engine",

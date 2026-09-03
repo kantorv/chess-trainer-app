@@ -1,10 +1,9 @@
 # chessapp-analyze-v1
 
-A Vite + React 19 + TypeScript chess trainer. Eight board screens sit inside one
-app shell — four small demos, each showing one idea, and four real screens
-(Play with Engine, Masked Pieces, the Analysis Board, the Board Editor). The
-boards themselves are `react-chessboard` v5 driven by `chess.js` and a Stockfish
-WASM worker.
+A Vite + React 19 + TypeScript chess trainer. Five board screens sit inside one
+app shell — Play with Engine, Masked Pieces, Load PGN, the Analysis Board and the
+Board Editor — reached from a plain landing page at `/`. The boards themselves
+are `react-chessboard` v5 driven by `chess.js` and a Stockfish WASM worker.
 
 Board work has its own rules — [`.claude/rules/chessboard.md`](.claude/rules/chessboard.md)
 holds the project conventions and, in its §0, the index to everything else.
@@ -47,7 +46,7 @@ change by whether it *adds* to that count, not by the exit code.
 | `src/locales/` | Inline `en` / `he` catalogs. `he` is typed `typeof en`, so a missing key is a compile error. |
 | `src/theme/` | The look: `themePrimitives.ts` (tokens), `AppThemeWithLang.tsx` (the provider), `rtlCache.ts`, `ForceLTR.tsx`, and the two header controls. |
 | `src/views/main/` | The app shell — `Layout.tsx` (header + sidebar + board area; the nav rail and the right-hand panel are fixed-width, and the board square is what is left over), `rightPanel.tsx` (the route-fillable panel slot), `Sidebar.tsx`, the nav registries (`navItems.ts`, `navFolders.ts`, `navTree.ts`), and the XState `service.ts`. |
-| `src/views/demos/`, `src/views/player/` | The four demo board screens. |
+| `src/views/home/` | The landing page at `/` — no board, just a card per screen built from `navTree()`. |
 | `src/views/shared/` | The panel pieces the game screens share: `MoveList.tsx`, `BoardControls.tsx`, `useGameNavigation.ts`, `EvalBar.tsx`, `BestVariations.tsx`, `PromotionPicker.tsx`, `OptionSlider.tsx`, `CopyableValue.tsx`, and `EngineBoardSquare.tsx` (the eval bar + board + promotion picker the two engine-play screens both render). They take props and know nothing about which screen is rendering them, and their catalog keys are top-level (`moveList.*`, `variations.*`, `promotion.*`, `engineOption.*`, `board.*`, `copyable.*`, `masking.*`) rather than under any one screen's. |
 | `src/views/engine/play/` | The Play with Engine screen. `PlayWithEngine.tsx` is layout (the shared `EngineBoardSquare`) and the `?fen=` arrival; **all the behaviour is in `usePlayWithEngine.ts`**; `EnginePanel.tsx` is the Game / Engine / Variations tab strip over the shared board controls, with `EngineSettings.tsx` under it. |
 | `src/views/masked/play/` | The Masked Pieces screen — Play with Engine with the piece graphics in disguise. `MaskedPlay.tsx` owns the mask and renders the same `EngineBoardSquare`; **the behaviour is `usePlayWithEngine`, reused verbatim**; `MaskedPanel.tsx` adds a fourth tab over the same three, with `MaskEditor.tsx` under it. |

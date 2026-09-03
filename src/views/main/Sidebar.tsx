@@ -39,8 +39,8 @@ function TreeRow({ node, depth, expanded, pathname, onToggle }: RowProps) {
   const paddingInlineStart = indentOf(depth);
 
   if (node.kind === "screen") {
-    // Exact match rather than a prefix test: "/" is a prefix of every other
-    // route, so `startsWith` would light up the basic board everywhere.
+    // Exact match rather than a prefix test: a `startsWith` check would light up
+    // a screen on every route nested under its path (and "/" on all of them).
     const isActive = pathname === node.to;
 
     return (

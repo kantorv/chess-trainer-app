@@ -436,7 +436,7 @@ export default class Engine {
     this.flush();
   }
 
-  /** The depth-only search the two demo boards use. */
+  /** Depth-only convenience wrapper around {@link search}. No current caller. */
   evaluatePosition(fen: string, depth = 12) {
     this.search(fen, { depth });
   }

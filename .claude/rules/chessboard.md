@@ -170,7 +170,7 @@ Full worked example: `stories/basic-examples/ClickToMove.stories.tsx`.
 
 Keyed by square id (`"e4"`), layered on top of the light/dark square styles.
 Use it for legal-move dots, last-move highlight, selected square, check
-indicator, right-click marks. The legal-move dot idiom used across the demos:
+indicator, right-click marks. The legal-move dot idiom used across the screens:
 
 ```tsx
 newSquares[move.to] = {
@@ -183,8 +183,8 @@ newSquares[move.to] = {
 
 Arrows **you pass in** via `options.arrows` are external / controlled: they are
 NOT auto-cleared on click or position change. Recompute the array yourself when
-the position changes — see `Board3` deriving a single arrow from the engine's
-best move. User-drawn (right-drag) arrows are separate and follow
+the position changes — see the Analysis Board deriving its best-move arrow from
+the engine's PV. User-drawn (right-drag) arrows are separate and follow
 `clearArrowsOnClick` / `clearArrowsOnPositionChange`.
 
 ### 3.5 Promotion
@@ -221,7 +221,7 @@ deploys to GitHub Pages at `/chess-trainer-app/`, where a bare
 | --- | --- |
 | `new Engine()` | Spawns a **dedicated Worker**. One per mounted board. |
 | `search(fen, { depth = 12, movetime })` | The one to use. Depth is clamped to 24; `movetime` is milliseconds and is omitted when 0. **May not start immediately** — see §4.1. |
-| `evaluatePosition(fen, depth = 12)` | `search(fen, { depth })`. Kept for the two demo boards. |
+| `evaluatePosition(fen, depth = 12)` | Thin alias for `search(fen, { depth })`. No current caller — the demo boards that used it were removed; kept as a convenience wrapper. |
 | `onMessage(cb) => unsubscribe` | Parsed UCI messages. **Returns an unsubscribe fn — you must call it.** |
 | `setOption(name, value) => boolean` | Buffered, not posted (§4.1). `false` means this build will not take it — either it has no such option or it has pinned it. |
 | `whenOptionsReady(cb) => unsubscribe` | Runs `cb` once `options` is complete, immediately if the handshake already landed. |
@@ -334,25 +334,24 @@ Consequences for a caller:
 
 | Route | File | Based on upstream story | Demonstrates |
 | --- | --- | --- | --- |
-| `/` | [`views/demos/basic/Board1.tsx`](../../src/views/demos/basic/Board1.tsx) | `Default` | Bare static board, `ChessboardOptions` typing |
-| `/move` | [`views/demos/move/Board2.tsx`](../../src/views/demos/move/Board2.tsx) | `PlayVsRandom` | The core loop: ref-owned `chess.js` + controlled `position` + `onPieceDrop`; vs. a random mover |
-| `/analyze` | [`views/demos/engine/Board3.tsx`](../../src/views/demos/engine/Board3.tsx) | `AnalysisBoard` | Stockfish eval per position, best move drawn as an `arrows` entry |
-| `/player1` | [`views/player/engine_basic/Board.tsx`](../../src/views/player/engine_basic/Board.tsx) | (composed) | Play *against* the engine — engine moves are applied automatically. The **minimal** reference for the engine-move loop; deliberately left alone by CTA-12 |
+| `/` | [`views/home/Home.tsx`](../../src/views/home/Home.tsx) | — | Landing page, no board — a card per screen, built from `navTree()` |
 | `/engine/play` | [`views/engine/play/PlayWithEngine.tsx`](../../src/views/engine/play/PlayWithEngine.tsx) | (composed) | The full screen: eval bar, move list, MultiPV variations, live UCI settings, a real promotion picker. Takes a `?fen=` starting position |
 | `/masked/play` | [`views/masked/play/MaskedPlay.tsx`](../../src/views/masked/play/MaskedPlay.tsx) | `Pieces` | The same screen with the pieces in disguise: `options.pieces` built from a `PieceMask` (`lib/pieceMask.ts`), and the notation masked to match. `usePlayWithEngine` reused verbatim |
+| `/games/load-pgn` | [`views/games/load_pgn/LoadPgn.tsx`](../../src/views/games/load_pgn/LoadPgn.tsx) | (composed) | A PGN pasted in, parsed to a `Game`, walked with the shared `MoveList` / `useGameNavigation` / `BoardControls` |
 | `/tools/analysis` | [`views/tools/analysis/AnalysisBoard.tsx`](../../src/views/tools/analysis/AnalysisBoard.tsx) | (composed) | Analysis: a **variation tree** (`lib/gameTree.ts`), PGN/FEN set-up and export, both colours movable, engine and eval bar switched independently |
 | `/tools/editor` | [`views/tools/editor/BoardEditor.tsx`](../../src/views/tools/editor/BoardEditor.tsx) | `SparePieces` | Position editing: `ChessboardProvider` + spare-piece palettes, `{ skipValidation: true }`, illegal positions reported rather than refused, hand-off to either of the two screens above |
 
-The `MainN.tsx` files next to each board are layout-only wrappers (an MUI `Box`
+The `Main.tsx` file next to each board is a layout-only wrapper (an MUI `Box`
 with a `data-testid`); the board component is the unit of interest. Each
 "upstream story" column entry names a file in
 `docs/vendor/react-chessboard/stories/`.
 
-The first four are **demos** — the smallest thing that shows one idea, and worth
-keeping small. `/engine/play`, `/masked/play`, `/tools/analysis` and
-`/tools/editor` are real screens; when the two kinds disagree about how much to
-handle (promotion is the standing example), the demo's shortcut is the one that
-stays.
+There used to be four small demo screens under `views/demos/` and
+`views/player/` (a bare board, a move loop, an eval demo, a minimal
+engine-play), each showing one idea; they were removed and `/` is now the
+landing page. The vendored Storybook examples under
+`docs/vendor/react-chessboard/stories/` still carry those minimal patterns when
+you need the smallest version of one.
 
 **Two rules the Play with Engine screen is built on, worth reusing:**
 

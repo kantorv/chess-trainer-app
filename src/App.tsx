@@ -1,15 +1,8 @@
-
-
-import { useEffect, useMemo } from 'react';
 //import * as Sentry from "@sentry/react";
 import { createBrowserRouter, RouterProvider } from "react-router";
 
 import { DefaultLayout } from './views/main/Layout';
-import { default as BasicExampe } from './views/demos/basic/Main'
-import { default as MovingPieceExample } from './views/demos/move/Main2'
-import { default as EngineEvaluationExample  } from './views/demos/engine/Main3'
-
-import { default as EnginePlayer1  } from './views/player/engine_basic/Main'
+import { default as HomeScreen  } from './views/home/Main'
 import { default as LoadPgnScreen  } from './views/games/load_pgn/Main'
 import { default as PlayWithEngineScreen  } from './views/engine/play/Main'
 import { default as MaskedPlayScreen  } from './views/masked/play/Main'
@@ -23,26 +16,14 @@ const routes = createBrowserRouter(
   [
     {
       path: "/",
-      //  errorElement: <NotFoundPage />,  
+      //  errorElement: <NotFoundPage />,
       element:
           <DefaultLayout />
       ,
       children: [
         {
-          index: true, element: <BasicExampe />
+          index: true, element: <HomeScreen />
 
-        },
-        {
-          path: "/move",
-          element: <MovingPieceExample />
-        },
-        {
-          path: "/analyze",
-          element: <EngineEvaluationExample />
-        },
-        {
-          path: "/player1",
-          element: <EnginePlayer1 />
         },
         {
           path: "/engine/play",

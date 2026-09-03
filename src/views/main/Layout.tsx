@@ -15,9 +15,9 @@ import ColorModeIconDropdown from '../../theme/ColorModeIconDropdown';
 import LanguageSwitch from '../../theme/LanguageSwitch';
 
 /**
- * Board inset in pixels — the MUI `p: 2` (2 × the 8px spacing unit) that used
- * to live only on `views/player/engine_basic/Main.tsx`, now applied once here
- * in the shell so all four board screens get the same breathing room. Kept as
+ * Board inset in pixels — the MUI `p: 2` (2 × the 8px spacing unit), applied
+ * once here in the shell so every board screen gets the same breathing room.
+ * Kept as
  * a raw number, not `theme.spacing(2)`: `cssVariables` is on, so that returns a
  * `calc(var(--mui-spacing))` string the resize maths cannot subtract.
  */
