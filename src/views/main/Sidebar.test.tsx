@@ -23,6 +23,23 @@ const renderAt = (path: string, tree?: NavTreeNode[]) =>
 const basicExamples = () =>
   screen.getByRole("button", { name: i18n.t("nav.folders.basicExamples") });
 
+/**
+ * Every folder in the shipped tree, at any depth — sub-folders are folder rows
+ * too, so the button count is this and not `navFolders.length`. Counted
+ * recursively rather than by hand, so nesting one more is a data edit here as
+ * well as in `navFolders.ts`.
+ */
+const folderCount = (folders: readonly { children?: readonly unknown[] }[]): number =>
+  folders.reduce(
+    (total, folder) =>
+      total +
+      1 +
+      folderCount(
+        (folder.children ?? []) as readonly { children?: readonly unknown[] }[],
+      ),
+    0,
+  );
+
 beforeEach(async () => {
   await i18n.changeLanguage("en");
 });
@@ -95,7 +112,7 @@ describe("the folder tree", () => {
 
     const folder = basicExamples();
     expect(folder).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getAllByRole("button")).toHaveLength(navFolders.length);
+    expect(screen.getAllByRole("button")).toHaveLength(folderCount(navFolders));
 
     // Every screen is visible on first paint — no regression on the flat list.
     for (const { labelKey } of navItems) {

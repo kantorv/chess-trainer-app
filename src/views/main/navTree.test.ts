@@ -26,7 +26,16 @@ describe("the shipped nav tree", () => {
 
   it("files every screen under the folder it names", () => {
     for (const item of navItems) {
-      expect(folderPath(item.to)).toEqual([item.folder]);
+      const breadcrumb = folderPath(item.to);
+      /*
+        The breadcrumb is the whole ancestor chain, top down — one id for a
+        screen in a top-level folder, two for one inside a sub-folder. What the
+        registration promises is the *last* of them: the folder the screen
+        actually names. Asserting the chain is exactly `[item.folder]` would be
+        asserting that nothing is ever nested, which `navFolders` no longer is.
+      */
+      expect(breadcrumb.length).toBeGreaterThan(0);
+      expect(breadcrumb.at(-1)).toBe(item.folder);
     }
   });
 
