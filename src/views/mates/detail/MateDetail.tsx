@@ -24,14 +24,16 @@ import CopyableValue from "../../shared/CopyableValue";
 import { RightPanel } from "../../main/rightPanel";
 
 /**
- * One position from the library, on a board, with the two hand-offs.
+ * One position from the library, on a board, with the three hand-offs.
  *
  * The board is read-only — this page is where a position is *looked at*; it is
- * played on `/engine/play` and analysed on `/tools/analysis`, and both are one
- * click away. The hand-off is the existing mechanism verbatim: the FEN crosses
- * as a **query parameter**, which is the only carrier that survives being
- * bookmarked, shared and reloaded, and both destinations already validate it
- * with `parseFen` and take it as *initial* state. Nothing new was built for it.
+ * played on `/engine/play`, analysed on `/tools/analysis` and taken apart on
+ * `/tools/editor`, and all three are one click away. The hand-off is the
+ * existing mechanism verbatim: the FEN crosses as a **query parameter**, which
+ * is the only carrier that survives being bookmarked, shared and reloaded, and
+ * every destination validates it with `parseFen` and takes it as *initial*
+ * state. Nothing new was built for it — a third destination is a third argument
+ * to `handOffTo`, and nothing else.
  *
  * **The board faces the side to move.** A position is something you are about
  * to answer, so you look at it from the side that has to move — the same rule
@@ -92,7 +94,7 @@ function MateDetail() {
     allowDragging: false,
   };
 
-  /** Both hand-offs, and the only interface between this screen and those two. */
+  /** Every hand-off, and the only interface between this screen and those three. */
   const handOffTo = (pathname: string) => () =>
     navigate({
       pathname,
@@ -170,6 +172,13 @@ function MateDetail() {
             data-testid="mate-play-engine"
           >
             {t("mates.detail.playWithEngine")}
+          </Button>
+          <Button
+            variant="outlined"
+            onClick={handOffTo("/tools/editor")}
+            data-testid="mate-open-editor"
+          >
+            {t("mates.detail.openInEditor")}
           </Button>
         </Stack>
       </RightPanel>

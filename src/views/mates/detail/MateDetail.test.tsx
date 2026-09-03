@@ -50,6 +50,7 @@ const renderAt = (path: string) =>
             <Route path="/mates/:category" element={<div data-testid="list" />} />
             <Route path="/tools/analysis" element={<Arrival name="analysis" />} />
             <Route path="/engine/play" element={<Arrival name="play" />} />
+            <Route path="/tools/editor" element={<Arrival name="editor" />} />
           </Routes>
         </RightPanelProvider>
       </MemoryRouter>
@@ -105,6 +106,19 @@ describe("MateDetail", () => {
     await userEvent.click(screen.getByTestId("mate-play-engine"));
 
     expect(screen.getByTestId("play-arrival")).toHaveAttribute(
+      "data-fen",
+      first.fen,
+    );
+  });
+
+  it("hands the position to the Board Editor as ?fen=", async () => {
+    // The third hand-off is the same mechanism with a third destination — the
+    // editor reads `?fen=` exactly as the other two do.
+    renderAt(pathOf(first.id));
+
+    await userEvent.click(screen.getByTestId("mate-open-editor"));
+
+    expect(screen.getByTestId("editor-arrival")).toHaveAttribute(
       "data-fen",
       first.fen,
     );

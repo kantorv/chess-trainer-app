@@ -1,4 +1,5 @@
 import {
+  useMemo,
   useState,
   type ChangeEvent,
   type DragEvent,
@@ -6,7 +7,7 @@ import {
 } from "react";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
-import { useNavigate, createSearchParams } from "react-router";
+import { useNavigate, createSearchParams, useSearchParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import {
   Chessboard,
@@ -14,7 +15,7 @@ import {
   type ChessboardOptions,
   type PieceDropHandlerArgs,
 } from "react-chessboard";
-import { FenParseError } from "../../../lib/fen";
+import { FenParseError, parseFen } from "../../../lib/fen";
 import { finalFenOf } from "../../../lib/gameModel";
 import { mainlineGame, type GameTree } from "../../../lib/gameTree";
 import { EmptyPgnError, PgnParseError, parsePgnTrees } from "../../../lib/pgn";
@@ -37,6 +38,13 @@ import { useBoardEditor } from "./useBoardEditor";
  *   palette, stacked;
  * - the **right-hand panel** (`<RightPanel>`) holds `EditorPanel` — the
  *   Position / FEN / PGN tabs over the reset controls and the two hand-offs.
+ *
+ * `/tools/editor?fen=<position>` opens on that position — the mate detail page
+ * and any other screen holding a FEN hand one over exactly the way this screen
+ * hands one out. The parameter is validated here (`parseFen` is the gate, and
+ * one that will not pass it is ignored rather than allowed to throw on someone
+ * else's mistyped link) and the hook takes it as its *initial* state, so nothing
+ * is written from an effect.
  *
  * All the behaviour lives in `useBoardEditor`; this component is the layout, the
  * board options, and the ingestion state that the two forms and the drop targets
@@ -68,7 +76,26 @@ import { useBoardEditor } from "./useBoardEditor";
 function BoardEditor() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const state = useBoardEditor();
+  const [searchParams] = useSearchParams();
+
+  /*
+    The position handed over by whoever linked here, if this is that arrival.
+    Only the first render's value is ever used (see `useBoardEditor`), but
+    parsing it on every render would build a `chess.js` instance for nothing.
+  */
+  const requested = searchParams.get("fen");
+  const initialFen = useMemo(() => {
+    if (requested === null) return undefined;
+    try {
+      return parseFen(requested);
+    } catch {
+      // A link nobody can read opens on the starting position, as if the
+      // parameter had not been there at all.
+      return undefined;
+    }
+  }, [requested]);
+
+  const state = useBoardEditor(initialFen);
 
   /*
     Ingestion state: what the reader has typed, what came out of the last

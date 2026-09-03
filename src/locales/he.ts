@@ -249,7 +249,8 @@ const he: typeof en = {
       enPassantNone: "אין",
     },
     controls: {
-      startingPosition: "עמדת הפתיחה",
+      startingPosition: "לוח חדש",
+      arrivalPosition: "איפוס",
       clearBoard: "ניקוי הלוח",
       flip: "היפוך הלוח",
       analysis: "המשך בלוח הניתוח",
@@ -306,6 +307,7 @@ const he: typeof en = {
       fen: "עמדה (FEN)",
       openInAnalysis: "פתיחה בלוח הניתוח",
       playWithEngine: "משחק מול המנוע",
+      openInEditor: "פתיחה בעורך העמדות",
     },
     sideToMove: {
       w: "הלבן במסע",

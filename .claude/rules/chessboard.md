@@ -340,8 +340,8 @@ Consequences for a caller:
 | `/games/load-pgn` | [`views/games/load_pgn/LoadPgn.tsx`](../../src/views/games/load_pgn/LoadPgn.tsx) | (composed) | A PGN pasted in, parsed to a `Game`, walked with the shared `MoveList` / `useGameNavigation` / `BoardControls` |
 | `/tools/analysis` | [`views/tools/analysis/AnalysisBoard.tsx`](../../src/views/tools/analysis/AnalysisBoard.tsx) | (composed) | Analysis: a **variation tree** (`lib/gameTree.ts`), PGN/FEN set-up and export, both colours movable, engine and eval bar switched independently |
 | `/mates/:category` | [`views/mates/list/MatesList.tsx`](../../src/views/mates/list/MatesList.tsx) | (composed) | A read-only preview board per card, several on one page — so `options.id` is the position's id, not a constant. One component behind all three category routes |
-| `/mates/:category/:id` | [`views/mates/detail/MateDetail.tsx`](../../src/views/mates/detail/MateDetail.tsx) | (composed) | One catalog position, read-only, facing the side to move, with the `?fen=` hand-off to the two playable screens |
-| `/tools/editor` | [`views/tools/editor/BoardEditor.tsx`](../../src/views/tools/editor/BoardEditor.tsx) | `SparePieces` | Position editing: `ChessboardProvider` + spare-piece palettes, `{ skipValidation: true }`, illegal positions reported rather than refused, hand-off to either of the two screens above |
+| `/mates/:category/:id` | [`views/mates/detail/MateDetail.tsx`](../../src/views/mates/detail/MateDetail.tsx) | (composed) | One catalog position, read-only, facing the side to move, with the `?fen=` hand-off to the three screens that read one |
+| `/tools/editor` | [`views/tools/editor/BoardEditor.tsx`](../../src/views/tools/editor/BoardEditor.tsx) | `SparePieces` | Position editing: `ChessboardProvider` + spare-piece palettes, `{ skipValidation: true }`, illegal positions reported rather than refused, hand-off to either of the two screens above. Takes a `?fen=` starting position, and offers a reset back to it |
 
 The `Main.tsx` file next to each board is a layout-only wrapper (an MUI `Box`
 with a `data-testid`); the board component is the unit of interest. Each

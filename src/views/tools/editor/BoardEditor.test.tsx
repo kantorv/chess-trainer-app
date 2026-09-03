@@ -110,10 +110,14 @@ const Arrival = ({ name }: { name: string }) => {
   return <div data-testid={`${name}-arrival`} data-fen={params.get("fen")} />;
 };
 
-const renderScreen = () =>
+/**
+ * The screen at `/tools/editor`, optionally with a query string — which is the
+ * whole of the arrival, so a test asks for one by rendering at the URL.
+ */
+const renderScreen = (entry = "/tools/editor") =>
   render(
     <AppThemeWithLang>
-      <MemoryRouter initialEntries={["/tools/editor"]}>
+      <MemoryRouter initialEntries={[entry]}>
         <RightPanelProvider>
           <Routes>
             <Route
@@ -138,6 +142,8 @@ const renderScreen = () =>
 
 const position = () => screen.getByTestId("board").getAttribute("data-position");
 const placement = () => position()!.split(" ")[0];
+const orientation = () =>
+  screen.getByTestId("board").getAttribute("data-orientation");
 
 const openTab = (tab: "position" | "fen" | "pgn") =>
   userEvent.click(screen.getByTestId(`editor-panel-tab-${tab}`));
@@ -326,9 +332,6 @@ describe("Board Editor — which way the board faces", () => {
   // A real position, Black to move.
   const blackToMove = "2b2rk1/3n1ppp/3Rp3/6B1/1q2N3/1P4Q1/r1P2PPP/2KR4 b - - 0 1";
 
-  const orientation = () =>
-    screen.getByTestId("board").getAttribute("data-orientation");
-
   it("turns to Black when a Black-to-move position is pasted", async () => {
     renderScreen();
     expect(orientation()).toBe("white");
@@ -417,6 +420,107 @@ describe("Board Editor — resets", () => {
       "black",
     );
     expect(position()).toBe(before);
+  });
+});
+
+describe("Board Editor — arriving with ?fen=", () => {
+  /*
+    A position with something in every field: Black to move, all four castling
+    rights, an en passant target and move counters that are not the start's — so
+    "the whole FEN arrived" is an assertion rather than a coincidence.
+  */
+  const arrival = "r3k2r/ppppp1pp/8/8/4Pp2/8/PPPP1PPP/R3K2R b KQkq e3 0 5";
+  const START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+
+  const editorAt = (fen: string) =>
+    `/tools/editor?${new URLSearchParams({ fen }).toString()}`;
+
+  it("opens on the handed-over position, all six fields", async () => {
+    renderScreen(editorAt(arrival));
+
+    expect(position()).toBe(arrival);
+
+    // Fields 2-4 are panel controls, so they have to read the same way the FEN
+    // does — and fields 5-6 are carried, which is what makes it round-trip.
+    await openTab("position");
+    expect(screen.getByTestId("editor-turn-b")).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    for (const flag of ["K", "Q", "k", "q"]) {
+      expect(checkbox(flag)).toBeChecked();
+    }
+    expect(screen.getByTestId("editor-en-passant")).toHaveTextContent("e3");
+  });
+
+  it("faces the side to move on such an arrival", () => {
+    // A position is something you are about to answer — the same rule the two
+    // loads follow, and what `/engine/play` does with the very same FEN.
+    renderScreen(editorAt(arrival));
+
+    expect(orientation()).toBe("black");
+  });
+
+  it("opens on the starting position when the parameter will not parse", () => {
+    renderScreen("/tools/editor?fen=not-a-position");
+
+    expect(position()).toBe(START);
+    expect(orientation()).toBe("white");
+    // A link nobody can read is ignored, not reported: the reader who followed
+    // it did not type it.
+    expect(screen.queryByTestId("editor-fen-error")).not.toBeInTheDocument();
+  });
+
+  it("opens on the starting position with no parameter at all", () => {
+    renderScreen();
+
+    expect(position()).toBe(START);
+    expect(screen.queryByTestId("editor-fen-error")).not.toBeInTheDocument();
+  });
+
+  it("offers the extra reset only when a readable position arrived", () => {
+    renderScreen();
+    expect(screen.queryByTestId("editor-reset-arrival")).toBeNull();
+
+    screen.getByTestId("editor-reset-start"); // the other two are always there
+    screen.getByTestId("editor-reset-clear");
+  });
+
+  it("offers no extra reset for a parameter that will not parse", () => {
+    // There would be nothing behind the button: the screen opened on the
+    // standard start, exactly as if the link had carried no position.
+    renderScreen("/tools/editor?fen=not-a-position");
+
+    expect(screen.queryByTestId("editor-reset-arrival")).toBeNull();
+  });
+
+  it("restores the position it opened with, after arbitrary edits", async () => {
+    renderScreen(editorAt(arrival));
+
+    drag("wP", "e4", "e5");
+    dropSpare("wQ", "d4");
+    await userEvent.click(screen.getByTestId("editor-turn-w"));
+    await userEvent.click(checkbox("K"));
+    await userEvent.click(screen.getByTestId("editor-reset-flip"));
+    expect(position()).not.toBe(arrival);
+
+    await userEvent.click(screen.getByTestId("editor-reset-arrival"));
+
+    // Placement and all six fields, and the board turned back to the side that
+    // has to answer it — this control re-hands the reader the position rather
+    // than rearranging the pieces.
+    expect(position()).toBe(arrival);
+    expect(orientation()).toBe("black");
+  });
+
+  it("keeps 'New board' meaning the standard start", async () => {
+    renderScreen(editorAt(arrival));
+
+    await userEvent.click(screen.getByTestId("editor-reset-start"));
+
+    expect(position()).toBe(START);
+    // And a reset is still about the pieces: it leaves the viewpoint alone.
+    expect(orientation()).toBe("black");
   });
 });
 

@@ -306,7 +306,13 @@ const en = {
       enPassantNone: "None",
     },
     controls: {
-      startingPosition: "Starting position",
+      /** The standard chess start — a board to begin arranging from. */
+      startingPosition: "New board",
+      /**
+       * Back to the position the screen was opened on — shown only when it was
+       * opened with one, so it never offers a position that does not exist.
+       */
+      arrivalPosition: "Reset",
       clearBoard: "Clear board",
       flip: "Flip board",
       /** The two hand-offs: both open another screen on the position being edited. */
@@ -380,6 +386,7 @@ const en = {
       fen: "Position (FEN)",
       openInAnalysis: "Open in Analysis Board",
       playWithEngine: "Play with Engine",
+      openInEditor: "Open in Board Editor",
     },
     /** Whose move it is — the side that has to find the mate. */
     sideToMove: {

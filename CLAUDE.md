@@ -51,7 +51,7 @@ change by whether it *adds* to that count, not by the exit code.
 | `src/views/engine/play/` | The Play with Engine screen. `PlayWithEngine.tsx` is layout (the shared `EngineBoardSquare`) and the `?fen=` arrival; **all the behaviour is in `usePlayWithEngine.ts`**; `EnginePanel.tsx` is the Game / Engine / Variations tab strip over the shared board controls, with `EngineSettings.tsx` under it. |
 | `src/views/masked/play/` | The Masked Pieces screen — Play with Engine with the piece graphics in disguise. `MaskedPlay.tsx` owns the mask and renders the same `EngineBoardSquare`; **the behaviour is `usePlayWithEngine`, reused verbatim**; `MaskedPanel.tsx` adds a fourth tab over the same three, with `MaskEditor.tsx` under it. |
 | `src/views/games/load_pgn/` | The Load PGN screen. `LoadPgn.tsx` owns the state and fills the board square; `GamePanel.tsx` is the whole of the shell panel — the Moves / Info / Load PGN tabs (`GameInfo.tsx`, `PgnIngest.tsx`, and the shared `MoveList`) over the shared board controls. |
-| `src/views/tools/editor/` | The Board Editor. `BoardEditor.tsx` is layout (the two palettes and the board, inside a `ChessboardProvider`), board options and the PGN/FEN ingestion state; **the behaviour is in `useBoardEditor.ts`**; `EditorPanel.tsx` is the Position / FEN / PGN tab strip over the reset controls and the hand-off, with `PositionFields.tsx`, `FenSetup.tsx`, `PgnSetup.tsx` and `PiecePalette.tsx` under it. |
+| `src/views/tools/editor/` | The Board Editor. `BoardEditor.tsx` is layout (the two palettes and the board, inside a `ChessboardProvider`), board options, the `?fen=` arrival and the PGN/FEN ingestion state; **the behaviour is in `useBoardEditor.ts`**; `EditorPanel.tsx` is the Position / FEN / PGN tab strip over the reset controls and the hand-off, with `PositionFields.tsx`, `FenSetup.tsx`, `PgnSetup.tsx` and `PiecePalette.tsx` under it. |
 | `src/views/tools/analysis/` | The Analysis Board. `AnalysisBoard.tsx` is layout (eval bar + board), board options and the PGN/FEN ingestion state; **the behaviour is in `useAnalysisBoard.ts`**, the navigation in `useTreeNavigation.ts`; `AnalysisPanel.tsx` is the Moves / Engine / Variations / Position tab strip, with `VariationTree.tsx`, `AnalysisSettings.tsx` and `PositionSetup.tsx` under it. |
 | `src/lib/engine.ts` | The Stockfish worker wrapper: search, UCI option discovery, and the protocol discipline that keeps the engine alive (see the chessboard rules §4). |
 | `src/lib/engineAnalysis.ts` | Reading the engine's numbers: `scoreFromUci` (the one place a score is normalised to White's perspective), `formatScore`, `evalBarFraction`, `pvToSan`, `numberedVariation`, plus the `Analysis` / `EngineLine` shape both engine screens collect into and the `withEngineLine` fold. Pure. |
@@ -64,7 +64,7 @@ change by whether it *adds* to that count, not by the exit code.
 | `src/lib/pieceMask.ts` | **Piece masking** — the `PieceMask` (true type → the type drawn in its place, all twelve), the presets, `maskedPieces` (the board's `options.pieces`) and `maskSan` / `maskSanLine` (the notation). Pure, and the only place the mask exists. |
 | `src/data/mates.json` | **The mates library** — the category list and a flat list of positions, each naming its category. The only file adding a mate touches. |
 | `src/lib/matesCatalog.ts` | Reading that file: the types (`MateCategoryId`, `MatePosition`, `LocalizedText`), the non-throwing `loadMatesCatalog` (every FEN through `parseFen`, ids unique, category known, bad rows dropped into `problems`), `localizedText` (the `en` fallback), the by-category lookups, and `sideToMoveOf`. Pure, and the only place that knows what the JSON looks like. |
-| `src/views/mates/` | The Mates section. `list/MatesList.tsx` is **one component behind all three routes** — the category is a route parameter — and `detail/MateDetail.tsx` is one position on a board with the two hand-offs. Neither knows anything about JSON. |
+| `src/views/mates/` | The Mates section. `list/MatesList.tsx` is **one component behind all three routes** — the category is a route parameter — and `detail/MateDetail.tsx` is one position on a board with the three hand-offs. Neither knows anything about JSON. |
 | `src/lib/treeManager.ts` | Read-only tree walks (`traverse` / `toArray` / `collectIds` / `findBy` / `getPath`). The seam for anything tree-shaped; `navTree.ts` is its only consumer. |
 
 ## One game model, two producers
@@ -165,6 +165,22 @@ and ignores what will not pass, then takes it as *initial* state rather than
 syncing it in an effect: arriving at the URL mounts the screen, so there is no
 later change to follow.
 
+**And it takes one the same way.** `/tools/editor?fen=…` is the other direction
+of that one mechanism, read with the same `useSearchParams` → `parseFen` →
+`useMemo` block the other two screens use and handed to `useBoardEditor` as its
+optional `initialFen`. So the three board screens now have one arrival between
+them, and no screen holding a FEN needs a transport of its own to reach any of
+them.
+
+An arrival gives the editor one control it otherwise has no use for: a second
+reset, **"Reset"**, that returns to the position the screen was opened with. It
+is **conditional** — rendered only when a readable `?fen=` arrived, because
+otherwise it would offer a position that does not exist — and it does not
+displace **"New board"** (`editor.controls.startingPosition`), which goes on
+meaning the standard chess start. Unlike the other two resets it *does* turn the
+board: it is handing the reader that position a second time rather than
+rearranging the pieces, which is the case the rule below is about.
+
 Play with Engine reads a little more out of it than the Analysis Board does. A
 position set up with Black to move is one the reader means to play as Black, so
 the incoming FEN also decides `playAs` and which way the board faces — otherwise
@@ -224,8 +240,10 @@ The rules it rests on:
   up and carries its own way back instead.
 
 The hand-off is the Board Editor's mechanism verbatim — `?fen=` on
-`/tools/analysis` and `/engine/play`, validated with `parseFen` and taken as
-*initial* state. No new transport was built for it.
+`/tools/analysis`, `/engine/play` and `/tools/editor`, validated with `parseFen`
+and taken as *initial* state. No new transport was built for it: the third
+destination is a third call to the same `handOffTo` helper on the detail page,
+and the list cards still link only to the detail page.
 
 ## A mask is a costume, never a rule
 
