@@ -4,12 +4,19 @@ import {
   allCategories,
   categoryLabel,
   findLibraryCategory,
+  findLibraryItem,
   findLibraryPosition,
+  itemsInLibraryCategory,
+  libraryCatalogOf,
+  libraryItemFen,
   loadLibraryCatalog,
   positionsInLibraryCategory,
   resolveLibraryPath,
   sideToMoveOf,
+  type LibraryGame,
+  type LibraryPosition,
 } from "./libraryCatalog";
+import { parsePgnGame } from "./pgn";
 
 /** A valid position — the shape of an entry, and legal from either side. */
 const KQ_VS_K = "7k/8/8/8/8/8/4Q3/4K3 w - - 0 1";
@@ -137,13 +144,13 @@ describe("resolveLibraryPath matches the longest category prefix", () => {
     });
   });
 
-  it("reads the leftover segment as a position id", () => {
+  it("reads the leftover segment as an item id", () => {
     const found = at("queen-vs-rook/deeper/deepest/buried");
 
     expect(found).toMatchObject({
-      kind: "position",
+      kind: "item",
       category: { path: "queen-vs-rook/deeper/deepest" },
-      position: { id: "buried" },
+      item: { kind: "position", id: "buried" },
     });
   });
 
@@ -259,5 +266,69 @@ describe("loadLibraryCatalog reports rather than throws", () => {
 
     expect(allCategories(catalog).map((c) => c.path)).toEqual(["outer"]);
     expect(catalog.problems).toEqual(['Category "outer": `children` is not an array.']);
+  });
+});
+
+/*
+  The item union, and the one invariant it rests on: `positions` is a projection
+  of `items`, built by `libraryCatalogOf` so that a producer cannot fill one and
+  forget the other. The Mates and Positions sections read the projection; the two
+  shared screens read `items`, which is what lets a section of games render
+  through them unchanged.
+*/
+describe("a catalog holds positions and games as one list of items", () => {
+  const position: LibraryPosition = {
+    kind: "position",
+    id: "mate-in-one",
+    category: "shelf",
+    fen: KQ_VS_K,
+    name: { en: "Mate in one" },
+  };
+
+  const pgn = '[Event "Test"]\n[White "Alice"]\n[Black "Bob"]\n\n1. e4 e5 *';
+  const game: LibraryGame = {
+    kind: "game",
+    id: "alice-bob",
+    category: "shelf",
+    pgn,
+    game: parsePgnGame(pgn),
+    name: { en: "Alice – Bob" },
+  };
+
+  const catalog = libraryCatalogOf(
+    [{ id: "shelf", path: "shelf", label: { en: "Shelf" }, children: [] }],
+    [position, game],
+    [],
+  );
+
+  it("projects the positions out of the items, and only the positions", () => {
+    expect(catalog.items).toEqual([position, game]);
+    expect(catalog.positions).toEqual([position]);
+  });
+
+  it("lists both kinds in a category, in data order", () => {
+    expect(itemsInLibraryCategory("shelf", catalog)).toEqual([position, game]);
+    // The narrowed reader the Mates binding speaks in sees only its own kind.
+    expect(positionsInLibraryCategory("shelf", catalog)).toEqual([position]);
+  });
+
+  it("finds either kind by id, and the narrowed finder only a position", () => {
+    expect(findLibraryItem("shelf", "alice-bob", catalog)).toBe(game);
+    expect(findLibraryItem("shelf", "mate-in-one", catalog)).toBe(position);
+    expect(findLibraryPosition("shelf", "alice-bob", catalog)).toBeUndefined();
+  });
+
+  it("resolves a game from a URL the same way it resolves a position", () => {
+    expect(resolveLibraryPath(["shelf", "alice-bob"], catalog)).toMatchObject({
+      kind: "item",
+      item: { kind: "game", id: "alice-bob" },
+    });
+  });
+
+  it("reads a starting position off either kind", () => {
+    expect(libraryItemFen(position)).toBe(KQ_VS_K);
+    // A game with no FEN tag starts where every game starts.
+    expect(libraryItemFen(game)).toContain("rnbqkbnr/pppppppp");
+    expect(sideToMoveOf(game)).toBe("w");
   });
 });

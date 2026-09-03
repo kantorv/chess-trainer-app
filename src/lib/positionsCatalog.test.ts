@@ -91,8 +91,8 @@ describe("the shipped endgame positions catalog", () => {
       const segments = `${position.category}/${position.id}`.split("/");
 
       expect(resolveLibraryPath(segments, positionsCatalog)).toMatchObject({
-        kind: "position",
-        position: { id: position.id },
+        kind: "item",
+        item: { kind: "position", id: position.id },
       });
     }
   });
