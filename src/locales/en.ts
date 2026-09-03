@@ -26,6 +26,15 @@ const en = {
     loadPgn: "Load PGN",
     analysisBoard: "Analysis Board",
     boardEditor: "Board Editor",
+    /**
+     * The three mates list screens. Each sits alone inside its own sub-folder,
+     * so the label repeats the folder's word — with the section qualifier,
+     * because a folder is a toggle and a screen is a link and a screen reader
+     * announces the link on its own.
+     */
+    matesBasic: "Basic mates",
+    matesAdvanced: "Advanced mates",
+    matesComplex: "Complex mates",
     /** Sidebar folders — groupings over the routes, never routes themselves. */
     folders: {
       basicExamples: "Basic Examples",
@@ -33,6 +42,10 @@ const en = {
       maskedPieces: "Masked Pieces",
       games: "Games",
       tools: "Tools",
+      mates: "Mates",
+      matesBasic: "Basic",
+      matesAdvanced: "Advanced",
+      matesComplex: "Complex",
     },
   },
   language: {
@@ -335,6 +348,49 @@ const en = {
         parseGame: "Could not read game {{number}} in this file. {{detail}}",
         file: "Could not read that file.",
       },
+    },
+  },
+  /**
+   * The Mates section — **chrome only**. The positions' own names and
+   * descriptions are per-language fields in `src/data/mates.json`, so adding a
+   * position never touches this file; see `lib/matesCatalog.ts` for why.
+   */
+  mates: {
+    /** Category labels, named here by each category's `labelKey` in the data. */
+    categories: {
+      basic: "Basic",
+      advanced: "Advanced",
+      complex: "Complex",
+    },
+    /** The list screen's panel. */
+    list: {
+      /*
+        Deliberately not an i18next plural key (`count_one` / `count_other`):
+        Hebrew's plural categories are not English's, so the two catalogs would
+        stop shipping the same key set — which `locales.test.ts` asserts, and
+        which the `typeof en` typing of `he` enforces in the other direction.
+      */
+      count: "Positions: {{count}}",
+      empty: "No positions in this category yet.",
+      hint: "Pick a position to open it on a board, then hand it to the Analysis Board or play it against the engine.",
+    },
+    /** The detail screen's panel. */
+    detail: {
+      back: "Back to {{category}}",
+      fen: "Position (FEN)",
+      openInAnalysis: "Open in Analysis Board",
+      playWithEngine: "Play with Engine",
+    },
+    /** Whose move it is — the side that has to find the mate. */
+    sideToMove: {
+      w: "White to play",
+      b: "Black to play",
+    },
+    /** An id or a category the URL names and the catalog does not have. */
+    notFound: {
+      category: "There is no such mates category.",
+      position: "There is no such position in this category.",
+      back: "Back to Basic mates",
     },
   },
   footer: {

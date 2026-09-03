@@ -15,6 +15,8 @@ import { default as PlayWithEngineScreen  } from './views/engine/play/Main'
 import { default as MaskedPlayScreen  } from './views/masked/play/Main'
 import { default as AnalysisBoardScreen  } from './views/tools/analysis/Main'
 import { default as BoardEditorScreen  } from './views/tools/editor/Main'
+import { default as MatesListScreen  } from './views/mates/list/Main'
+import { default as MateDetailScreen  } from './views/mates/detail/Main'
 
 
 
@@ -63,6 +65,19 @@ const routes = createBrowserRouter(
         {
           path: "/tools/editor",
           element: <BoardEditorScreen />
+        },
+        // The Mates library. Two patterns, however many categories and
+        // positions the data grows to: the category is a parameter, so
+        // `/mates/basic`, `/mates/advanced` and `/mates/complex` — and whatever
+        // comes next — are all the same screen. The sidebar's three entries
+        // point at these; folders never appear in a URL.
+        {
+          path: "/mates/:category",
+          element: <MatesListScreen />
+        },
+        {
+          path: "/mates/:category/:id",
+          element: <MateDetailScreen />
         }
 
       ]
