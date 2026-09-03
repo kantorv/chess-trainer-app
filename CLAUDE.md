@@ -1,9 +1,10 @@
 # chessapp-analyze-v1
 
-A Vite + React 19 + TypeScript chess trainer. Seven board screens sit inside one
-app shell — four small demos, each showing one idea, and three real screens
-(Play with Engine, the Analysis Board, the Board Editor). The boards themselves
-are `react-chessboard` v5 driven by `chess.js` and a Stockfish WASM worker.
+A Vite + React 19 + TypeScript chess trainer. Eight board screens sit inside one
+app shell — four small demos, each showing one idea, and four real screens
+(Play with Engine, Masked Pieces, the Analysis Board, the Board Editor). The
+boards themselves are `react-chessboard` v5 driven by `chess.js` and a Stockfish
+WASM worker.
 
 Board work has its own rules — [`.claude/rules/chessboard.md`](.claude/rules/chessboard.md)
 holds the project conventions and, in its §0, the index to everything else.
@@ -47,8 +48,9 @@ change by whether it *adds* to that count, not by the exit code.
 | `src/theme/` | The look: `themePrimitives.ts` (tokens), `AppThemeWithLang.tsx` (the provider), `rtlCache.ts`, `ForceLTR.tsx`, and the two header controls. |
 | `src/views/main/` | The app shell — `Layout.tsx` (header + sidebar + board area; the nav rail and the right-hand panel are fixed-width, and the board square is what is left over), `rightPanel.tsx` (the route-fillable panel slot), `Sidebar.tsx`, the nav registries (`navItems.ts`, `navFolders.ts`, `navTree.ts`), and the XState `service.ts`. |
 | `src/views/demos/`, `src/views/player/` | The four demo board screens. |
-| `src/views/shared/` | The panel pieces the game screens share: `MoveList.tsx`, `BoardControls.tsx`, `useGameNavigation.ts`, `EvalBar.tsx`, `BestVariations.tsx`, `PromotionPicker.tsx`, `OptionSlider.tsx`, `CopyableValue.tsx`. They take props and know nothing about which screen is rendering them, and their catalog keys are top-level (`moveList.*`, `variations.*`, `promotion.*`, `engineOption.*`, `board.*`, `copyable.*`) rather than under any one screen's. |
-| `src/views/engine/play/` | The Play with Engine screen. `PlayWithEngine.tsx` is layout (eval bar + board), board options and the `?fen=` arrival; **all the behaviour is in `usePlayWithEngine.ts`**; `EnginePanel.tsx` is the Game / Engine / Variations tab strip over the shared board controls, with `EngineSettings.tsx` under it. |
+| `src/views/shared/` | The panel pieces the game screens share: `MoveList.tsx`, `BoardControls.tsx`, `useGameNavigation.ts`, `EvalBar.tsx`, `BestVariations.tsx`, `PromotionPicker.tsx`, `OptionSlider.tsx`, `CopyableValue.tsx`, and `EngineBoardSquare.tsx` (the eval bar + board + promotion picker the two engine-play screens both render). They take props and know nothing about which screen is rendering them, and their catalog keys are top-level (`moveList.*`, `variations.*`, `promotion.*`, `engineOption.*`, `board.*`, `copyable.*`, `masking.*`) rather than under any one screen's. |
+| `src/views/engine/play/` | The Play with Engine screen. `PlayWithEngine.tsx` is layout (the shared `EngineBoardSquare`) and the `?fen=` arrival; **all the behaviour is in `usePlayWithEngine.ts`**; `EnginePanel.tsx` is the Game / Engine / Variations tab strip over the shared board controls, with `EngineSettings.tsx` under it. |
+| `src/views/masked/play/` | The Masked Pieces screen — Play with Engine with the piece graphics in disguise. `MaskedPlay.tsx` owns the mask and renders the same `EngineBoardSquare`; **the behaviour is `usePlayWithEngine`, reused verbatim**; `MaskedPanel.tsx` adds a fourth tab over the same three, with `MaskEditor.tsx` under it. |
 | `src/views/games/load_pgn/` | The Load PGN screen. `LoadPgn.tsx` owns the state and fills the board square; `GamePanel.tsx` is the whole of the shell panel — the Moves / Info / Load PGN tabs (`GameInfo.tsx`, `PgnIngest.tsx`, and the shared `MoveList`) over the shared board controls. |
 | `src/views/tools/editor/` | The Board Editor. `BoardEditor.tsx` is layout (the two palettes and the board, inside a `ChessboardProvider`), board options and the PGN/FEN ingestion state; **the behaviour is in `useBoardEditor.ts`**; `EditorPanel.tsx` is the Position / FEN / PGN tab strip over the reset controls and the hand-off, with `PositionFields.tsx`, `FenSetup.tsx`, `PgnSetup.tsx` and `PiecePalette.tsx` under it. |
 | `src/views/tools/analysis/` | The Analysis Board. `AnalysisBoard.tsx` is layout (eval bar + board), board options and the PGN/FEN ingestion state; **the behaviour is in `useAnalysisBoard.ts`**, the navigation in `useTreeNavigation.ts`; `AnalysisPanel.tsx` is the Moves / Engine / Variations / Position tab strip, with `VariationTree.tsx`, `AnalysisSettings.tsx` and `PositionSetup.tsx` under it. |
@@ -60,6 +62,7 @@ change by whether it *adds* to that count, not by the exit code.
 | `src/lib/fen.ts` | FEN ingestion: `parseFen` validates and normalises a pasted position, or throws `FenParseError`. |
 | `src/lib/positionEditor.ts` | A position *being edited*: `fenFields` / `fenFromFields` (the six fields apart and back together, which is what makes the editor's side-to-move, castling and en passant controls round-trip), `enPassantOptions`, and `positionProblems` — **non-throwing** legality reporting, because a half-edited board is illegal by definition. Pure. |
 | `src/lib/gameNavigation.ts` | Walking a `Game`: `clampPly` / `fenAtPly` / `arrowsAtPly` / `moveRowsOf`. A ply is a half-move index, 0 being the starting position; each ply's FEN is read off the move that already carries it, so nothing re-simulates a game. |
+| `src/lib/pieceMask.ts` | **Piece masking** — the `PieceMask` (true type → the type drawn in its place, all twelve), the presets, `maskedPieces` (the board's `options.pieces`) and `maskSan` / `maskSanLine` (the notation). Pure, and the only place the mask exists. |
 | `src/lib/treeManager.ts` | Read-only tree walks (`traverse` / `toArray` / `collectIds` / `findBy` / `getPath`). The seam for anything tree-shaped; `navTree.ts` is its only consumer. |
 
 ## One game model, two producers
@@ -175,6 +178,43 @@ Loading a **game** deliberately does not: a PGN opens at ply 0, where the side t
 move says nothing about which side is being studied. Neither do the editor's
 resets or its side-to-move field, for the same reason in reverse — arranging a
 position is not being handed one, and a viewpoint the reader chose is theirs.
+
+## A mask is a costume, never a rule
+
+Masked Pieces (`/masked/play`) draws chosen piece types with another piece's
+graphic while the game underneath stays ordinary legal chess. The technique and
+this app's implementation of it are specified in
+[`docs/chess_piece_masking_technique.docx.md`](docs/chess_piece_masking_technique.docx.md)
+— §7 and §13 there are the two clauses the design answers to, and §15 is what was
+actually built.
+
+Three things follow, and they are the whole design:
+
+- **The screen has no behaviour of its own.** It runs `usePlayWithEngine`
+  *verbatim* — no mode flag, no fork — so legality, captures, check, castling, en
+  passant, promotion, the engine's evaluation and the engine's moves are computed
+  from the true position and are identical to `/engine/play`. The mask lives
+  entirely between the state and the pixels. Nothing in `chess.js`,
+  `lib/engine.ts`, `lib/gameModel.ts` or the PGN path changed for it.
+- **It is keyed on the piece *type*, not the piece.** `chess.js` gives a piece no
+  stable identity, so per-piece masking would need a square → identity map
+  maintained through every move, capture, castle, en passant and promotion — a
+  second source of truth that can desync from the real position. A twelve-entry
+  type map is a render-time lookup with no state at all, each colour is masked
+  independently for free, and a promoted pawn is drawn as whatever a queen is
+  drawn as because nothing recorded that it used to be a pawn.
+- **The notation is the second place it has to be applied.** SAN names the piece
+  that moved and the move list sits beside the board, so `MoveList` and
+  `BestVariations` take an optional `mask` prop and print coordinates (`g1f3`)
+  for a move whose piece is hidden. Optional is the point: Load PGN, the Analysis
+  Board and Play with Engine pass none and are untouched.
+
+And one rule that is easy to get wrong: **a type is hidden when it is drawn as
+something else *or when something else is drawn as it*.** Under "all pieces
+identical" the pawn is still drawn as a pawn and is the most thoroughly hidden
+piece on the board — `e4` in the move list would be the one thing saying which
+man really was a pawn. `isMasked` in `lib/pieceMask.ts` is that rule; `mask[t] !== t`
+is not.
 
 ## Theming, direction and language
 

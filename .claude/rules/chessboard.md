@@ -339,6 +339,7 @@ Consequences for a caller:
 | `/analyze` | [`views/demos/engine/Board3.tsx`](../../src/views/demos/engine/Board3.tsx) | `AnalysisBoard` | Stockfish eval per position, best move drawn as an `arrows` entry |
 | `/player1` | [`views/player/engine_basic/Board.tsx`](../../src/views/player/engine_basic/Board.tsx) | (composed) | Play *against* the engine — engine moves are applied automatically. The **minimal** reference for the engine-move loop; deliberately left alone by CTA-12 |
 | `/engine/play` | [`views/engine/play/PlayWithEngine.tsx`](../../src/views/engine/play/PlayWithEngine.tsx) | (composed) | The full screen: eval bar, move list, MultiPV variations, live UCI settings, a real promotion picker. Takes a `?fen=` starting position |
+| `/masked/play` | [`views/masked/play/MaskedPlay.tsx`](../../src/views/masked/play/MaskedPlay.tsx) | `Pieces` | The same screen with the pieces in disguise: `options.pieces` built from a `PieceMask` (`lib/pieceMask.ts`), and the notation masked to match. `usePlayWithEngine` reused verbatim |
 | `/tools/analysis` | [`views/tools/analysis/AnalysisBoard.tsx`](../../src/views/tools/analysis/AnalysisBoard.tsx) | (composed) | Analysis: a **variation tree** (`lib/gameTree.ts`), PGN/FEN set-up and export, both colours movable, engine and eval bar switched independently |
 | `/tools/editor` | [`views/tools/editor/BoardEditor.tsx`](../../src/views/tools/editor/BoardEditor.tsx) | `SparePieces` | Position editing: `ChessboardProvider` + spare-piece palettes, `{ skipValidation: true }`, illegal positions reported rather than refused, hand-off to either of the two screens above |
 
@@ -348,9 +349,10 @@ with a `data-testid`); the board component is the unit of interest. Each
 `docs/vendor/react-chessboard/stories/`.
 
 The first four are **demos** — the smallest thing that shows one idea, and worth
-keeping small. `/engine/play`, `/tools/analysis` and `/tools/editor` are real
-screens; when the two kinds disagree about how much to handle (promotion is the
-standing example), the demo's shortcut is the one that stays.
+keeping small. `/engine/play`, `/masked/play`, `/tools/analysis` and
+`/tools/editor` are real screens; when the two kinds disagree about how much to
+handle (promotion is the standing example), the demo's shortcut is the one that
+stays.
 
 **Two rules the Play with Engine screen is built on, worth reusing:**
 
@@ -365,7 +367,22 @@ standing example), the demo's shortcut is the one that stays.
   (`Layout.tsx` is not changed for one). Bar width + gap must come to exactly the
   constant subtracted from the board's side, and the board box needs
   `flexShrink: 0`, or flex shaves the difference off and the board stops being
-  square.
+  square. That rule now lives in exactly one file —
+  [`views/shared/EngineBoardSquare.tsx`](../../src/views/shared/EngineBoardSquare.tsx),
+  which both engine-play screens render. **A third screen with an eval bar
+  renders that, rather than copying the `calc()`.**
+
+**And one the Masked Pieces screen adds:**
+
+- **`options.pieces` is the only honest place to disguise a piece.** The mask is
+  a map from a true type to the type drawn for it, turned into a renderer per
+  type by `maskedPieces` (`lib/pieceMask.ts`), each one taken straight out of the
+  library's `defaultPieces` so a masked rook is *pixel-identical* to a real pawn
+  rather than merely similar. The board goes on reporting the real source and
+  target squares, so `onPieceDrop`, legality and promotion never learn anything
+  happened — which is what keeps the screen ordinary chess and lets it reuse
+  `usePlayWithEngine` with no edits at all. Never reach for `squareRenderer`,
+  a doctored `position`, or anything that would change what `chess.js` is holding.
 
 **And two the Analysis Board adds:**
 
