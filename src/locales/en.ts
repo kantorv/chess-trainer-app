@@ -49,6 +49,13 @@ const en = {
        * named here.
        */
       positions: "Positions",
+      /**
+       * The User PGNs section's root, and the same rule as Positions above: its
+       * sub-folders are generated — one per `.pgn` file under `src/data/pgn/` —
+       * and named from the file's own `StudyName` tag or from `src/data/pgn.json`,
+       * so dropping a PGN in never touches this catalog.
+       */
+      userPgns: "User PGNs",
     },
   },
   /** The index screen — a landing page linking out to the real screens. */
@@ -448,6 +455,52 @@ const en = {
       category: "There is no such endgame category.",
       position: "There is no such position in this category.",
       back: "Back to the endgame positions",
+    },
+  },
+  /**
+   * The User PGNs section's chrome — `t(`${section.chromeKey}.…`)` again, in the
+   * same shape the two sections above carry, plus the keys a section whose items
+   * are **games** needs: `list.moves` for a card's caption and
+   * `detail.openInLoadPgn` for the hand-off only a game has. The shared key
+   * shape is a floor, not a ceiling; a section adds what its item kinds need.
+   *
+   * The folder and game names are *not* here. A folder is named from its file's
+   * `StudyName` tag or from `src/data/pgn.json`, and a game from its
+   * `ChapterName` or its players — which is what lets a new PGN file be a
+   * drop-in rather than a two-file locale edit.
+   */
+  userPgns: {
+    /** The list screen's panel. */
+    list: {
+      count: "Games: {{count}}",
+      empty: "No games in this file yet.",
+      hint: "Pick a game to replay it move by move, then hand it to the Analysis Board or take the position on screen to the engine.",
+      /** A game card's caption, and the line under the name on its detail page. */
+      moves: "{{count}} moves",
+    },
+    /** The detail screen's panel. */
+    detail: {
+      back: "Back to {{category}}",
+      fen: "Position at this move (FEN)",
+      openInAnalysis: "Open in Analysis Board",
+      openInLoadPgn: "Open in Load PGN",
+      playWithEngine: "Play this position",
+      openInEditor: "Edit this position",
+    },
+    /**
+     * Only the *not-found* screens read this, since a game card is captioned by
+     * its length rather than by whose move it is. Kept so the section carries
+     * the shared shape whole.
+     */
+    sideToMove: {
+      w: "White to play",
+      b: "Black to play",
+    },
+    /** A path or an id the URL names and the catalog does not have. */
+    notFound: {
+      category: "There is no such PGN folder.",
+      position: "There is no such game in this folder.",
+      back: "Back to the user PGNs",
     },
   },
   footer: {

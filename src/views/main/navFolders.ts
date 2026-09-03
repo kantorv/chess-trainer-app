@@ -9,7 +9,7 @@ import TrendingUpRoundedIcon from "@mui/icons-material/TrendingUpRounded";
 import VisibilityOffRoundedIcon from "@mui/icons-material/VisibilityOffRounded";
 
 import type { LocalizedText } from "../../lib/libraryCatalog";
-import { positionsNavFolder } from "./navFromLibrary";
+import { positionsNavFolder, userPgnsNavFolder } from "./navFromLibrary";
 
 /**
  * Folders are the groupings in the sidebar. Each screen names exactly one of
@@ -49,12 +49,13 @@ export type NavFolder = {
 /**
  * The folder tree, top to bottom.
  *
- * Every folder here is written out by hand except one: `positionsNavFolder()`
- * is the **generated** Positions subtree — a folder per endgame category,
- * nested exactly as `src/data/positions.json` nests them and named from the
- * data (see `navFromLibrary.ts`). Adding a category at any depth therefore
- * changes this tree without touching this file, which is the whole of that
- * section's promise.
+ * Every folder here is written out by hand except two, and both are
+ * **generated** by `navFromLibrary.ts` from a library catalog: the Positions
+ * subtree is a folder per endgame category, nested exactly as
+ * `src/data/positions.json` nests them, and the User PGNs subtree is a folder
+ * per `.pgn` file under `src/data/pgn/`. Both are named from their data, so
+ * adding a category — or dropping a PGN file in — changes this tree without
+ * touching this file, which is the whole of those sections' promise.
  */
 export const navFolders: readonly NavFolder[] = [
   {
@@ -108,6 +109,7 @@ export const navFolders: readonly NavFolder[] = [
     ],
   },
   positionsNavFolder(),
+  userPgnsNavFolder(),
   {
     id: "tools",
     labelKey: "nav.folders.tools",
