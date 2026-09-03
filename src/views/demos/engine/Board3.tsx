@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Chess } from 'chess.js';
 import {
   Chessboard,
@@ -31,10 +31,11 @@ const MIN_REPORT_DEPTH = 10;
  */
 function Board3() {
   const engineRef = useRef<Engine | null>(null);
-  if (engineRef.current === null) {
-    engineRef.current = new Engine();
-  }
-  const engine = engineRef.current;
+  // Resolved at call time, not during render. StrictMode's mount → unmount →
+  // remount tears the worker down and re-runs the effects *without* an
+  // intervening render, so an engine captured during render would be a dead
+  // worker for the rest of the session.
+  const getEngine = useCallback(() => (engineRef.current ??= new Engine()), []);
 
   const chessGameRef = useRef(new Chess());
   const chessGame = chessGameRef.current;
@@ -45,9 +46,11 @@ function Board3() {
   const [bestLine, setBestLine] = useState('');
   const [possibleMate, setPossibleMate] = useState('');
 
-  // Subscribe to engine output exactly once per Engine instance.
+  // Subscribe to engine output exactly once per Engine instance. This effect is
+  // declared first, so on a StrictMode remount it is the one that rebuilds the
+  // worker — before the evaluate effect below asks it for a search.
   useEffect(() => {
-    const unsubscribe = engine.onMessage(
+    const unsubscribe = getEngine().onMessage(
       ({ positionEvaluation, possibleMate, pv, depth }) => {
         if (depth && depth < MIN_REPORT_DEPTH) {
           return;
@@ -69,22 +72,22 @@ function Board3() {
     );
 
     return unsubscribe;
-  }, [engine, chessGame]);
+  }, [getEngine, chessGame]);
 
   // Tear the worker down on unmount (and on StrictMode remount).
   useEffect(() => {
     return () => {
-      engine.terminate();
+      engineRef.current?.terminate();
       engineRef.current = null;
     };
-  }, [engine]);
+  }, []);
 
   // Re-evaluate whenever the position changes and the game is still live.
   useEffect(() => {
     if (!(chessGame.isGameOver() || chessGame.isDraw())) {
-      engine.evaluatePosition(chessPosition, ENGINE_DEPTH);
+      getEngine().evaluatePosition(chessPosition, ENGINE_DEPTH);
     }
-  }, [engine, chessGame, chessPosition]);
+  }, [getEngine, chessGame, chessPosition]);
 
   function onPieceDrop({ sourceSquare, targetSquare }: PieceDropHandlerArgs) {
     if (!targetSquare) {
@@ -103,7 +106,7 @@ function Board3() {
 
     // New position: stop the in-flight search and clear stale engine output.
     // The evaluate effect above kicks off a fresh search.
-    engine.stop();
+    getEngine().stop();
     setPossibleMate('');
     setBestLine('');
     setChessPosition(chessGame.fen());

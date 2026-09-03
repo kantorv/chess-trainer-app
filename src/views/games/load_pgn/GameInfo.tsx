@@ -1,7 +1,7 @@
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import { useTranslation } from "react-i18next";
-import { pgnTag, type ParsedGame } from "../../../lib/pgn";
+import { gameTag, type Game } from "../../../lib/gameModel";
 
 /**
  * The Info tab: a game's PGN tag pairs, as a two-column list.
@@ -11,7 +11,7 @@ import { pgnTag, type ParsedGame } from "../../../lib/pgn";
  * tag, because a PGN may hold any tag at all and dropping them would lose data
  * the reader can see in the file itself.
  *
- * Values are read through `pgnTag`, so the placeholders `chess.js` fills the
+ * Values are read through `gameTag`, so the placeholders `chess.js` fills the
  * seven-tag roster with ("?", "????.??.??") are treated as absent rather than
  * printed.
  */
@@ -33,7 +33,7 @@ const NAMED_TAGS = [
 
 const NAMED_TAG_KEYS = new Set<string>(NAMED_TAGS.map(([tag]) => tag));
 
-function GameInfo({ game }: { game: ParsedGame | undefined }) {
+function GameInfo({ game }: { game: Game | undefined }) {
   const { t } = useTranslation();
 
   if (game === undefined) {
@@ -47,12 +47,12 @@ function GameInfo({ game }: { game: ParsedGame | undefined }) {
   const named = NAMED_TAGS.map(([tag, labelKey]) => ({
     key: tag,
     label: t(`gamePanel.info.${labelKey}`),
-    value: pgnTag(game.headers, tag),
+    value: gameTag(game.headers, tag),
   })).filter((row) => row.value !== undefined);
 
   const extra = Object.keys(game.headers)
     .filter((tag) => !NAMED_TAG_KEYS.has(tag))
-    .map((tag) => ({ key: tag, label: tag, value: pgnTag(game.headers, tag) }))
+    .map((tag) => ({ key: tag, label: tag, value: gameTag(game.headers, tag) }))
     .filter((row) => row.value !== undefined);
 
   const rows = [...named, ...extra];

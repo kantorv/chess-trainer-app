@@ -3,7 +3,11 @@ import GridViewRoundedIcon from "@mui/icons-material/GridViewRounded";
 import TouchAppRoundedIcon from "@mui/icons-material/TouchAppRounded";
 import InsightsRoundedIcon from "@mui/icons-material/InsightsRounded";
 import SmartToyRoundedIcon from "@mui/icons-material/SmartToyRounded";
+import SportsEsportsRoundedIcon from "@mui/icons-material/SportsEsportsRounded";
 import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
+import AccountTreeRoundedIcon from "@mui/icons-material/AccountTreeRounded";
+import DashboardCustomizeRoundedIcon from "@mui/icons-material/DashboardCustomizeRounded";
+import VisibilityOffRoundedIcon from "@mui/icons-material/VisibilityOffRounded";
 import type { NavFolderId } from "./navFolders";
 
 export type NavItem = {
@@ -47,10 +51,34 @@ export const navItems: readonly NavItem[] = [
     folder: "basic-examples",
   },
   {
+    to: "/engine/play",
+    labelKey: "nav.playWithEngine",
+    icon: SportsEsportsRoundedIcon,
+    folder: "engine",
+  },
+  {
+    to: "/masked/play",
+    labelKey: "nav.maskedPlay",
+    icon: VisibilityOffRoundedIcon,
+    folder: "masked-pieces",
+  },
+  {
     to: "/games/load-pgn",
     labelKey: "nav.loadPgn",
     icon: UploadFileRoundedIcon,
     folder: "games",
+  },
+  {
+    to: "/tools/analysis",
+    labelKey: "nav.analysisBoard",
+    icon: AccountTreeRoundedIcon,
+    folder: "tools",
+  },
+  {
+    to: "/tools/editor",
+    labelKey: "nav.boardEditor",
+    icon: DashboardCustomizeRoundedIcon,
+    folder: "tools",
   },
 ];
 

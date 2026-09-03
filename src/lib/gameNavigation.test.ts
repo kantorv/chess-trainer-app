@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_POSITION } from "chess.js";
-import { parsePgnGames, type ParsedGame } from "./pgn";
+import { parsePgnGames } from "./pgn";
+import type { Game } from "./gameModel";
 import {
   MOVE_ARROW_COLOR,
   arrowsAtPly,
@@ -11,7 +12,7 @@ import {
 } from "./gameNavigation";
 
 /** `1. e4 e5 2. Nf3 Nc6 3. Bb5` — five plies, so the last pair is half empty. */
-const game: ParsedGame = parsePgnGames(
+const game: Game = parsePgnGames(
   [`[White "Alice"]`, `[Black "Bob"]`, "", "1. e4 e5 2. Nf3 Nc6 3. Bb5 1-0"].join(
     "\n",
   ),
@@ -21,7 +22,7 @@ const game: ParsedGame = parsePgnGames(
  * A game seeded from a FEN with Black to move on move 12 — the case where the
  * pair numbering cannot be derived from the move index alone.
  */
-const blackToMove: ParsedGame = {
+const blackToMove: Game = {
   headers: {
     SetUp: "1",
     FEN: "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 12",
@@ -33,7 +34,7 @@ const blackToMove: ParsedGame = {
   ],
 };
 
-const emptyGame: ParsedGame = { headers: {}, moves: [] };
+const emptyGame: Game = { headers: {}, moves: [] };
 
 describe("clampPly", () => {
   it("pins a ply into the range the game actually has", () => {

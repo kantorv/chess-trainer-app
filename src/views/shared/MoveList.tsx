@@ -1,10 +1,11 @@
-import { useEffect, useRef, type Ref } from "react";
+import { useEffect, useMemo, useRef, type Ref } from "react";
 import Box from "@mui/material/Box";
 import ButtonBase from "@mui/material/ButtonBase";
 import Typography from "@mui/material/Typography";
 import { useTranslation } from "react-i18next";
-import { moveRowsOf } from "../../../lib/gameNavigation";
-import type { ParsedGame, ParsedMove } from "../../../lib/pgn";
+import { moveRowsOf } from "../../lib/gameNavigation";
+import { initialFenOf, type Game, type GameMove } from "../../lib/gameModel";
+import { maskSanLine, type PieceMask } from "../../lib/pieceMask";
 
 /**
  * The lichess-style move list: numbered pairs, the current ply highlighted,
@@ -18,10 +19,18 @@ import type { ParsedGame, ParsedMove } from "../../../lib/pgn";
  */
 
 type MoveListProps = {
-  game: ParsedGame;
+  game: Game;
   /** The selected half-move; 0 is the starting position. */
   currentPly: number;
   onSelectPly: (ply: number) => void;
+  /**
+   * Optional piece mask (`lib/pieceMask.ts`). With one, a move made by a piece
+   * whose identity the board is hiding is printed as coordinates instead of
+   * SAN — `"Nf3"` in a list beside a masked board hands back the identity the
+   * board is busy hiding. Without one nothing changes, which is why the three
+   * screens that do not mask anything pass no prop.
+   */
+  mask?: PieceMask;
 };
 
 /**
@@ -65,11 +74,14 @@ const selectedCellSx = {
 /** One clickable SAN cell, or an empty slot when that half of the pair is absent. */
 function MoveCell({
   move,
+  text,
   isCurrent,
   onSelect,
   activeRef,
 }: {
-  move: ParsedMove | null;
+  move: GameMove | null;
+  /** What to print for it — its SAN, or the mask's rewrite of it. */
+  text: string;
   isCurrent: boolean;
   onSelect: (ply: number) => void;
   activeRef: Ref<HTMLButtonElement>;
@@ -88,14 +100,36 @@ function MoveCell({
       onClick={() => onSelect(move.ply)}
       sx={{ ...cellSx, ...sanTokenSx, ...(isCurrent ? selectedCellSx : {}) }}
     >
-      {move.san}
+      {text}
     </ButtonBase>
   );
 }
 
-function MoveList({ game, currentPly, onSelectPly }: MoveListProps) {
+function MoveList({ game, currentPly, onSelectPly, mask }: MoveListProps) {
   const { t } = useTranslation();
   const rows = moveRowsOf(game);
+
+  /*
+    The whole list's text, rewritten in one pass. `maskSanLine` replays the game
+    because SAN alone does not carry the square a move came from, so this is one
+    replay per game rather than one per move — and none at all when no mask is
+    in play, which is every screen but the masked one.
+
+    Indexed by ply - 1: a ply is a 1-based half-move index over exactly this
+    array (`lib/gameNavigation.ts`).
+  */
+  const maskedSan = useMemo(
+    () =>
+      mask === undefined
+        ? null
+        : maskSanLine(
+            mask,
+            initialFenOf(game),
+            game.moves.map((move) => move.san),
+          ),
+    [mask, game],
+  );
+  const textOf = (move: GameMove) => maskedSan?.[move.ply - 1] ?? move.san;
 
   const activeRef = useRef<HTMLButtonElement | null>(null);
 
@@ -164,12 +198,14 @@ function MoveList({ game, currentPly, onSelectPly }: MoveListProps) {
               </Typography>
               <MoveCell
                 move={row.white}
+                text={row.white === null ? "" : textOf(row.white)}
                 isCurrent={row.white?.ply === currentPly}
                 onSelect={onSelectPly}
                 activeRef={activeRef}
               />
               <MoveCell
                 move={row.black}
+                text={row.black === null ? "" : textOf(row.black)}
                 isCurrent={row.black?.ply === currentPly}
                 onSelect={onSelectPly}
                 activeRef={activeRef}

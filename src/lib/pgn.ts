@@ -1,39 +1,29 @@
-import { Chess, DEFAULT_POSITION, type Square } from "chess.js";
+import { Chess, DEFAULT_POSITION } from "chess.js";
+import { gameFromChess, type Game, type GameHeaders } from "./gameModel";
+import { addMove, emptyTree, type GameTree } from "./gameTree";
 
 /**
- * PGN ingestion and the parsed-game model.
+ * PGN ingestion: text in, a {@link Game} or a {@link GameTree} out.
  *
- * The Load PGN screen owns this module; the move list / navigation consumes it.
- * Everything here is plain data and pure functions — no React, no live
- * `chess.js` instance handed out — so both sides and their tests can use it
- * freely and neither has to reach into the other's components.
+ * The *models* those games are expressed in live in `lib/gameModel.ts` and
+ * `lib/gameTree.ts`; this module owns nothing but the parsing, and is one
+ * producer of each. Everything here is pure, so the screens and their tests can
+ * use it freely.
  *
  * The split between the two parsing steps is deliberate: cutting a file into
  * games is a *text* concern (games are separated by a blank line before the
- * next `[Event ...]` tag pair), while `chess.js` `loadPgn` only ever takes one
- * game at a time.
+ * next `[Event ...]` tag pair), while a parser only ever takes one game at a
+ * time.
+ *
+ * ## Two parsers, because they answer different questions
+ *
+ * {@link parsePgnGames} hands the work to `chess.js` `loadPgn`, which reads the
+ * **mainline and discards every `( ... )` side line** — the right answer for a
+ * screen that replays one game. {@link parsePgnTrees} keeps them, because an
+ * analysis board's whole point is the side lines, so it walks the movetext
+ * itself and uses `chess.js` only to decide what each move means in the position
+ * it is played from.
  */
-
-/** PGN tag pairs, e.g. `{ White: "Alice", Result: "1-0" }`. */
-export type PgnHeaders = Record<string, string>;
-
-/** One half-move of a parsed game. */
-export type ParsedMove = {
-  /** Standard algebraic notation, as written in the PGN — `"Nf3"`, `"O-O"`. */
-  san: string;
-  from: Square;
-  to: Square;
-  /** The position *after* this move, so a viewer can jump straight to it. */
-  fen: string;
-  /** 1-based half-move number: White's first move is 1, Black's reply 2. */
-  ply: number;
-};
-
-/** A single game: its tag pairs, and its moves in order. */
-export type ParsedGame = {
-  headers: PgnHeaders;
-  moves: ParsedMove[];
-};
 
 /**
  * Raised instead of letting a `chess.js` parse error escape into the UI.
@@ -71,26 +61,6 @@ export class EmptyPgnError extends PgnParseError {
 }
 
 /**
- * The placeholder values the PGN spec uses for "unknown". They are not worth
- * showing in a game picker, so `pgnTag` reports them as absent.
- */
-const PLACEHOLDER_TAGS = new Set(["", "?", "??", "???", "-", "????.??.??", "*"]);
-
-/**
- * A tag's value, or `undefined` when it is missing or a spec placeholder.
- * `chess.js` fills the seven-tag roster with those placeholders even for a PGN
- * that carried no tags at all, so reading `headers.White` directly would put a
- * literal "?" in the UI.
- */
-export const pgnTag = (
-  headers: PgnHeaders,
-  key: string,
-): string | undefined => {
-  const value = headers[key]?.trim();
-  return value === undefined || PLACEHOLDER_TAGS.has(value) ? undefined : value;
-};
-
-/**
  * Cut PGN text into one chunk per game.
  *
  * Purely textual: a new game starts at an `[Event ...]` tag that follows a
@@ -111,7 +81,7 @@ export const splitPgnGames = (pgn: string): string[] =>
  * error — so every caller has one thing to catch. `gameNumber` is threaded
  * through only so a multi-game failure can name which game went wrong.
  */
-export const parsePgnGame = (pgn: string, gameNumber?: number): ParsedGame => {
+export const parsePgnGame = (pgn: string, gameNumber?: number): Game => {
   const chess = new Chess();
 
   try {
@@ -123,18 +93,9 @@ export const parsePgnGame = (pgn: string, gameNumber?: number): ParsedGame => {
     );
   }
 
-  return {
-    headers: chess.getHeaders(),
-    moves: chess.history({ verbose: true }).map((move, index) => ({
-      san: move.san,
-      from: move.from,
-      to: move.to,
-      // `Move.after` is the FEN once the move has been made — exactly the
-      // position a move list wants to show when this ply is selected.
-      fen: move.after,
-      ply: index + 1,
-    })),
-  };
+  // The parsed tag pairs win over the snapshot's own `FEN` reconstruction:
+  // a PGN that set up a position states it in its headers already.
+  return gameFromChess(chess, chess.getHeaders());
 };
 
 /**
@@ -142,7 +103,7 @@ export const parsePgnGame = (pgn: string, gameNumber?: number): ParsedGame => {
  * {@link PgnParseError} on the first game that fails (with its 1-based number),
  * and {@link EmptyPgnError} on input that holds no game at all.
  */
-export const parsePgnGames = (pgn: string): ParsedGame[] => {
+export const parsePgnGames = (pgn: string): Game[] => {
   const chunks = splitPgnGames(pgn);
   if (chunks.length === 0) {
     throw new EmptyPgnError();
@@ -155,13 +116,163 @@ export const parsePgnGames = (pgn: string): ParsedGame[] => {
   );
 };
 
-/**
- * The position the game starts from — the standard opening position unless the
- * PGN set one up with a `FEN` tag.
- */
-export const initialFenOf = (game: ParsedGame): string =>
-  pgnTag(game.headers, "FEN") ?? DEFAULT_POSITION;
+/* ------------------------------------------------------------------ *
+ * Variation-aware parsing
+ * ------------------------------------------------------------------ */
 
-/** The position after the last move, or the starting one for a moveless game. */
-export const finalFenOf = (game: ParsedGame): string =>
-  game.moves.at(-1)?.fen ?? initialFenOf(game);
+/** The game terminators, which end the movetext and are not moves. */
+const RESULTS = new Set(["1-0", "0-1", "1/2-1/2", "*"]);
+
+/**
+ * Split a game's text into its tag pairs and its movetext.
+ *
+ * The tag values are read with an explicit escape rule (`\"` inside a value),
+ * because a PGN `[Event "The \"Open\""]` is legal and a lazier regex would cut
+ * the value in half.
+ */
+const splitTags = (pgn: string): { headers: GameHeaders; movetext: string } => {
+  const TAG = /^[ \t]*\[[ \t]*([A-Za-z0-9_]+)[ \t]+"((?:[^"\\]|\\.)*)"[ \t]*\][ \t]*$/;
+  const headers: GameHeaders = {};
+  const body: string[] = [];
+
+  for (const line of pgn.replace(/\r\n?/g, "\n").split("\n")) {
+    const tag = TAG.exec(line);
+    // Only the *leading* run of lines is tags; once movetext has started, a
+    // bracketed line is movetext (it can only be a malformed one, and letting
+    // the move parser fail on it says so far better than silently eating it).
+    if (tag !== null && body.length === 0) {
+      headers[tag[1]] = tag[2].replace(/\\(.)/g, "$1");
+    } else if (line.trim() !== "" || body.length > 0) {
+      body.push(line);
+    }
+  }
+
+  return { headers, movetext: body.join("\n") };
+};
+
+/**
+ * Cut movetext into the tokens the walk below cares about: moves, `(`, `)` and
+ * results. Everything PGN allows between them is dropped first —
+ * `{ ... }` and `; ...` comments, `< ... >` reserved sections, `$12` NAGs, the
+ * `!?`-style suffixes, and the move numbers themselves, which carry no
+ * information a ply counter does not already have.
+ */
+const tokenizeMovetext = (movetext: string): string[] =>
+  movetext
+    .replace(/\{[^}]*\}/g, " ")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/;[^\n]*/g, " ")
+    .replace(/\$\d+/g, " ")
+    // Move numbers: "12.", "12...", and the spaced "12. .." a few writers emit.
+    .replace(/\b\d+\s*\.(\s*\.\.)?/g, " ")
+    .replace(/[()]/g, (bracket) => ` ${bracket} `)
+    .split(/\s+/)
+    .filter((token) => token !== "");
+
+/**
+ * Parse one game *with its variations* into a {@link GameTree}.
+ *
+ * The walk is a stack over `(` and `)`. A variation is an alternative to the
+ * move that came **before** it, so opening one rewinds to the position that move
+ * was played from and re-parents to that move's parent; closing one restores
+ * where the outer line had got to — including *which* move it was last at, so a
+ * second `( ... )` in a row is another alternative to the same move rather than
+ * to the first alternative.
+ *
+ * Throws {@link PgnParseError} on the first move that will not play, naming it,
+ * because "illegal move in a variation" is otherwise indistinguishable from a
+ * screen that silently dropped half the file.
+ */
+export const parsePgnTree = (pgn: string, gameNumber?: number): GameTree => {
+  const { headers, movetext } = splitTags(pgn);
+  const startFen = headers.FEN?.trim() || DEFAULT_POSITION;
+
+  let tree: GameTree;
+  try {
+    // The start position is validated here rather than on the first move, so a
+    // broken `FEN` tag reads as a broken FEN tag.
+    new Chess(startFen);
+    tree = emptyTree(startFen, headers);
+  } catch (cause) {
+    throw new PgnParseError(
+      cause instanceof Error ? cause.message : String(cause),
+      gameNumber,
+    );
+  }
+
+  /** Where the next move goes: under `parentId`, played from `fen`. */
+  type Cursor = { parentId: string | null; fen: string };
+
+  let cursor: Cursor = { parentId: null, fen: startFen };
+  /** The cursor as it stood *before* the last move — what `(` rewinds to. */
+  let previous: Cursor | null = null;
+  const stack: { cursor: Cursor; previous: Cursor | null }[] = [];
+
+  for (const token of tokenizeMovetext(movetext)) {
+    if (token === "(") {
+      if (previous === null) {
+        throw new PgnParseError(
+          "A variation opened before any move was played.",
+          gameNumber,
+        );
+      }
+      stack.push({ cursor, previous });
+      cursor = previous;
+      previous = null;
+      continue;
+    }
+
+    if (token === ")") {
+      const outer = stack.pop();
+      if (outer === undefined) {
+        throw new PgnParseError("Unbalanced ')' in the movetext.", gameNumber);
+      }
+      cursor = outer.cursor;
+      previous = outer.previous;
+      continue;
+    }
+
+    if (RESULTS.has(token)) continue;
+
+    const chess = new Chess(cursor.fen);
+    let move;
+    try {
+      move = chess.move(token);
+    } catch {
+      throw new PgnParseError(`Illegal move "${token}".`, gameNumber);
+    }
+
+    const added = addMove(tree, cursor.parentId, {
+      san: move.san,
+      from: move.from,
+      to: move.to,
+      fen: move.after,
+    });
+    tree = added.tree;
+
+    previous = cursor;
+    cursor = { parentId: added.nodeId, fen: move.after };
+  }
+
+  if (stack.length > 0) {
+    throw new PgnParseError("Unclosed '(' in the movetext.", gameNumber);
+  }
+
+  return tree;
+};
+
+/**
+ * Parse a whole PGN file into variation trees — the same file handling
+ * {@link parsePgnGames} does, and the same errors, over the parser that keeps
+ * side lines.
+ */
+export const parsePgnTrees = (pgn: string): GameTree[] => {
+  const chunks = splitPgnGames(pgn);
+  if (chunks.length === 0) {
+    throw new EmptyPgnError();
+  }
+
+  return chunks.map((chunk, index) =>
+    parsePgnTree(chunk, chunks.length > 1 ? index + 1 : undefined),
+  );
+};

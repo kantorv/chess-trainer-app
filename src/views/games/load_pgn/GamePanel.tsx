@@ -3,10 +3,10 @@ import Box from "@mui/material/Box";
 import Tab from "@mui/material/Tab";
 import Tabs from "@mui/material/Tabs";
 import { useTranslation } from "react-i18next";
-import type { ParsedGame } from "../../../lib/pgn";
-import BoardControls from "./BoardControls";
+import type { Game } from "../../../lib/gameModel";
+import BoardControls from "../../shared/BoardControls";
 import GameInfo from "./GameInfo";
-import MoveList from "./MoveList";
+import MoveList from "../../shared/MoveList";
 
 /**
  * The screen's whole right-hand panel: a tab strip, the tab's content, and the
@@ -36,7 +36,7 @@ type TabId = (typeof TAB_IDS)[number];
 
 type GamePanelProps = {
   /** The game on screen, or `undefined` before one is loaded. */
-  game: ParsedGame | undefined;
+  game: Game | undefined;
   ply: number;
   lastPly: number;
   onSelectPly: (ply: number) => void;
@@ -68,7 +68,7 @@ function GamePanel({
     the one `react-hooks/set-state-in-effect` leaves alone. Keyed on the game
     object, so picking a different game out of a multi-game file counts too.
   */
-  const [shownGame, setShownGame] = useState<ParsedGame | undefined>(undefined);
+  const [shownGame, setShownGame] = useState<Game | undefined>(undefined);
   if (game !== shownGame) {
     setShownGame(game);
     if (game !== undefined) setTab("moves");

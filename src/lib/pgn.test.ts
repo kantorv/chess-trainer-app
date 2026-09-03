@@ -2,13 +2,14 @@ import { describe, expect, it } from "vitest";
 import {
   EmptyPgnError,
   PgnParseError,
-  finalFenOf,
-  initialFenOf,
   parsePgnGame,
   parsePgnGames,
-  pgnTag,
+  parsePgnTree,
+  parsePgnTrees,
   splitPgnGames,
 } from "./pgn";
+import { finalFenOf, gameTag, initialFenOf } from "./gameModel";
+import { mainline, treeToPgn } from "./gameTree";
 
 const game = (white: string, black: string, moves: string, result = "1-0") =>
   [
@@ -133,17 +134,17 @@ describe("parsePgnGames", () => {
   });
 });
 
-describe("pgnTag", () => {
+describe("gameTag", () => {
   it("reads a real value", () => {
-    expect(pgnTag({ White: "Alice" }, "White")).toBe("Alice");
+    expect(gameTag({ White: "Alice" }, "White")).toBe("Alice");
   });
 
   it("treats the spec's placeholders and missing tags alike", () => {
     // chess.js fills the seven-tag roster with these even for a tagless PGN.
-    expect(pgnTag({ White: "?" }, "White")).toBeUndefined();
-    expect(pgnTag({ Date: "????.??.??" }, "Date")).toBeUndefined();
-    expect(pgnTag({ Result: "*" }, "Result")).toBeUndefined();
-    expect(pgnTag({}, "Event")).toBeUndefined();
+    expect(gameTag({ White: "?" }, "White")).toBeUndefined();
+    expect(gameTag({ Date: "????.??.??" }, "Date")).toBeUndefined();
+    expect(gameTag({ Result: "*" }, "Result")).toBeUndefined();
+    expect(gameTag({}, "Event")).toBeUndefined();
   });
 });
 
@@ -169,5 +170,130 @@ describe("the positions of a parsed game", () => {
     const parsed = parsePgnGame(game("Alice", "Bob", "1. e4 e5 2. Nf3"));
 
     expect(finalFenOf(parsed)).toBe(parsed.moves.at(-1)?.fen);
+  });
+});
+
+describe("parsePgnTree — the variation-aware parser", () => {
+  it("reads a plain game as a single line", () => {
+    const tree = parsePgnTree(game("Alice", "Bob", "1. e4 e5 2. Nf3"));
+
+    expect(mainline(tree).map((node) => node.san)).toEqual(["e4", "e5", "Nf3"]);
+    expect(tree.headers.White).toBe("Alice");
+  });
+
+  it("keeps a side line that chess.js's own parser discards", () => {
+    const pgn = "1. e4 e5 (1... c5 2. Nf3 d6) 2. Nf3 Nc6";
+
+    // The linear parser is mainline-only — that is what it is for.
+    expect(parsePgnGames(pgn)[0].moves.map((move) => move.san)).toEqual([
+      "e4",
+      "e5",
+      "Nf3",
+      "Nc6",
+    ]);
+
+    const tree = parsePgnTree(pgn);
+    const afterE4 = mainline(tree)[0];
+    expect(afterE4.children.map((node) => node.san)).toEqual(["e5", "c5"]);
+
+    // And the side line carries its own continuation.
+    const sicilian = afterE4.children[1];
+    expect(mainline({ ...tree, moves: [sicilian] }).map((n) => n.san)).toEqual([
+      "c5",
+      "Nf3",
+      "d6",
+    ]);
+  });
+
+  it("reads two variations of the same move as siblings, not as nesting", () => {
+    const tree = parsePgnTree("1. e4 e5 (1... c5) (1... e6) 2. Nf3");
+    const afterE4 = mainline(tree)[0];
+
+    expect(afterE4.children.map((node) => node.san)).toEqual([
+      "e5",
+      "c5",
+      "e6",
+    ]);
+  });
+
+  it("reads a variation inside a variation", () => {
+    const tree = parsePgnTree("1. e4 e5 (1... c5 2. Nf3 (2. Nc3) d6)");
+    const sicilian = mainline(tree)[0].children[1];
+    const [nf3, nc3] = sicilian.children;
+
+    expect([nf3.san, nc3.san]).toEqual(["Nf3", "Nc3"]);
+    expect(nf3.children.map((node) => node.san)).toEqual(["d6"]);
+    // The inner variation is an alternative to Nf3, so it has no continuation.
+    expect(nc3.children).toEqual([]);
+  });
+
+  it("ignores comments, NAGs and move-quality suffixes", () => {
+    const tree = parsePgnTree(
+      "1. e4! {the king's pawn} $1 e5 ; a trailing comment\n2. Nf3?! Nc6 *",
+    );
+
+    expect(mainline(tree).map((node) => node.san)).toEqual([
+      "e4",
+      "e5",
+      "Nf3",
+      "Nc6",
+    ]);
+  });
+
+  it("starts from the FEN tag when there is one", () => {
+    const fen = "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 12";
+    const tree = parsePgnTree(`[SetUp "1"]\n[FEN "${fen}"]\n\n12... Nf6 13. Nf3 *`);
+
+    expect(tree.startFen).toBe(fen);
+    expect(mainline(tree).map((node) => node.san)).toEqual(["Nf6", "Nf3"]);
+    // Ply counts from the set-up position, not from move 1.
+    expect(mainline(tree).map((node) => node.ply)).toEqual([1, 2]);
+  });
+
+  it("round-trips a game with variations through the PGN writer", () => {
+    const pgn = "1. e4 e5 (1... c5 2. Nf3) 2. Nf3 Nc6 *";
+    const once = parsePgnTree(pgn);
+    const again = parsePgnTree(treeToPgn(once));
+
+    expect(treeToPgn(again)).toBe(treeToPgn(once));
+    expect(treeToPgn(once)).toContain("1. e4 e5 (1... c5 2. Nf3) 2. Nf3 Nc6");
+  });
+
+  it("names the illegal move rather than failing silently", () => {
+    expect(() => parsePgnTree("1. e4 e5 2. Nf3 (2. Kf3) Nc6")).toThrow(
+      /Illegal move "Kf3"/,
+    );
+  });
+
+  it("reports unbalanced parentheses", () => {
+    expect(() => parsePgnTree("1. e4 e5 (1... c5")).toThrow(/Unclosed/);
+    expect(() => parsePgnTree("1. e4 e5) 2. Nf3")).toThrow(/Unbalanced/);
+    expect(() => parsePgnTree("(1. e4)")).toThrow(/before any move/);
+  });
+});
+
+describe("parsePgnTrees", () => {
+  it("parses every game in a multi-game file", () => {
+    const trees = parsePgnTrees(twoGames);
+
+    expect(trees).toHaveLength(2);
+    expect(trees[0].headers.White).toBe("Alice");
+    expect(mainline(trees[1]).map((node) => node.san)).toEqual(["d4", "d5"]);
+  });
+
+  it("names which game failed", () => {
+    const broken = `${game("Alice", "Bob", "1. e4 e5")}\n\n${game(
+      "Carol",
+      "Dan",
+      "1. d4 Ke7",
+      "0-1",
+    )}`;
+
+    expect(() => parsePgnTrees(broken)).toThrow(PgnParseError);
+    expect(() => parsePgnTrees(broken)).toThrow(/Game 2/);
+  });
+
+  it("refuses input with no game in it", () => {
+    expect(() => parsePgnTrees("   \n\n  ")).toThrow(EmptyPgnError);
   });
 });

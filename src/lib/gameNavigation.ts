@@ -1,11 +1,13 @@
 import type { Arrow } from "react-chessboard";
-import { initialFenOf, type ParsedGame, type ParsedMove } from "./pgn";
+import { initialFenOf, type Game, type GameMove } from "./gameModel";
 
 /**
- * Walking a parsed game: which position a ply shows, which arrow marks it, and
- * how its moves pair up into lichess-style numbered rows.
+ * Walking a game: which position a ply shows, which arrow marks it, and how its
+ * moves pair up into lichess-style numbered rows. A game parsed out of a PGN
+ * and one growing under the engine screen are the same shape here, so both
+ * screens navigate through this one module.
  *
- * Pure functions over the {@link ParsedGame} model — no React, no `chess.js`
+ * Pure functions over the {@link Game} model — no React, no `chess.js`
  * instance. A ply is a *half*-move index: `0` is the starting position and `n`
  * is the position after `game.moves[n - 1]`, which is exactly the `fen` that
  * move already carries. Nothing here re-simulates a game.
@@ -18,22 +20,22 @@ export const MOVE_ARROW_COLOR = "#ffaa00";
 export type MoveRow = {
   /** The full-move number as it is printed, e.g. `1` in `1. e4 e5`. */
   number: number;
-  white: ParsedMove | null;
-  black: ParsedMove | null;
+  white: GameMove | null;
+  black: GameMove | null;
 };
 
 /** The last selectable ply — the position after the final move. */
-export const lastPlyOf = (game: ParsedGame): number => game.moves.length;
+export const lastPlyOf = (game: Game): number => game.moves.length;
 
 /** A ply pinned into `[0, lastPly]`. Out-of-range input is a clamp, not a throw. */
-export const clampPly = (game: ParsedGame, ply: number): number =>
+export const clampPly = (game: Game, ply: number): number =>
   Math.min(Math.max(Math.trunc(ply), 0), lastPlyOf(game));
 
 /**
  * The position at a ply: the starting position at ply 0, otherwise the FEN the
  * move at that ply already recorded.
  */
-export const fenAtPly = (game: ParsedGame, ply: number): string => {
+export const fenAtPly = (game: Game, ply: number): string => {
   const at = clampPly(game, ply);
   return at === 0 ? initialFenOf(game) : game.moves[at - 1].fen;
 };
@@ -48,7 +50,7 @@ export const fenAtPly = (game: ParsedGame, ply: number): string => {
  * set for the current ply, so this returns exactly that set rather than
  * something to append to.
  */
-export const arrowsAtPly = (game: ParsedGame, ply: number): Arrow[] => {
+export const arrowsAtPly = (game: Game, ply: number): Arrow[] => {
   const at = clampPly(game, ply);
   if (at === 0) return [];
 
@@ -59,12 +61,17 @@ export const arrowsAtPly = (game: ParsedGame, ply: number): Arrow[] => {
 };
 
 /**
- * Where the game's move numbering starts, read off the initial FEN. Almost
- * always "White, move 1" — but a PGN with a `FEN` tag can start from Black to
- * move, or from move 24, and printing `1.` there would be a lie.
+ * Where move numbering starts, read off a starting FEN. Almost always "White,
+ * move 1" — but a position set up from a FEN can start from Black to move, or
+ * from move 24, and printing `1.` there would be a lie.
+ *
+ * Exported because the variation tree numbers its moves by the same rule
+ * (`lib/gameTree.ts` `plyLabel`), and two copies of it would drift.
  */
-const numberingOf = (game: ParsedGame) => {
-  const [, turn, , , , fullmove] = initialFenOf(game).split(/\s+/);
+export const startNumbering = (
+  fen: string,
+): { whiteFirst: boolean; firstNumber: number } => {
+  const [, turn, , , , fullmove] = fen.split(/\s+/);
   const first = Number.parseInt(fullmove ?? "", 10);
   return {
     whiteFirst: turn !== "b",
@@ -72,12 +79,15 @@ const numberingOf = (game: ParsedGame) => {
   };
 };
 
+/** The same, for a game — its numbering comes from its own initial position. */
+const numberingOf = (game: Game) => startNumbering(initialFenOf(game));
+
 /**
  * The moves grouped into numbered pairs, so the list can render two columns
  * rather than one row per ply. A game that starts with Black to move opens with
  * a row whose `white` is `null`.
  */
-export const moveRowsOf = (game: ParsedGame): MoveRow[] => {
+export const moveRowsOf = (game: Game): MoveRow[] => {
   const { whiteFirst, firstNumber } = numberingOf(game);
   const rows: MoveRow[] = [];
 

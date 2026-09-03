@@ -3,7 +3,8 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import userEvent from "@testing-library/user-event";
 import i18n from "../../../i18n";
 import AppThemeWithLang from "../../../theme/AppThemeWithLang";
-import { finalFenOf, parsePgnGames } from "../../../lib/pgn";
+import { parsePgnGames } from "../../../lib/pgn";
+import { finalFenOf } from "../../../lib/gameModel";
 import { RightPanelOutlet, RightPanelProvider } from "../../main/rightPanel";
 import LoadPgn from "./LoadPgn";
 
