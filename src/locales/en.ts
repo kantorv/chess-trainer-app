@@ -17,6 +17,12 @@ const en = {
     engineEvaluation: "Engine evaluation demo",
     playEngine: "Play with engine 1",
     playWithEngine: "Play with Engine",
+    /**
+     * The same screen as `playWithEngine`, with the pieces in disguise. The
+     * qualifier is not decoration: two sidebar entries with one accessible name
+     * are two links a screen reader cannot tell apart.
+     */
+    maskedPlay: "Play with Engine (masked)",
     loadPgn: "Load PGN",
     analysisBoard: "Analysis Board",
     boardEditor: "Board Editor",
@@ -24,6 +30,7 @@ const en = {
     folders: {
       basicExamples: "Basic Examples",
       engine: "Engine",
+      maskedPieces: "Masked Pieces",
       games: "Games",
       tools: "Tools",
     },
@@ -102,6 +109,38 @@ const en = {
     copied: "Copied",
     copyFailed: "Could not copy — select the text and copy it by hand.",
   },
+  /**
+   * Piece masking — the Masking tab of `views/masked/play/`, and the one
+   * setting that reaches the shared move list and variations. Top-level like
+   * the other shared-component namespaces: the mask is a concept two of them
+   * now take a prop for, not something one screen owns.
+   */
+  masking: {
+    tab: "Masking",
+    white: "White",
+    black: "Black",
+    /** Over the twelve controls: what each real piece is drawn as. */
+    drawnAs: "Drawn as",
+    presets: {
+      title: "Masking policy",
+      /** The three policies of the specification's variants table (§8). */
+      identity: "Show real pieces",
+      nonPawns: "Non-pawns as pawns",
+      allIdentical: "All pieces identical",
+    },
+    /** The six piece names, for the rows and the choices in them. */
+    pieces: {
+      k: "King",
+      q: "Queen",
+      r: "Rook",
+      b: "Bishop",
+      n: "Knight",
+      p: "Pawn",
+    },
+    notation: "Hide masked pieces in the notation",
+    notationHint:
+      "A move by a masked piece is written as coordinates (g1f3) in the move list and the variations, so the notation does not name what the board is hiding.",
+  },
   moveList: {
     title: "Moves",
     /** Ply 0, a selectable entry of its own. */
@@ -129,8 +168,10 @@ const en = {
     },
   },
   /**
-   * The Play with Engine screen. Chrome only: SAN, the scores and the depth are
-   * notation and numbers, and stay language-independent.
+   * The Play with Engine screen — and Masked Pieces, which is that screen with
+   * the pieces in disguise and so says all the same things about tabs, turns
+   * and settings. Chrome only: SAN, the scores and the depth are notation and
+   * numbers, and stay language-independent.
    */
   playEngine: {
     tabs: {
