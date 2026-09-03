@@ -281,7 +281,7 @@ describe("fixed-width rails", () => {
     renderShell();
 
     expect(screen.getByTestId("layout-sidebar-container")).toHaveStyle({
-      width: "240px",
+      width: "280px",
       flexShrink: "0",
     });
   });

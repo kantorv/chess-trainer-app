@@ -3,6 +3,7 @@ import GridViewRoundedIcon from "@mui/icons-material/GridViewRounded";
 import { TreeManager } from "../../lib/treeManager";
 import {
   buildNavTree,
+  folderChain,
   folderPath,
   navLabelKeys,
   navTree,
@@ -110,6 +111,17 @@ describe("buildNavTree nests folders to any depth", () => {
   it("yields the full folder breadcrumb three levels down", () => {
     expect(folderPath("/d", tree)).toEqual(["outer", "inner", "deepest"]);
     expect(folderPath("/a", tree)).toEqual(["outer"]);
+  });
+
+  it("yields a folder's own ancestor chain, itself included", () => {
+    // What the sidebar opens when a folder is clicked: the folders it lives in
+    // come with it, or it would open inside a shut parent.
+    expect(folderChain("deepest", tree)).toEqual(["outer", "inner", "deepest"]);
+    expect(folderChain("outer", tree)).toEqual(["outer"]);
+    expect(folderChain("sibling", tree)).toEqual(["sibling"]);
+    // A screen is not a folder, and neither is an id that is not in the tree.
+    expect(folderChain("/d", tree)).toEqual([]);
+    expect(folderChain("nope", tree)).toEqual([]);
   });
 
   it("walks every level depth-first, parent before children", () => {

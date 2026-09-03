@@ -301,7 +301,7 @@ one. Four layers, each consumed by the next:
 | --- | --- | --- |
 | Walks | `src/lib/treeManager.ts` | Depth-first reads over any tree. The only place tree traversal is written. |
 | Data | `navFolders.ts` + `navItems.ts` | The authored folder tree (`{ id, labelKey, icon, children? }`) and the screens, each naming its `folder`. |
-| Builder | `navTree.ts` | Pure `buildNavTree` — sub-folders before that folder's own screens at every level — plus `folderPath` (the breadcrumb, and the chain the sidebar re-opens). |
+| Builder | `navTree.ts` | Pure `buildNavTree` — sub-folders before that folder's own screens at every level — plus `folderPath` (a screen's breadcrumb, and the chain the sidebar opens) and `folderChain` (the same for a folder id, itself included). |
 | Renderer | `Sidebar.tsx` | A recursive `TreeRow`. Folders are `aria-expanded` toggles, screens are links. |
 
 Consequences worth knowing:
@@ -310,11 +310,16 @@ Consequences worth knowing:
   give it a `labelKey` present in both catalogs, and point screens at it. The
   renderer already recurses — `navTree.test.ts` and `Sidebar.test.tsx` both
   carry fixtures nested deeper than anything shipped.
-- **Folders start open and are never persisted.** `Sidebar.tsx` tracks what the
-  reader *collapsed*, so absent means open and no map needs seeding. Navigating
-  re-opens the active screen's ancestors — adjusted during render against the
-  previous pathname, not in an effect, which `react-hooks/set-state-in-effect`
-  rejects.
+- **One chain is open at a time, and the route decides which.** `Sidebar.tsx`
+  holds an *open path* — the folder ids from the top of the tree down to one
+  folder — so opening a folder under a different parent shuts the one that was
+  open, while a sub-folder still opens inside its own parents. It is seeded from
+  `folderPath(pathname)` and follows the route, adjusted during render against
+  the previous pathname rather than in an effect, which
+  `react-hooks/set-state-in-effect` rejects. A path that is no screen in the
+  tree (the landing page, `/mates/<category>/<id>`) has no chain of its own and
+  leaves the open one alone. Nothing is persisted: the state is re-derived on
+  every mount.
 - **The active state is an exact path match.** `"/"` is a prefix of every other
   route, so `startsWith` would light the basic board up everywhere.
 - **The sidebar mirrors; only the board does not.** Depth is indented with

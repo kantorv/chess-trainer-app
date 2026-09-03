@@ -80,6 +80,20 @@ export const folderPath = (to: string, tree: NavTreeNode[] = navTree()): string[
     .map((node) => node.id);
 
 /**
+ * The folder ids from the top of the tree down to the folder `id` itself,
+ * inclusive — `folderPath`'s counterpart for a folder rather than a screen.
+ * It is what the sidebar opens when a folder is clicked: opening a sub-folder
+ * has to open the folders it lives in, or it would open inside a shut parent.
+ * Empty for an id that is not a folder in this tree.
+ */
+export const folderChain = (id: string, tree: NavTreeNode[] = navTree()): string[] =>
+  (
+    new TreeManager<NavTreeNode>(tree).getPath(
+      (node) => node.kind === "folder" && node.id === id,
+    ) ?? []
+  ).map((node) => node.id);
+
+/**
  * Every catalog key the sidebar renders, folders and screens alike. The
  * catalog test reads the tree through this rather than listing keys by hand.
  */

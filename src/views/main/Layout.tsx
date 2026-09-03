@@ -31,7 +31,7 @@ const BOARD_INSET_PX = 16;
  * content is fixed-width (an icon, a label, one level of indent), so it takes a
  * fixed width and the board area keeps everything the rail does not need.
  */
-const SIDEBAR_WIDTH_PX = 240;
+const SIDEBAR_WIDTH_PX = 280;
 
 /**
  * The right-hand panel's width bounds, in pixels.
