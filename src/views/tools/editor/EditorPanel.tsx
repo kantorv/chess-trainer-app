@@ -7,6 +7,7 @@ import Tab from "@mui/material/Tab";
 import Tabs from "@mui/material/Tabs";
 import Tooltip from "@mui/material/Tooltip";
 import GridOnRoundedIcon from "@mui/icons-material/GridOnRounded";
+import RestoreRoundedIcon from "@mui/icons-material/RestoreRounded";
 import DeleteSweepRoundedIcon from "@mui/icons-material/DeleteSweepRounded";
 import SwapVertRoundedIcon from "@mui/icons-material/SwapVertRounded";
 import InsightsRoundedIcon from "@mui/icons-material/InsightsRounded";
@@ -32,6 +33,9 @@ import type { BoardEditorState } from "./useBoardEditor";
  * │ [start] [clear] [flip]  [play][analyse]│  controls — fixed
  * └────────────────────────────────────────┘
  * ```
+ *
+ * A fourth reset, "Opened position", joins that row when — and only when — the
+ * screen arrived with a readable `?fen=`; see the note on `resets` below.
  *
  * The report sits *above* the tabs rather than inside one: what is wrong with
  * the position is true whichever form you happen to have open, and the controls
@@ -71,6 +75,14 @@ function EditorPanel({
   const { t } = useTranslation();
   const [tab, setTab] = useState<TabId>("position");
 
+  /*
+    The resets, one of which is conditional: "Opened position" is only there when
+    the screen arrived with a readable `?fen=`, because with no handed-over
+    position it would have nothing to return to. It sits next to "Starting
+    position" — they are the same gesture aimed at two different positions, and
+    the arriving one does not replace the standard start, which keeps its
+    meaning.
+  */
   const resets = [
     {
       key: "start",
@@ -78,6 +90,16 @@ function EditorPanel({
       icon: <GridOnRoundedIcon fontSize="small" />,
       onClick: state.setStartingPosition,
     },
+    ...(state.arrivalFen === undefined
+      ? []
+      : [
+          {
+            key: "arrival",
+            label: t("editor.controls.arrivalPosition"),
+            icon: <RestoreRoundedIcon fontSize="small" />,
+            onClick: state.setArrivalPosition,
+          },
+        ]),
     {
       key: "clear",
       label: t("editor.controls.clearBoard"),
