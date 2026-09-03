@@ -1,0 +1,245 @@
+import { useState } from "react";
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import Stack from "@mui/material/Stack";
+import Tab from "@mui/material/Tab";
+import Tabs from "@mui/material/Tabs";
+import Typography from "@mui/material/Typography";
+import { createSearchParams, useNavigate } from "react-router";
+import { useTranslation } from "react-i18next";
+import { Chessboard, type ChessboardOptions } from "react-chessboard";
+
+import { asAppLanguage } from "../../i18n";
+import { gameReferenceOf } from "../../lib/gameReference";
+import {
+  localizedText,
+  type LibraryCategory,
+  type LibraryGame,
+} from "../../lib/libraryCatalog";
+import BoardControls from "../shared/BoardControls";
+import CopyableValue from "../shared/CopyableValue";
+import GameInfo from "../shared/GameInfo";
+import MoveList from "../shared/MoveList";
+import { useGameNavigation } from "../shared/useGameNavigation";
+import { RightPanel } from "../main/rightPanel";
+import BackToCategory from "./BackToCategory";
+import type { LibrarySection } from "./section";
+
+/**
+ * One **game** from a library, replayed — the body `LibraryDetail` renders for
+ * an item of that kind, and the whole of what the User PGNs section adds to the
+ * two shared screens.
+ *
+ * **It writes no move list and no ply navigation.** A game out of a `.pgn` file
+ * is the same `Game` the Load PGN screen parses out of a paste, so it goes
+ * straight to `useGameNavigation`, `MoveList` and `BoardControls` and the
+ * numbered pairs, the current-ply highlight, the jump targets and the keyboard
+ * stepping all come with it. That is the payoff of the one game model, and it is
+ * why a game-shaped library item cost a screen rather than a subsystem.
+ *
+ * ### The board does not turn
+ *
+ * A *position* that arrives faces the side to move, because a position is
+ * something you are about to answer. A **game** deliberately does not: a PGN
+ * opens at ply 0, where the side to move says nothing about which side is being
+ * studied. The flip control is there for a reader who wants the other view, the
+ * same way it is on Load PGN.
+ *
+ * ### Two hand-offs, two carriers
+ *
+ * | Destination | Carries | Why |
+ * | --- | --- | --- |
+ * | `/tools/analysis`, `/games/load-pgn` | `?game=<reference>` | they replay the *game*, so the whole game has to cross — as a catalog reference, since the PGN itself is far too long for a URL (`lib/gameReference.ts`) |
+ * | `/engine/play`, `/tools/editor` | `?fen=<position at the current ply>` | neither replays anything; what they want is the position on screen, which is exactly what the existing hand-off already carries |
+ *
+ * The second row is the point: `?fen=` was not extended, wrapped or replaced. A
+ * reader who steps to move 24 and hits "Play with Engine" gets move 24, through
+ * the same mechanism the Board Editor has always used.
+ */
+
+const TAB_IDS = ["moves", "info"] as const;
+type TabId = (typeof TAB_IDS)[number];
+
+type Props = {
+  section: LibrarySection;
+  category: LibraryCategory;
+  item: LibraryGame;
+};
+
+function LibraryGameDetail({ section, category, item }: Props) {
+  const { t, i18n } = useTranslation();
+  const language = asAppLanguage(i18n.language);
+  const navigate = useNavigate();
+
+  const [tab, setTab] = useState<TabId>("moves");
+  const [orientation, setOrientation] = useState<"white" | "black">("white");
+
+  const { ply, lastPly, fen, arrows, goToPly } = useGameNavigation(item.game);
+
+  const name = localizedText(item.name, language);
+  const description = localizedText(item.description, language);
+
+  const boardOptions: ChessboardOptions = {
+    id: `${section.itemTestId}-detail-${item.id}`,
+    position: fen,
+    boardOrientation: orientation,
+    /*
+      The move that produced this position. External arrows are never cleared by
+      the board itself (`.claude/rules/chessboard.md` §3.4), so this is the whole
+      set for the current ply, recomputed on every change.
+    */
+    arrows,
+    // Read-only: this page replays a game. Dragging here would desync the board
+    // from the PGN it is showing.
+    allowDragging: false,
+  };
+
+  /**
+   * The game itself, to a screen that replays one. A reference rather than the
+   * PGN: the destination resolves it through the same catalog.
+   */
+  const handOffGameTo = (pathname: string) => () =>
+    navigate({
+      pathname,
+      search: createSearchParams({
+        game: gameReferenceOf(section.gameReferenceKey ?? "", item),
+      }).toString(),
+    });
+
+  /** The position *at the ply on screen*, to a screen that takes a position. */
+  const handOffFenTo = (pathname: string) => () =>
+    navigate({ pathname, search: createSearchParams({ fen }).toString() });
+
+  return (
+    <>
+      <Box data-testid={`${section.itemTestId}-detail-board`} sx={{ height: "100%" }}>
+        <Chessboard options={boardOptions} />
+      </Box>
+
+      <RightPanel>
+        <Box
+          data-testid={`${section.itemTestId}-detail-panel`}
+          sx={{
+            flexGrow: 1,
+            minHeight: 0,
+            display: "flex",
+            flexDirection: "column",
+            gap: 1,
+          }}
+        >
+          {/* Fixed head: where the reader came from, and what they are looking at. */}
+          <Box sx={{ flexShrink: 0 }}>
+            <BackToCategory section={section} category={category} />
+            <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+              {name}
+            </Typography>
+            <Typography variant="body2" sx={{ color: "text.secondary", mt: 0.25 }}>
+              {t(`${section.chromeKey}.list.moves`, {
+                count: item.game.moves.length,
+              })}
+            </Typography>
+          </Box>
+
+          <Tabs
+            value={tab}
+            onChange={(_event, next: TabId) => setTab(next)}
+            variant="fullWidth"
+            sx={{
+              flexShrink: 0,
+              minHeight: 36,
+              borderBottom: "1px solid",
+              borderColor: "divider",
+              "& .MuiTab-root": { minHeight: 36, textTransform: "none" },
+            }}
+          >
+            {TAB_IDS.map((id) => (
+              <Tab
+                key={id}
+                value={id}
+                label={t(`gamePanel.tabs.${id}`)}
+                data-testid={`${section.itemTestId}-tab-${id}`}
+              />
+            ))}
+          </Tabs>
+
+          {/*
+            The one region that scrolls — the shell's aside is a non-scrolling
+            flex column so that the head above and the controls below stay put
+            (see `Layout.tsx`). Rendered one tab at a time, because the move list
+            scrolls the selected ply into view and a hidden copy would be
+            scrolling a zero-height box on every ply change.
+          */}
+          <Box
+            role="tabpanel"
+            data-testid={`${section.itemTestId}-detail-content-${tab}`}
+            sx={{ flexGrow: 1, minHeight: 0, overflow: "auto" }}
+          >
+            {tab === "moves" && (
+              <>
+                {description !== "" && (
+                  <Typography variant="body2" sx={{ mb: 1.5 }}>
+                    {description}
+                  </Typography>
+                )}
+                <MoveList
+                  game={item.game}
+                  currentPly={ply}
+                  onSelectPly={goToPly}
+                />
+                <Box sx={{ mt: 2 }}>
+                  <CopyableValue
+                    label={t(`${section.chromeKey}.detail.fen`)}
+                    value={fen}
+                    testId={`${section.itemTestId}-fen`}
+                  />
+                </Box>
+                <Stack spacing={1} sx={{ mt: 2 }}>
+                  <Button
+                    variant="contained"
+                    onClick={handOffGameTo("/tools/analysis")}
+                    data-testid={`${section.itemTestId}-open-analysis`}
+                  >
+                    {t(`${section.chromeKey}.detail.openInAnalysis`)}
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    onClick={handOffGameTo("/games/load-pgn")}
+                    data-testid={`${section.itemTestId}-open-load-pgn`}
+                  >
+                    {t(`${section.chromeKey}.detail.openInLoadPgn`)}
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    onClick={handOffFenTo("/engine/play")}
+                    data-testid={`${section.itemTestId}-play-engine`}
+                  >
+                    {t(`${section.chromeKey}.detail.playWithEngine`)}
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    onClick={handOffFenTo("/tools/editor")}
+                    data-testid={`${section.itemTestId}-open-editor`}
+                  >
+                    {t(`${section.chromeKey}.detail.openInEditor`)}
+                  </Button>
+                </Stack>
+              </>
+            )}
+            {tab === "info" && <GameInfo game={item.game} />}
+          </Box>
+
+          <BoardControls
+            ply={ply}
+            lastPly={lastPly}
+            onSelectPly={goToPly}
+            onFlip={() =>
+              setOrientation((side) => (side === "white" ? "black" : "white"))
+            }
+          />
+        </Box>
+      </RightPanel>
+    </>
+  );
+}
+
+export default LibraryGameDetail;

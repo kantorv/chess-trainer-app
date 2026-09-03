@@ -10,23 +10,31 @@ import { asAppLanguage } from "../../i18n";
 import {
   categoryLabel,
   findLibraryCategory,
+  itemsInLibraryCategory,
+  libraryItemFen,
   localizedText,
-  positionsInLibraryCategory,
   sideToMoveOf,
-  type LibraryPosition,
+  type LibraryItem,
 } from "../../lib/libraryCatalog";
 import { RightPanel } from "../main/rightPanel";
 import { sectionHome, type LibrarySection } from "./section";
 
 /**
- * One category's positions, as cards — **the list screen of every library
- * section**, Mates and Positions alike.
+ * One category's items, as cards — **the list screen of every library
+ * section**: Mates, Positions and User PGNs alike.
  *
  * The category arrives as a path (`"basic"`, `"queen-vs-rook/rosettes"`)
- * rather than being read off the router here, because the two sections address
- * it differently: Mates has a `:category` route parameter and Positions a splat
- * resolved through the catalog. Everything below that is identical, and this
- * screen knows nothing about JSON — it reads through `lib/libraryCatalog.ts`.
+ * rather than being read off the router here, because the sections address it
+ * differently: Mates has a `:category` route parameter, Positions and User PGNs
+ * a splat resolved through the catalog. Everything below that is identical, and
+ * this screen knows nothing about JSON or PGN — it reads through
+ * `lib/libraryCatalog.ts`.
+ *
+ * **The item kind is one branch, and only one**: the card's caption. A position
+ * is captioned by whose move it is, because that is the question it asks; a game
+ * is captioned by how long it is, because "White to play" says nothing about a
+ * game you are about to replay. The preview board is not a branch at all —
+ * `libraryItemFen` gives both kinds their starting position.
  *
  * A card deep-links to `<routeBase>/<category path>/<id>`. The sidebar's active
  * state is an exact path match by design (`"/"` is a prefix of every route), so
@@ -37,16 +45,16 @@ import { sectionHome, type LibrarySection } from "./section";
 
 /**
  * A card's preview board. Read-only: the position is a thing to look at here,
- * and it becomes a thing to play on the two screens the detail page hands it
- * to. Each board takes the position's own id, since `options.id` has to be
- * unique across the page and a category shows several at once.
+ * and it becomes a thing to play or replay on the screens the detail page hands
+ * it to. Each board takes the item's own id, since `options.id` has to be unique
+ * across the page and a category shows several at once.
  */
 const previewOptions = (
   section: LibrarySection,
-  position: LibraryPosition,
+  item: LibraryItem,
 ): ChessboardOptions => ({
-  id: `${section.itemTestId}-preview-${position.id}`,
-  position: position.fen,
+  id: `${section.itemTestId}-preview-${item.id}`,
+  position: libraryItemFen(item),
   allowDragging: false,
   allowDrawingArrows: false,
   showNotation: false,
@@ -63,7 +71,7 @@ function LibraryList({ section, categoryPath }: Props) {
   const language = asAppLanguage(i18n.language);
 
   const found = findLibraryCategory(categoryPath, section.catalog);
-  const positions = positionsInLibraryCategory(categoryPath, section.catalog);
+  const items = itemsInLibraryCategory(categoryPath, section.catalog);
 
   // An unknown category in the URL is a miss, not a crash: no board is
   // rendered, and the reader is pointed back at a category that exists.
@@ -105,24 +113,28 @@ function LibraryList({ section, categoryPath }: Props) {
           alignContent: "start",
         }}
       >
-        {positions.map((position) => (
-          <Card key={position.id} variant="outlined">
+        {items.map((item) => (
+          <Card key={item.id} variant="outlined">
             <CardActionArea
               component={RouterLink}
-              to={`${section.routeBase}/${position.category}/${position.id}`}
-              data-testid={`${section.itemTestId}-card-${position.id}`}
+              to={`${section.routeBase}/${item.category}/${item.id}`}
+              data-testid={`${section.itemTestId}-card-${item.id}`}
             >
               <Box sx={{ p: 1 }}>
                 <Box sx={{ width: "100%", aspectRatio: "1 / 1" }}>
-                  <Chessboard options={previewOptions(section, position)} />
+                  <Chessboard options={previewOptions(section, item)} />
                 </Box>
               </Box>
               <Box sx={{ px: 1.5, pb: 1.5 }}>
                 <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                  {localizedText(position.name, language)}
+                  {localizedText(item.name, language)}
                 </Typography>
                 <Typography variant="caption" sx={{ color: "text.secondary" }}>
-                  {t(`${section.chromeKey}.sideToMove.${sideToMoveOf(position)}`)}
+                  {item.kind === "game"
+                    ? t(`${section.chromeKey}.list.moves`, {
+                        count: item.game.moves.length,
+                      })
+                    : t(`${section.chromeKey}.sideToMove.${sideToMoveOf(item)}`)}
                 </Typography>
               </Box>
             </CardActionArea>
@@ -135,11 +147,11 @@ function LibraryList({ section, categoryPath }: Props) {
           {categoryLabel(found, (key) => t(key), language)}
         </Typography>
         <Typography variant="body2" sx={{ color: "text.secondary", mt: 0.5 }}>
-          {positions.length === 0
+          {items.length === 0
             ? t(`${section.chromeKey}.list.empty`)
-            : t(`${section.chromeKey}.list.count`, { count: positions.length })}
+            : t(`${section.chromeKey}.list.count`, { count: items.length })}
         </Typography>
-        {positions.length > 0 && (
+        {items.length > 0 && (
           <Typography variant="body2" sx={{ color: "text.secondary", mt: 2 }}>
             {t(`${section.chromeKey}.list.hint`)}
           </Typography>

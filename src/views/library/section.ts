@@ -1,4 +1,6 @@
+import { PGN_REFERENCE_KEY } from "../../lib/gameReference";
 import { matesCatalog } from "../../lib/matesCatalog";
+import { pgnCatalog } from "../../lib/pgnCatalog";
 import { positionsCatalog } from "../../lib/positionsCatalog";
 import type { LibraryCatalog } from "../../lib/libraryCatalog";
 
@@ -29,8 +31,15 @@ export type LibrarySection = {
   chromeKey: string;
   /** `data-testid` base for the list screen. */
   listTestId: string;
-  /** `data-testid` base for one position, on the cards and on the detail page. */
+  /** `data-testid` base for one item, on the cards and on the detail page. */
   itemTestId: string;
+  /**
+   * The key this section's games are addressed by in a `?game=` reference
+   * (`lib/gameReference.ts`). Only a section that holds games has one — the two
+   * position libraries leave it unset, and their detail pages therefore offer
+   * the `?fen=` hand-offs alone.
+   */
+  gameReferenceKey?: string;
 };
 
 /**
@@ -60,4 +69,18 @@ export const positionsSection: LibrarySection = {
   chromeKey: "positions",
   listTestId: "positions-list",
   itemTestId: "position",
+};
+
+/**
+ * The User PGNs section: one folder per `.pgn` file the project ships, one item
+ * per game inside it. The first section whose items are **games**, which is why
+ * it is also the first with a `gameReferenceKey`.
+ */
+export const userPgnsSection: LibrarySection = {
+  routeBase: "/pgn",
+  catalog: pgnCatalog,
+  chromeKey: "userPgns",
+  listTestId: "user-pgns-list",
+  itemTestId: "user-pgn",
+  gameReferenceKey: PGN_REFERENCE_KEY,
 };
