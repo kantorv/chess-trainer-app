@@ -283,3 +283,5 @@ Consequences worth knowing:
 - 4. use the fetched content to answer the question
 
 
+## claude-in-chrome instructions
+- 1. Never take screenshots unless you have to. Check first if the analysis can be done with dom/javascript tools. If you have to take screenshot - ask user before.
