@@ -7,6 +7,7 @@ import SportsEsportsRoundedIcon from "@mui/icons-material/SportsEsportsRounded";
 import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
 import AccountTreeRoundedIcon from "@mui/icons-material/AccountTreeRounded";
 import DashboardCustomizeRoundedIcon from "@mui/icons-material/DashboardCustomizeRounded";
+import VisibilityOffRoundedIcon from "@mui/icons-material/VisibilityOffRounded";
 import type { NavFolderId } from "./navFolders";
 
 export type NavItem = {
@@ -54,6 +55,12 @@ export const navItems: readonly NavItem[] = [
     labelKey: "nav.playWithEngine",
     icon: SportsEsportsRoundedIcon,
     folder: "engine",
+  },
+  {
+    to: "/masked/play",
+    labelKey: "nav.maskedPlay",
+    icon: VisibilityOffRoundedIcon,
+    folder: "masked-pieces",
   },
   {
     to: "/games/load-pgn",
