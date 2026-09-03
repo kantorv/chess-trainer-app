@@ -1,4 +1,6 @@
 import type { SvgIconComponent } from "@mui/icons-material";
+import type { AppLanguage } from "../../i18n";
+import { localizedText, type LocalizedText } from "../../lib/libraryCatalog";
 import { TreeManager } from "../../lib/treeManager";
 import { navItemsInFolder } from "./navItems";
 import { navFolders } from "./navFolders";
@@ -7,14 +9,25 @@ import { navFolders } from "./navFolders";
  * The navigation as a tree the sidebar renders: a node per folder, holding its
  * sub-folder nodes (folders first) and then a node per screen that names it.
  * Any depth — `navFolders` in `navFolders.ts` decides. This is the only place
- * `TreeManager` is used; nothing else walks the tree by hand.
+ * `TreeManager` is used to walk the navigation; nothing else walks it by hand.
+ *
+ * **A node's name is either chrome or content.** `labelKey` is an `src/locales`
+ * key, which is what an authored screen or folder carries — the app ships those
+ * strings and `locales.test.ts` asserts both catalogs have them. `label` is a
+ * per-language `{ en, he }` carried by the data, which is what a folder
+ * *generated* from a library catalog carries (`navFromLibrary.ts`): a category
+ * added to `src/data/positions.json` must not need a locale edit, and it has no
+ * catalog key to assert. Exactly one of the two; `navLabel` reads whichever is
+ * there and `navLabelKeys` reports only the first kind.
  */
 export type NavTreeNode = {
   kind: "folder" | "screen";
   /** Folder id for a folder node; the route path for a screen node. */
   id: string;
-  /** i18n key — the renderer calls `t(labelKey)` for folders and screens alike. */
-  labelKey: string;
+  /** i18n key — for a node whose name is chrome the app ships. */
+  labelKey?: string;
+  /** Resolved per-language name — for a node generated from a data catalog. */
+  label?: LocalizedText;
   icon: SvgIconComponent;
   /** The route, screen nodes only. */
   to?: string;
@@ -28,12 +41,24 @@ export type NavTreeNode = {
  */
 type FolderLike<Id extends string> = {
   id: Id;
-  labelKey: string;
+  labelKey?: string;
+  label?: LocalizedText;
   icon: SvgIconComponent;
   children?: readonly FolderLike<Id>[];
 };
 
-type ScreenLike = { to: string; labelKey: string; icon: SvgIconComponent };
+type ScreenLike = {
+  to: string;
+  labelKey?: string;
+  label?: LocalizedText;
+  icon: SvgIconComponent;
+};
+
+/** Carry across whichever of the two naming fields the input has. */
+const nameOf = (source: { labelKey?: string; label?: LocalizedText }) => ({
+  ...(source.labelKey !== undefined ? { labelKey: source.labelKey } : {}),
+  ...(source.label !== undefined ? { label: source.label } : {}),
+});
 
 /**
  * Pure builder — folders in, tree out, with sub-folders ordered before the
@@ -47,14 +72,14 @@ export const buildNavTree = <Id extends string>(
   folders.map((folder) => ({
     kind: "folder",
     id: folder.id,
-    labelKey: folder.labelKey,
+    ...nameOf(folder),
     icon: folder.icon,
     children: [
       ...buildNavTree(folder.children ?? [], screensOf),
       ...screensOf(folder.id).map((item) => ({
         kind: "screen" as const,
         id: item.to,
-        labelKey: item.labelKey,
+        ...nameOf(item),
         icon: item.icon,
         to: item.to,
       })),
@@ -94,8 +119,30 @@ export const folderChain = (id: string, tree: NavTreeNode[] = navTree()): string
   ).map((node) => node.id);
 
 /**
- * Every catalog key the sidebar renders, folders and screens alike. The
+ * A node's name, from wherever it keeps it — the one place the two kinds are
+ * told apart, so the sidebar and the landing page do not each have to.
+ */
+export const navLabel = (
+  node: Pick<NavTreeNode, "labelKey" | "label">,
+  translate: (key: string) => string,
+  language: AppLanguage,
+): string =>
+  node.labelKey !== undefined
+    ? translate(node.labelKey)
+    : localizedText(node.label, language);
+
+/**
+ * Every **catalog key** the sidebar renders, folders and screens alike. The
  * catalog test reads the tree through this rather than listing keys by hand.
+ *
+ * Nodes named from the data are skipped rather than reported with some stand-in
+ * key: they have no catalog entry by design, and a generated category must not
+ * make `locales.test.ts` fail the day it ships. The assertion the test makes is
+ * therefore unchanged and still exact — every key here really must resolve in
+ * both languages.
  */
 export const navLabelKeys = (tree: NavTreeNode[] = navTree()): string[] =>
-  new TreeManager<NavTreeNode>(tree).toArray().map((node) => node.labelKey);
+  new TreeManager<NavTreeNode>(tree)
+    .toArray()
+    .map((node) => node.labelKey)
+    .filter((key): key is string => key !== undefined);

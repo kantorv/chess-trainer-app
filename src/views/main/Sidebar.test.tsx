@@ -8,7 +8,7 @@ import AppThemeWithLang from "../../theme/AppThemeWithLang";
 import SideBar from "./Sidebar";
 import { navItems, navItemsInFolder } from "./navItems";
 import { navFolders, type NavFolder } from "./navFolders";
-import { folderChain, type NavTreeNode } from "./navTree";
+import { folderChain, navLabel, type NavTreeNode } from "./navTree";
 
 const renderAt = (path: string, tree?: NavTreeNode[]) =>
   render(
@@ -24,10 +24,10 @@ const toolsFolder = () =>
   screen.getByRole("button", { name: i18n.t("nav.folders.tools") });
 
 /**
- * Every folder in the shipped tree, at any depth — sub-folders are folder rows
- * too, so the button count is this and not `navFolders.length`. Counted
- * recursively rather than by hand, so nesting one more is a data edit here as
- * well as in `navFolders.ts`.
+ * Every folder in a subtree, at any depth — sub-folders are folder rows too, so
+ * a button count that includes an open folder's children is this and not a
+ * length. Counted recursively rather than by hand, so nesting one more is a data
+ * edit here as well as in `navFolders.ts`.
  */
 const folderCount = (folders: readonly { children?: readonly unknown[] }[]): number =>
   folders.reduce(
@@ -40,14 +40,24 @@ const folderCount = (folders: readonly { children?: readonly unknown[] }[]): num
     0,
   );
 
-/** A folder's catalog key, at any depth — so a test can name its row. */
-const labelKeyOfFolder = (
+/**
+ * The name a row renders, for a folder or a screen — through `navLabel`, the
+ * same resolver the sidebar uses. Not `i18n.t(labelKey)` any more: a folder or
+ * screen generated from a library catalog is named from the data and has no
+ * catalog key at all, so a test that reached for one would be naming a row the
+ * app does not render that way.
+ */
+const nameOf = (node: { labelKey?: string; label?: Parameters<typeof navLabel>[0]["label"] }) =>
+  navLabel(node, (key) => i18n.t(key), "en");
+
+/** A folder's rendered name, at any depth — so a test can name its row. */
+const folderNameOf = (
   id: string,
   folders: readonly NavFolder[] = navFolders,
 ): string => {
   for (const folder of folders) {
-    if (folder.id === id) return folder.labelKey;
-    const nested = folder.children && labelKeyOfFolder(id, folder.children);
+    if (folder.id === id) return nameOf(folder);
+    const nested = folder.children && folderNameOf(id, folder.children);
     if (nested) return nested;
   }
   return "";
@@ -70,34 +80,36 @@ describe("sidebar navigation", () => {
     const user = userEvent.setup();
     for (const folder of navFolders) {
       if (folder.children) continue;
-      await user.click(
-        screen.getByRole("button", { name: i18n.t(folder.labelKey) }),
-      );
-      for (const { labelKey } of navItemsInFolder(folder.id)) {
-        expect(screen.getByRole("link", { name: i18n.t(labelKey) })).toBeVisible();
+      await user.click(screen.getByRole("button", { name: nameOf(folder) }));
+      for (const item of navItemsInFolder(folder.id)) {
+        expect(screen.getByRole("link", { name: nameOf(item) })).toBeVisible();
       }
     }
   });
 
+  /*
+    Walks every screen in the tree, opening its whole folder chain on the way —
+    a click per folder, and `userEvent` is deliberately slow. The generated
+    Positions screens roughly doubled the count, which is real coverage rather
+    than a slow test to trim, so the budget is raised instead.
+  */
   it("links to the route each entry declares", async () => {
     renderAt("/");
     const user = userEvent.setup();
 
-    for (const { to, labelKey, folder } of navItems) {
+    for (const item of navItems) {
       // The screen's folder has to be opened first — and, for a nested one, its
       // parent before it.
-      for (const id of folderChain(folder)) {
-        const row = screen.getByRole("button", {
-          name: i18n.t(labelKeyOfFolder(id)),
-        });
+      for (const id of folderChain(item.folder)) {
+        const row = screen.getByRole("button", { name: folderNameOf(id) });
         if (row.getAttribute("aria-expanded") === "false") await user.click(row);
       }
-      expect(screen.getByRole("link", { name: i18n.t(labelKey) })).toHaveAttribute(
+      expect(screen.getByRole("link", { name: nameOf(item) })).toHaveAttribute(
         "href",
-        to,
+        item.to,
       );
     }
-  });
+  }, 30000);
 
   it("marks only the current route as the current page", () => {
     renderAt("/tools/analysis");
@@ -178,13 +190,18 @@ describe("the folder tree", () => {
       screen.getByRole("button", { name: i18n.t("nav.folders.mates") }),
     );
 
-    // Every folder in the shipped tree, at any depth — the sub-folder rows only
-    // exist once the folder holding them is open.
-    expect(screen.getAllByRole("button")).toHaveLength(folderCount(navFolders));
-    for (const category of navFolders.find((f) => f.id === "mates")?.children ??
-      []) {
+    /*
+      The top-level rows plus everything under Mates, at any depth — and only
+      that: one chain is open at a time, so the Positions section's own
+      sub-folders are still unmounted inside their shut parent.
+    */
+    const mates = navFolders.find((f) => f.id === "mates")?.children ?? [];
+    expect(screen.getAllByRole("button")).toHaveLength(
+      navFolders.length + folderCount(mates),
+    );
+    for (const category of mates) {
       expect(
-        screen.getByRole("button", { name: i18n.t(category.labelKey) }),
+        screen.getByRole("button", { name: nameOf(category) }),
       ).toHaveAttribute("aria-expanded", "false");
     }
   });

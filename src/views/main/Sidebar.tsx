@@ -10,7 +10,14 @@ import ExpandLessRounded from "@mui/icons-material/ExpandLessRounded";
 import ExpandMoreRounded from "@mui/icons-material/ExpandMoreRounded";
 import { Link as RouterLink, useLocation } from "react-router";
 import { useTranslation } from "react-i18next";
-import { folderChain, folderPath, navTree, type NavTreeNode } from "./navTree";
+import { asAppLanguage } from "../../i18n";
+import {
+  folderChain,
+  folderPath,
+  navLabel,
+  navTree,
+  type NavTreeNode,
+} from "./navTree";
 
 /** The shipped tree, built once — a stable identity for the default prop. */
 const shippedTree = navTree();
@@ -29,8 +36,15 @@ type RowProps = {
 
 /** One row, plus — for a folder — its collapsible body, recursively. */
 function TreeRow({ node, depth, expanded, pathname, onToggle }: RowProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const Icon = node.icon;
+  /*
+    Chrome comes out of the catalogs; a folder generated from a library's data
+    carries its own `{ en, he }` instead, because a category added to
+    `src/data/positions.json` must not need a locale edit. `navLabel` is the one
+    place that is decided — see `navTree.ts`.
+  */
+  const label = navLabel(node, (key) => t(key), asAppLanguage(i18n.language));
   /*
     A logical inset, so depth reads as "further from the start of the line" in
     both directions: under RTL the sidebar sits on the right and the tree has to
@@ -61,7 +75,7 @@ function TreeRow({ node, depth, expanded, pathname, onToggle }: RowProps) {
             <Icon fontSize="small" />
           </ListItemIcon>
           <ListItemText
-            primary={t(node.labelKey)}
+            primary={label}
             slotProps={{
               primary: {
                 sx: {
@@ -94,7 +108,7 @@ function TreeRow({ node, depth, expanded, pathname, onToggle }: RowProps) {
           <Icon fontSize="small" />
         </ListItemIcon>
         <ListItemText
-          primary={t(node.labelKey)}
+          primary={label}
           slotProps={{
             primary: { sx: { fontWeight: 700, color: "text.primary" } },
           }}
