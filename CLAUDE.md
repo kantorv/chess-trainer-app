@@ -173,13 +173,13 @@ them, and no screen holding a FEN needs a transport of its own to reach any of
 them.
 
 An arrival gives the editor one control it otherwise has no use for: a second
-reset, "Opened position", that returns to the position the screen was opened
-with. It is **conditional** — rendered only when a readable `?fen=` arrived,
-because otherwise it would offer a position that does not exist — and it does
-not displace "Starting position", which goes on meaning the standard chess
-start. Unlike the other two resets it *does* turn the board: it is handing the
-reader that position a second time rather than rearranging the pieces, which is
-the case the rule below is about.
+reset, **"Reset"**, that returns to the position the screen was opened with. It
+is **conditional** — rendered only when a readable `?fen=` arrived, because
+otherwise it would offer a position that does not exist — and it does not
+displace **"New board"** (`editor.controls.startingPosition`), which goes on
+meaning the standard chess start. Unlike the other two resets it *does* turn the
+board: it is handing the reader that position a second time rather than
+rearranging the pieces, which is the case the rule below is about.
 
 Play with Engine reads a little more out of it than the Analysis Board does. A
 position set up with Black to move is one the reader means to play as Black, so

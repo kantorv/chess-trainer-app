@@ -306,12 +306,13 @@ const en = {
       enPassantNone: "None",
     },
     controls: {
-      startingPosition: "Starting position",
+      /** The standard chess start — a board to begin arranging from. */
+      startingPosition: "New board",
       /**
        * Back to the position the screen was opened on — shown only when it was
        * opened with one, so it never offers a position that does not exist.
        */
-      arrivalPosition: "Opened position",
+      arrivalPosition: "Reset",
       clearBoard: "Clear board",
       flip: "Flip board",
       /** The two hand-offs: both open another screen on the position being edited. */

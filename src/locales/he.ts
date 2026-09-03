@@ -249,8 +249,8 @@ const he: typeof en = {
       enPassantNone: "אין",
     },
     controls: {
-      startingPosition: "עמדת הפתיחה",
-      arrivalPosition: "העמדה שנפתחה",
+      startingPosition: "לוח חדש",
+      arrivalPosition: "איפוס",
       clearBoard: "ניקוי הלוח",
       flip: "היפוך הלוח",
       analysis: "המשך בלוח הניתוח",

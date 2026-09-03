@@ -513,7 +513,7 @@ describe("Board Editor — arriving with ?fen=", () => {
     expect(orientation()).toBe("black");
   });
 
-  it("keeps 'Starting position' meaning the standard start", async () => {
+  it("keeps 'New board' meaning the standard start", async () => {
     renderScreen(editorAt(arrival));
 
     await userEvent.click(screen.getByTestId("editor-reset-start"));

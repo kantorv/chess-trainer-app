@@ -34,8 +34,8 @@ import type { BoardEditorState } from "./useBoardEditor";
  * └────────────────────────────────────────┘
  * ```
  *
- * A fourth reset, "Opened position", joins that row when — and only when — the
- * screen arrived with a readable `?fen=`; see the note on `resets` below.
+ * A fourth reset, "Reset", joins that row when — and only when — the screen
+ * arrived with a readable `?fen=`; see the note on `resets` below.
  *
  * The report sits *above* the tabs rather than inside one: what is wrong with
  * the position is true whichever form you happen to have open, and the controls
@@ -76,12 +76,12 @@ function EditorPanel({
   const [tab, setTab] = useState<TabId>("position");
 
   /*
-    The resets, one of which is conditional: "Opened position" is only there when
-    the screen arrived with a readable `?fen=`, because with no handed-over
-    position it would have nothing to return to. It sits next to "Starting
-    position" — they are the same gesture aimed at two different positions, and
-    the arriving one does not replace the standard start, which keeps its
-    meaning.
+    The resets, one of which is conditional: "Reset" — back to the position the
+    screen was opened on — is only there when it arrived with a readable
+    `?fen=`, because with no handed-over position it would have nothing to
+    return to. It sits next to "New board", the standard chess start: the same
+    gesture aimed at two different positions, and the arriving one does not
+    replace the start, which keeps its meaning.
   */
   const resets = [
     {
