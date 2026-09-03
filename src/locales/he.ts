@@ -222,6 +222,7 @@ const he: typeof en = {
       clearBoard: "ניקוי הלוח",
       flip: "היפוך הלוח",
       analysis: "המשך בלוח הניתוח",
+      play: "שחקו מכאן",
     },
     problems: {
       title: "לא ניתן לשחק מהעמדה הזו עדיין:",

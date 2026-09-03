@@ -36,7 +36,7 @@ import { useBoardEditor } from "./useBoardEditor";
  * - the **board square** holds the black palette, the board and the white
  *   palette, stacked;
  * - the **right-hand panel** (`<RightPanel>`) holds `EditorPanel` — the
- *   Position / FEN / PGN tabs over the reset controls and the hand-off.
+ *   Position / FEN / PGN tabs over the reset controls and the two hand-offs.
  *
  * All the behaviour lives in `useBoardEditor`; this component is the layout, the
  * board options, and the ingestion state that the two forms and the drop targets
@@ -166,15 +166,16 @@ function BoardEditor() {
   };
 
   /**
-   * The hand-off. The FEN crosses the route boundary as a **query parameter**
-   * on `/tools/analysis`, which is the only carrier that survives what a reader
-   * does with a link: it is in the URL, so the position can be bookmarked,
-   * shared and reloaded, where router state would be gone on the first refresh.
-   * `AnalysisBoard` reads it once as its initial position — see the note there.
+   * The hand-offs. The FEN crosses the route boundary as a **query parameter**,
+   * which is the only carrier that survives what a reader does with a link: it
+   * is in the URL, so the position can be bookmarked, shared and reloaded, where
+   * router state would be gone on the first refresh. Both destinations read it
+   * once as their initial position — see the notes on `useAnalysisBoard` and
+   * `usePlayWithEngine` — so this is the whole of the interface between them.
    */
-  const continueToAnalysis = () =>
+  const handOffTo = (pathname: string) => () =>
     navigate({
-      pathname: "/tools/analysis",
+      pathname,
       search: createSearchParams({ fen: state.fen }).toString(),
     });
 
@@ -292,7 +293,8 @@ function BoardEditor() {
 
           <EditorPanel
             state={state}
-            onContinueToAnalysis={continueToAnalysis}
+            onContinueToAnalysis={handOffTo("/tools/analysis")}
+            onPlayFromHere={handOffTo("/engine/play")}
             fen={
               <FenSetup
                 fenText={fenText}

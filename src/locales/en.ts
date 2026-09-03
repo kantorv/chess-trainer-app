@@ -255,8 +255,9 @@ const en = {
       startingPosition: "Starting position",
       clearBoard: "Clear board",
       flip: "Flip board",
-      /** The hand-off: opens the Analysis Board on the position being edited. */
+      /** The two hand-offs: both open another screen on the position being edited. */
       analysis: "Continue on the Analysis Board",
+      play: "Play from here",
     },
     problems: {
       title: "This position cannot be played from yet:",

@@ -99,10 +99,10 @@ const dropSpare = (pieceType: string, to: string | null) => {
   return accepted;
 };
 
-/** Where the Analysis Board would be opened, once the hand-off is used. */
-const AnalysisArrival = () => {
+/** Where a hand-off lands: the route it opened, and the FEN it carried. */
+const Arrival = ({ name }: { name: string }) => {
   const [params] = useSearchParams();
-  return <div data-testid="analysis-arrival" data-fen={params.get("fen")} />;
+  return <div data-testid={`${name}-arrival`} data-fen={params.get("fen")} />;
 };
 
 const renderScreen = () =>
@@ -120,7 +120,11 @@ const renderScreen = () =>
                 </>
               }
             />
-            <Route path="/tools/analysis" element={<AnalysisArrival />} />
+            <Route
+              path="/tools/analysis"
+              element={<Arrival name="analysis" />}
+            />
+            <Route path="/engine/play" element={<Arrival name="play" />} />
           </Routes>
         </RightPanelProvider>
       </MemoryRouter>
@@ -493,7 +497,7 @@ describe("Board Editor — illegal positions", () => {
   });
 });
 
-describe("Board Editor — the hand-off", () => {
+describe("Board Editor — the hand-offs", () => {
   it("opens the Analysis Board on the edited position", async () => {
     renderScreen();
     drag("wP", "e2", "e4");
@@ -507,5 +511,27 @@ describe("Board Editor — the hand-off", () => {
       "data-fen",
       edited,
     );
+  });
+
+  it("starts a game against the engine from the edited position", async () => {
+    renderScreen();
+    drag("wP", "e2", "e4");
+    const edited = position();
+
+    await userEvent.click(screen.getByTestId("editor-play-from-here"));
+
+    // The same carrier, the other destination — one interface, two screens.
+    expect(screen.getByTestId("play-arrival")).toHaveAttribute(
+      "data-fen",
+      edited,
+    );
+  });
+
+  it("switches both hand-offs off together while the position is illegal", async () => {
+    renderScreen();
+    await userEvent.click(screen.getByTestId("editor-reset-clear"));
+
+    expect(screen.getByTestId("editor-continue-analysis")).toBeDisabled();
+    expect(screen.getByTestId("editor-play-from-here")).toBeDisabled();
   });
 });
