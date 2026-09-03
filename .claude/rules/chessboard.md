@@ -335,9 +335,9 @@ Consequences for a caller:
 | `/move` | [`views/demos/move/Board2.tsx`](../../src/views/demos/move/Board2.tsx) | `PlayVsRandom` | The core loop: ref-owned `chess.js` + controlled `position` + `onPieceDrop`; vs. a random mover |
 | `/analyze` | [`views/demos/engine/Board3.tsx`](../../src/views/demos/engine/Board3.tsx) | `AnalysisBoard` | Stockfish eval per position, best move drawn as an `arrows` entry |
 | `/player1` | [`views/player/engine_basic/Board.tsx`](../../src/views/player/engine_basic/Board.tsx) | (composed) | Play *against* the engine — engine moves are applied automatically. The **minimal** reference for the engine-move loop; deliberately left alone by CTA-12 |
-| `/engine/play` | [`views/engine/play/PlayWithEngine.tsx`](../../src/views/engine/play/PlayWithEngine.tsx) | (composed) | The full screen: eval bar, move list, MultiPV variations, live UCI settings, a real promotion picker |
+| `/engine/play` | [`views/engine/play/PlayWithEngine.tsx`](../../src/views/engine/play/PlayWithEngine.tsx) | (composed) | The full screen: eval bar, move list, MultiPV variations, live UCI settings, a real promotion picker. Takes a `?fen=` starting position |
 | `/tools/analysis` | [`views/tools/analysis/AnalysisBoard.tsx`](../../src/views/tools/analysis/AnalysisBoard.tsx) | (composed) | Analysis: a **variation tree** (`lib/gameTree.ts`), PGN/FEN set-up and export, both colours movable, engine and eval bar switched independently |
-| `/tools/editor` | [`views/tools/editor/BoardEditor.tsx`](../../src/views/tools/editor/BoardEditor.tsx) | `SparePieces` | Position editing: `ChessboardProvider` + spare-piece palettes, `{ skipValidation: true }`, illegal positions reported rather than refused, hand-off to the Analysis Board |
+| `/tools/editor` | [`views/tools/editor/BoardEditor.tsx`](../../src/views/tools/editor/BoardEditor.tsx) | `SparePieces` | Position editing: `ChessboardProvider` + spare-piece palettes, `{ skipValidation: true }`, illegal positions reported rather than refused, hand-off to either of the two screens above |
 
 The `MainN.tsx` files next to each board are layout-only wrappers (an MUI `Box`
 with a `data-testid`); the board component is the unit of interest. Each

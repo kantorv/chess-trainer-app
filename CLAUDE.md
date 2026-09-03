@@ -47,7 +47,7 @@ change by whether it *adds* to that count, not by the exit code.
 | `src/views/main/` | The app shell — `Layout.tsx` (header + sidebar + board area; the nav rail and the right-hand panel are fixed-width, and the board square is what is left over), `rightPanel.tsx` (the route-fillable panel slot), `Sidebar.tsx`, the nav registries (`navItems.ts`, `navFolders.ts`, `navTree.ts`), and the XState `service.ts`. |
 | `src/views/demos/`, `src/views/player/` | The four demo board screens. |
 | `src/views/shared/` | The panel pieces the game screens share: `MoveList.tsx`, `BoardControls.tsx`, `useGameNavigation.ts`, `EvalBar.tsx`, `BestVariations.tsx`, `PromotionPicker.tsx`, `OptionSlider.tsx`, `CopyableValue.tsx`. They take props and know nothing about which screen is rendering them, and their catalog keys are top-level (`moveList.*`, `variations.*`, `promotion.*`, `engineOption.*`, `board.*`, `copyable.*`) rather than under any one screen's. |
-| `src/views/engine/play/` | The Play with Engine screen. `PlayWithEngine.tsx` is layout (eval bar + board) and board options; **all the behaviour is in `usePlayWithEngine.ts`**; `EnginePanel.tsx` is the Game / Engine / Variations tab strip over the shared board controls, with `EngineSettings.tsx` under it. |
+| `src/views/engine/play/` | The Play with Engine screen. `PlayWithEngine.tsx` is layout (eval bar + board), board options and the `?fen=` arrival; **all the behaviour is in `usePlayWithEngine.ts`**; `EnginePanel.tsx` is the Game / Engine / Variations tab strip over the shared board controls, with `EngineSettings.tsx` under it. |
 | `src/views/games/load_pgn/` | The Load PGN screen. `LoadPgn.tsx` owns the state and fills the board square; `GamePanel.tsx` is the whole of the shell panel — the Moves / Info / Load PGN tabs (`GameInfo.tsx`, `PgnIngest.tsx`, and the shared `MoveList`) over the shared board controls. |
 | `src/views/tools/editor/` | The Board Editor. `BoardEditor.tsx` is layout (the two palettes and the board, inside a `ChessboardProvider`), board options and the PGN/FEN ingestion state; **the behaviour is in `useBoardEditor.ts`**; `EditorPanel.tsx` is the Position / FEN / PGN tab strip over the reset controls and the hand-off, with `PositionFields.tsx`, `FenSetup.tsx`, `PgnSetup.tsx` and `PiecePalette.tsx` under it. |
 | `src/views/tools/analysis/` | The Analysis Board. `AnalysisBoard.tsx` is layout (eval bar + board), board options and the PGN/FEN ingestion state; **the behaviour is in `useAnalysisBoard.ts`**, the navigation in `useTreeNavigation.ts`; `AnalysisPanel.tsx` is the Moves / Engine / Variations / Position tab strip, with `VariationTree.tsx`, `AnalysisSettings.tsx` and `PositionSetup.tsx` under it. |
@@ -150,11 +150,20 @@ whole design:
   a `SparePiece` can only reach the board's drag context from inside it. The
   provider renders no element of its own, so it costs the layout nothing.
 
-The hand-off to the Analysis Board crosses the route boundary as a **query
-parameter** — `/tools/analysis?fen=…` — so the position survives being
-bookmarked, shared and reloaded, where router state would not. `useAnalysisBoard`
-takes it as an *initial* state rather than syncing it in an effect: arriving at
-that URL mounts the screen, so there is no later change to follow.
+The editor hands a position on to **both** of the other real screens, and by
+exactly the same route: a **query parameter** — `/tools/analysis?fen=…` and
+`/engine/play?fen=…` — so the position survives being bookmarked, shared and
+reloaded, where router state would not. Each screen validates it with `parseFen`
+and ignores what will not pass, then takes it as *initial* state rather than
+syncing it in an effect: arriving at the URL mounts the screen, so there is no
+later change to follow.
+
+Play with Engine reads a little more out of it than the Analysis Board does. A
+position set up with Black to move is one the reader means to play as Black, so
+the incoming FEN also decides `playAs` and which way the board faces — otherwise
+the engine would move the instant the screen opened, from a position they had
+just finished arranging. It is also what "New game" returns to; resetting to the
+standard start would throw the handed-over position away with no way back.
 
 ## Theming, direction and language
 
