@@ -20,7 +20,7 @@ import { useGameNavigation } from "../../shared/useGameNavigation";
  * parent element — they share it through this hook's return value instead, which
  * is also what lets the whole behaviour be tested without mounting a board.
  *
- * ## The two things that are easy to get wrong
+ * ## The three things that are easy to get wrong
  *
  * **1. The position on screen is not always the live position.** The player can
  * step back through the move list at any time, including while the engine is

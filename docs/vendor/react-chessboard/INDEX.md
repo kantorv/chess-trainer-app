@@ -39,7 +39,7 @@ Storybook path.
 | `PlayVsRandom.stories.tsx` | The core loop: ref-owned `chess.js` + controlled `position` + `onPieceDrop`, opponent plays random legal moves. Mirror of app `Board2`. |
 | `ClickToMove.stories.tsx` | `allowDragging: false` + `onSquareClick` from/to state machine + legal-target highlights via `squareStyles`. |
 | `ClickOrDragToMove.stories.tsx` | Both input modes on one board at once. |
-| `SparePieces.stories.tsx` | `ChessboardProvider` + drag-from-palette / position editing. |
+| `SparePieces.stories.tsx` | `ChessboardProvider` + drag-from-palette / position editing. Mirror of app `BoardEditor`. |
 
 ### `stories/advanced-examples/`
 

@@ -82,7 +82,10 @@ Rules:
   board wrap it in a `max-width` box.
 - **`ChessboardProvider`** is only needed for spare pieces / drag-from-palette
   setups or when you need `useChessboardContext`. Plain boards just use
-  `<Chessboard>`.
+  `<Chessboard>`. When you do need it, **every option moves to it** and
+  `<Chessboard />` takes none — `views/tools/editor/BoardEditor.tsx` is the
+  in-repo example, and §5 has the rest of what that changes. It renders no
+  element of its own, so it costs the layout nothing.
 - **The board must never mirror.** `Layout.tsx` wraps the board area in
   `ForceLTR` — files run a–h left to right in every language. See the root
   `CLAUDE.md` for why.
@@ -430,8 +433,14 @@ Full detail: `docs/vendor/react-chessboard/G_UpgradeToV5.mdx`.
       hardcoding `'q'`.
 - [ ] If using the engine: lazy ref, subscribe-in-effect + unsubscribe,
       `terminate()` on unmount, score normalized by turn.
+- [ ] If using spare pieces: `ChessboardProvider` with the options on **it**,
+      the palettes inside it, and `piece.isSparePiece` / a `null` `targetSquare`
+      handled in `onPieceDrop` (§5).
+- [ ] If anything shares the board square with the board (an eval bar, a
+      palette): its size and the gaps sum to exactly the constant subtracted
+      from the board's side, and the board box has `flexShrink: 0` (§5).
 - [ ] Any `setTimeout` / async work cleared on unmount.
-- [ ] `tsc -b` clean.
+- [ ] `tsc -b` clean, `yarn test:run` green, `yarn lint` adding no findings.
 
 ---
 

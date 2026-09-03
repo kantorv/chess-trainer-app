@@ -27,6 +27,11 @@ import {
  *
  * Presentational: no state of its own, so it renders against a fixture.
  *
+ * Changing the side to move here does **not** turn the board, though loading a
+ * position does (`useBoardEditor`'s `applyFen`). Arranging a position is not the
+ * same as being handed one: you may well be setting Black's move up while
+ * looking from White, and the flip control is a click away.
+ *
  * The en passant target is a picker rather than a text box, over the squares
  * `enPassantOptions` says are possible with this side to move. A target is
  * always on the rank behind the pawn that just double-pushed, so eight squares

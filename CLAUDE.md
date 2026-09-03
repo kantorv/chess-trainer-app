@@ -1,8 +1,9 @@
 # chessapp-analyze-v1
 
-A Vite + React 19 + TypeScript chess trainer. Four board screens sit inside one
-app shell; the boards themselves are `react-chessboard` v5 driven by `chess.js`
-and a Stockfish WASM worker.
+A Vite + React 19 + TypeScript chess trainer. Seven board screens sit inside one
+app shell — four small demos, each showing one idea, and three real screens
+(Play with Engine, the Analysis Board, the Board Editor). The boards themselves
+are `react-chessboard` v5 driven by `chess.js` and a Stockfish WASM worker.
 
 Board work has its own rules — [`.claude/rules/chessboard.md`](.claude/rules/chessboard.md)
 holds the project conventions and, in its §0, the index to everything else.
@@ -135,8 +136,9 @@ whole design:
 - **Illegal is a state, not an error.** You have to be able to take a king off in
   order to put a different one down, so `positionProblems` (`lib/positionEditor.ts`)
   *reports* — no king, two kings, a pawn on the back rank, the side not to move
-  already in check — and only the two controls that hand the position onwards
-  (the FEN copy button and the Analysis Board) are switched off while it does.
+  already in check — and only the three controls that take the position
+  *elsewhere* (the FEN copy button and the two hand-offs) are switched off while
+  it does.
   `parseFen` still guards the way **in**: a pasted FEN is a claim about a
   finished position, not a board mid-edit.
 - **The FEN is split apart.** Field 1 comes off the board; fields 2–4 are panel

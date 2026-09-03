@@ -33,7 +33,7 @@ import { useTreeNavigation } from "./useTreeNavigation";
  * `withEngineLine`, `views/shared/`'s panel pieces) and the two hooks stayed
  * separate. Play with Engine is shipped and must not regress on a flag.
  *
- * ## The three things worth knowing
+ * ## The four things worth knowing
  *
  * **1. The game is a tree, and the position is a node.** Playing a move from an
  * earlier ply opens a variation and keeps both lines (`lib/gameTree.ts`). So the

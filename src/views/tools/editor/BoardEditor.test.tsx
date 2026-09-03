@@ -22,6 +22,11 @@ import BoardEditor from "./BoardEditor";
 
   No `Engine` stand-in here, and that is the point: an editor never analyses, so
   a worker jsdom cannot build is never asked for.
+
+  The screen does need a **router**, though: both hand-offs navigate, and the
+  whole of their interface with the other two screens is the FEN in the URL. The
+  routes below stand in for those screens and record what arrived, which is how
+  a test asserts on a hand-off without mounting an engine board.
 */
 
 const harness = vi.hoisted(() => {

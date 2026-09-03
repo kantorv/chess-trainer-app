@@ -33,9 +33,11 @@ import {
  * asks whether a *move* is legal, because nothing here makes a move.
  *
  * What legality there is gets **reported**, never enforced: `positionProblems`
- * (`lib/positionEditor.ts`) names what is wrong, and only the two controls that
- * hand the position onwards — the copy button and the Analysis Board — are
- * switched off while it is.
+ * (`lib/positionEditor.ts`) names what is wrong, and the only things switched
+ * off while it is are the three controls that take the position *elsewhere* —
+ * the FEN copy button and the two hand-offs. Everything that edits stays live,
+ * including the FEN field itself: you have to be able to see what you are
+ * fixing.
  *
  * ## The FEN is split, and only field 1 comes off the board
  *

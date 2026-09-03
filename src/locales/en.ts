@@ -266,7 +266,7 @@ const en = {
       extraKing: "One side has more than one king.",
       pawnOnBackRank: "A pawn is standing on the first or the last rank.",
       opponentInCheck: "The side not to move is already in check.",
-      /** Under the two controls an illegal position switches off. */
+      /** Under each of the three controls an illegal position switches off. */
       blocked: "Fix the position to use this.",
     },
     fen: {
