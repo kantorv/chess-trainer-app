@@ -1,8 +1,12 @@
 import type { SvgIconComponent } from "@mui/icons-material";
+import EmojiEventsRoundedIcon from "@mui/icons-material/EmojiEventsRounded";
 import FolderRoundedIcon from "@mui/icons-material/FolderRounded";
 import FolderSpecialRoundedIcon from "@mui/icons-material/FolderSpecialRounded";
 import HandymanRoundedIcon from "@mui/icons-material/HandymanRounded";
 import MemoryRoundedIcon from "@mui/icons-material/MemoryRounded";
+import PsychologyRoundedIcon from "@mui/icons-material/PsychologyRounded";
+import SchoolRoundedIcon from "@mui/icons-material/SchoolRounded";
+import TrendingUpRoundedIcon from "@mui/icons-material/TrendingUpRounded";
 import VisibilityOffRoundedIcon from "@mui/icons-material/VisibilityOffRounded";
 
 /**
@@ -24,7 +28,11 @@ export type NavFolderId =
   | "engine"
   | "masked-pieces"
   | "games"
-  | "tools";
+  | "tools"
+  | "mates"
+  | "mates-basic"
+  | "mates-advanced"
+  | "mates-complex";
 
 export type NavFolder = {
   id: NavFolderId;
@@ -56,6 +64,38 @@ export const navFolders: readonly NavFolder[] = [
     id: "games",
     labelKey: "nav.folders.games",
     icon: FolderSpecialRoundedIcon,
+  },
+  /*
+    The first shipped folder with sub-folders. It is a data edit and nothing
+    else: `buildNavTree` recurses and `Sidebar.tsx`'s `TreeRow` recurses, and
+    both already carried fixtures nested deeper than anything that shipped.
+
+    Each sub-folder holds exactly one screen — the category's list — and the
+    positions inside it stay data. A folder per position would grow the sidebar
+    without bound and would force these two registries to become data-driven;
+    `/mates/<category>/<id>` is a route rather than a nav entry for that reason.
+  */
+  {
+    id: "mates",
+    labelKey: "nav.folders.mates",
+    icon: EmojiEventsRoundedIcon,
+    children: [
+      {
+        id: "mates-basic",
+        labelKey: "nav.folders.matesBasic",
+        icon: SchoolRoundedIcon,
+      },
+      {
+        id: "mates-advanced",
+        labelKey: "nav.folders.matesAdvanced",
+        icon: TrendingUpRoundedIcon,
+      },
+      {
+        id: "mates-complex",
+        labelKey: "nav.folders.matesComplex",
+        icon: PsychologyRoundedIcon,
+      },
+    ],
   },
   {
     id: "tools",

@@ -22,12 +22,19 @@ const he: typeof en = {
     loadPgn: "טעינת PGN",
     analysisBoard: "לוח ניתוח",
     boardEditor: "עורך העמדות",
+    matesBasic: "מטים בסיסיים",
+    matesAdvanced: "מטים מתקדמים",
+    matesComplex: "מטים מורכבים",
     folders: {
       basicExamples: "דוגמאות בסיסיות",
       engine: "מנוע",
       maskedPieces: "כלים מוסווים",
       games: "משחקים",
       tools: "כלים",
+      mates: "מטים",
+      matesBasic: "בסיסי",
+      matesAdvanced: "מתקדם",
+      matesComplex: "מורכב",
     },
   },
   language: {
@@ -282,6 +289,33 @@ const he: typeof en = {
         parseGame: "לא ניתן לקרוא את משחק {{number}} בקובץ. {{detail}}",
         file: "לא ניתן לקרוא את הקובץ.",
       },
+    },
+  },
+  mates: {
+    categories: {
+      basic: "בסיסי",
+      advanced: "מתקדם",
+      complex: "מורכב",
+    },
+    list: {
+      count: "עמדות: {{count}}",
+      empty: "אין עדיין עמדות בקטגוריה הזו.",
+      hint: "בחרו עמדה כדי לפתוח אותה על הלוח, ואז העבירו אותה ללוח הניתוח או שחקו אותה מול המנוע.",
+    },
+    detail: {
+      back: "חזרה אל {{category}}",
+      fen: "עמדה (FEN)",
+      openInAnalysis: "פתיחה בלוח הניתוח",
+      playWithEngine: "משחק מול המנוע",
+    },
+    sideToMove: {
+      w: "הלבן במסע",
+      b: "השחור במסע",
+    },
+    notFound: {
+      category: "אין קטגוריית מטים כזו.",
+      position: "אין עמדה כזו בקטגוריה הזו.",
+      back: "חזרה אל מטים בסיסיים",
     },
   },
   footer: {
