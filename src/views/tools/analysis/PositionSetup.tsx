@@ -1,20 +1,18 @@
-import { useState, type ChangeEvent, type FormEvent } from "react";
+import type { ChangeEvent, FormEvent } from "react";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
-import IconButton from "@mui/material/IconButton";
 import List from "@mui/material/List";
 import ListItemButton from "@mui/material/ListItemButton";
 import ListItemText from "@mui/material/ListItemText";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
-import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
-import ContentCopyRoundedIcon from "@mui/icons-material/ContentCopyRounded";
 import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
 import { useTranslation } from "react-i18next";
 import { gameTag } from "../../../lib/gameModel";
 import type { GameTree } from "../../../lib/gameTree";
+import CopyableValue from "../../shared/CopyableValue";
 
 /**
  * The Position tab: every way a position gets *in*, and both ways it comes back
@@ -31,7 +29,8 @@ import type { GameTree } from "../../../lib/gameTree";
  *
  * Presentational: parsing lives in `lib/pgn.ts` and `lib/fen.ts`, and the state
  * lives in `AnalysisBoard.tsx`. This draws the controls and calls back out, so
- * it renders in a test with no board and no shell around it.
+ * it renders in a test with no board and no shell around it. The two read-only
+ * fields are `views/shared/CopyableValue.tsx`, shared with the Board Editor.
  */
 
 /** An input that stays clickable — and so uploadable in tests — while unseen. */
@@ -65,103 +64,6 @@ type PositionSetupProps = {
   /** The whole game, side lines included — read-only. */
   currentPgn: string;
 };
-
-/**
- * A read-only value with a copy button.
- *
- * The clipboard write is guarded rather than assumed: it needs a secure context
- * and the permission, jsdom has no clipboard at all, and a copy button that
- * throws into the console while looking like it worked is worse than one that
- * says it failed. The text stays selectable either way, which is the fallback
- * the failure message points at.
- */
-function CopyableValue({
-  label,
-  value,
-  testId,
-}: {
-  label: string;
-  value: string;
-  testId: string;
-}) {
-  const { t } = useTranslation();
-  const [state, setState] = useState<"idle" | "copied" | "failed">("idle");
-
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(value);
-      setState("copied");
-    } catch {
-      setState("failed");
-    }
-  };
-
-  return (
-    <Box>
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 1,
-        }}
-      >
-        <Typography variant="body2" sx={{ fontWeight: 600 }}>
-          {label}
-        </Typography>
-        <Tooltip title={t("analysis.position.copy")}>
-          <IconButton
-            size="small"
-            aria-label={`${t("analysis.position.copy")}: ${label}`}
-            data-testid={`${testId}-copy`}
-            onClick={copy}
-          >
-            <ContentCopyRoundedIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
-      </Box>
-
-      <TextField
-        fullWidth
-        multiline
-        size="small"
-        maxRows={6}
-        value={value}
-        slotProps={{
-          htmlInput: {
-            "data-testid": testId,
-            readOnly: true,
-            "aria-label": label,
-            // Notation, in a panel that mirrors under Hebrew — the attribute,
-            // never a CSS declaration (see the root `CLAUDE.md`).
-            dir: "ltr",
-            style: {
-              fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
-              fontSize: "0.75rem",
-            },
-          },
-        }}
-      />
-
-      {state !== "idle" && (
-        <Typography
-          variant="caption"
-          data-testid={`${testId}-copy-state`}
-          sx={{
-            display: "block",
-            color: state === "copied" ? "success.main" : "warning.main",
-          }}
-        >
-          {t(
-            state === "copied"
-              ? "analysis.position.copied"
-              : "analysis.position.copyFailed",
-          )}
-        </Typography>
-      )}
-    </Box>
-  );
-}
 
 function PositionSetup({
   games,
