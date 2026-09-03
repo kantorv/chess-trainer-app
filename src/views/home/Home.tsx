@@ -5,7 +5,8 @@ import Card from "@mui/material/Card";
 import CardActionArea from "@mui/material/CardActionArea";
 import Typography from "@mui/material/Typography";
 
-import { navTree, type NavTreeNode } from "../main/navTree";
+import { asAppLanguage } from "../../i18n";
+import { navLabel, navTree, type NavTreeNode } from "../main/navTree";
 
 /**
  * The index screen. There is no board here — with the demo screens gone, `"/"`
@@ -21,7 +22,14 @@ const screensOf = (node: NavTreeNode): NavTreeNode[] =>
   );
 
 const Home = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const language = asAppLanguage(i18n.language);
+  /*
+    A card's name is a catalog key for an authored screen and the data's own
+    `{ en, he }` for one generated from a library catalog — the same two kinds
+    the sidebar renders, resolved the same way. See `navTree.ts`.
+  */
+  const labelOf = (node: NavTreeNode) => navLabel(node, (key) => t(key), language);
 
   return (
     <Box sx={{ height: "100%", overflowY: "auto", p: 1 }}>
@@ -39,7 +47,7 @@ const Home = () => {
             color="text.secondary"
             sx={{ display: "block", mb: 1 }}
           >
-            {t(folder.labelKey)}
+            {labelOf(folder)}
           </Typography>
 
           <Box
@@ -65,7 +73,7 @@ const Home = () => {
                   >
                     <Icon color="primary" />
                     <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>
-                      {t(entry.labelKey)}
+                      {labelOf(entry)}
                     </Typography>
                   </CardActionArea>
                 </Card>

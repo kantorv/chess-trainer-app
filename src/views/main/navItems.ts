@@ -5,22 +5,33 @@ import AccountTreeRoundedIcon from "@mui/icons-material/AccountTreeRounded";
 import DashboardCustomizeRoundedIcon from "@mui/icons-material/DashboardCustomizeRounded";
 import VisibilityOffRoundedIcon from "@mui/icons-material/VisibilityOffRounded";
 import ViewListRoundedIcon from "@mui/icons-material/ViewListRounded";
+
+import type { LocalizedText } from "../../lib/libraryCatalog";
 import type { NavFolderId } from "./navFolders";
+import { positionsNavItems } from "./navFromLibrary";
 
 export type NavItem = {
   /** Route path, matched against `useLocation().pathname` for the active state. */
   to: string;
-  /** i18n key, not a label — the sidebar renders `t(labelKey)`. */
-  labelKey: string;
+  /** i18n key — for an authored screen, whose name is chrome the app ships. */
+  labelKey?: string;
+  /** Per-language name — for a screen generated from a data catalog. */
+  label?: LocalizedText;
   icon: SvgIconComponent;
   /** The folder this screen hangs under in the sidebar — an id from `navFolders`. */
   folder: NavFolderId;
 };
 
 /**
- * Every screen, in one place. The sidebar builds its tree from this
- * rather than repeating a list item per route, so adding a screen is one entry
- * here plus the route in `App.tsx` and a string in both catalogs.
+ * Every screen, in one place. The sidebar builds its tree from this rather than
+ * repeating a list item per route, so adding a screen is one entry here plus
+ * the route in `App.tsx` and a string in both catalogs.
+ *
+ * The exception, and the reason `label` exists above, is the Positions section:
+ * its list screens are **generated** from `src/data/positions.json`
+ * (`navFromLibrary.ts`), one per category at any depth, and are named from the
+ * data. `/positions/*` is a single splat route, so a new category needs no
+ * entry here and no route either.
  */
 export const navItems: readonly NavItem[] = [
   {
@@ -65,6 +76,7 @@ export const navItems: readonly NavItem[] = [
     icon: ViewListRoundedIcon,
     folder: "mates-complex",
   },
+  ...positionsNavItems(),
   {
     to: "/tools/analysis",
     labelKey: "nav.analysisBoard",

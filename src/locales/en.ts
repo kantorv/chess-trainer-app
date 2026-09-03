@@ -41,6 +41,14 @@ const en = {
       matesBasic: "Basic",
       matesAdvanced: "Advanced",
       matesComplex: "Complex",
+      /**
+       * The Positions section's root. Its *sub*-folders have no key here and
+       * never will: they are generated from `src/data/positions.json` and named
+       * from it, one per endgame category at any depth, which is what makes a
+       * new category a data edit alone. The section itself is chrome, so it is
+       * named here.
+       */
+      positions: "Positions",
     },
   },
   /** The index screen — a landing page linking out to the real screens. */
@@ -398,6 +406,48 @@ const en = {
       category: "There is no such mates category.",
       position: "There is no such position in this category.",
       back: "Back to Basic mates",
+    },
+  },
+  /**
+   * The endgame Positions section — **chrome only**, and deliberately the same
+   * key shape as `mates` above, because one pair of components
+   * (`views/library/`) renders both and reads them by
+   * `t(`${section.chromeKey}.…`)`.
+   *
+   * The category names are *not* here. They live in
+   * `src/data/positions.json` as `{ en, he }` fields, which is what lets a new
+   * category — at any depth — be a single data edit rather than a three-file
+   * one; see `lib/positionsCatalog.ts`.
+   */
+  positions: {
+    /** The list screen's panel. */
+    list: {
+      count: "Positions: {{count}}",
+      empty: "No positions in this category yet.",
+      hint: "Pick a position to open it on a board, then hand it to the Analysis Board or play it against the engine.",
+    },
+    /** The detail screen's panel. */
+    detail: {
+      back: "Back to {{category}}",
+      fen: "Position (FEN)",
+      openInAnalysis: "Open in Analysis Board",
+      playWithEngine: "Play with Engine",
+      openInEditor: "Open in Board Editor",
+    },
+    /**
+     * Whose move it is. Not always the attacker here, unlike the mates
+     * section: a drawing defense or a mutual zugzwang is the defender's to
+     * play, and that is the position's whole point.
+     */
+    sideToMove: {
+      w: "White to play",
+      b: "Black to play",
+    },
+    /** A path or an id the URL names and the catalog does not have. */
+    notFound: {
+      category: "There is no such endgame category.",
+      position: "There is no such position in this category.",
+      back: "Back to the endgame positions",
     },
   },
   footer: {

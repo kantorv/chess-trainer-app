@@ -62,10 +62,16 @@ change by whether it *adds* to that count, not by the exit code.
 | `src/lib/positionEditor.ts` | A position *being edited*: `fenFields` / `fenFromFields` (the six fields apart and back together, which is what makes the editor's side-to-move, castling and en passant controls round-trip), `enPassantOptions`, and `positionProblems` — **non-throwing** legality reporting, because a half-edited board is illegal by definition. Pure. |
 | `src/lib/gameNavigation.ts` | Walking a `Game`: `clampPly` / `fenAtPly` / `arrowsAtPly` / `moveRowsOf`. A ply is a half-move index, 0 being the starting position; each ply's FEN is read off the move that already carries it, so nothing re-simulates a game. |
 | `src/lib/pieceMask.ts` | **Piece masking** — the `PieceMask` (true type → the type drawn in its place, all twelve), the presets, `maskedPieces` (the board's `options.pieces`) and `maskSan` / `maskSanLine` (the notation). Pure, and the only place the mask exists. |
+| `src/lib/libraryCatalog.ts` | **The shared library layer** — the types (`LibraryCategory` with its `path` and `children`, `LibraryPosition`, `LocalizedText`), the non-throwing `loadLibraryCatalog` (every FEN through `parseFen`, ids unique, category paths known, bad rows dropped into `problems`), the lookups, `categoryLabel` (data label or catalog key), `resolveLibraryPath` (the longest-category-prefix match a splat route needs) and `sideToMoveOf`. Pure, and the only place that knows what a library's JSON looks like. |
 | `src/data/mates.json` | **The mates library** — the category list and a flat list of positions, each naming its category. The only file adding a mate touches. |
-| `src/lib/matesCatalog.ts` | Reading that file: the types (`MateCategoryId`, `MatePosition`, `LocalizedText`), the non-throwing `loadMatesCatalog` (every FEN through `parseFen`, ids unique, category known, bad rows dropped into `problems`), `localizedText` (the `en` fallback), the by-category lookups, and `sideToMoveOf`. Pure, and the only place that knows what the JSON looks like. |
-| `src/views/mates/` | The Mates section. `list/MatesList.tsx` is **one component behind all three routes** — the category is a route parameter — and `detail/MateDetail.tsx` is one position on a board with the three hand-offs. Neither knows anything about JSON. |
-| `src/lib/treeManager.ts` | Read-only tree walks (`traverse` / `toArray` / `collectIds` / `findBy` / `getPath`). The seam for anything tree-shaped; `navTree.ts` is its only consumer. |
+| `src/lib/matesCatalog.ts` | A thin binding over the shared layer in the Mates section's own vocabulary (`findMateCategory`, `positionsInCategory`, `findMatePosition`), plus the shipped catalog. |
+| `src/data/positions.json` | **The endgame Positions library** — categories nested to any depth, each with its own `{ en, he }` name, and the positions inside them. The only file adding a category *or* a position touches. |
+| `src/lib/positionsCatalog.ts` | That file loaded, once, through the same shared loader. |
+| `src/views/library/` | The section-agnostic screens both libraries render: `LibraryList.tsx` (the card grid of preview boards plus the right-hand count and hint), `LibraryDetail.tsx` (one position, read-only, facing the side to move, with the three `?fen=` hand-offs) and `section.ts`, which is what tells one section from another — route base, catalog, chrome keys, test ids. |
+| `src/views/mates/` | The Mates section, as a **binding**: `list/MatesList.tsx` and `detail/MateDetail.tsx` read `/mates/:category(/:id)` and hand it to the two shared screens. Neither knows anything about JSON. |
+| `src/views/positions/` | The Positions section: `PositionsSection.tsx` is **one component behind every `/positions/*` URL**, resolving the splat through the catalog and rendering whichever shared screen the answer calls for. |
+| `src/views/main/navFromLibrary.ts` | Building a sidebar subtree — a folder plus a list screen per category, at any depth — out of a library catalog, and merging it into the authored registries. Pure; `positionsNavFolder()` / `positionsNavItems()` are the only shipped use. |
+| `src/lib/treeManager.ts` | Read-only tree walks (`traverse` / `toArray` / `collectIds` / `findBy` / `getPath`). The seam for anything tree-shaped: `navTree.ts` and `libraryCatalog.ts` are its consumers. |
 
 ## One game model, two producers
 
@@ -199,16 +205,22 @@ position is not being handed one, and a viewpoint the reader chose is theirs.
 
 ## A library is data; only its chrome is code
 
-The Mates section (`/mates/basic`, `/mates/advanced`, `/mates/complex`, and
-`/mates/<category>/<id>` for one position) is a browsable library of checkmate
-positions. **Adding one is an entry in
-[`src/data/mates.json`](src/data/mates.json) and nothing else** — no
-TypeScript, no locale key, no component edit. Four layers, each the only owner
-of its concern:
+There are two browsable position libraries — **Mates** (`/mates/basic`,
+`/mates/advanced`, `/mates/complex`, and `/mates/<category>/<id>` for one
+position) and **Positions** (`/positions/<path>` and `/positions/<path>/<id>`,
+endgame theory: Lucena, Philidor, Vancura, Réti, Saavedra, the trebuchet) — and
+**one implementation between them**. Adding a position, or a category *at any
+depth*, is an entry in that section's JSON and nothing else: no TypeScript, no
+locale key, no component edit, no route.
 
 ```
-mates.json ──loadMatesCatalog()──▶ MatesCatalog ──▶ MatesList / MateDetail ──?fen=──▶ Analysis Board
-  (data)        (lib/matesCatalog.ts)                      (views/mates/)            / Play with Engine
+mates.json  ───┐                                    ┌──▶ LibraryList  ─┐
+               ├─loadLibraryCatalog()─▶ LibraryCatalog                 ├──?fen=──▶ Analysis Board
+positions.json ┘   (lib/libraryCatalog.ts)          └──▶ LibraryDetail ┘           / Play with Engine
+                                                        (views/library/)           / Board Editor
+      │                                                       ▲
+      └──navFromLibrary.ts──▶ navFolders / navItems       views/mates/  (the /mates/:category routes)
+             (the sidebar subtree, generated)             views/positions/  (the /positions/* splat)
 ```
 
 The rules it rests on:
@@ -217,27 +229,51 @@ The rules it rests on:
   `typeof en`, so a catalog key is a two-file edit and a compile error until
   both are done — right for chrome the app *ships*, wrong for content it
   *lists*. Names and descriptions are `{ en, he }` fields on the entry with an
-  `en` fallback; only the folder labels, screen labels and button labels are in
-  the locale catalogs.
-- **A category id is data, not a type.** `MateCategoryId` is a plain `string`
-  alias on purpose: narrowing it to the three shipped ids would make a fourth
-  category a code edit, and the ids arrive from a route parameter anyway. What
-  *is* checked is that a position's category is one the catalog declares.
-- **A malformed entry is reported, never thrown.** A bad FEN or a missing name
-  drops that row into `problems` and the rest of the catalog still loads — a
-  library that cannot render one card must not take the other five down with
-  it, and a `throw` at module scope would take the whole app down.
-- **The mating side is to move in every shipped position**, asserted over the
-  whole catalog in `matesCatalog.test.ts`. Load-bearing rather than cosmetic:
-  `/engine/play` derives `playAs` and the board orientation from the incoming
-  FEN's side to move, so an entry with the defender to move would open the board
-  backwards and have the engine move the instant the screen loaded.
-- **Three nav entries, however big the library gets.** The sidebar has a Mates
-  folder with Basic / Advanced / Complex sub-folders — the first shipped use of
-  nesting, and a pure data edit, because `buildNavTree` and `Sidebar.tsx` both
-  already recursed. A position is a route, not a nav entry; the sidebar's active
-  state stays an exact path match, so a detail page does not light its category
-  up and carries its own way back instead.
+  `en` fallback; only the screen chrome — the section title, the count, the
+  buttons — is in the locale catalogs, and both sections carry the same key
+  shape under their own block so `t(`${section.chromeKey}.…`)` serves both.
+- **So does a category's name, unless it already had a key.** A category carries
+  *either* a `labelKey` (Mates, whose three labels shipped before the shared
+  layer existed and stay untouched) *or* an inline `label: { en, he }`
+  (Positions, the case that must not need a locale edit). `categoryLabel` is the
+  one place the two are told apart.
+- **A category id is data, not a type**, and a category is addressed by its full
+  **path** — `queen-vs-rook/rosettes`. Narrowing either to the shipped values
+  would make a new category a code edit, and the segments arrive from the URL
+  anyway. A flat section is simply the case where every path is one segment,
+  which is why `mates.json` did not change when the layer generalised.
+- **A malformed entry is reported, never thrown.** A bad FEN, a missing name, a
+  category with no label: the row drops into `problems` and the rest of the
+  catalog still loads — a library that cannot render one card must not take the
+  other five down with it, and a `throw` at module scope would take the whole
+  app down.
+- **One splat route serves any depth.** `resolveLibraryPath` matches the
+  **longest prefix** of the URL segments that names a category and reads
+  whatever is left (at most one segment) as a position id, so `App.tsx` never
+  learns how deep `positions.json` nests. Mates keeps its two shipped
+  `:category` routes, because those URLs are bookmarked.
+- **The nav is generated from the catalog, and named from it.** `navFromLibrary`
+  builds a folder plus one list screen per category, at any depth, and splices
+  the subtree into `navFolders` / `navItems`; `buildNavTree`, `folderPath`,
+  `folderChain` and `Sidebar.tsx` all recursed already and did not change for
+  it. Mates' three categories stay written out by hand — three is all that
+  section will have. A *position* is a route, not a nav entry, in both sections.
+- **A generated node has no catalog key, and `navLabelKeys` must not invent
+  one.** `locales.test.ts` asserts every key that walk returns resolves in both
+  languages; a folder named from the data has nothing to assert, so
+  `NavTreeNode` carries `labelKey` *or* `label` and the walk reports only the
+  first kind. Weakening the assertion instead would have given up the check that
+  catches a real missing translation.
+- **The mating side is to move in every shipped *mate*** — asserted in
+  `matesCatalog.test.ts`, and **that rule stops at that section.** It is
+  load-bearing there: `/engine/play` derives `playAs` and the board orientation
+  from the incoming FEN, so a mate with the defender to move would open backwards
+  and have the engine move the instant the screen loaded. But Philidor's rook
+  defense, Vancura, the short-side defense, the Cochrane defense and the
+  trebuchet are *defensive or mutual-zugzwang* positions in which the side to
+  move is the defender, and half the endgame library would be unshippable under
+  an attacker-to-move rule. The board still faces the side to move, which for a
+  drawing defense correctly opens the reader on the defending side.
 
 The hand-off is the Board Editor's mechanism verbatim — `?fen=` on
 `/tools/analysis`, `/engine/play` and `/tools/editor`, validated with `parseFen`
@@ -318,8 +354,9 @@ one. Four layers, each consumed by the next:
 | Layer | File | What it owns |
 | --- | --- | --- |
 | Walks | `src/lib/treeManager.ts` | Depth-first reads over any tree. The only place tree traversal is written. |
-| Data | `navFolders.ts` + `navItems.ts` | The authored folder tree (`{ id, labelKey, icon, children? }`) and the screens, each naming its `folder`. |
-| Builder | `navTree.ts` | Pure `buildNavTree` — sub-folders before that folder's own screens at every level — plus `folderPath` (a screen's breadcrumb, and the chain the sidebar opens) and `folderChain` (the same for a folder id, itself included). |
+| Data | `navFolders.ts` + `navItems.ts` | The folder tree (`{ id, labelKey?, label?, icon, children? }`) and the screens, each naming its `folder`. Mostly authored; the Positions subtree is spliced in from the generator below. |
+| Generator | `navFromLibrary.ts` | A folder plus one list screen per category of a library catalog, at any depth, named from the data (`src/data/positions.json`). Ids are namespaced (`positions:queen-vs-rook/rosettes`) so a generated one cannot collide with an authored one. |
+| Builder | `navTree.ts` | Pure `buildNavTree` — sub-folders before that folder's own screens at every level — plus `folderPath` (a screen's breadcrumb, and the chain the sidebar opens), `folderChain` (the same for a folder id, itself included), `navLabel` (catalog key *or* data label) and `navLabelKeys` (only the keys). |
 | Renderer | `Sidebar.tsx` | A recursive `TreeRow`. Folders are `aria-expanded` toggles, screens are links. |
 
 Consequences worth knowing:
@@ -328,6 +365,11 @@ Consequences worth knowing:
   give it a `labelKey` present in both catalogs, and point screens at it. The
   renderer already recurses — `navTree.test.ts` and `Sidebar.test.tsx` both
   carry fixtures nested deeper than anything shipped.
+- **A folder does not have to be written out at all.** The Positions section's
+  are built from its JSON and carry a `label` rather than a `labelKey`; only
+  `navLabel` and `navLabelKeys` know the difference, and `NavFolderId` is a
+  plain `string` because a generated id cannot be a union member. See the
+  library section above for why the label lives in the data.
 - **One chain is open at a time, and the route decides which.** `Sidebar.tsx`
   holds an *open path* — the folder ids from the top of the tree down to one
   folder — so opening a folder under a different parent shuts the one that was
