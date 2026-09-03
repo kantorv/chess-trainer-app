@@ -19,6 +19,7 @@ const en = {
     playWithEngine: "Play with Engine",
     loadPgn: "Load PGN",
     analysisBoard: "Analysis Board",
+    boardEditor: "Board Editor",
     /** Sidebar folders — groupings over the routes, never routes themselves. */
     folders: {
       basicExamples: "Basic Examples",
@@ -94,6 +95,12 @@ const en = {
     unsupported: "This engine build has no \"{{option}}\" option.",
     /** Shown under a control the build declares but pins to a single value. */
     fixed: "This engine build fixes {{option}} at {{value}}.",
+  },
+  /** A read-only notation field — `views/shared/CopyableValue.tsx`, on two screens. */
+  copyable: {
+    copy: "Copy",
+    copied: "Copied",
+    copyFailed: "Could not copy — select the text and copy it by hand.",
   },
   moveList: {
     title: "Moves",
@@ -201,14 +208,90 @@ const en = {
       currentTitle: "This position",
       currentFen: "Current FEN",
       currentPgn: "Current PGN",
-      copy: "Copy",
-      copied: "Copied",
-      copyFailed: "Could not copy — select the text and copy it by hand.",
       errors: {
         emptyPgn: "No PGN found in that input.",
         pgn: "Could not read this PGN. {{detail}}",
         pgnGame: "Could not read game {{number}} in this file. {{detail}}",
         fen: "Could not read this FEN. {{detail}}",
+        file: "Could not read that file.",
+      },
+    },
+  },
+  /**
+   * The Board Editor. Chrome only: the FEN, the PGN and the square names are
+   * notation and stay language-independent.
+   */
+  editor: {
+    tabs: {
+      position: "Position",
+      fen: "FEN",
+      pgn: "PGN",
+    },
+    palette: {
+      white: "White pieces",
+      black: "Black pieces",
+      /** On the trash in one palette — it empties that colour off the board. */
+      clear: "Take the {{color}} pieces off the board",
+      colors: {
+        white: "white",
+        black: "black",
+      },
+      /** How the other kind of deletion works, said once under the board. */
+      removeHint: "Drag a piece off the board — onto a palette or the trash — to remove it.",
+    },
+    fields: {
+      turn: "Side to move",
+      white: "White",
+      black: "Black",
+      castling: "Castling",
+      whiteKingside: "White 0-0",
+      whiteQueenside: "White 0-0-0",
+      blackKingside: "Black 0-0",
+      blackQueenside: "Black 0-0-0",
+      enPassant: "En passant target",
+      enPassantNone: "None",
+    },
+    controls: {
+      startingPosition: "Starting position",
+      clearBoard: "Clear board",
+      flip: "Flip board",
+      /** The two hand-offs: both open another screen on the position being edited. */
+      analysis: "Continue on the Analysis Board",
+      play: "Play from here",
+    },
+    problems: {
+      title: "This position cannot be played from yet:",
+      noWhiteKing: "White has no king.",
+      noBlackKing: "Black has no king.",
+      extraKing: "One side has more than one king.",
+      pawnOnBackRank: "A pawn is standing on the first or the last rank.",
+      opponentInCheck: "The side not to move is already in check.",
+      /** Under each of the three controls an illegal position switches off. */
+      blocked: "Fix the position to use this.",
+    },
+    fen: {
+      title: "Set a position up",
+      label: "Paste a FEN",
+      load: "Set position",
+      currentTitle: "This position",
+      currentFen: "Current FEN",
+      error: "Could not read this FEN. {{detail}}",
+    },
+    pgn: {
+      title: "Load a game",
+      chooseFile: "Choose a .pgn file",
+      dropHint: "Drop a .pgn file here",
+      pasteLabel: "Or paste PGN text",
+      load: "Load PGN",
+      /** What loading one does here, which is not what it does elsewhere. */
+      hint: "The game's final position is loaded into the editor.",
+      gamesTitle: "Games in this file",
+      gameFallback: "Game {{number}}",
+      versus: "vs",
+      errors: {
+        empty: "No PGN found in that input.",
+        parse: "Could not read this PGN. {{detail}}",
+        parseGame: "Could not read game {{number}} in this file. {{detail}}",
         file: "Could not read that file.",
       },
     },

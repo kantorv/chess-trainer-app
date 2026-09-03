@@ -33,7 +33,7 @@ import { useTreeNavigation } from "./useTreeNavigation";
  * `withEngineLine`, `views/shared/`'s panel pieces) and the two hooks stayed
  * separate. Play with Engine is shipped and must not regress on a flag.
  *
- * ## The three things worth knowing
+ * ## The four things worth knowing
  *
  * **1. The game is a tree, and the position is a node.** Playing a move from an
  * earlier ply opens a variation and keeps both lines (`lib/gameTree.ts`). So the
@@ -45,7 +45,15 @@ import { useTreeNavigation } from "./useTreeNavigation";
  * screen is only ever an analysis whose FEN matches that position, so a set left
  * over from the previous one is never rendered under a new board.
  *
- * **3. Engine lifecycle.** Lazy ref resolved at call time, subscribe in an effect
+ * **3. An initial position can come from outside.** The Board Editor hands a
+ * position over as a query parameter on this screen's route, so the optional
+ * `initialFen` is read *once*, as this hook's initial state — arriving at
+ * `/tools/analysis?fen=…` mounts the screen, so there is no later change to
+ * follow, and reading it in an effect instead would mean writing state from one.
+ * A position that will not parse is the caller's to reject; whatever arrives
+ * here is used as-is.
+ *
+ * **4. Engine lifecycle.** Lazy ref resolved at call time, subscribe in an effect
  * with the returned unsubscribe, terminate on unmount —
  * `.claude/rules/chessboard.md` §4. The subscribe effect is declared first so a
  * StrictMode remount rebuilds the worker before anything asks it to search.
@@ -94,7 +102,7 @@ const isTerminal = (fen: string): boolean => {
 /** A tree with nothing in it, taken once — plain data that nothing mutates. */
 const NEW_TREE: GameTree = emptyTree();
 
-export const useAnalysisBoard = () => {
+export const useAnalysisBoard = (initialFen?: string) => {
   const engineRef = useRef<Engine | null>(null);
   // Resolved at call time, never during render: StrictMode's mount → unmount →
   // remount terminates the worker and re-runs the effects with no render in
@@ -117,14 +125,22 @@ export const useAnalysisBoard = () => {
     return chess;
   }, []);
 
-  const [tree, setTree] = useState<GameTree>(NEW_TREE);
+  // Lazily, and only on the first render: see note 3 above.
+  const [tree, setTree] = useState<GameTree>(() =>
+    initialFen === undefined ? NEW_TREE : emptyTree(initialFen),
+  );
   const [settings, setSettings] = useState<AnalysisSettings>(
     DEFAULT_ANALYSIS_SETTINGS,
   );
   const [analysis, setAnalysis] = useState<Analysis>(EMPTY_ANALYSIS);
   const [engineOn, setEngineOn] = useState(true);
   const [showEvalBar, setShowEvalBar] = useState(true);
-  const [orientation, setOrientation] = useState<"white" | "black">("white");
+  // Facing the side to move in the position this screen opened on — see
+  // `loadFen` for why a position you are handed turns the board and a game you
+  // load does not.
+  const [orientation, setOrientation] = useState<"white" | "black">(() =>
+    initialFen !== undefined && turnOf(initialFen) === "b" ? "black" : "white",
+  );
   const [promotion, setPromotion] = useState<{
     from: Square;
     to: Square;
@@ -338,9 +354,22 @@ export const useAnalysisBoard = () => {
     [goToNode],
   );
 
-  /** Set a position up from a pasted FEN. Throws `FenParseError` on bad input. */
+  /**
+   * Set a position up from a pasted FEN. Throws `FenParseError` on bad input.
+   *
+   * It also turns the board to the side to move. A position arriving as a FEN is
+   * one you are about to answer — a study, a puzzle, a game handed over from the
+   * Board Editor — so the side that has to move is the side you are looking
+   * from. Loading a *game* (`loadTree`) deliberately does not: a PGN opens at
+   * ply 0, where the side to move says nothing about which side you are studying,
+   * and turning the board there would overrule a viewpoint the reader chose.
+   */
   const loadFen = useCallback(
-    (text: string) => loadTree(emptyTree(parseFen(text))),
+    (text: string) => {
+      const fen = parseFen(text);
+      loadTree(emptyTree(fen));
+      setOrientation(turnOf(fen) === "b" ? "black" : "white");
+    },
     [loadTree],
   );
 

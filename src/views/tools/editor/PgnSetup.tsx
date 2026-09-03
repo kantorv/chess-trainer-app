@@ -12,25 +12,19 @@ import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
 import { useTranslation } from "react-i18next";
 import { gameTag } from "../../../lib/gameModel";
 import type { GameTree } from "../../../lib/gameTree";
-import CopyableValue from "../../shared/CopyableValue";
 
 /**
- * The Position tab: every way a position gets *in*, and both ways it comes back
- * *out*.
+ * The PGN tab: paste a game, pick a file, or drop one on the screen, and the
+ * **final position** of the game you choose lands on the board.
  *
- * In — a PGN (pasted, picked, or dropped on the screen) and a FEN. Out — the
- * FEN of the position on screen and the PGN of the whole game, side lines
- * included, each read-only with a copy button. The pair is deliberate: a board
- * you can set up but not get back out of is a dead end.
+ * The Analysis Board's Position tab loads a game to *play through*; this one
+ * loads it to carry on editing from, which is the only difference between the
+ * two forms and the reason this screen says so under the input. The picker for
+ * a multi-game file is the same idea as the sibling screen's, over the same
+ * `parsePgnTrees` output.
  *
- * It lives in the shell's right-hand panel rather than under the board because
- * `Layout.tsx` hands a screen a board square and an aside, and there is no
- * region under the board for a form.
- *
- * Presentational: parsing lives in `lib/pgn.ts` and `lib/fen.ts`, and the state
- * lives in `AnalysisBoard.tsx`. This draws the controls and calls back out, so
- * it renders in a test with no board and no shell around it. The two read-only
- * fields are `views/shared/CopyableValue.tsx`, shared with the Board Editor.
+ * Presentational: the ingestion state and the parsing live in
+ * `BoardEditor.tsx` and `lib/pgn.ts`.
  */
 
 /** An input that stays clickable — and so uploadable in tests — while unseen. */
@@ -46,7 +40,7 @@ const hiddenInputSx = {
   border: 0,
 } as const;
 
-type PositionSetupProps = {
+type PgnSetupProps = {
   /** Games from the last multi-game file, for the picker. Empty for a single game. */
   games: readonly GameTree[];
   selected: number;
@@ -56,16 +50,9 @@ type PositionSetupProps = {
   onPgnTextChange: (text: string) => void;
   onLoadPgn: (event: FormEvent) => void;
   onFileChosen: (event: ChangeEvent<HTMLInputElement>) => void;
-  fenText: string;
-  onFenTextChange: (text: string) => void;
-  onLoadFen: (event: FormEvent) => void;
-  /** The position on screen — read-only. */
-  currentFen: string;
-  /** The whole game, side lines included — read-only. */
-  currentPgn: string;
 };
 
-function PositionSetup({
+function PgnSetup({
   games,
   selected,
   onSelectGame,
@@ -74,12 +61,7 @@ function PositionSetup({
   onPgnTextChange,
   onLoadPgn,
   onFileChosen,
-  fenText,
-  onFenTextChange,
-  onLoadFen,
-  currentFen,
-  currentPgn,
-}: PositionSetupProps) {
+}: PgnSetupProps) {
   const { t } = useTranslation();
 
   /** The name to show for a game — its players, or a numbered fallback. */
@@ -87,8 +69,8 @@ function PositionSetup({
     const white = gameTag(game.headers, "White");
     const black = gameTag(game.headers, "Black");
     return white || black
-      ? `${white ?? "?"} ${t("analysis.position.versus")} ${black ?? "?"}`
-      : t("analysis.position.gameFallback", { number: index + 1 });
+      ? `${white ?? "?"} ${t("editor.pgn.versus")} ${black ?? "?"}`
+      : t("editor.pgn.gameFallback", { number: index + 1 });
   };
 
   const subtitleOf = (game: GameTree) =>
@@ -99,12 +81,12 @@ function PositionSetup({
 
   return (
     <Box
-      data-testid="position-setup"
+      data-testid="editor-pgn-setup"
       sx={{ display: "flex", flexDirection: "column", gap: 2 }}
     >
       <Box>
         <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
-          {t("analysis.position.pgnTitle")}
+          {t("editor.pgn.title")}
         </Typography>
 
         <Stack
@@ -118,19 +100,19 @@ function PositionSetup({
             size="small"
             startIcon={<UploadFileRoundedIcon />}
           >
-            {t("analysis.position.chooseFile")}
+            {t("editor.pgn.chooseFile")}
             <Box
               component="input"
               type="file"
               accept=".pgn"
-              data-testid="analysis-pgn-file-input"
-              aria-label={t("analysis.position.chooseFile")}
+              data-testid="editor-pgn-file-input"
+              aria-label={t("editor.pgn.chooseFile")}
               onChange={onFileChosen}
               sx={hiddenInputSx}
             />
           </Button>
           <Typography variant="body2" sx={{ color: "text.secondary" }}>
-            {t("analysis.position.dropHint")}
+            {t("editor.pgn.dropHint")}
           </Typography>
         </Stack>
 
@@ -143,42 +125,25 @@ function PositionSetup({
             // pushes everything below it out of the tab.
             maxRows={10}
             size="small"
-            label={t("analysis.position.pasteLabel")}
+            label={t("editor.pgn.pasteLabel")}
             value={pgnText}
             onChange={(event) => onPgnTextChange(event.target.value)}
-            // On the control itself: a `data-testid` on the TextField lands on
-            // its wrapper, which is not something a reader can type into.
-            slotProps={{ htmlInput: { "data-testid": "analysis-pgn-input" } }}
+            slotProps={{ htmlInput: { "data-testid": "editor-pgn-input" } }}
           />
           <Button type="submit" size="small" variant="outlined" sx={{ mt: 1 }}>
-            {t("analysis.position.loadPgn")}
+            {t("editor.pgn.load")}
           </Button>
-        </Box>
-      </Box>
-
-      <Box>
-        <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
-          {t("analysis.position.fenTitle")}
-        </Typography>
-        <Box component="form" onSubmit={onLoadFen}>
-          <TextField
-            fullWidth
-            size="small"
-            label={t("analysis.position.fenLabel")}
-            value={fenText}
-            onChange={(event) => onFenTextChange(event.target.value)}
-            slotProps={{
-              htmlInput: { dir: "ltr", "data-testid": "analysis-fen-input" },
-            }}
-          />
-          <Button type="submit" size="small" variant="outlined" sx={{ mt: 1 }}>
-            {t("analysis.position.loadFen")}
-          </Button>
+          <Typography
+            variant="caption"
+            sx={{ display: "block", mt: 0.5, color: "text.secondary" }}
+          >
+            {t("editor.pgn.hint")}
+          </Typography>
         </Box>
       </Box>
 
       {error !== null && (
-        <Alert severity="error" data-testid="analysis-position-error">
+        <Alert severity="error" data-testid="editor-pgn-error">
           {error}
         </Alert>
       )}
@@ -186,9 +151,9 @@ function PositionSetup({
       {games.length > 1 && (
         <Box>
           <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-            {t("analysis.position.gamesTitle")}
+            {t("editor.pgn.gamesTitle")}
           </Typography>
-          <List dense disablePadding data-testid="analysis-game-picker">
+          <List dense disablePadding data-testid="editor-game-picker">
             {games.map((game, index) => (
               <ListItemButton
                 // Games in a file have no id of their own, and the list is
@@ -207,24 +172,8 @@ function PositionSetup({
           </List>
         </Box>
       )}
-
-      <Box sx={{ display: "grid", gap: 1.5 }}>
-        <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-          {t("analysis.position.currentTitle")}
-        </Typography>
-        <CopyableValue
-          label={t("analysis.position.currentFen")}
-          value={currentFen}
-          testId="analysis-current-fen"
-        />
-        <CopyableValue
-          label={t("analysis.position.currentPgn")}
-          value={currentPgn}
-          testId="analysis-current-pgn"
-        />
-      </Box>
     </Box>
   );
 }
 
-export default PositionSetup;
+export default PgnSetup;

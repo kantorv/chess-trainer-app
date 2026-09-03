@@ -82,7 +82,10 @@ Rules:
   board wrap it in a `max-width` box.
 - **`ChessboardProvider`** is only needed for spare pieces / drag-from-palette
   setups or when you need `useChessboardContext`. Plain boards just use
-  `<Chessboard>`.
+  `<Chessboard>`. When you do need it, **every option moves to it** and
+  `<Chessboard />` takes none — `views/tools/editor/BoardEditor.tsx` is the
+  in-repo example, and §5 has the rest of what that changes. It renders no
+  element of its own, so it costs the layout nothing.
 - **The board must never mirror.** `Layout.tsx` wraps the board area in
   `ForceLTR` — files run a–h left to right in every language. See the root
   `CLAUDE.md` for why.
@@ -335,8 +338,9 @@ Consequences for a caller:
 | `/move` | [`views/demos/move/Board2.tsx`](../../src/views/demos/move/Board2.tsx) | `PlayVsRandom` | The core loop: ref-owned `chess.js` + controlled `position` + `onPieceDrop`; vs. a random mover |
 | `/analyze` | [`views/demos/engine/Board3.tsx`](../../src/views/demos/engine/Board3.tsx) | `AnalysisBoard` | Stockfish eval per position, best move drawn as an `arrows` entry |
 | `/player1` | [`views/player/engine_basic/Board.tsx`](../../src/views/player/engine_basic/Board.tsx) | (composed) | Play *against* the engine — engine moves are applied automatically. The **minimal** reference for the engine-move loop; deliberately left alone by CTA-12 |
-| `/engine/play` | [`views/engine/play/PlayWithEngine.tsx`](../../src/views/engine/play/PlayWithEngine.tsx) | (composed) | The full screen: eval bar, move list, MultiPV variations, live UCI settings, a real promotion picker |
+| `/engine/play` | [`views/engine/play/PlayWithEngine.tsx`](../../src/views/engine/play/PlayWithEngine.tsx) | (composed) | The full screen: eval bar, move list, MultiPV variations, live UCI settings, a real promotion picker. Takes a `?fen=` starting position |
 | `/tools/analysis` | [`views/tools/analysis/AnalysisBoard.tsx`](../../src/views/tools/analysis/AnalysisBoard.tsx) | (composed) | Analysis: a **variation tree** (`lib/gameTree.ts`), PGN/FEN set-up and export, both colours movable, engine and eval bar switched independently |
+| `/tools/editor` | [`views/tools/editor/BoardEditor.tsx`](../../src/views/tools/editor/BoardEditor.tsx) | `SparePieces` | Position editing: `ChessboardProvider` + spare-piece palettes, `{ skipValidation: true }`, illegal positions reported rather than refused, hand-off to either of the two screens above |
 
 The `MainN.tsx` files next to each board are layout-only wrappers (an MUI `Box`
 with a `data-testid`); the board component is the unit of interest. Each
@@ -344,9 +348,9 @@ with a `data-testid`); the board component is the unit of interest. Each
 `docs/vendor/react-chessboard/stories/`.
 
 The first four are **demos** — the smallest thing that shows one idea, and worth
-keeping small. `/engine/play` and `/tools/analysis` are real screens; when the
-two kinds disagree about how much to handle (promotion is the standing example),
-the demo's shortcut is the one that stays.
+keeping small. `/engine/play`, `/tools/analysis` and `/tools/editor` are real
+screens; when the two kinds disagree about how much to handle (promotion is the
+standing example), the demo's shortcut is the one that stays.
 
 **Two rules the Play with Engine screen is built on, worth reusing:**
 
@@ -374,6 +378,23 @@ the demo's shortcut is the one that stays.
 - **A screen that can branch navigates by node, not by ply.** See the root
   `CLAUDE.md` on the tree; the shared `BoardControls` still take a ply, and
   `useTreeNavigation` derives one from the line the reader is standing on.
+
+**And two the Board Editor adds:**
+
+- **Spare pieces mean `ChessboardProvider`, and the options move with them.**
+  Every option that would have gone on `<Chessboard>` goes on the provider
+  instead and the board itself takes no props (§2, and
+  `stories/basic-examples/SparePieces.stories.tsx`) — a `SparePiece` can only
+  reach the drag context from inside it. `onPieceDrop` then does the whole job:
+  `piece.isSparePiece` says whether it came from a palette, and a `null`
+  `targetSquare` — anywhere off the board, the palettes and the trash included —
+  is a deletion. The provider renders no element, so it costs the layout nothing.
+- **A board being edited is illegal on the way to being legal.** It is a
+  `chess.js` built with `{ skipValidation: true }`, only ever `put` to and
+  `remove`d from, and `lib/positionEditor.ts` *reports* what is wrong instead of
+  refusing it — see the root `CLAUDE.md`. The one thing `chess.js` still refuses
+  is a second king of one colour, so `put` returning `false` is a real branch and
+  the drop has to put back whatever it lifted.
 
 ---
 
@@ -412,8 +433,14 @@ Full detail: `docs/vendor/react-chessboard/G_UpgradeToV5.mdx`.
       hardcoding `'q'`.
 - [ ] If using the engine: lazy ref, subscribe-in-effect + unsubscribe,
       `terminate()` on unmount, score normalized by turn.
+- [ ] If using spare pieces: `ChessboardProvider` with the options on **it**,
+      the palettes inside it, and `piece.isSparePiece` / a `null` `targetSquare`
+      handled in `onPieceDrop` (§5).
+- [ ] If anything shares the board square with the board (an eval bar, a
+      palette): its size and the gaps sum to exactly the constant subtracted
+      from the board's side, and the board box has `flexShrink: 0` (§5).
 - [ ] Any `setTimeout` / async work cleared on unmount.
-- [ ] `tsc -b` clean.
+- [ ] `tsc -b` clean, `yarn test:run` green, `yarn lint` adding no findings.
 
 ---
 
@@ -438,3 +465,14 @@ erased at compile time, so the mock does not have to provide it. Anything that
 depends on the board actually rendering — sizing, drag, arrows — belongs in a
 browser check, not in jsdom. `views/games/load_pgn/LoadPgn.test.tsx` is the
 worked example.
+
+**Stub whatever the screen actually imports.** A spare-piece screen reaches for
+three exports, not one: the options go to `ChessboardProvider`, the palettes are
+`SparePiece`s, and `<Chessboard>` takes nothing — so the stub keeps the options
+from the *provider* and the board renders what it finds there.
+`views/tools/editor/BoardEditor.test.tsx` is that version.
+
+jsdom's CSS parser also drops properties it does not implement — `aspect-ratio`
+among them — so a `toHaveStyle` assertion on one silently fails. Assert the
+constant that can drift (the width `calc`) and leave what the browser makes of
+it to a browser check.

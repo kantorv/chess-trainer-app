@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router";
 import i18n from "../../../i18n";
 import AppThemeWithLang from "../../../theme/AppThemeWithLang";
 import { MAX_VARIATIONS_OFFERED } from "../../../lib/engineAnalysis";
@@ -187,13 +188,19 @@ const engineReports = (info: {
   });
 };
 
-const renderScreen = () =>
+/*
+  A router, because the screen reads its initial position off the URL — that is
+  how the Board Editor hands one over. `entry` is what a test arrives at.
+*/
+const renderScreen = (entry = "/tools/analysis") =>
   render(
     <AppThemeWithLang>
-      <RightPanelProvider>
-        <AnalysisBoard />
-        <RightPanelOutlet />
-      </RightPanelProvider>
+      <MemoryRouter initialEntries={[entry]}>
+        <RightPanelProvider>
+          <AnalysisBoard />
+          <RightPanelOutlet />
+        </RightPanelProvider>
+      </MemoryRouter>
     </AppThemeWithLang>,
   );
 
@@ -355,6 +362,40 @@ describe("Analysis Board — the Position tab", () => {
     drag("g8", "f6");
     await openTab("moves");
     expect(screen.getByTestId("variation-tree")).toHaveTextContent("12… Nf6");
+  });
+
+  it("turns the board to the side to move in a pasted FEN", async () => {
+    renderScreen();
+    await openTab("position");
+
+    await pasteInto(
+      "analysis-fen-input",
+      "2b2rk1/3n1ppp/3Rp3/6B1/1q2N3/1P4Q1/r1P2PPP/2KR4 b - - 0 1",
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Set position" }));
+
+    expect(screen.getByTestId("board")).toHaveAttribute(
+      "data-orientation",
+      "black",
+    );
+  });
+
+  it("leaves the viewpoint alone when a game is loaded instead", async () => {
+    renderScreen();
+    await userEvent.click(screen.getByTestId("board-control-flip"));
+    await openTab("position");
+
+    await pasteInto("analysis-pgn-input", "1. e4 e5");
+    await userEvent.click(screen.getByRole("button", { name: "Load PGN" }));
+
+    /*
+      A PGN opens at ply 0, where the side to move says nothing about which side
+      the reader is studying — so the flip they asked for stands.
+    */
+    expect(screen.getByTestId("board")).toHaveAttribute(
+      "data-orientation",
+      "black",
+    );
   });
 
   it("reports a FEN it cannot read, and leaves the board alone", async () => {
@@ -613,6 +654,42 @@ describe("Analysis Board — promotion", () => {
 
     expect(screen.queryByTestId("promotion-picker")).not.toBeInTheDocument();
     expect(position()).toBe(before);
+  });
+});
+
+describe("Analysis Board — arriving from the Board Editor", () => {
+  const edited = "4k3/8/8/8/8/8/4Q3/4K3 w - - 0 1";
+
+  it("opens on the position handed over in the URL", () => {
+    renderScreen(`/tools/analysis?fen=${encodeURIComponent(edited)}`);
+
+    expect(position()).toBe(edited);
+    // White to move in that one, so the board faces White.
+    expect(screen.getByTestId("board")).toHaveAttribute(
+      "data-orientation",
+      "white",
+    );
+    // And it is a game from that position, not a diagram: the engine is asked
+    // about it, and a move played from it is the first of the line.
+    expect(engine().lastSearch).toBe(edited);
+    drag("e2", "e7");
+    expect(moveTokens()).toEqual(["Qe7+"]);
+  });
+
+  it("faces the side to move in the position it was handed", () => {
+    const blackToMove = "2b2rk1/3n1ppp/3Rp3/6B1/1q2N3/1P4Q1/r1P2PPP/2KR4 b - - 0 1";
+    renderScreen(`/tools/analysis?fen=${encodeURIComponent(blackToMove)}`);
+
+    expect(screen.getByTestId("board")).toHaveAttribute(
+      "data-orientation",
+      "black",
+    );
+  });
+
+  it("ignores a position it cannot read, rather than throwing on the link", () => {
+    renderScreen("/tools/analysis?fen=not-a-position");
+
+    expect(position()).toMatch(/^rnbqkbnr\/pppppppp/);
   });
 });
 

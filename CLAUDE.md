@@ -1,8 +1,9 @@
 # chessapp-analyze-v1
 
-A Vite + React 19 + TypeScript chess trainer. Four board screens sit inside one
-app shell; the boards themselves are `react-chessboard` v5 driven by `chess.js`
-and a Stockfish WASM worker.
+A Vite + React 19 + TypeScript chess trainer. Seven board screens sit inside one
+app shell — four small demos, each showing one idea, and three real screens
+(Play with Engine, the Analysis Board, the Board Editor). The boards themselves
+are `react-chessboard` v5 driven by `chess.js` and a Stockfish WASM worker.
 
 Board work has its own rules — [`.claude/rules/chessboard.md`](.claude/rules/chessboard.md)
 holds the project conventions and, in its §0, the index to everything else.
@@ -46,9 +47,10 @@ change by whether it *adds* to that count, not by the exit code.
 | `src/theme/` | The look: `themePrimitives.ts` (tokens), `AppThemeWithLang.tsx` (the provider), `rtlCache.ts`, `ForceLTR.tsx`, and the two header controls. |
 | `src/views/main/` | The app shell — `Layout.tsx` (header + sidebar + board area; the nav rail and the right-hand panel are fixed-width, and the board square is what is left over), `rightPanel.tsx` (the route-fillable panel slot), `Sidebar.tsx`, the nav registries (`navItems.ts`, `navFolders.ts`, `navTree.ts`), and the XState `service.ts`. |
 | `src/views/demos/`, `src/views/player/` | The four demo board screens. |
-| `src/views/shared/` | The panel pieces the game screens share: `MoveList.tsx`, `BoardControls.tsx`, `useGameNavigation.ts`, `EvalBar.tsx`, `BestVariations.tsx`, `PromotionPicker.tsx`, `OptionSlider.tsx`. They take props and know nothing about which screen is rendering them, and their catalog keys are top-level (`moveList.*`, `variations.*`, `promotion.*`, `engineOption.*`, `board.*`) rather than under any one screen's. |
-| `src/views/engine/play/` | The Play with Engine screen. `PlayWithEngine.tsx` is layout (eval bar + board) and board options; **all the behaviour is in `usePlayWithEngine.ts`**; `EnginePanel.tsx` is the Game / Engine / Variations tab strip over the shared board controls, with `EngineSettings.tsx` under it. |
+| `src/views/shared/` | The panel pieces the game screens share: `MoveList.tsx`, `BoardControls.tsx`, `useGameNavigation.ts`, `EvalBar.tsx`, `BestVariations.tsx`, `PromotionPicker.tsx`, `OptionSlider.tsx`, `CopyableValue.tsx`. They take props and know nothing about which screen is rendering them, and their catalog keys are top-level (`moveList.*`, `variations.*`, `promotion.*`, `engineOption.*`, `board.*`, `copyable.*`) rather than under any one screen's. |
+| `src/views/engine/play/` | The Play with Engine screen. `PlayWithEngine.tsx` is layout (eval bar + board), board options and the `?fen=` arrival; **all the behaviour is in `usePlayWithEngine.ts`**; `EnginePanel.tsx` is the Game / Engine / Variations tab strip over the shared board controls, with `EngineSettings.tsx` under it. |
 | `src/views/games/load_pgn/` | The Load PGN screen. `LoadPgn.tsx` owns the state and fills the board square; `GamePanel.tsx` is the whole of the shell panel — the Moves / Info / Load PGN tabs (`GameInfo.tsx`, `PgnIngest.tsx`, and the shared `MoveList`) over the shared board controls. |
+| `src/views/tools/editor/` | The Board Editor. `BoardEditor.tsx` is layout (the two palettes and the board, inside a `ChessboardProvider`), board options and the PGN/FEN ingestion state; **the behaviour is in `useBoardEditor.ts`**; `EditorPanel.tsx` is the Position / FEN / PGN tab strip over the reset controls and the hand-off, with `PositionFields.tsx`, `FenSetup.tsx`, `PgnSetup.tsx` and `PiecePalette.tsx` under it. |
 | `src/views/tools/analysis/` | The Analysis Board. `AnalysisBoard.tsx` is layout (eval bar + board), board options and the PGN/FEN ingestion state; **the behaviour is in `useAnalysisBoard.ts`**, the navigation in `useTreeNavigation.ts`; `AnalysisPanel.tsx` is the Moves / Engine / Variations / Position tab strip, with `VariationTree.tsx`, `AnalysisSettings.tsx` and `PositionSetup.tsx` under it. |
 | `src/lib/engine.ts` | The Stockfish worker wrapper: search, UCI option discovery, and the protocol discipline that keeps the engine alive (see the chessboard rules §4). |
 | `src/lib/engineAnalysis.ts` | Reading the engine's numbers: `scoreFromUci` (the one place a score is normalised to White's perspective), `formatScore`, `evalBarFraction`, `pvToSan`, `numberedVariation`, plus the `Analysis` / `EngineLine` shape both engine screens collect into and the `withEngineLine` fold. Pure. |
@@ -56,6 +58,7 @@ change by whether it *adds* to that count, not by the exit code.
 | `src/lib/gameTree.ts` | **The variation tree** — `GameTree` / `VariationNode`, `addMove` (the branch), `mainline` / `lineOf` / `pathTo` / `fenAtNode`, `treeToPgn`, and the `treeFromGame` ⇄ `mainlineGame` bridge that makes a `Game` a walk over a tree. Read the next section before touching it. |
 | `src/lib/pgn.ts` | PGN ingestion only: text in, a `Game` (`parsePgnGames`, mainline only — what `chess.js` gives) or a `GameTree` (`parsePgnTrees`, side lines kept) out. |
 | `src/lib/fen.ts` | FEN ingestion: `parseFen` validates and normalises a pasted position, or throws `FenParseError`. |
+| `src/lib/positionEditor.ts` | A position *being edited*: `fenFields` / `fenFromFields` (the six fields apart and back together, which is what makes the editor's side-to-move, castling and en passant controls round-trip), `enPassantOptions`, and `positionProblems` — **non-throwing** legality reporting, because a half-edited board is illegal by definition. Pure. |
 | `src/lib/gameNavigation.ts` | Walking a `Game`: `clampPly` / `fenAtPly` / `arrowsAtPly` / `moveRowsOf`. A ply is a half-move index, 0 being the starting position; each ply's FEN is read off the move that already carries it, so nothing re-simulates a game. |
 | `src/lib/treeManager.ts` | Read-only tree walks (`traverse` / `toArray` / `collectIds` / `findBy` / `getPath`). The seam for anything tree-shaped; `navTree.ts` is its only consumer. |
 
@@ -121,6 +124,57 @@ The rules the whole thing rests on:
   parsers: `parsePgnGames` (mainline, for the Load PGN screen) and
   `parsePgnTrees` (side lines kept), and only the second round-trips with
   `treeToPgn`.
+
+## An editor owns a position, not a game
+
+The Board Editor is the one board screen with no `Game` and no `GameTree` behind
+it. It has no moves to hold: pieces are **put and removed**, never moved by a
+rule, so its `chess.js` instance is built with `{ skipValidation: true }` and is
+a container rather than a rules authority. Three things follow, and they are the
+whole design:
+
+- **Illegal is a state, not an error.** You have to be able to take a king off in
+  order to put a different one down, so `positionProblems` (`lib/positionEditor.ts`)
+  *reports* — no king, two kings, a pawn on the back rank, the side not to move
+  already in check — and only the three controls that take the position
+  *elsewhere* (the FEN copy button and the two hand-offs) are switched off while
+  it does.
+  `parseFen` still guards the way **in**: a pasted FEN is a claim about a
+  finished position, not a board mid-edit.
+- **The FEN is split apart.** Field 1 comes off the board; fields 2–4 are panel
+  controls held as `PositionFields`; fields 5–6 are carried so a pasted FEN
+  round-trips. Reading *only* field 1 off the `chess.js` instance is what lets
+  the side-to-move, castling and en passant controls mean anything — the
+  instance keeps its own idea of those, and that idea is what the reader is
+  overriding.
+- **Spare pieces need `ChessboardProvider`.** It is the one screen that cannot
+  use a plain `<Chessboard>`: every option goes to the provider instead, because
+  a `SparePiece` can only reach the board's drag context from inside it. The
+  provider renders no element of its own, so it costs the layout nothing.
+
+The editor hands a position on to **both** of the other real screens, and by
+exactly the same route: a **query parameter** — `/tools/analysis?fen=…` and
+`/engine/play?fen=…` — so the position survives being bookmarked, shared and
+reloaded, where router state would not. Each screen validates it with `parseFen`
+and ignores what will not pass, then takes it as *initial* state rather than
+syncing it in an effect: arriving at the URL mounts the screen, so there is no
+later change to follow.
+
+Play with Engine reads a little more out of it than the Analysis Board does. A
+position set up with Black to move is one the reader means to play as Black, so
+the incoming FEN also decides `playAs` and which way the board faces — otherwise
+the engine would move the instant the screen opened, from a position they had
+just finished arranging. It is also what "New game" returns to; resetting to the
+standard start would throw the handed-over position away with no way back.
+
+**A position turns the board; a game does not.** All three screens face the side
+to move when a *position* arrives — a pasted FEN, a handed-over one, the final
+position of a game loaded into the editor — because a position is something you
+are about to answer, so the side that has to move is the side you look from.
+Loading a **game** deliberately does not: a PGN opens at ply 0, where the side to
+move says nothing about which side is being studied. Neither do the editor's
+resets or its side-to-move field, for the same reason in reverse — arranging a
+position is not being handed one, and a viewpoint the reader chose is theirs.
 
 ## Theming, direction and language
 
