@@ -32,8 +32,19 @@ describe("loadMatesCatalog", () => {
     const catalog = catalogOf([entry()]);
 
     expect(catalog.problems).toEqual([]);
+    /*
+      `path` and `children` arrive with the shared library layer: a category is
+      addressed by its full path now, and a flat section like this one is simply
+      the case where every path is a single segment and every child list empty.
+      `mates.json` itself did not change for it.
+    */
     expect(catalog.categories).toEqual([
-      { id: "basic", labelKey: "mates.categories.basic" },
+      {
+        id: "basic",
+        path: "basic",
+        labelKey: "mates.categories.basic",
+        children: [],
+      },
     ]);
     expect(catalog.positions).toHaveLength(1);
     expect(catalog.positions[0].fen).toBe(KQ_VS_K);
