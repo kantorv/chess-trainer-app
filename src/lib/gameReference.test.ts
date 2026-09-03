@@ -12,23 +12,24 @@ import { positionsCatalog } from "./positionsCatalog";
  * The `?game=` carrier: what a detail page writes into a link and what a
  * destination screen gets back out of one.
  *
- * The two shipped shapes are both here — a folder one segment deep (the
- * chess.com export) and one nested under `studies` by the manifest — because the
- * whole reason the category path is resolved rather than counted is that a
- * reference does not know how deep its own folder sits.
+ * Every shipped folder sits two segments deep (`studies/<file>`), which is the
+ * case that matters: a reference is *resolved* against the catalog rather than
+ * split by counting segments, so a reader of one never has to know how deep its
+ * folder sits. Taking `segments[1]` as the category would pass on a flat library
+ * and fail on every reference here.
  */
 
-const nested = pgnCatalog.items.find((item) =>
-  item.category.startsWith("studies/"),
-)!;
-const flat = pgnCatalog.items.find((item) => !item.category.includes("/"))!;
+const first = pgnCatalog.items[0];
+const last = pgnCatalog.items[pgnCatalog.items.length - 1];
 
 describe("gameReferenceOf and resolveGameReference round-trip", () => {
   it.each([
-    ["a folder one segment deep", flat],
-    ["a folder the manifest nested", nested],
+    ["the first shipped game", first],
+    ["one in a different folder", last],
   ])("carries %s there and back", (_name, item) => {
     if (item.kind !== "game") throw new Error("expected a game");
+    // The point of the round trip: a nested category path, crossed whole.
+    expect(item.category.split("/").length).toBeGreaterThan(1);
 
     const reference = gameReferenceOf(PGN_REFERENCE_KEY, item);
 
@@ -37,7 +38,7 @@ describe("gameReferenceOf and resolveGameReference round-trip", () => {
   });
 
   it("tolerates the empty segments a stray slash leaves", () => {
-    expect(resolveGameReference(`/pgn/${flat.category}/${flat.id}/`)).toBe(flat);
+    expect(resolveGameReference(`/pgn/${first.category}/${first.id}/`)).toBe(first);
   });
 });
 
@@ -49,7 +50,8 @@ describe("resolveGameReference refuses everything it cannot resolve", () => {
     ["a section with no games in it", "positions/pawn-endgames/opposition"],
     ["a key with no path after it", "pgn"],
     ["a folder the catalog does not have", "pgn/no-such-folder/whatever"],
-    ["a game the folder does not have", `pgn/${flat.category}/no-such-game`],
+    ["a game the folder does not have", `pgn/${first.category}/no-such-game`],
+    ["a folder named without its parent", `pgn/${first.category.split("/")[1]}/x`],
   ])("comes back undefined for %s", (_name, reference) => {
     expect(resolveGameReference(reference)).toBeUndefined();
   });

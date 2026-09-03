@@ -12,6 +12,10 @@
       "under": "studies",
       "label": { "en": "Puzzles, custom set #1", "he": "חידות, סט מותאם #1" },
       "order": 20
+    },
+    "lichess_study_zwischenzug-best-games-part1_by_lalala732_2026.04.12.pgn": {
+      "under": "studies",
+      "order": 30
     }
   }
 }
