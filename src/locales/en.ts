@@ -520,6 +520,8 @@ const en = {
     /** The detail screen's panel. */
     detail: {
       back: "Back to {{category}}",
+      /** The top-right close button — the same destination as `back`, terser. */
+      close: "Close",
       fen: "Position at this move (FEN)",
       openInAnalysis: "Analysis",
       openInLoadPgn: "PGN viewer",

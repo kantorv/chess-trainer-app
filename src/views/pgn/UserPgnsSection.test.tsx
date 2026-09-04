@@ -243,6 +243,14 @@ describe("the User PGNs section", () => {
     expect(screen.getByTestId("user-pgns-list")).toBeInTheDocument();
   });
 
+  it("closes to the same folder from the top-right close button", async () => {
+    renderAt(`/pgn/${PLAYED}/${played.id}`);
+
+    await userEvent.click(screen.getByTestId("user-pgn-detail-close"));
+
+    expect(screen.getByTestId("user-pgns-list")).toBeInTheDocument();
+  });
+
   it("says so, and renders no board, for a folder that does not exist", () => {
     renderAt("/pgn/no-such-file");
 

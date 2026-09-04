@@ -376,6 +376,7 @@ const he: typeof en = {
     },
     detail: {
       back: "חזרה אל {{category}}",
+      close: "סגירה",
       fen: "העמדה במסע הזה (FEN)",
       openInAnalysis: "ניתוח",
       openInLoadPgn: "מציג PGN",

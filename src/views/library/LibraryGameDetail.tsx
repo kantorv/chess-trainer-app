@@ -1,10 +1,12 @@
 import { useMemo, useState } from "react";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import IconButton from "@mui/material/IconButton";
 import Stack from "@mui/material/Stack";
 import Tab from "@mui/material/Tab";
 import Tabs from "@mui/material/Tabs";
 import Typography from "@mui/material/Typography";
+import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import { createSearchParams, useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 import { Chessboard, type ChessboardOptions } from "react-chessboard";
@@ -160,7 +162,30 @@ function LibraryGameDetail({ section, category, item }: Props) {
         >
           {/* Fixed head: where the reader came from, and what they are looking at. */}
           <Box sx={{ flexShrink: 0 }}>
-            <BackToCategory section={section} category={category} />
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "flex-start",
+                justifyContent: "space-between",
+                gap: 1,
+              }}
+            >
+              <BackToCategory section={section} category={category} />
+              {/*
+                A second, terser way out — top-right, the conventional close
+                corner — to the same destination `BackToCategory` links: the
+                folder this game sits in, i.e. the parent PGN index page.
+              */}
+              <IconButton
+                size="small"
+                onClick={() => navigate(`${section.routeBase}/${category.path}`)}
+                aria-label={t(`${section.chromeKey}.detail.close`)}
+                data-testid={`${section.itemTestId}-detail-close`}
+                sx={{ mt: -0.5, mr: -0.5 }}
+              >
+                <CloseRoundedIcon fontSize="small" />
+              </IconButton>
+            </Box>
             <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
               {name}
             </Typography>
