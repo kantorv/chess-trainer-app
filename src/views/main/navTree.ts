@@ -86,9 +86,50 @@ export const buildNavTree = <Id extends string>(
     ],
   }));
 
+/**
+ * Fold a redundant category folder into its list screen.
+ *
+ * The three library sections — Mates, Positions, User PGNs — each model a
+ * category as a folder holding one same-named list screen. For a **leaf**
+ * category that folder is pure overhead: a second click, a second copy of the
+ * name, and nothing inside it but the one screen. So the sidebar renders it as
+ * just that screen.
+ *
+ * The rule is exactly "one child, and it is a screen":
+ *
+ * - a category that also holds **sub-folders** keeps its folder, and its own
+ *   list screen sits alongside them (two-or-more children — untouched);
+ * - a manifest **group** that gathers several `.pgn` files under one named
+ *   folder keeps its folder too — once its own leaf children have folded down
+ *   to screens it holds several of them, which is again two-or-more children.
+ *
+ * Applied **below the top level only**: the top-level rows are app-area
+ * groupings (Engine, Games, Tools…), not categories, and both `navTree` and the
+ * landing page expect every one of them to stay a folder.
+ */
+export const collapseLeafCategory = (node: NavTreeNode): NavTreeNode => {
+  if (node.kind !== "folder") return node;
+  const children = (node.children ?? []).map(collapseLeafCategory);
+  return children.length === 1 && children[0].kind === "screen"
+    ? children[0]
+    : { ...node, children };
+};
+
+/**
+ * The built tree with every redundant leaf-category folder folded away. Kept
+ * out of `buildNavTree` itself so the pure builder still round-trips a fixture
+ * unchanged; `navTree` is the one caller that wants the fold.
+ */
+export const collapseLeafCategories = (tree: NavTreeNode[]): NavTreeNode[] =>
+  tree.map((folder) =>
+    folder.kind === "folder"
+      ? { ...folder, children: (folder.children ?? []).map(collapseLeafCategory) }
+      : folder,
+  );
+
 /** Build the tree fresh from the registries. Cheap — a handful of nodes. */
 export const navTree = (): NavTreeNode[] =>
-  buildNavTree(navFolders, navItemsInFolder);
+  collapseLeafCategories(buildNavTree(navFolders, navItemsInFolder));
 
 /**
  * The folder ids from the top of the tree down to the screen at `to`, in order

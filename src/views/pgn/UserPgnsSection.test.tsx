@@ -68,8 +68,8 @@ const renderAt = (path: string) =>
   );
 
 const PLAYED =
-  "studies/lichess-study-zwischenzug-best-games-part1-by-lalala732-2026-04-12";
-const STUDY = "studies/lichess-study-queen-vs-rook-rosettes-by-methurst-2021-07-08";
+  "lichess-study-zwischenzug-best-games-part1-by-lalala732-2026-04-12";
+const STUDY = "lichess-study-queen-vs-rook-rosettes-by-methurst-2021-07-08";
 
 const played = itemsInLibraryCategory(PLAYED, pgnCatalog)[0];
 if (played.kind !== "game") throw new Error("expected a game");

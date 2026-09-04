@@ -3,13 +3,14 @@ import GridViewRoundedIcon from "@mui/icons-material/GridViewRounded";
 import { TreeManager } from "../../lib/treeManager";
 import {
   buildNavTree,
+  collapseLeafCategories,
   folderChain,
   folderPath,
   navLabelKeys,
   navTree,
   type NavTreeNode,
 } from "./navTree";
-import { navItems } from "./navItems";
+import { navItems, navItemsInFolder } from "./navItems";
 import { navFolders } from "./navFolders";
 
 describe("the shipped nav tree", () => {
@@ -26,17 +27,26 @@ describe("the shipped nav tree", () => {
   });
 
   it("files every screen under the folder it names", () => {
+    const raw = buildNavTree(navFolders, navItemsInFolder);
+
     for (const item of navItems) {
-      const breadcrumb = folderPath(item.to);
       /*
-        The breadcrumb is the whole ancestor chain, top down — one id for a
-        screen in a top-level folder, two for one inside a sub-folder. What the
-        registration promises is the *last* of them: the folder the screen
-        actually names. Asserting the chain is exactly `[item.folder]` would be
-        asserting that nothing is ever nested, which `navFolders` no longer is.
+        In the raw tree every screen still sits directly under the folder it
+        names — that is the registration contract, unchanged.
       */
-      expect(breadcrumb.length).toBeGreaterThan(0);
-      expect(breadcrumb.at(-1)).toBe(item.folder);
+      const registered = folderPath(item.to, raw);
+      expect(registered.length).toBeGreaterThan(0);
+      expect(registered.at(-1)).toBe(item.folder);
+
+      /*
+        The rendered tree folds a redundant leaf-category folder away, so a
+        screen that named one now hangs one level up. The breadcrumb is then a
+        *prefix* of the registered chain — never empty, never a different
+        branch.
+      */
+      const rendered = folderPath(item.to);
+      expect(rendered.length).toBeGreaterThan(0);
+      expect(registered.slice(0, rendered.length)).toEqual(rendered);
     }
   });
 
@@ -170,5 +180,116 @@ describe("buildNavTree nests folders to any depth", () => {
     expect(again).toEqual(tree);
     expect(again).not.toBe(tree);
     expect(nested[0].children?.[0].id).toBe("inner");
+  });
+});
+
+describe("collapseLeafCategories folds a redundant category folder", () => {
+  const icon = GridViewRoundedIcon;
+
+  /*
+    Every shape the fold has to tell apart, one level down from a section root:
+
+    - `leaf`   — a folder with one screen and nothing else → becomes the screen
+    - `group`  — a folder with several screens (a multi-file PGN group, once its
+                 own leaf children have folded) → stays a folder
+    - `parent` — a folder with a sub-folder *and* its own list screen → stays a
+                 folder, and the sub-folder folds inside it
+  */
+  const section: NavTreeNode = {
+    kind: "folder",
+    id: "section",
+    label: { en: "Section" },
+    icon,
+    children: [
+      {
+        kind: "folder",
+        id: "section:leaf",
+        label: { en: "Leaf" },
+        icon,
+        children: [
+          { kind: "screen", id: "/s/leaf", label: { en: "Leaf" }, icon, to: "/s/leaf" },
+        ],
+      },
+      {
+        kind: "folder",
+        id: "section:group",
+        label: { en: "Group" },
+        icon,
+        children: [
+          {
+            kind: "folder",
+            id: "section:group/a",
+            label: { en: "A" },
+            icon,
+            children: [
+              { kind: "screen", id: "/s/group/a", label: { en: "A" }, icon, to: "/s/group/a" },
+            ],
+          },
+          { kind: "screen", id: "/s/group/b", label: { en: "B" }, icon, to: "/s/group/b" },
+        ],
+      },
+      {
+        kind: "folder",
+        id: "section:parent",
+        label: { en: "Parent" },
+        icon,
+        children: [
+          {
+            kind: "folder",
+            id: "section:parent/child",
+            label: { en: "Child" },
+            icon,
+            children: [
+              { kind: "screen", id: "/s/parent/child", label: { en: "Child" }, icon, to: "/s/parent/child" },
+            ],
+          },
+          { kind: "screen", id: "/s/parent", label: { en: "Parent" }, icon, to: "/s/parent" },
+        ],
+      },
+    ],
+  };
+
+  const folded = collapseLeafCategories([section])[0];
+
+  it("keeps the section root a folder and folds its leaf child to a screen", () => {
+    expect(folded.kind).toBe("folder");
+    const [leaf] = folded.children ?? [];
+    expect(leaf).toMatchObject({ kind: "screen", to: "/s/leaf" });
+  });
+
+  it("keeps a folder that still holds more than one child", () => {
+    const group = folded.children?.find((n) => n.id === "section:group");
+    expect(group?.kind).toBe("folder");
+    // Its own leaf child folded, so it now lists two screens.
+    expect(group?.children?.map((n) => `${n.kind}:${n.to}`)).toEqual([
+      "screen:/s/group/a",
+      "screen:/s/group/b",
+    ]);
+  });
+
+  it("keeps a parent that has a sub-folder alongside its own screen", () => {
+    const parent = folded.children?.find((n) => n.id === "section:parent");
+    expect(parent?.kind).toBe("folder");
+    expect(parent?.children?.map((n) => `${n.kind}:${n.id}`)).toEqual([
+      // the sub-folder folded to its screen, the parent's own screen stays
+      "screen:/s/parent/child",
+      "screen:/s/parent",
+    ]);
+  });
+
+  it("never folds a top-level folder, even one holding a single screen", () => {
+    const top: NavTreeNode = {
+      kind: "folder",
+      id: "top",
+      labelKey: "top",
+      icon,
+      children: [
+        { kind: "screen", id: "/only", labelKey: "only", icon, to: "/only" },
+      ],
+    };
+    expect(collapseLeafCategories([top])[0]).toMatchObject({
+      kind: "folder",
+      id: "top",
+    });
   });
 });

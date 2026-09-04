@@ -26,11 +26,13 @@ import type { NavItem } from "./navItems";
  * Two things make that work:
  *
  * - **A category is a folder holding exactly one screen**, its own list, both
- *   carrying the category's name. That is the shape Mates already ships (the
- *   *Basic* folder holding the *Basic mates* screen), so the sidebar reads the
- *   same in both sections, and a category with sub-categories holds them
- *   alongside its own list rather than instead of it. A *position* stays a
- *   route rather than a nav entry, or the sidebar would grow without bound.
+ *   carrying the category's name — and a category with sub-categories holds
+ *   them alongside its own list rather than instead of it. For a *leaf*
+ *   category that folder is redundant, so `collapseLeafCategories` in
+ *   `navTree.ts` folds it back down to just the screen before the sidebar
+ *   renders it (the same fold the hand-written Mates sub-folders now get). A
+ *   *position* stays a route rather than a nav entry, or the sidebar would grow
+ *   without bound.
  * - **A generated node is named from the data**, so it carries `label` rather
  *   than a `labelKey` — see `navTree.ts`. There is no locale key to write, and
  *   `locales.test.ts` keeps asserting exactly what it asserted before.
