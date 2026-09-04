@@ -225,40 +225,6 @@ function LibraryGameDetail({ section, category, item }: Props) {
                     testId={`${section.itemTestId}-fen`}
                   />
                 </Box>
-                {activeComment && (
-                  <Box
-                    data-testid={`${section.itemTestId}-move-comment`}
-                    sx={{
-                      mt: 1.5,
-                      p: 1,
-                      borderRadius: 1,
-                      border: "1px solid",
-                      borderColor: "divider",
-                      bgcolor: "action.hover",
-                    }}
-                  >
-                    <Typography
-                      variant="caption"
-                      sx={{ display: "block", fontWeight: 700, mb: 0.5 }}
-                    >
-                      {moveLabel(activeComment.ply)}
-                    </Typography>
-                    {activeComment.paragraphs.map((paragraph, index) => (
-                      <Typography
-                        key={index}
-                        variant="body2"
-                        sx={{
-                          mb:
-                            index < activeComment.paragraphs.length - 1
-                              ? 0.75
-                              : 0,
-                        }}
-                      >
-                        {paragraph}
-                      </Typography>
-                    ))}
-                  </Box>
-                )}
                 <Box
                   sx={{
                     mt: 2,
@@ -375,6 +341,47 @@ function LibraryGameDetail({ section, category, item }: Props) {
               </Box>
             )}
           </Box>
+
+          {/*
+            Pinned above the controls, outside the scrolling region above — a
+            long game's comment on a move buried deep in the list would
+            otherwise sit off-screen until the reader scrolled the move list
+            down to find it. `flexShrink: 0` keeps it fixed the same way
+            `BoardControls` is.
+          */}
+          {tab === "moves" && activeComment && (
+            <Box
+              data-testid={`${section.itemTestId}-move-comment`}
+              sx={{
+                flexShrink: 0,
+                p: 1,
+                borderRadius: 1,
+                border: "1px solid",
+                borderColor: "divider",
+                bgcolor: "action.hover",
+                maxHeight: "30%",
+                overflowY: "auto",
+              }}
+            >
+              <Typography
+                variant="caption"
+                sx={{ display: "block", fontWeight: 700, mb: 0.5 }}
+              >
+                {moveLabel(activeComment.ply)}
+              </Typography>
+              {activeComment.paragraphs.map((paragraph, index) => (
+                <Typography
+                  key={index}
+                  variant="body2"
+                  sx={{
+                    mb: index < activeComment.paragraphs.length - 1 ? 0.75 : 0,
+                  }}
+                >
+                  {paragraph}
+                </Typography>
+              ))}
+            </Box>
+          )}
 
           <BoardControls
             ply={ply}
