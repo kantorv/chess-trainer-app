@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  allCategories,
   findLibraryCategory,
   itemsInLibraryCategory,
   resolveLibraryPath,
 } from "./libraryCatalog";
+import { pgnKindOf } from "./pgnKind";
 import { gameDisplayName, loadPgnLibrary, slugify } from "./pgnLibrary";
 import { parsePgnGame, splitPgnGames } from "./pgn";
 
@@ -237,6 +239,18 @@ describe("loadPgnLibrary splits a file that holds several studies", () => {
     ).toHaveLength(2);
   });
 
+  it("labels the folders with what they are", () => {
+    /*
+      The taxonomy the section dispatches its screens on (`lib/pgnKind.ts`).
+      A collection is the file, a study is each folder in it — and the study
+      inside a collection is the same kind as a study that arrived in a file of
+      its own, which is why both get `LibraryList`.
+    */
+    expect(catalog.kinds[FILE]).toBe("collection");
+    expect(catalog.kinds[`${FILE}/first-study`]).toBe("study");
+    expect(catalog.kinds[`${FILE}/second-study`]).toBe("study");
+  });
+
   it("leaves a file with one StudyName exactly as it was", () => {
     // The split is the multi-study case and nothing else: every shipped export
     // but one is a single study, and none of them moved.
@@ -251,6 +265,45 @@ describe("loadPgnLibrary splits a file that holds several studies", () => {
 
     expect(played.categories[0].children).toEqual([]);
     expect(itemsInLibraryCategory("games", played)).toHaveLength(2);
+  });
+});
+
+describe("loadPgnLibrary says what kind of thing each folder is", () => {
+  it("tells a study from a file of played games", () => {
+    // A `StudyName` is the whole rule: with one the file is a study, without
+    // one it is games somebody played.
+    const catalog = loadPgnLibrary({
+      "my_study.pgn": STUDY,
+      "games.pgn": CHESS_COM,
+    });
+
+    expect(catalog.kinds["my-study"]).toBe("study");
+    expect(catalog.kinds["games"]).toBe("games");
+  });
+
+  it("calls a manifest group a shelf", () => {
+    // A folder created on the way to a file's own folder groups files and is
+    // nothing else — the kind a missing entry falls back to.
+    const catalog = loadPgnLibrary(
+      { "my_study.pgn": STUDY },
+      { files: { "my_study.pgn": { under: "lessons" } } },
+    );
+
+    expect(catalog.kinds["lessons"]).toBe("shelf");
+    expect(catalog.kinds["lessons/my-study"]).toBe("study");
+    expect(pgnKindOf("lessons/nothing-here", catalog.kinds)).toBe("shelf");
+    expect(pgnKindOf(undefined, catalog.kinds)).toBe("shelf");
+  });
+
+  it("gives every folder it made a kind", () => {
+    const catalog = loadPgnLibrary({
+      "all_my_studies.pgn": MULTI_STUDY,
+      "games.pgn": CHESS_COM,
+    });
+
+    for (const category of allCategories(catalog)) {
+      expect(catalog.kinds[category.path]).toBeDefined();
+    }
   });
 });
 

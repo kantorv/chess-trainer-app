@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes, useSearchParams } from "react-router";
 
@@ -57,7 +57,10 @@ const renderAt = (path: string) =>
                   <>
                     <UserPgnsSection />
                     <RightPanelOutlet />
-                    <LeftPanelOutlet />
+                    {/* The shell's fallback is the nav tree; naming it is how
+                        the tests below tell "this screen claimed the rail"
+                        from "the app's own sidebar is still there". */}
+                    <LeftPanelOutlet fallback={<span>app sidebar</span>} />
                   </>
                 }
               />
@@ -423,5 +426,171 @@ describe("the User PGNs section", () => {
     // Chrome out of `src/locales`; the game's name out of its own tag pairs.
     expect(panel).toHaveTextContent(i18n.t("userPgns.detail.openInAnalysis"));
     expect(panel).toHaveTextContent(played.name.en);
+  });
+});
+
+/**
+ * The section's **dispatcher**, which is where the PGN taxonomy
+ * (`lib/pgnKind.ts`) becomes visible: which screen a `/pgn/*` URL gets, and
+ * which sidebar it gets with it.
+ *
+ * Asserted against the shipped catalog rather than a fixture, because the
+ * promise is about the files in `src/data/pgn/`: a kind that stopped being
+ * recognised would be a screen nobody could reach.
+ */
+
+/** The shipped collection: one file, 28 studies, 169 chapters. */
+const COLLECTION = "/pgn/methurst-public-studies";
+const COLLECTION_STUDY = `${COLLECTION}/queen-vs-rook-lightning`;
+
+describe("a collection gets its own index screen", () => {
+  beforeEach(async () => {
+    await i18n.changeLanguage("en");
+  });
+
+  it("says what the file holds, and who wrote it", () => {
+    renderAt(COLLECTION);
+
+    expect(screen.getByTestId("user-pgns-collection-facts")).toHaveTextContent(
+      "28 studies · 169 chapters",
+    );
+    // The Annotator tag every chapter carries, as a link to the profile.
+    expect(screen.getByTestId("user-pgns-collection-author")).toHaveAttribute(
+      "href",
+      "https://lichess.org/@/methurst",
+    );
+    // Not the shared list screen: no cards, no card-size toggle.
+    expect(screen.queryByTestId("user-pgns-list")).toBeNull();
+  });
+
+  it("renders the file's authored notes in the body, above the studies", () => {
+    // The one place a reader of an index wants prose is on the index — so a
+    // collection's sibling `.mdx` fills the body rather than the narrow panel.
+    renderAt(COLLECTION);
+
+    const notes = screen.getByTestId("user-pgns-collection-notes");
+    expect(
+      within(notes).getByRole("heading", {
+        name: "Queen vs Rook — the whole method",
+      }),
+    ).toBeInTheDocument();
+    expect(within(notes).getByRole("table")).toBeInTheDocument();
+  });
+
+  it("lists every study as a row that says how many chapters it holds", () => {
+    renderAt(COLLECTION);
+
+    const row = screen.getByTestId(
+      "user-pgns-collection-study-queen-vs-rook-adjacent-rosettes",
+    );
+    expect(row).toHaveTextContent("Queen vs Rook, Adjacent Rosettes");
+    expect(row).toHaveTextContent("10 chapters");
+    expect(row).toHaveAttribute(
+      "href",
+      `${COLLECTION}/queen-vs-rook-adjacent-rosettes`,
+    );
+    expect(screen.getAllByTestId(/^user-pgns-collection-study-/)).toHaveLength(28);
+  });
+
+  it("filters the studies by name", async () => {
+    renderAt(COLLECTION);
+
+    await userEvent.type(
+      screen.getByTestId("user-pgns-collection-search"),
+      "lightning",
+    );
+    expect(screen.getAllByTestId(/^user-pgns-collection-study-/)).toHaveLength(1);
+
+    await userEvent.clear(screen.getByTestId("user-pgns-collection-search"));
+    await userEvent.type(
+      screen.getByTestId("user-pgns-collection-search"),
+      "zugzwang",
+    );
+    expect(
+      screen.getByTestId("user-pgns-collection-no-matches"),
+    ).toBeInTheDocument();
+  });
+
+  it("leaves the app's own sidebar in place", () => {
+    // The body *is* the list of studies here, so nothing claims the rail.
+    renderAt(COLLECTION);
+
+    expect(screen.getByText("app sidebar")).toBeInTheDocument();
+    expect(screen.queryByTestId("user-pgns-collection-nav")).toBeNull();
+  });
+});
+
+describe("a study inside a collection", () => {
+  beforeEach(async () => {
+    await i18n.changeLanguage("en");
+  });
+
+  it("is the ordinary list screen, chapters and all", () => {
+    // A study is a study wherever it was filed: the shared screen, unchanged.
+    renderAt(COLLECTION_STUDY);
+
+    expect(screen.getByTestId("user-pgns-list")).toBeInTheDocument();
+    expect(screen.getByTestId("user-pgns-list-count")).toHaveTextContent("Games: 7");
+  });
+
+  it("puts the collection's other studies in the sidebar's place", () => {
+    renderAt(COLLECTION_STUDY);
+
+    const nav = screen.getByTestId("user-pgns-collection-nav");
+    expect(screen.queryByText("app sidebar")).toBeNull();
+
+    const active = within(nav).getByTestId(
+      "user-pgns-collection-nav-study-queen-vs-rook-lightning",
+    );
+    expect(active).toHaveAttribute("aria-current", "true");
+    // Two lines and an icon: the name, and what is behind the click.
+    expect(active).toHaveTextContent("Queen vs Rook, Lightning");
+    expect(active).toHaveTextContent("7 chapters");
+    expect(
+      within(nav).getAllByTestId(/^user-pgns-collection-nav-study-/),
+    ).toHaveLength(28);
+  });
+
+  it("offers the way back out, since claiming the rail hides the sidebar", () => {
+    renderAt(COLLECTION_STUDY);
+
+    for (const testId of [
+      "user-pgns-collection-nav-close",
+      "user-pgns-collection-nav-home",
+    ]) {
+      expect(screen.getByTestId(testId)).toHaveAttribute("href", COLLECTION);
+    }
+  });
+
+  it("keeps the chapter's own sibling nav one level down", () => {
+    // Innermost wins: on a chapter the useful list is that study's chapters,
+    // and one panel is claimed at a time.
+    renderAt(`${COLLECTION_STUDY}/chapter-1`);
+
+    expect(screen.getByTestId("user-pgn-sibling-nav")).toBeInTheDocument();
+    expect(screen.queryByTestId("user-pgns-collection-nav")).toBeNull();
+  });
+});
+
+describe("every other kind keeps the screen it had", () => {
+  beforeEach(async () => {
+    await i18n.changeLanguage("en");
+  });
+
+  it("gives a study in its own file the list screen and the app sidebar", () => {
+    renderAt(`/pgn/${STUDY}`);
+
+    expect(screen.getByTestId("user-pgns-list")).toBeInTheDocument();
+    expect(screen.getByText("app sidebar")).toBeInTheDocument();
+    expect(screen.queryByTestId("user-pgns-collection-nav")).toBeNull();
+  });
+
+  it("gives a manifest shelf the list screen, with a card per file", () => {
+    renderAt("/pgn/chess-fundamentals-capablanca");
+
+    expect(screen.getByTestId("user-pgns-list-folder-count")).toHaveTextContent(
+      "Studies: 3",
+    );
+    expect(screen.queryByTestId("user-pgns-collection")).toBeNull();
   });
 });

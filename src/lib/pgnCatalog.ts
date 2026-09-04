@@ -1,5 +1,5 @@
-import { loadPgnLibrary } from "./pgnLibrary";
-import type { LibraryCatalog } from "./libraryCatalog";
+import { loadPgnLibrary, type PgnLibrary } from "./pgnLibrary";
+import type { PgnKinds } from "./pgnKind";
 import rawManifest from "../data/pgn.json";
 
 /**
@@ -38,4 +38,13 @@ const files = import.meta.glob("../data/pgn/*.pgn", {
 }) as Record<string, string>;
 
 /** The shipped catalog, loaded once. */
-export const pgnCatalog: LibraryCatalog = loadPgnLibrary(files, rawManifest);
+export const pgnCatalog: PgnLibrary = loadPgnLibrary(files, rawManifest);
+
+/**
+ * What kind of thing each shipped folder is, keyed by category path — a study,
+ * a collection of studies, a shelf of files, a file of played games
+ * ([`pgnKind.ts`](./pgnKind.ts)). It is what `views/pgn/UserPgnsSection.tsx`
+ * dispatches on, and it is re-exported here so a screen imports the catalog and
+ * its kinds from one module.
+ */
+export const pgnKinds: PgnKinds = pgnCatalog.kinds;

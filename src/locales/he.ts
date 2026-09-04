@@ -385,6 +385,16 @@ const he: typeof en = {
         comfortable: "כרטיסים מרווחים",
       },
     },
+    collection: {
+      studies_one: "מחקר {{count}}",
+      studies_other: "{{count}} מחקרים",
+      chapters_one: "פרק {{count}}",
+      chapters_other: "{{count}} פרקים",
+      by: "מאת {{author}}",
+      search: "חיפוש מחקרים",
+      noMatches: "אין מחקרים שמתאימים לחיפוש הזה.",
+      hint: "בחרו מחקר כדי לראות את הפרקים שלו.",
+    },
     detail: {
       back: "חזרה אל {{category}}",
       close: "סגירה",

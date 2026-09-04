@@ -541,6 +541,25 @@ const en = {
         comfortable: "Comfortable cards",
       },
     },
+    /**
+     * The **collection** screen — the index of a `.pgn` file that holds several
+     * studies (`views/pgn/PgnCollection.tsx`), and its left-hand nav.
+     *
+     * A section-specific block, which the shared key shape explicitly allows:
+     * only this section has files, so only this section has a kind of folder
+     * that is a shelf of studies rather than a folder of games.
+     */
+    collection: {
+      studies_one: "{{count}} study",
+      studies_other: "{{count}} studies",
+      chapters_one: "{{count}} chapter",
+      chapters_other: "{{count}} chapters",
+      /** The `Annotator` tag the chapters agree on, when they do. */
+      by: "by {{author}}",
+      search: "Search studies",
+      noMatches: "No studies match that search.",
+      hint: "Pick a study to see its chapters.",
+    },
     /** The detail screen's panel. */
     detail: {
       back: "Back to {{category}}",

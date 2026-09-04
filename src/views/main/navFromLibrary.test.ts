@@ -7,7 +7,8 @@ import {
   loadLibraryCatalog,
 } from "../../lib/libraryCatalog";
 import { loadPgnLibrary } from "../../lib/pgnLibrary";
-import { pgnCatalog } from "../../lib/pgnCatalog";
+import { pgnCatalog, pgnKinds } from "../../lib/pgnCatalog";
+import { pgnKindOf } from "../../lib/pgnKind";
 import { positionsCatalog } from "../../lib/positionsCatalog";
 import {
   libraryNavFolder,
@@ -321,18 +322,38 @@ describe("the generated User PGNs subtree", () => {
   });
 
   it("reaches every catalog folder that has games, and no others", () => {
-    // Dropping a `.pgn` into `src/data/pgn/` is a route the sidebar offers, with
-    // nothing else edited. This is that promise, asserted — but a manifest group
-    // (`chess-fundamentals-capablanca`) holds only its parts, so it is a folder
-    // without a screen and is not among the routes.
+    /*
+      Dropping a `.pgn` into `src/data/pgn/` is a route the sidebar offers, with
+      nothing else edited. This is that promise, asserted — with the two
+      exceptions the section declares: a manifest group
+      (`chess-fundamentals-capablanca`) holds only its parts, so it is a folder
+      without a screen; a **collection** holds only its studies but claims a
+      screen anyway through `hasScreen`, because its index page
+      (`views/pgn/PgnCollection.tsx`) is where its notes and counts live.
+    */
     const listable = allCategories(pgnCatalog).filter(
-      (category) => itemsInLibraryCategory(category.path, pgnCatalog).length > 0,
+      (category) =>
+        itemsInLibraryCategory(category.path, pgnCatalog).length > 0 ||
+        pgnKindOf(category.path, pgnKinds) === "collection",
     );
     expect(listable.length).toBeLessThan(allCategories(pgnCatalog).length);
+    // The collection is in it, and it holds no chapters of its own.
+    expect(listable.map((category) => category.path)).toContain(
+      "methurst-public-studies",
+    );
 
     expect(userPgnsNavItems().map((item) => item.to).sort()).toEqual(
       listable.map((category) => `/pgn/${category.path}`).sort(),
     );
+  });
+
+  it("gives a manifest shelf no screen, and a collection one", () => {
+    // The `hasScreen` override, at its two ends: both folders group and hold
+    // nothing, and only the one with a screen of its own gets a row.
+    const routes = userPgnsNavItems().map((item) => item.to);
+
+    expect(routes).toContain("/pgn/methurst-public-studies");
+    expect(routes).not.toContain("/pgn/chess-fundamentals-capablanca");
   });
 
   it("cannot collide with the other generated section's ids", () => {

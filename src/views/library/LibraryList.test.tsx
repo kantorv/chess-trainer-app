@@ -306,11 +306,18 @@ describe("LibraryList", () => {
   });
 
   describe("a category's sub-folders", () => {
-    /* Positions ships one of each shape: `queen-vs-rook` holds a position of
-       its own *and* the Rosettes sub-folder, and the multi-study PGN export is
-       a folder of twenty-eight studies and no chapters of its own. */
+    /*
+      Two shapes, both shipped: `queen-vs-rook` (Positions) holds a position of
+      its own *and* the Rosettes sub-folder; the Capablanca manifest group holds
+      three files and nothing of its own.
+
+      Not the multi-study PGN export, though it is the same shape as the second:
+      the User PGNs section routes that path to `PgnCollection` rather than
+      here (`views/pgn/UserPgnsSection.tsx`), so testing the shared screen
+      against it would assert a screen the app does not show for it.
+    */
     const MIXED = "queen-vs-rook";
-    const MULTI_STUDY = "methurst-public-studies";
+    const GROUP = "chess-fundamentals-capablanca";
 
     it("renders a folder card in the same grid, ahead of the item cards", () => {
       renderList(positionsSection, MIXED);
@@ -325,19 +332,20 @@ describe("LibraryList", () => {
     });
 
     it("counts everything under a folder, not the folder's own items", () => {
-      // Its own list is empty; the click behind it leads to 169 chapters.
-      renderList(userPgnsSection, MULTI_STUDY);
+      // The group holds no chapters itself; the click behind each card leads to
+      // one part's forty-odd.
+      renderList(userPgnsSection, GROUP);
 
-      expect(
-        screen.getByTestId("user-pgns-list-folder-queen-vs-rook-adjacent-rosettes"),
-      ).toHaveTextContent("Games: 10");
+      const [card] = screen.getAllByTestId(/^user-pgns-list-folder-lichess/);
+      expect(card).toHaveTextContent(/Games: \d+/);
+      expect(card).not.toHaveTextContent("Games: 0");
     });
 
     it("counts the folders in the top bar, in the section's own words", () => {
-      renderList(userPgnsSection, MULTI_STUDY);
+      renderList(userPgnsSection, GROUP);
 
       expect(screen.getByTestId("user-pgns-list-folder-count")).toHaveTextContent(
-        "Studies: 28",
+        "Studies: 3",
       );
       // No games of its own, so no game count beside it.
       expect(screen.queryByTestId("user-pgns-list-count")).toBeNull();
@@ -346,14 +354,11 @@ describe("LibraryList", () => {
 
     it("searches the folders as well as the cards", async () => {
       const user = userEvent.setup();
-      renderList(userPgnsSection, MULTI_STUDY);
+      renderList(userPgnsSection, GROUP);
 
-      await user.type(screen.getByTestId("user-pgns-list-search"), "lightning");
+      await user.type(screen.getByTestId("user-pgns-list-search"), "part 2");
 
-      expect(
-        screen.getByTestId("user-pgns-list-folder-queen-vs-rook-lightning"),
-      ).toBeInTheDocument();
-      expect(screen.getAllByTestId(/^user-pgns-list-folder-queen/)).toHaveLength(1);
+      expect(screen.getAllByTestId(/^user-pgns-list-folder-lichess/)).toHaveLength(1);
       expect(screen.getByTestId("user-pgns-list-folder-count")).toHaveTextContent(
         "Studies: 1",
       );
@@ -361,7 +366,7 @@ describe("LibraryList", () => {
 
     it("says nothing matched when the search empties both", async () => {
       const user = userEvent.setup();
-      renderList(userPgnsSection, MULTI_STUDY);
+      renderList(userPgnsSection, GROUP);
 
       await user.type(screen.getByTestId("user-pgns-list-search"), "zugzwang");
 
@@ -372,7 +377,7 @@ describe("LibraryList", () => {
     it("registers the panel for a folder that only holds folders", () => {
       // It has something to click, so it has something to say about clicking
       // it — the hint, or this folder's own notes.
-      render(listTree(userPgnsSection, MULTI_STUDY, <span>shell placeholder</span>));
+      render(listTree(userPgnsSection, GROUP, <span>shell placeholder</span>));
 
       expect(screen.getByTestId("layout-right-panel")).toHaveTextContent(
         "Pick a game to replay it",

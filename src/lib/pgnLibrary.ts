@@ -7,6 +7,7 @@ import {
   type LocalizedText,
 } from "./libraryCatalog";
 import { PgnParseError, parsePgnGame, splitPgnGames } from "./pgn";
+import type { PgnKinds } from "./pgnKind";
 
 /**
  * The **User PGNs** library, built out of the `.pgn` files the project ships —
@@ -73,6 +74,17 @@ import { PgnParseError, parsePgnGame, splitPgnGames } from "./pgn";
  * loads. A broken file must not take the other folders — or the app, since this
  * runs at module scope — down with it.
  */
+
+/**
+ * What this loader returns: an ordinary {@link LibraryCatalog}, plus **what
+ * kind of thing each folder is** (`lib/pgnKind.ts`).
+ *
+ * Two values rather than a field on `LibraryCategory`, because a category is
+ * shared with the two position sections and a `.pgn` kind means nothing there —
+ * the same rule that keeps folder notes out of the catalog. Everything that
+ * takes a `LibraryCatalog` takes this unchanged.
+ */
+export type PgnLibrary = LibraryCatalog & { kinds: PgnKinds };
 
 /** What the manifest may say about one file. Every field is optional. */
 export type PgnManifestEntry = {
@@ -268,16 +280,23 @@ export const studyGroupsOf = (
  *
  * A file holding more than one `StudyName` becomes a folder of study
  * sub-folders — see {@link studyGroupsOf} and the note at the top of the file.
+ *
+ * Every folder is also labelled with a {@link PgnKind}, which is what lets the
+ * section give a collection a different screen from a study
+ * (`views/pgn/UserPgnsSection.tsx`). The kinds ride **beside** the catalog
+ * rather than inside it: `LibraryCategory` serves three sections and only this
+ * one has `.pgn` files behind it.
  */
 export const loadPgnLibrary = (
   files: Record<string, string>,
   rawManifest?: unknown,
-): LibraryCatalog => {
+): PgnLibrary => {
   const problems: string[] = [];
   const manifest = readPgnManifest(rawManifest, problems);
 
   const roots: Building[] = [];
   const byPath = new Map<string, Building>();
+  const kinds: PgnKinds = {};
 
   /**
    * The folder at this path, created — with every ancestor it needs — if it is
@@ -302,6 +321,12 @@ export const loadPgnLibrary = (
       children: [],
     };
     byPath.set(path, category);
+    /*
+      A folder created on the way to another one is a grouping folder and
+      nothing else, so `shelf` is the floor. The caller that meant to create
+      *this* path overwrites it with what the file actually is.
+    */
+    kinds[path] = "shelf";
 
     if (segments.length === 1) {
       roots.push(category);
@@ -419,6 +444,9 @@ export const loadPgnLibrary = (
             ? { en: studyName }
             : { en: humanizeFileName(fileName) }),
       );
+      // A `StudyName` is what makes a file a study; without one it is a file of
+      // played games, and the two are told apart nowhere else (`lib/pgnKind.ts`).
+      kinds[path] = studyName !== undefined ? "study" : "games";
       addGames(path, parsed);
       continue;
     }
@@ -430,6 +458,7 @@ export const loadPgnLibrary = (
       of the things inside it.
     */
     folderAt(path, entry?.label ?? { en: humanizeFileName(fileName) });
+    kinds[path] = "collection";
 
     const takenSlugs = new Set<string>();
     groups.forEach((group, index) => {
@@ -449,9 +478,12 @@ export const loadPgnLibrary = (
 
       const studyPath = `${path}/${slug}`;
       folderAt(studyPath, { en: group.study });
+      // One study of a collection is a study like any other, and gets the same
+      // screen as a study that came in a file of its own.
+      kinds[studyPath] = "study";
       addGames(studyPath, group.games);
     });
   }
 
-  return libraryCatalogOf(roots, items, problems);
+  return { ...libraryCatalogOf(roots, items, problems), kinds };
 };
