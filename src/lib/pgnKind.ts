@@ -17,6 +17,14 @@
  * | `collection` | one file holding **several** studies | a file with two or more `StudyName`s | `PgnCollection` — an index of its studies, with the collection's own left-hand nav |
  * | `shelf` | a folder of several **files** | a `src/data/pgn.json` `under` path | `LibraryList` — a card per sub-folder |
  * | `games` | played games, not a study at all | a file with no `StudyName` (a chess.com export) | `LibraryList` — a card per game |
+ * | `uploads` | **not a file at all** — the folder the reader puts files in | the one folder `lib/pgnUploads.ts` builds | `PgnUploads` — the upload button, and what has been uploaded |
+ *
+ * `uploads` is the odd one, and deliberately so: it is a *place* rather than a
+ * genre, which is why it is the only kind that is declared rather than
+ * recognised. What lands **inside** it is recognised like anything else — an
+ * uploaded lichess study is a `study`, an uploaded export of every study its
+ * author wrote is a `collection` — because an upload goes through the same
+ * loader a shipped file does.
  *
  * ## Adding a kind
  *
@@ -42,7 +50,7 @@
  */
 
 /** What a User PGNs folder is. See the table above. */
-export type PgnKind = "study" | "collection" | "shelf" | "games";
+export type PgnKind = "study" | "collection" | "shelf" | "games" | "uploads";
 
 /** Category path → what that folder is. Every folder the loader made is in it. */
 export type PgnKinds = Record<string, PgnKind>;

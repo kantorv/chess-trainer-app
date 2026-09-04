@@ -33,8 +33,12 @@ export type NavItem = {
  * (`navFromLibrary.ts`), one per category at any depth, both named from their
  * data. Each is served by a single splat route, so a new category — or a new
  * PGN file — needs no entry here and no route either.
+ *
+ * A **function**, for the reason `navFolders` is one: a `.pgn` the reader
+ * uploads adds a screen while the app is running, so the list is built when it
+ * is asked for rather than when this module is imported.
  */
-export const navItems: readonly NavItem[] = [
+export const navItems = (): readonly NavItem[] => [
   {
     to: "/engine/play",
     labelKey: "nav.playWithEngine",
@@ -95,4 +99,4 @@ export const navItems: readonly NavItem[] = [
 
 /** The screens filed under one folder, in registration order. */
 export const navItemsInFolder = (folder: NavFolderId): readonly NavItem[] =>
-  navItems.filter((item) => item.folder === folder);
+  navItems().filter((item) => item.folder === folder);

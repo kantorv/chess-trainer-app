@@ -1,6 +1,6 @@
 import { PGN_REFERENCE_KEY } from "../../lib/gameReference";
 import { matesCatalog } from "../../lib/matesCatalog";
-import { pgnCatalog } from "../../lib/pgnCatalog";
+import { userPgnsLibrary } from "../../lib/pgnCatalog";
 import { positionsCatalog } from "../../lib/positionsCatalog";
 import type { LibraryCatalog } from "../../lib/libraryCatalog";
 import type { FolderNotes } from "./folderNotes";
@@ -102,7 +102,17 @@ export const positionsSection: LibrarySection = {
  */
 export const userPgnsSection: LibrarySection = {
   routeBase: "/pgn",
-  catalog: pgnCatalog,
+  /*
+    A getter, uniquely among the three sections: this library is the shipped
+    `.pgn` files **plus whatever the reader has uploaded**, and an upload
+    happens while the app is running. `userPgnsLibrary()` is memoised on the
+    stored uploads, so reading it per render costs a string comparison; what
+    re-*renders* on a change is whoever subscribed (`views/pgn/useUploads.ts`).
+    The other two sections' catalogs are build-time constants and stay fields.
+  */
+  get catalog() {
+    return userPgnsLibrary();
+  },
   chromeKey: "userPgns",
   listTestId: "user-pgns-list",
   itemTestId: "user-pgn",

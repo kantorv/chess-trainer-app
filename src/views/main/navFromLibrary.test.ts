@@ -7,7 +7,7 @@ import {
   loadLibraryCatalog,
 } from "../../lib/libraryCatalog";
 import { loadPgnLibrary } from "../../lib/pgnLibrary";
-import { pgnCatalog, pgnKinds } from "../../lib/pgnCatalog";
+import { userPgnsLibrary } from "../../lib/pgnCatalog";
 import { pgnKindOf } from "../../lib/pgnKind";
 import { positionsCatalog } from "../../lib/positionsCatalog";
 import {
@@ -100,7 +100,7 @@ const idsOf = (folders: readonly NavFolder[]) =>
   new TreeManager<NavFolder>(folders).collectIds("id");
 
 /** The shipped tree before the leaf-category fold — the registration contract. */
-const rawShippedTree = () => buildNavTree(navFolders, navItemsInFolder);
+const rawShippedTree = () => buildNavTree(navFolders(), navItemsInFolder);
 
 /**
  * A generated screen is in the shipped (rendered) tree under `section`, and the
@@ -259,9 +259,22 @@ describe("the generated User PGNs subtree", () => {
 
     expect(folder.id).toBe("user-pgns");
     expect(folder.labelKey).toBe("nav.folders.userPgns");
-    // The section is chrome and is named from the catalog; a *file* is content
-    // and is named from itself, so it carries a `label` and no key.
+    /*
+      The section is chrome and is named from the catalog; a *file* is content
+      and is named from itself, so it carries a `label` and no key.
+
+      The Uploads folder is the one exception, and the reason the two naming
+      fields exist: it is a *place to put files* rather than a file, it ships
+      with the app and is there before anything is in it, so it is chrome and
+      carries a key like the authored folders do. What lands inside it is named
+      from itself again.
+    */
     for (const child of folder.children ?? []) {
+      if (child.id === "user-pgns:uploads") {
+        expect(child.labelKey).toBe("userPgns.uploads.title");
+        expect(child.label).toBeUndefined();
+        continue;
+      }
       expect(child.labelKey).toBeUndefined();
       expect(child.label?.en).toBeTruthy();
     }
@@ -331,12 +344,16 @@ describe("the generated User PGNs subtree", () => {
       screen anyway through `hasScreen`, because its index page
       (`views/pgn/PgnCollection.tsx`) is where its notes and counts live.
     */
-    const listable = allCategories(pgnCatalog).filter(
-      (category) =>
-        itemsInLibraryCategory(category.path, pgnCatalog).length > 0 ||
-        pgnKindOf(category.path, pgnKinds) === "collection",
-    );
-    expect(listable.length).toBeLessThan(allCategories(pgnCatalog).length);
+    const library = userPgnsLibrary();
+    const listable = allCategories(library).filter((category) => {
+      const kind = pgnKindOf(category.path, library.kinds);
+      return (
+        itemsInLibraryCategory(category.path, library).length > 0 ||
+        kind === "collection" ||
+        kind === "uploads"
+      );
+    });
+    expect(listable.length).toBeLessThan(allCategories(library).length);
     // The collection is in it, and it holds no chapters of its own.
     expect(listable.map((category) => category.path)).toContain(
       "methurst-public-studies",
@@ -353,6 +370,8 @@ describe("the generated User PGNs subtree", () => {
     const routes = userPgnsNavItems().map((item) => item.to);
 
     expect(routes).toContain("/pgn/methurst-public-studies");
+    // The Uploads folder, always — its screen is how a file gets in.
+    expect(routes).toContain("/pgn/uploads");
     expect(routes).not.toContain("/pgn/chess-fundamentals-capablanca");
   });
 

@@ -5,13 +5,14 @@ import {
   resolveLibraryPath,
   type LibraryCategory,
 } from "../../lib/libraryCatalog";
-import { pgnKinds } from "../../lib/pgnCatalog";
+import { userPgnsLibrary } from "../../lib/pgnCatalog";
 import { pgnKindOf } from "../../lib/pgnKind";
 import LibraryDetail from "../library/LibraryDetail";
 import LibraryList from "../library/LibraryList";
 import { userPgnsSection } from "../library/section";
 import PgnCollection from "./PgnCollection";
 import PgnCollectionNav from "./PgnCollectionNav";
+import PgnUploads from "./PgnUploads";
 
 /**
  * The User PGNs section — **one component behind every `/pgn/*` URL**, at every
@@ -32,6 +33,7 @@ import PgnCollectionNav from "./PgnCollectionNav";
  *
  * | Kind | Screen | Sidebar |
  * | --- | --- | --- |
+ * | `uploads` — the folder the reader's own files land in | `PgnUploads` — the upload button, and what has been uploaded | the app's own |
  * | `collection` — one file, several studies | `PgnCollection` — an index of the studies, with the file's authored notes | the app's own |
  * | `study` **inside** a collection | `LibraryList` — a card per chapter | `PgnCollectionNav` — the collection's other studies |
  * | `study`, `games`, `shelf` | `LibraryList` | the app's own |
@@ -54,7 +56,8 @@ const collectionOf = (category: LibraryCategory): LibraryCategory | undefined =>
   if (parentPath === "") return undefined;
 
   const parent = findLibraryCategory(parentPath, userPgnsSection.catalog);
-  return parent !== undefined && pgnKindOf(parent.path, pgnKinds) === "collection"
+  return parent !== undefined &&
+    pgnKindOf(parent.path, userPgnsLibrary().kinds) === "collection"
     ? parent
     : undefined;
 };
@@ -97,8 +100,13 @@ function UserPgnsSection() {
   }
 
   const category = location.category;
+  const kind = pgnKindOf(category.path, userPgnsLibrary().kinds);
 
-  if (pgnKindOf(category.path, pgnKinds) === "collection") {
+  if (kind === "uploads") {
+    return <PgnUploads section={userPgnsSection} />;
+  }
+
+  if (kind === "collection") {
     return <PgnCollection section={userPgnsSection} category={category} />;
   }
 

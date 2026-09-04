@@ -4,7 +4,7 @@ import LibraryBooksRoundedIcon from "@mui/icons-material/LibraryBooksRounded";
 import SnippetFolderRoundedIcon from "@mui/icons-material/SnippetFolderRounded";
 import ViewListRoundedIcon from "@mui/icons-material/ViewListRounded";
 
-import { pgnCatalog, pgnKinds } from "../../lib/pgnCatalog";
+import { userPgnsLibrary } from "../../lib/pgnCatalog";
 import { pgnKindOf } from "../../lib/pgnKind";
 import { positionsCatalog } from "../../lib/positionsCatalog";
 import {
@@ -61,7 +61,8 @@ export type LibraryNavOptions = {
    * A section overrides it when one of its grouping folders has a screen worth
    * reaching anyway — the User PGNs **collection**, whose index page is a real
    * screen (`views/pgn/PgnCollection.tsx`) rather than a list that would come
-   * out empty.
+   * out empty, and its **Uploads** folder, whose screen is the upload button
+   * itself and therefore has to be there before anything is in the folder.
    */
   hasScreen?: (category: LibraryCategory) => boolean;
   /** Folder id of the section's root folder, and the namespace of every id under it. */
@@ -184,7 +185,10 @@ export const userPgnsNavOptions: LibraryNavOptions = {
     author and its authored notes, and a folder that only expands would leave
     that unreachable. Every other group (a manifest shelf) keeps the default.
   */
-  hasScreen: (category) => pgnKindOf(category.path, pgnKinds) === "collection",
+  hasScreen: (category) => {
+    const kind = pgnKindOf(category.path, userPgnsLibrary().kinds);
+    return kind === "collection" || kind === "uploads";
+  },
   rootId: "user-pgns",
   rootLabelKey: "nav.folders.userPgns",
   rootIcon: SnippetFolderRoundedIcon,
@@ -193,10 +197,14 @@ export const userPgnsNavOptions: LibraryNavOptions = {
   screenIcon: ViewListRoundedIcon,
 };
 
-/** The User PGNs folder subtree, built from the shipped catalog. */
+/**
+ * The User PGNs folder subtree, built from the **live** library — the shipped
+ * files plus whatever the reader has uploaded, which is why this section's
+ * registries are functions called per render rather than constants.
+ */
 export const userPgnsNavFolder = (): NavFolder =>
-  libraryNavFolder(pgnCatalog, userPgnsNavOptions);
+  libraryNavFolder(userPgnsLibrary(), userPgnsNavOptions);
 
-/** The User PGNs list screens, built from the shipped catalog. */
+/** The User PGNs list screens, from that same live library. */
 export const userPgnsNavItems = (): NavItem[] =>
-  libraryNavItems(pgnCatalog, userPgnsNavOptions);
+  libraryNavItems(userPgnsLibrary(), userPgnsNavOptions);

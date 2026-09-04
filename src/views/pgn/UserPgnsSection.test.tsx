@@ -13,6 +13,7 @@ import { fenAtPly } from "../../lib/gameNavigation";
 import { extractPgnComments, hasPgnComments } from "../../lib/pgnComments";
 import { RightPanelOutlet, RightPanelProvider } from "../main/rightPanel";
 import { LeftPanelOutlet, LeftPanelProvider } from "../main/leftPanel";
+import { addUpload, clearUploads } from "../../lib/pgnUploadStore";
 import UserPgnsSection from "./UserPgnsSection";
 
 /* Stubbed for the reason in `.claude/rules/chessboard.md` §8 — jsdom has no
@@ -592,5 +593,173 @@ describe("every other kind keeps the screen it had", () => {
       "Studies: 3",
     );
     expect(screen.queryByTestId("user-pgns-collection")).toBeNull();
+  });
+});
+
+/**
+ * **Uploads** — the reader's own files, and the one folder in this section that
+ * is a place rather than a file (`lib/pgnKind.ts`).
+ *
+ * The screen is driven through a real `<input type="file">`: `userEvent.upload`
+ * hands it a `File`, which is what the browser does, so what is asserted is the
+ * whole path — read the file, recognise it, store it, and grow the catalog the
+ * rest of the section reads.
+ */
+const STUDY_PGN = `[Event "Uploaded: Chapter 1"]
+[Result "*"]
+[StudyName "Uploaded Study"]
+[ChapterName "Chapter 1"]
+
+1. e4 e5 *
+
+[Event "Uploaded: Chapter 2"]
+[Result "*"]
+[StudyName "Uploaded Study"]
+[ChapterName "Chapter 2"]
+
+1. d4 d5 *
+
+`;
+
+const pgnFile = (name: string, text = STUDY_PGN) =>
+  new File([text], name, { type: "application/x-chess-pgn" });
+
+describe("the Uploads folder", () => {
+  beforeEach(async () => {
+    await i18n.changeLanguage("en");
+    clearUploads();
+  });
+
+  it("is reachable with nothing in it, and offers the button", () => {
+    renderAt("/pgn/uploads");
+
+    expect(screen.getByTestId("user-pgns-uploads")).toBeInTheDocument();
+    expect(screen.getByTestId("user-pgns-uploads-button")).toHaveTextContent(
+      "Upload lichess study",
+    );
+    expect(screen.getByTestId("user-pgns-uploads-empty")).toBeInTheDocument();
+    expect(screen.getByTestId("user-pgns-uploads-count")).toHaveTextContent(
+      "Files: 0",
+    );
+  });
+
+  it("says where the files are kept", () => {
+    // A reader who uploads a study they care about should know this is a
+    // browser and not a backup.
+    renderAt("/pgn/uploads");
+
+    expect(screen.getByTestId("user-pgns-uploads-storage-note")).toHaveTextContent(
+      "kept in this browser only",
+    );
+  });
+
+  it("keeps a picked file and lists what it turned out to be", async () => {
+    renderAt("/pgn/uploads");
+
+    await userEvent.upload(
+      screen.getByTestId("user-pgns-uploads-input"),
+      pgnFile("my_study.pgn"),
+    );
+
+    const row = await screen.findByTestId("user-pgns-uploads-item-my_study.pgn");
+    // Named from its own StudyName tag, like any other file in the section.
+    expect(row).toHaveTextContent("Uploaded Study");
+    expect(row).toHaveTextContent("Study · Games: 2");
+    expect(row).toHaveAttribute("href", "/pgn/uploads/my-study");
+    expect(screen.getByTestId("user-pgns-uploads-count")).toHaveTextContent(
+      "Files: 1",
+    );
+  });
+
+  it("puts the uploaded study into the catalog the whole section reads", async () => {
+    renderAt("/pgn/uploads");
+    await userEvent.upload(
+      screen.getByTestId("user-pgns-uploads-input"),
+      pgnFile("my_study.pgn"),
+    );
+    await screen.findByTestId("user-pgns-uploads-item-my_study.pgn");
+
+    // The ordinary list screen, at the ordinary splat route.
+    await userEvent.click(screen.getByTestId("user-pgns-uploads-item-my_study.pgn"));
+
+    expect(screen.getByTestId("user-pgns-list-top-bar")).toHaveTextContent(
+      "Uploaded Study",
+    );
+    expect(screen.getByTestId("user-pgn-card-chapter-1")).toBeInTheDocument();
+  });
+
+  it("replays an uploaded chapter like any other game", async () => {
+    addUpload("my_study.pgn", STUDY_PGN);
+    renderAt("/pgn/uploads/my-study/chapter-1");
+
+    expect(screen.getByTestId("board")).toBeInTheDocument();
+    // The shared detail screen, with its hand-offs — nothing knows it was
+    // uploaded rather than shipped.
+    expect(screen.getByTestId("user-pgn-open-analysis")).toBeInTheDocument();
+  });
+
+  it("hands an uploaded game on with ?game=, like a shipped one", async () => {
+    addUpload("my_study.pgn", STUDY_PGN);
+    renderAt("/pgn/uploads/my-study/chapter-1");
+
+    await userEvent.click(screen.getByTestId("user-pgn-open-analysis"));
+
+    expect(screen.getByTestId("analysis-arrival")).toHaveAttribute(
+      "data-game",
+      "pgn/uploads/my-study/chapter-1",
+    );
+  });
+
+  it("splits an uploaded multi-study export into a collection", async () => {
+    const twoStudies = `${STUDY_PGN}[Event "Second: Chapter 1"]
+[Result "*"]
+[StudyName "Second Study"]
+[ChapterName "Chapter 1"]
+
+1. c4 *
+
+`;
+    renderAt("/pgn/uploads");
+    await userEvent.upload(
+      screen.getByTestId("user-pgns-uploads-input"),
+      pgnFile("all_studies.pgn", twoStudies),
+    );
+
+    const row = await screen.findByTestId("user-pgns-uploads-item-all_studies.pgn");
+    expect(row).toHaveTextContent("Studies · Games: 3");
+
+    await userEvent.click(row);
+    // The collection index, recognised rather than declared.
+    expect(screen.getByTestId("user-pgns-collection")).toBeInTheDocument();
+    expect(screen.getByTestId("user-pgns-collection-facts")).toHaveTextContent(
+      "2 studies · 3 chapters",
+    );
+  });
+
+  it("refuses a file with no readable game, and says which", async () => {
+    renderAt("/pgn/uploads");
+
+    await userEvent.upload(
+      screen.getByTestId("user-pgns-uploads-input"),
+      pgnFile("broken.pgn", '[Event "x"]\n\n1. e4 Qxh8 *\n'),
+    );
+
+    expect(await screen.findByTestId("user-pgns-uploads-rejected")).toHaveTextContent(
+      "broken.pgn holds no game that could be read.",
+    );
+    // Nothing was kept, so no empty folder appeared in the sidebar.
+    expect(screen.getByTestId("user-pgns-uploads-empty")).toBeInTheDocument();
+  });
+
+  it("removes one on request", async () => {
+    addUpload("my_study.pgn", STUDY_PGN);
+    renderAt("/pgn/uploads");
+
+    await userEvent.click(
+      screen.getByTestId("user-pgns-uploads-remove-my_study.pgn"),
+    );
+
+    expect(screen.getByTestId("user-pgns-uploads-empty")).toBeInTheDocument();
+    expect(screen.queryByTestId("user-pgns-uploads-item-my_study.pgn")).toBeNull();
   });
 });

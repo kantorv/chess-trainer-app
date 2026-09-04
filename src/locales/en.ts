@@ -549,6 +549,39 @@ const en = {
      * only this section has files, so only this section has a kind of folder
      * that is a shelf of studies rather than a folder of games.
      */
+    /**
+     * The **Uploads** screen — the reader's own `.pgn` files
+     * (`views/pgn/PgnUploads.tsx`). Chrome, all of it: the folder ships with
+     * the app and is there before any file is, unlike the folders inside it,
+     * which are named from the files themselves.
+     */
+    uploads: {
+      /** The folder's name, in the sidebar and on the screen. */
+      title: "Uploads",
+      /** The button — a lichess study export is what it is mostly for. */
+      upload: "Upload lichess study",
+      count: "Files: {{count}}",
+      empty: "Nothing uploaded yet. Pick a .pgn file — a lichess study export, a chess.com download, or any PGN.",
+      hint: "In a lichess study, use the study menu → Export chapters, then pick the file here. An export of all of an author's studies works too: each study becomes a folder of its own.",
+      /** Said plainly: this is a browser, not a backup. */
+      storage: "Uploads are kept in this browser only. Clearing site data removes them, and they do not follow you to another device.",
+      remove: "Remove {{name}}",
+      /** What a file turned out to be — the `PgnKind` it loaded as. */
+      kinds: {
+        study: "Study",
+        collection: "Studies",
+        games: "Games",
+        shelf: "Folder",
+        uploads: "Uploads",
+      },
+      /** Why a picked file was not kept. Keyed by `UploadProblem`. */
+      problems: {
+        empty: "{{name}} is empty.",
+        unreadable: "{{name}} holds no game that could be read.",
+        "too-large": "{{name}} is too large to keep in this browser.",
+        storage: "{{name}} could not be saved — this browser's storage is full.",
+      },
+    },
     collection: {
       studies_one: "{{count}} study",
       studies_other: "{{count}} studies",

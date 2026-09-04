@@ -34,10 +34,27 @@ screen that suits it. The kinds live in
 | **`collection`** | one file holding **several** studies | two or more `StudyName`s | `PgnCollection` — the file's index: counts, author, its `.mdx` notes, and a row per study | the app's own |
 | **`shelf`** | a folder of several **files** | a `pgn.json` `under` path | `LibraryList` — a card per sub-folder | the app's own |
 | **`games`** | played games, no study at all | no `StudyName` (a chess.com export) | `LibraryList` — a card per game | the app's own |
+| **`uploads`** | **not a file** — the folder the reader's own files land in | the one folder `src/lib/pgnUploads.ts` builds | `PgnUploads` — the upload button, and what has been uploaded | the app's own |
 
 An **item** — one chapter, one game — is the same everywhere: `LibraryDetail`
 replays it, with its neighbours in the left panel. What kind of folder it came
 out of makes no difference to it.
+
+### The reader's own files: `/pgn/uploads`
+
+This folder is **not** in this directory — it is whatever the reader has
+uploaded, kept in their browser's `localStorage`
+([`src/lib/pgnUploads.ts`](../../lib/pgnUploads.ts) and its store). Everything
+above still applies to it: an uploaded file goes through the **same loader**
+under the same `under:` mechanism, so a lichess study becomes a folder of
+chapters, an export of every study its author wrote becomes a `collection` with
+its own index, and a chess.com download becomes a folder of games — recognised,
+never declared. Its chapters route, search, replay and hand themselves on with
+`?game=` exactly as a shipped file's do.
+
+What it is **not** is a way to add content to this repository: uploads live in
+one browser, are lost when site data is cleared, and follow the reader to no
+other device. Content that should ship belongs here, as a file.
 
 ### Adding a kind
 

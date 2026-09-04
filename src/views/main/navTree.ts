@@ -129,7 +129,7 @@ export const collapseLeafCategories = (tree: NavTreeNode[]): NavTreeNode[] =>
 
 /** Build the tree fresh from the registries. Cheap — a handful of nodes. */
 export const navTree = (): NavTreeNode[] =>
-  collapseLeafCategories(buildNavTree(navFolders, navItemsInFolder));
+  collapseLeafCategories(buildNavTree(navFolders(), navItemsInFolder));
 
 /**
  * The folder ids from the top of the tree down to the screen at `to`, in order
