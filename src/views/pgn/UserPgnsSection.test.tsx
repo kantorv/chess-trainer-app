@@ -1,7 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter, Route, Routes, useSearchParams } from "react-router";
+import {
+  MemoryRouter,
+  Route,
+  Routes,
+  useLocation,
+  useSearchParams,
+} from "react-router";
 
 import i18n from "../../i18n";
 import AppThemeWithLang from "../../theme/AppThemeWithLang";
@@ -41,9 +47,15 @@ const Arrival = ({ name }: { name: string }) => {
       data-testid={`${name}-arrival`}
       data-fen={params.get("fen")}
       data-game={params.get("game")}
+      data-move={params.get("move")}
     />
   );
 };
+
+/** What the address bar currently says — for the `?move=` reflection. */
+const LocationSearch = () => (
+  <div data-testid="location-search" data-search={useLocation().search} />
+);
 
 const renderAt = (path: string) =>
   render(
@@ -62,6 +74,7 @@ const renderAt = (path: string) =>
                         the tests below tell "this screen claimed the rail"
                         from "the app's own sidebar is still there". */}
                     <LeftPanelOutlet fallback={<span>app sidebar</span>} />
+                    <LocationSearch />
                   </>
                 }
               />
@@ -241,6 +254,90 @@ describe("the User PGNs section", () => {
       "data-fen",
       fenAtPly(played.game, 2),
     );
+  });
+
+  it.each([
+    ["analysis", "user-pgn-open-analysis"],
+    ["load-pgn", "user-pgn-open-load-pgn"],
+  ])("carries the ply on screen to %s as &move=", async (arrival, testId) => {
+    renderAt(`/pgn/${PLAYED}/${played.id}`);
+
+    const next = screen.getByRole("button", {
+      name: i18n.t("gamePanel.controls.next"),
+    });
+    await userEvent.click(next);
+    await userEvent.click(next);
+    await userEvent.click(screen.getByTestId(testId));
+
+    const landed = screen.getByTestId(`${arrival}-arrival`);
+    expect(landed).toHaveAttribute("data-game", `pgn/${PLAYED}/${played.id}`);
+    expect(landed).toHaveAttribute("data-move", "2");
+  });
+
+  it("omits &move= from the hand-off at ply 0", async () => {
+    renderAt(`/pgn/${PLAYED}/${played.id}`);
+
+    await userEvent.click(screen.getByTestId("user-pgn-open-analysis"));
+
+    expect(screen.getByTestId("analysis-arrival")).not.toHaveAttribute(
+      "data-move",
+    );
+  });
+
+  describe("the ?move= in the address bar", () => {
+    const next = () => screen.getByTestId("board-control-next");
+    const first = () => screen.getByTestId("board-control-first");
+    const search = () =>
+      screen.getByTestId("location-search").getAttribute("data-search") ?? "";
+
+    it("reflects the ply on screen, replacing in place", async () => {
+      renderAt(`/pgn/${PLAYED}/${played.id}`);
+      expect(search()).not.toContain("move=");
+
+      await userEvent.click(next());
+      await userEvent.click(next());
+      expect(search()).toContain("move=2");
+      expect(screen.getByTestId("board")).toHaveAttribute(
+        "data-position",
+        fenAtPly(played.game, 2),
+      );
+    });
+
+    it("drops the parameter back at ply 0 rather than writing move=0", async () => {
+      renderAt(`/pgn/${PLAYED}/${played.id}`);
+
+      await userEvent.click(next());
+      expect(search()).toContain("move=1");
+      await userEvent.click(first());
+      expect(search()).not.toContain("move=");
+    });
+
+    it("opens on the ply the URL names", () => {
+      renderAt(`/pgn/${PLAYED}/${played.id}?move=3`);
+
+      expect(screen.getByTestId("board")).toHaveAttribute(
+        "data-position",
+        fenAtPly(played.game, 3),
+      );
+    });
+
+    it("clamps a ply past the end of the game rather than throwing", () => {
+      renderAt(`/pgn/${PLAYED}/${played.id}?move=99999`);
+
+      expect(screen.getByTestId("board")).toHaveAttribute(
+        "data-position",
+        fenAtPly(played.game, played.game.moves.length),
+      );
+    });
+
+    it("ignores a ?move= that is not a ply", () => {
+      renderAt(`/pgn/${PLAYED}/${played.id}?move=abc`);
+
+      expect(screen.getByTestId("board")).toHaveAttribute(
+        "data-position",
+        fenAtPly(played.game, 0),
+      );
+    });
   });
 
   it("closes to the same folder from the top-right close button", async () => {

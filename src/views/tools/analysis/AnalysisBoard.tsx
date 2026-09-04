@@ -15,6 +15,7 @@ import {
 } from "react-chessboard";
 import { FenParseError, parseFen } from "../../../lib/fen";
 import { resolveGameReference } from "../../../lib/gameReference";
+import { parseMoveParam } from "../../../lib/gameNavigation";
 import type { GameTree } from "../../../lib/gameTree";
 import {
   EmptyPgnError,
@@ -116,7 +117,18 @@ function AnalysisBoard() {
     }
   }, [requestedGame]);
 
-  const state = useAnalysisBoard(initialFen, initialTree);
+  /*
+    The `?move=` that rode beside the `?game=`, if any: the mainline ply the
+    board opens on. Read with the same discipline as its siblings — parsed once,
+    and a value that will not parse is as absent as the parameter being missing.
+  */
+  const requestedMove = searchParams.get("move");
+  const initialPly = useMemo(
+    () => parseMoveParam(requestedMove),
+    [requestedMove],
+  );
+
+  const state = useAnalysisBoard(initialFen, initialTree, initialPly);
 
   /*
     Ingestion state: what the reader has typed, what came out of the last

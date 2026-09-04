@@ -379,13 +379,25 @@ is for:
 
 | Destination | Carries | Because |
 | --- | --- | --- |
-| Analysis Board, Load PGN | `?game=` | they replay a game, so the game has to cross |
+| Analysis Board, Load PGN | `?game=` (+ `?move=` at the ply on screen) | they replay a game, so the game has to cross — and it opens where the reader was |
 | Play with Engine, Board Editor | `?fen=` at the **ply on screen** | neither replays anything; what they want is the position being looked at |
 
 The Analysis Board re-reads the referenced PGN with `parsePgnTree` rather than
 taking the catalog's parsed `Game`: the catalog holds a **mainline** (`chess.js`
 `loadPgn` discards `( … )`), and side lines are the one thing an analysis board
 is for.
+
+**`?move=` rides beside `?game=`, and the study page's own URL too.** A
+reference names the game but not where the reader was in it, so the detail page
+reflects every step into its own URL with history **replace** (`?move=<ply>`,
+the same half-move unit `useGameNavigation` speaks; ply 0 deletes the
+parameter), and the two `?game=` hand-offs append it. Both destinations take it
+as *initial* state like any other arrival — Load PGN as the first render's
+ply, the Analysis Board as a mainline walk (`useTreeNavigation` seeds the node
+id, because its state is a node, not a ply). Validation is the one rule the
+other two parameters already keep: `parseMoveParam` (`lib/gameNavigation.ts`)
+ignores anything that is not a non-negative integer, and a value past the end
+of the game is clamped on read, exactly like a ply from any other source.
 
 The rules the libraries rest on:
 

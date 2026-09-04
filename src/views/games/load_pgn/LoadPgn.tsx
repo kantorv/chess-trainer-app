@@ -11,6 +11,7 @@ import { useSearchParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import { Chessboard, type ChessboardOptions } from "react-chessboard";
 import { resolveGameReference } from "../../../lib/gameReference";
+import { parseMoveParam } from "../../../lib/gameNavigation";
 import { EmptyPgnError, PgnParseError, parsePgnGames } from "../../../lib/pgn";
 import type { Game } from "../../../lib/gameModel";
 import { RightPanel } from "../../main/rightPanel";
@@ -66,6 +67,18 @@ function LoadPgn() {
     [requestedGame],
   );
 
+  /*
+    The `?move=` that rode beside the `?game=`, if this is that hand-off: the
+    ply the reader was on becomes the first render's ply (clamped on read, like
+    any ply). Absent or unreadable means ply 0 — the arrival's long-standing
+    default.
+  */
+  const requestedMove = searchParams.get("move");
+  const initialPly = useMemo(
+    () => parseMoveParam(requestedMove) ?? 0,
+    [requestedMove],
+  );
+
   const [games, setGames] = useState<readonly Game[]>(() =>
     arrived === undefined ? [] : [arrived.game],
   );
@@ -86,7 +99,10 @@ function LoadPgn() {
     instance here on purpose — every ply already carries the FEN of the position
     after it (`lib/pgn.ts`), so nothing needs re-simulating.
   */
-  const { ply, lastPly, fen, arrows, goToPly } = useGameNavigation(current);
+  const { ply, lastPly, fen, arrows, goToPly } = useGameNavigation(
+    current,
+    initialPly,
+  );
 
   /*
     A freshly loaded game opens on its final position — the most informative
