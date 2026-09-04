@@ -1,16 +1,25 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import IconButton from "@mui/material/IconButton";
 import Stack from "@mui/material/Stack";
 import Tab from "@mui/material/Tab";
 import Tabs from "@mui/material/Tabs";
 import Typography from "@mui/material/Typography";
+import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
+import QueryStatsRoundedIcon from "@mui/icons-material/QueryStatsRounded";
+import MenuBookRoundedIcon from "@mui/icons-material/MenuBookRounded";
+import PlayArrowRoundedIcon from "@mui/icons-material/PlayArrowRounded";
+import EditRoundedIcon from "@mui/icons-material/EditRounded";
 import { createSearchParams, useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 import { Chessboard, type ChessboardOptions } from "react-chessboard";
 
 import { asAppLanguage } from "../../i18n";
 import { gameReferenceOf } from "../../lib/gameReference";
+import { initialFenOf } from "../../lib/gameModel";
+import { startNumbering } from "../../lib/gameNavigation";
+import { extractPgnComments, hasPgnComments } from "../../lib/pgnComments";
 import {
   localizedText,
   type LibraryCategory,
@@ -22,7 +31,6 @@ import GameInfo from "../shared/GameInfo";
 import MoveList from "../shared/MoveList";
 import { useGameNavigation } from "../shared/useGameNavigation";
 import { RightPanel } from "../main/rightPanel";
-import BackToCategory from "./BackToCategory";
 import type { LibrarySection } from "./section";
 
 /**
@@ -57,8 +65,18 @@ import type { LibrarySection } from "./section";
  * the same mechanism the Board Editor has always used.
  */
 
-const TAB_IDS = ["moves", "info"] as const;
+const TAB_IDS = ["moves", "info", "description"] as const;
 type TabId = (typeof TAB_IDS)[number];
+
+/** The four hand-offs, sized down to fit beside the close button in the head. */
+const compactButtonSx = {
+  fontSize: "0.6875rem",
+  lineHeight: 1.2,
+  paddingBlock: 0.25,
+  paddingInline: 0.75,
+  minWidth: 0,
+  "& .MuiButton-startIcon": { marginInlineEnd: 0.5 },
+} as const;
 
 type Props = {
   section: LibrarySection;
@@ -78,6 +96,34 @@ function LibraryGameDetail({ section, category, item }: Props) {
 
   const name = localizedText(item.name, language);
   const description = localizedText(item.description, language);
+
+  /**
+   * The annotation text the PGN carries — the preamble and every mainline move
+   * comment, re-flowed. Read from the raw chunk rather than the parsed `Game`
+   * because `chess.js` has already flattened the paragraph breaks out of the
+   * latter (see `lib/pgnComments.ts`).
+   */
+  const comments = useMemo(() => extractPgnComments(item.pgn), [item.pgn]);
+  const gameHasComments = hasPgnComments(comments);
+
+  /** Plies that carry a move comment — the marker set for the move list. */
+  const annotatedPlies = useMemo(
+    () => new Set(comments.moves.map((entry) => entry.ply)),
+    [comments],
+  );
+
+  /** The comment on the move currently on screen, if it has one. */
+  const activeComment = comments.moves.find((entry) => entry.ply === ply);
+
+  /** `"27. h5"` / `"27... Rf6"` for the move a comment belongs to. */
+  const moveLabel = (targetPly: number): string => {
+    const move = item.game.moves[targetPly - 1];
+    if (move === undefined) return `#${targetPly}`;
+    const { whiteFirst, firstNumber } = startNumbering(initialFenOf(item.game));
+    const slot = targetPly - 1 + (whiteFirst ? 0 : 1);
+    const number = firstNumber + Math.floor(slot / 2);
+    return `${number}${slot % 2 === 0 ? "." : "..."} ${move.san}`;
+  };
 
   const boardOptions: ChessboardOptions = {
     id: `${section.itemTestId}-detail-${item.id}`,
@@ -129,8 +175,78 @@ function LibraryGameDetail({ section, category, item }: Props) {
         >
           {/* Fixed head: where the reader came from, and what they are looking at. */}
           <Box sx={{ flexShrink: 0 }}>
-            <BackToCategory section={section} category={category} />
-            <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "flex-start",
+                justifyContent: "space-between",
+                gap: 1,
+              }}
+            >
+              {/*
+                The four hand-offs, top-left — where `BackToCategory` used to
+                sit. That link is gone: it pointed at the same folder the new
+                close button (top-right) does, so keeping both was one exit
+                twice over.
+              */}
+              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+                <Button
+                  size="small"
+                  variant="contained"
+                  startIcon={<QueryStatsRoundedIcon sx={{ fontSize: "1rem" }} />}
+                  onClick={handOffGameTo("/tools/analysis")}
+                  data-testid={`${section.itemTestId}-open-analysis`}
+                  sx={compactButtonSx}
+                >
+                  {t(`${section.chromeKey}.detail.openInAnalysis`)}
+                </Button>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={<MenuBookRoundedIcon sx={{ fontSize: "1rem" }} />}
+                  onClick={handOffGameTo("/games/load-pgn")}
+                  data-testid={`${section.itemTestId}-open-load-pgn`}
+                  sx={compactButtonSx}
+                >
+                  {t(`${section.chromeKey}.detail.openInLoadPgn`)}
+                </Button>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={<PlayArrowRoundedIcon sx={{ fontSize: "1rem" }} />}
+                  onClick={handOffFenTo("/engine/play")}
+                  data-testid={`${section.itemTestId}-play-engine`}
+                  sx={compactButtonSx}
+                >
+                  {t(`${section.chromeKey}.detail.playWithEngine`)}
+                </Button>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={<EditRoundedIcon sx={{ fontSize: "1rem" }} />}
+                  onClick={handOffFenTo("/tools/editor")}
+                  data-testid={`${section.itemTestId}-open-editor`}
+                  sx={compactButtonSx}
+                >
+                  {t(`${section.chromeKey}.detail.openInEditor`)}
+                </Button>
+              </Box>
+              {/*
+                A second, terser way out — top-right, the conventional close
+                corner — to the folder this game sits in, i.e. the parent PGN
+                index page.
+              */}
+              <IconButton
+                size="small"
+                onClick={() => navigate(`${section.routeBase}/${category.path}`)}
+                aria-label={t(`${section.chromeKey}.detail.close`)}
+                data-testid={`${section.itemTestId}-detail-close`}
+                sx={{ mt: -0.5, mr: -0.5, flexShrink: 0 }}
+              >
+                <CloseRoundedIcon fontSize="small" />
+              </IconButton>
+            </Box>
+            <Typography variant="subtitle1" sx={{ fontWeight: 700, mt: 1 }}>
               {name}
             </Typography>
             <Typography variant="body2" sx={{ color: "text.secondary", mt: 0.25 }}>
@@ -185,6 +301,7 @@ function LibraryGameDetail({ section, category, item }: Props) {
                   game={item.game}
                   currentPly={ply}
                   onSelectPly={goToPly}
+                  annotatedPlies={annotatedPlies}
                 />
                 <Box sx={{ mt: 2 }}>
                   <CopyableValue
@@ -193,40 +310,122 @@ function LibraryGameDetail({ section, category, item }: Props) {
                     testId={`${section.itemTestId}-fen`}
                   />
                 </Box>
-                <Stack spacing={1} sx={{ mt: 2 }}>
-                  <Button
-                    variant="contained"
-                    onClick={handOffGameTo("/tools/analysis")}
-                    data-testid={`${section.itemTestId}-open-analysis`}
-                  >
-                    {t(`${section.chromeKey}.detail.openInAnalysis`)}
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    onClick={handOffGameTo("/games/load-pgn")}
-                    data-testid={`${section.itemTestId}-open-load-pgn`}
-                  >
-                    {t(`${section.chromeKey}.detail.openInLoadPgn`)}
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    onClick={handOffFenTo("/engine/play")}
-                    data-testid={`${section.itemTestId}-play-engine`}
-                  >
-                    {t(`${section.chromeKey}.detail.playWithEngine`)}
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    onClick={handOffFenTo("/tools/editor")}
-                    data-testid={`${section.itemTestId}-open-editor`}
-                  >
-                    {t(`${section.chromeKey}.detail.openInEditor`)}
-                  </Button>
-                </Stack>
               </>
             )}
             {tab === "info" && <GameInfo game={item.game} />}
+            {tab === "description" && (
+              <Box data-testid={`${section.itemTestId}-description`}>
+                {!gameHasComments && (
+                  <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                    {t(`${section.chromeKey}.detail.noDescription`)}
+                  </Typography>
+                )}
+
+                {comments.preamble.length > 0 && (
+                  <Box
+                    data-testid={`${section.itemTestId}-description-preamble`}
+                    sx={{ mb: comments.moves.length > 0 ? 2 : 0 }}
+                  >
+                    {comments.preamble.map((paragraph, index) => (
+                      <Typography key={index} variant="body2" sx={{ mb: 1 }}>
+                        {paragraph}
+                      </Typography>
+                    ))}
+                  </Box>
+                )}
+
+                <Stack spacing={1}>
+                  {comments.moves.map((entry) => {
+                    const current = entry.ply === ply;
+                    return (
+                      <Box
+                        key={entry.ply}
+                        component="button"
+                        type="button"
+                        onClick={() => goToPly(entry.ply)}
+                        aria-current={current ? "true" : undefined}
+                        data-testid={`${section.itemTestId}-description-entry-${entry.ply}`}
+                        sx={{
+                          display: "block",
+                          width: "100%",
+                          textAlign: "start",
+                          font: "inherit",
+                          color: "inherit",
+                          cursor: "pointer",
+                          p: 1,
+                          borderRadius: 1,
+                          border: "1px solid",
+                          borderColor: current ? "primary.main" : "divider",
+                          bgcolor: current ? "action.selected" : "transparent",
+                          "&:hover": { bgcolor: "action.hover" },
+                        }}
+                      >
+                        <Typography
+                          variant="caption"
+                          sx={{ display: "block", fontWeight: 700, mb: 0.5 }}
+                        >
+                          {moveLabel(entry.ply)}
+                        </Typography>
+                        {entry.paragraphs.map((paragraph, index) => (
+                          <Typography
+                            key={index}
+                            variant="body2"
+                            sx={{
+                              mb:
+                                index < entry.paragraphs.length - 1 ? 0.75 : 0,
+                            }}
+                          >
+                            {paragraph}
+                          </Typography>
+                        ))}
+                      </Box>
+                    );
+                  })}
+                </Stack>
+              </Box>
+            )}
           </Box>
+
+          {/*
+            Pinned above the controls, outside the scrolling region above — a
+            long game's comment on a move buried deep in the list would
+            otherwise sit off-screen until the reader scrolled the move list
+            down to find it. `flexShrink: 0` keeps it fixed the same way
+            `BoardControls` is.
+          */}
+          {tab === "moves" && activeComment && (
+            <Box
+              data-testid={`${section.itemTestId}-move-comment`}
+              sx={{
+                flexShrink: 0,
+                p: 1,
+                borderRadius: 1,
+                border: "1px solid",
+                borderColor: "divider",
+                bgcolor: "action.hover",
+                maxHeight: "30%",
+                overflowY: "auto",
+              }}
+            >
+              <Typography
+                variant="caption"
+                sx={{ display: "block", fontWeight: 700, mb: 0.5 }}
+              >
+                {moveLabel(activeComment.ply)}
+              </Typography>
+              {activeComment.paragraphs.map((paragraph, index) => (
+                <Typography
+                  key={index}
+                  variant="body2"
+                  sx={{
+                    mb: index < activeComment.paragraphs.length - 1 ? 0.75 : 0,
+                  }}
+                >
+                  {paragraph}
+                </Typography>
+              ))}
+            </Box>
+          )}
 
           <BoardControls
             ply={ply}

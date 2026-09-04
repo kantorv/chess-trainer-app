@@ -10,6 +10,7 @@ import { matesSection } from "../library/section";
 import { pgnCatalog } from "../../lib/pgnCatalog";
 import { initialFenOf } from "../../lib/gameModel";
 import { fenAtPly } from "../../lib/gameNavigation";
+import { extractPgnComments, hasPgnComments } from "../../lib/pgnComments";
 import { RightPanelOutlet, RightPanelProvider } from "../main/rightPanel";
 import UserPgnsSection from "./UserPgnsSection";
 
@@ -234,10 +235,10 @@ describe("the User PGNs section", () => {
     );
   });
 
-  it("links back to the folder a game sits in", async () => {
+  it("closes to the same folder from the top-right close button", async () => {
     renderAt(`/pgn/${PLAYED}/${played.id}`);
 
-    await userEvent.click(screen.getByTestId("user-pgn-detail-back"));
+    await userEvent.click(screen.getByTestId("user-pgn-detail-close"));
 
     expect(screen.getByTestId("user-pgns-list")).toBeInTheDocument();
   });
@@ -260,13 +261,110 @@ describe("the User PGNs section", () => {
     expect(screen.queryByTestId("board")).toBeNull();
   });
 
+  it("opens on the Moves tab, not the new Description tab", () => {
+    renderAt(`/pgn/${PLAYED}/${played.id}`);
+
+    expect(
+      screen.getByTestId("user-pgn-detail-content-moves"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("user-pgn-detail-content-description"),
+    ).toBeNull();
+  });
+
+  it("shows the chapter's re-flowed preamble in the Description tab", async () => {
+    // Rosettes Chapter 1 opens with a multi-paragraph note on the starting
+    // position and carries no per-move comments.
+    renderAt(`/pgn/${STUDY}/chapter-1`);
+
+    await userEvent.click(screen.getByTestId("user-pgn-tab-description"));
+
+    const preamble = screen.getByTestId("user-pgn-description-preamble");
+    expect(preamble).toHaveTextContent("three different rosette types");
+    // The numbered points the source wrote with single newlines survive as
+    // their own paragraphs.
+    expect(preamble.querySelectorAll("p").length).toBeGreaterThan(1);
+  });
+
+  it("labels each move comment and jumps the board to that ply on click", async () => {
+    const comments = extractPgnComments(played.pgn);
+    const first = comments.moves[0];
+    expect(first).toBeDefined();
+
+    renderAt(`/pgn/${PLAYED}/${played.id}`);
+    await userEvent.click(screen.getByTestId("user-pgn-tab-description"));
+
+    const entry = screen.getByTestId(
+      `user-pgn-description-entry-${first.ply}`,
+    );
+    expect(entry).toHaveTextContent(played.game.moves[first.ply - 1].san);
+
+    await userEvent.click(entry);
+
+    expect(screen.getByTestId("board")).toHaveAttribute(
+      "data-position",
+      fenAtPly(played.game, first.ply),
+    );
+  });
+
+  it("marks annotated moves in the Moves list and shows the comment when that move is active", async () => {
+    const comments = extractPgnComments(played.pgn);
+    const first = comments.moves[0];
+    expect(first).toBeDefined();
+
+    renderAt(`/pgn/${PLAYED}/${played.id}`);
+
+    // The move list is the Moves tab, which opens by default.
+    expect(
+      screen.getByTestId(`move-comment-icon-${first.ply}`),
+    ).toBeInTheDocument();
+    // A move with no comment carries no marker.
+    const plain = played.game.moves.find(
+      (move) => !comments.moves.some((entry) => entry.ply === move.ply),
+    );
+    expect(plain).toBeDefined();
+    expect(
+      screen.queryByTestId(`move-comment-icon-${plain!.ply}`),
+    ).toBeNull();
+
+    // Nothing under the FEN until the annotated move is the one on screen.
+    expect(screen.queryByTestId("user-pgn-move-comment")).toBeNull();
+
+    await userEvent.click(screen.getByTestId(`move-ply-${first.ply}`));
+
+    const shown = screen.getByTestId("user-pgn-move-comment");
+    expect(shown).toHaveTextContent(played.game.moves[first.ply - 1].san);
+    expect(shown).toHaveTextContent(first.paragraphs[0].slice(0, 20));
+  });
+
+  it("shows an explicit empty state for a game with no comments", async () => {
+    const PUZZLES =
+      "lichess-study-puzzles-custom-set-1-by-lalala732-2026-05-03";
+    const bare = itemsInLibraryCategory(PUZZLES, pgnCatalog).find(
+      (item) =>
+        item.kind === "game" && !hasPgnComments(extractPgnComments(item.pgn)),
+    );
+    if (bare === undefined || bare.kind !== "game") {
+      throw new Error("expected a puzzle chapter with no comments");
+    }
+
+    renderAt(`/pgn/${PUZZLES}/${bare.id}`);
+    await userEvent.click(screen.getByTestId("user-pgn-tab-description"));
+
+    const panel = screen.getByTestId("user-pgn-description");
+    expect(panel).toHaveTextContent("This game has no annotations.");
+    expect(
+      screen.queryAllByTestId(/^user-pgn-description-entry-/),
+    ).toHaveLength(0);
+  });
+
   it("translates its chrome, and takes its content from the PGN, under Hebrew", async () => {
     await i18n.changeLanguage("he");
     renderAt(`/pgn/${PLAYED}/${played.id}`);
 
     const panel = screen.getByTestId("layout-right-panel");
     // Chrome out of `src/locales`; the game's name out of its own tag pairs.
-    expect(panel).toHaveTextContent("פתיחה בלוח הניתוח");
+    expect(panel).toHaveTextContent(i18n.t("userPgns.detail.openInAnalysis"));
     expect(panel).toHaveTextContent(played.name.en);
   });
 });

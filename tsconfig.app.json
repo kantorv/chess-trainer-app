@@ -5,7 +5,10 @@
     "useDefineForClassFields": true,
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "module": "ESNext",
-    "types": ["vite/client"],
+    // `mdx` is `@types/mdx`: the `declare module "*.mdx"` that lets a folder's
+    // authored notes be imported as a component. Vite compiles them through
+    // `@mdx-js/rollup`; this is the half that makes `tsc -b` accept the import.
+    "types": ["vite/client", "mdx"],
     "skipLibCheck": true,
 
     /* Bundler mode */

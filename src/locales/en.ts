@@ -78,6 +78,8 @@ const en = {
       moves: "Moves",
       info: "Info",
       load: "Load PGN",
+      /** The User PGNs game detail's third tab — its PGN annotation text. */
+      description: "Description",
     },
     /** Accessible names for the icon-only board controls. */
     controls: {
@@ -518,11 +520,15 @@ const en = {
     /** The detail screen's panel. */
     detail: {
       back: "Back to {{category}}",
+      /** The top-right close button — the same destination as `back`, terser. */
+      close: "Close",
       fen: "Position at this move (FEN)",
-      openInAnalysis: "Open in Analysis Board",
-      openInLoadPgn: "Open in Load PGN",
-      playWithEngine: "Play this position",
-      openInEditor: "Edit this position",
+      openInAnalysis: "Analysis",
+      openInLoadPgn: "PGN viewer",
+      playWithEngine: "Play Engine",
+      openInEditor: "Board Editor",
+      /** The Description tab's empty state — a game whose PGN carried no comments. */
+      noDescription: "This game has no annotations.",
     },
     /**
      * Only the *not-found* screens read this, since a game card is captioned by

@@ -102,6 +102,29 @@ describe("the move list", () => {
     expect(cell(0)).toHaveAttribute("aria-current", "true");
   });
 
+  it("flags a move with a comment marker only when its ply is in annotatedPlies", () => {
+    render(
+      <AppThemeWithLang>
+        <MoveList
+          game={game}
+          currentPly={0}
+          onSelectPly={vi.fn()}
+          annotatedPlies={new Set([2])}
+        />
+      </AppThemeWithLang>,
+    );
+
+    expect(screen.getByTestId("move-comment-icon-2")).toBeInTheDocument();
+    expect(screen.queryByTestId("move-comment-icon-1")).toBeNull();
+    expect(cell(2)).toHaveAttribute("data-has-comment", "true");
+    expect(cell(1)).not.toHaveAttribute("data-has-comment");
+  });
+
+  it("renders no comment markers when annotatedPlies is omitted", () => {
+    renderList(0);
+    expect(screen.queryByTestId(/^move-comment-icon-/)).toBeNull();
+  });
+
   it("keeps SAN tokens left-to-right under Hebrew", async () => {
     await i18n.changeLanguage("he");
     renderList(0);

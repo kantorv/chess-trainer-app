@@ -25,6 +25,7 @@ import {
 import { RightPanel } from "../main/rightPanel";
 import { cardSizeTrack, DEFAULT_CARD_SIZE, type CardSize } from "./cardSize";
 import LibraryCardFooter from "./LibraryCardFooter";
+import LibraryNotes from "./LibraryNotes";
 import { filterLibraryItems } from "./librarySearch";
 import { sectionHome, type LibrarySection } from "./section";
 
@@ -72,10 +73,20 @@ import { sectionHome, type LibrarySection } from "./section";
  *
  * The top bar carries what the reader acts on before picking a card — the
  * category's name and how many are in it, the name search, and how big the
- * cards should be. The right-hand panel keeps the hint alone; a category with
- * nothing in it has no hint to give, so it registers no panel at all and the
- * shell's own placeholder stands, exactly as the unknown-category miss below
- * already does.
+ * cards should be. A category with nothing in it has nothing to say about
+ * picking a card, so it registers no panel at all and the shell's own
+ * placeholder stands, exactly as the unknown-category miss below already does.
+ *
+ * ### The right-hand panel: a folder's notes, or the hint
+ *
+ * A folder may carry **authored notes** — what this study is, who wrote it, what
+ * to look for — and the panel is where they go. The lookup arrives on the
+ * section descriptor (`section.folderNotes`, keyed by category path), so this
+ * screen renders whichever section's notes it was handed and knows nothing about
+ * where they came from: the User PGNs section resolves them from `.mdx` files
+ * sitting beside its `.pgn` files, and the other two sections carry none today
+ * and would carry them tomorrow by filling that one field. A folder without
+ * notes keeps the one-line hint, unchanged.
  */
 
 /**
@@ -127,6 +138,13 @@ function LibraryList({ section, categoryPath }: Props) {
 
   const found = findLibraryCategory(categoryPath, section.catalog);
   const items = itemsInLibraryCategory(categoryPath, section.catalog);
+  // This folder's authored notes, if its section has any for it. Keyed by the
+  // same path the catalog is, so a folder either has notes or does not — there
+  // is nothing to resolve, match or fall back through here.
+  const notes =
+    categoryPath === undefined
+      ? undefined
+      : section.folderNotes?.[categoryPath];
 
   // An unknown category in the URL is a miss, not a crash: no board is
   // rendered, and the reader is pointed back at a category that exists.
@@ -326,9 +344,16 @@ function LibraryList({ section, categoryPath }: Props) {
 
       {items.length > 0 && (
         <RightPanel>
-          <Typography variant="body2" sx={{ color: "text.secondary" }}>
-            {t(`${section.chromeKey}.list.hint`)}
-          </Typography>
+          {notes === undefined ? (
+            <Typography variant="body2" sx={{ color: "text.secondary" }}>
+              {t(`${section.chromeKey}.list.hint`)}
+            </Typography>
+          ) : (
+            <LibraryNotes
+              notes={notes}
+              testId={`${section.listTestId}-notes`}
+            />
+          )}
         </RightPanel>
       )}
     </>
