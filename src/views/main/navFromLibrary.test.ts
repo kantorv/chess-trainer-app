@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import GridViewRoundedIcon from "@mui/icons-material/GridViewRounded";
 
 import { allCategories, loadLibraryCatalog } from "../../lib/libraryCatalog";
+import { loadPgnLibrary } from "../../lib/pgnLibrary";
 import { pgnCatalog } from "../../lib/pgnCatalog";
 import { positionsCatalog } from "../../lib/positionsCatalog";
 import {
@@ -13,8 +14,15 @@ import {
   userPgnsNavItems,
   type LibraryNavOptions,
 } from "./navFromLibrary";
-import { buildNavTree, folderPath, navLabelKeys, navTree } from "./navTree";
+import {
+  buildNavTree,
+  collapseLeafCategories,
+  folderPath,
+  navLabelKeys,
+  navTree,
+} from "./navTree";
 import { navItemsInFolder } from "./navItems";
+import { navFolders } from "./navFolders";
 import { TreeManager } from "../../lib/treeManager";
 import type { NavFolder } from "./navFolders";
 
@@ -51,6 +59,25 @@ const catalog = loadLibraryCatalog({
 /** Every folder id in a subtree, depth-first. */
 const idsOf = (folders: readonly NavFolder[]) =>
   new TreeManager<NavFolder>(folders).collectIds("id");
+
+/** The shipped tree before the leaf-category fold — the registration contract. */
+const rawShippedTree = () => buildNavTree(navFolders, navItemsInFolder);
+
+/**
+ * A generated screen is in the shipped (rendered) tree under `section`, and the
+ * fold only ever shortened its breadcrumb — it never moved the screen to a
+ * different branch or dropped it. `folder` is the folder the screen *names*,
+ * still the last id of its breadcrumb in the un-folded tree.
+ */
+const expectFiledUnder = (to: string, folder: string, section: string) => {
+  const registered = folderPath(to, rawShippedTree());
+  const rendered = folderPath(to, navTree());
+
+  expect(rendered[0], `${to} is not under ${section}`).toBe(section);
+  expect(rendered.length).toBeGreaterThan(0);
+  expect(registered.at(-1)).toBe(folder);
+  expect(registered.slice(0, rendered.length)).toEqual(rendered);
+};
 
 describe("libraryNavFolder", () => {
   const folder = libraryNavFolder(catalog, options);
@@ -133,12 +160,10 @@ describe("the generated Positions subtree, as shipped", () => {
 
   it("puts every one of them into the shipped nav tree, under Positions", () => {
     for (const item of positionsNavItems()) {
-      // The breadcrumb is the whole chain from the top, so this asserts both
-      // that the screen is in the tree and that it hangs under the section.
-      const breadcrumb = folderPath(item.to, navTree());
-
-      expect(breadcrumb[0], `${item.to} is not under Positions`).toBe("positions");
-      expect(breadcrumb.at(-1)).toBe(item.folder);
+      // In the tree the sidebar renders, a redundant leaf-category folder is
+      // folded away — so the screen hangs one level up, but under the same
+      // section and never on a different branch.
+      expectFiledUnder(item.to, item.folder, "positions");
       expect(navItemsInFolder(item.folder)).toEqual([item]);
     }
   });
@@ -186,21 +211,49 @@ describe("the generated User PGNs subtree", () => {
     }
   });
 
-  it("nests a folder exactly as the manifest nested the category", () => {
-    const studies = (userPgnsNavFolder().children ?? []).find(
-      (child) => child.id === "user-pgns:studies",
+  it("keeps a manifest group that gathers several files as one folder", () => {
+    /*
+      The multi-file grouping path: two `.pgn` files nested under one named
+      folder via `folders.<id>` + a per-file `under`. Each file's own folder is
+      a leaf and folds down to a screen, but the group folder then holds several
+      of those, so it survives the fold as a folder that lists both files.
+    */
+    const grouped = loadPgnLibrary(
+      {
+        "alpha.pgn": '[Event "Alpha"]\n\n1. e4 e5 *\n',
+        "beta.pgn": '[Event "Beta"]\n\n1. d4 d5 *\n',
+      },
+      {
+        folders: { lessons: { en: "Lessons", he: "שיעורים" } },
+        files: {
+          "alpha.pgn": { under: "lessons" },
+          "beta.pgn": { under: "lessons" },
+        },
+      },
+    );
+    expect(grouped.problems).toEqual([]);
+
+    const opts: LibraryNavOptions = { ...options, rootId: "grp", routeBase: "/grp" };
+    const items = libraryNavItems(grouped, opts);
+    const tree = collapseLeafCategories(
+      buildNavTree([libraryNavFolder(grouped, opts)], (id) =>
+        items.filter((item) => item.folder === id),
+      ),
     );
 
-    expect(studies).toBeDefined();
-    expect((studies?.children ?? []).length).toBeGreaterThan(0);
+    const lessons = tree[0].children?.find((node) => node.id === "grp:lessons");
+    expect(lessons?.kind).toBe("folder");
+
+    const routes = (lessons?.children ?? [])
+      .filter((node) => node.kind === "screen")
+      .map((node) => node.to);
+    expect(routes).toContain("/grp/lessons/alpha");
+    expect(routes).toContain("/grp/lessons/beta");
   });
 
   it("puts every generated screen into the shipped nav tree, under User PGNs", () => {
     for (const item of userPgnsNavItems()) {
-      const breadcrumb = folderPath(item.to, navTree());
-
-      expect(breadcrumb[0], `${item.to} is not under User PGNs`).toBe("user-pgns");
-      expect(breadcrumb.at(-1)).toBe(item.folder);
+      expectFiledUnder(item.to, item.folder, "user-pgns");
       expect(navItemsInFolder(item.folder)).toEqual([item]);
     }
   });

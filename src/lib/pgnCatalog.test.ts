@@ -14,29 +14,31 @@ import { pgnCatalog } from "./pgnCatalog";
  *
  * `pgnLibrary.test.ts` is where the loader's behaviour is pinned down against
  * fixtures. What is asserted here is that the real files come through it: that
- * every game in them parses, that the manifest nests and names the two studies,
- * and — the promise the section rests on — that the file the manifest says
- * nothing about is listed anyway.
+ * every game in them parses, that the manifest names two of the studies, and —
+ * the promise the section rests on — that the file the manifest says nothing
+ * about is listed anyway.
+ *
+ * The three shipped studies sit at the **top level** of the section: the
+ * manifest renames and orders them but no longer nests them under a "Studies"
+ * wrapper, so each file is its own top-level folder.
  */
-const ROSETTES =
-  "studies/lichess-study-queen-vs-rook-rosettes-by-methurst-2021-07-08";
-const PUZZLES =
-  "studies/lichess-study-puzzles-custom-set-1-by-lalala732-2026-05-03";
-const GAMES =
-  "studies/lichess-study-zwischenzug-best-games-part1-by-lalala732-2026-04-12";
+const ROSETTES = "lichess-study-queen-vs-rook-rosettes-by-methurst-2021-07-08";
+const PUZZLES = "lichess-study-puzzles-custom-set-1-by-lalala732-2026-05-03";
+const GAMES = "lichess-study-zwischenzug-best-games-part1-by-lalala732-2026-04-12";
 
 describe("the shipped User PGNs catalog", () => {
   it("loads every file with nothing to report", () => {
     expect(pgnCatalog.problems).toEqual([]);
   });
 
-  it("finds all three files, under the folder the manifest nests them in", () => {
+  it("finds all three files, each a top-level folder of its own", () => {
     const paths = allCategories(pgnCatalog).map((category) => category.path);
 
-    expect(paths).toContain("studies");
     expect(paths).toContain(ROSETTES);
     expect(paths).toContain(PUZZLES);
     expect(paths).toContain(GAMES);
+    // No "Studies" wrapper any more — every path is a single segment.
+    expect(paths.every((path) => !path.includes("/"))).toBe(true);
   });
 
   it("names a folder from the manifest, and one the manifest did not label from its own file", () => {

@@ -12,11 +12,12 @@ import { positionsCatalog } from "./positionsCatalog";
  * The `?game=` carrier: what a detail page writes into a link and what a
  * destination screen gets back out of one.
  *
- * Every shipped folder sits two segments deep (`studies/<file>`), which is the
- * case that matters: a reference is *resolved* against the catalog rather than
- * split by counting segments, so a reader of one never has to know how deep its
- * folder sits. Taking `segments[1]` as the category would pass on a flat library
- * and fail on every reference here.
+ * The shipped User PGNs folders sit one segment deep now, but a reference is
+ * still *resolved* against the catalog rather than split by counting segments —
+ * the leftover after the section key goes to `resolveLibraryPath`, the same
+ * longest-prefix match the splat route uses — so a reference into a folder the
+ * manifest nested any number of levels needs no extra work here.
+ * `resolveLibraryPath`'s own nested fixtures cover the deep case.
  */
 
 const first = pgnCatalog.items[0];
@@ -28,8 +29,7 @@ describe("gameReferenceOf and resolveGameReference round-trip", () => {
     ["one in a different folder", last],
   ])("carries %s there and back", (_name, item) => {
     if (item.kind !== "game") throw new Error("expected a game");
-    // The point of the round trip: a nested category path, crossed whole.
-    expect(item.category.split("/").length).toBeGreaterThan(1);
+    expect(item.category).not.toBe("");
 
     const reference = gameReferenceOf(PGN_REFERENCE_KEY, item);
 
@@ -51,7 +51,7 @@ describe("resolveGameReference refuses everything it cannot resolve", () => {
     ["a key with no path after it", "pgn"],
     ["a folder the catalog does not have", "pgn/no-such-folder/whatever"],
     ["a game the folder does not have", `pgn/${first.category}/no-such-game`],
-    ["a folder named without its parent", `pgn/${first.category.split("/")[1]}/x`],
+    ["the old nested path, since the folders were flattened", `pgn/studies/${first.category}/${first.id}`],
   ])("comes back undefined for %s", (_name, reference) => {
     expect(resolveGameReference(reference)).toBeUndefined();
   });

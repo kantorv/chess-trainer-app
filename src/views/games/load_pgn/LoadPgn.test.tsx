@@ -257,7 +257,7 @@ describe("the Load PGN screen — arriving with a game", () => {
     because arriving at the URL is what mounts the screen.
   */
   const played = itemsInLibraryCategory(
-    "studies/lichess-study-zwischenzug-best-games-part1-by-lalala732-2026-04-12",
+    "lichess-study-zwischenzug-best-games-part1-by-lalala732-2026-04-12",
     pgnCatalog,
   )[0];
   if (played.kind !== "game") throw new Error("expected a game");
