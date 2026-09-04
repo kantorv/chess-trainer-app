@@ -428,6 +428,15 @@ const en = {
       position: "There is no such position in this category.",
       back: "Back to Basic mates",
     },
+    /**
+     * The sibling-nav panel that replaces the sidebar while a detail screen is
+     * open (`views/library/LibrarySiblingNav.tsx`) — the landmark's own label
+     * and its close control, which returns to this category's list.
+     */
+    leftPanel: {
+      ariaLabel: "Other items in {{category}}",
+      close: "Close",
+    },
   },
   /**
    * The endgame Positions section — **chrome only**, and deliberately the same
@@ -476,6 +485,11 @@ const en = {
       category: "There is no such endgame category.",
       position: "There is no such position in this category.",
       back: "Back to the endgame positions",
+    },
+    /** See `mates.leftPanel` above — same shape, same shared component. */
+    leftPanel: {
+      ariaLabel: "Other items in {{category}}",
+      close: "Close",
     },
   },
   /**
@@ -544,6 +558,11 @@ const en = {
       category: "There is no such PGN folder.",
       position: "There is no such game in this folder.",
       back: "Back to the user PGNs",
+    },
+    /** See `mates.leftPanel` above — same shape, same shared component. */
+    leftPanel: {
+      ariaLabel: "Other items in {{category}}",
+      close: "Close",
     },
   },
   footer: {

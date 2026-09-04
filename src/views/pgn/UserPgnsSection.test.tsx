@@ -12,6 +12,7 @@ import { initialFenOf } from "../../lib/gameModel";
 import { fenAtPly } from "../../lib/gameNavigation";
 import { extractPgnComments, hasPgnComments } from "../../lib/pgnComments";
 import { RightPanelOutlet, RightPanelProvider } from "../main/rightPanel";
+import { LeftPanelOutlet, LeftPanelProvider } from "../main/leftPanel";
 import UserPgnsSection from "./UserPgnsSection";
 
 /* Stubbed for the reason in `.claude/rules/chessboard.md` §8 — jsdom has no
@@ -48,21 +49,24 @@ const renderAt = (path: string) =>
     <AppThemeWithLang>
       <MemoryRouter initialEntries={[path]}>
         <RightPanelProvider>
-          <Routes>
-            <Route
-              path="/pgn/*"
-              element={
-                <>
-                  <UserPgnsSection />
-                  <RightPanelOutlet />
-                </>
-              }
-            />
-            <Route path="/tools/analysis" element={<Arrival name="analysis" />} />
-            <Route path="/games/load-pgn" element={<Arrival name="load-pgn" />} />
-            <Route path="/engine/play" element={<Arrival name="play" />} />
-            <Route path="/tools/editor" element={<Arrival name="editor" />} />
-          </Routes>
+          <LeftPanelProvider>
+            <Routes>
+              <Route
+                path="/pgn/*"
+                element={
+                  <>
+                    <UserPgnsSection />
+                    <RightPanelOutlet />
+                    <LeftPanelOutlet />
+                  </>
+                }
+              />
+              <Route path="/tools/analysis" element={<Arrival name="analysis" />} />
+              <Route path="/games/load-pgn" element={<Arrival name="load-pgn" />} />
+              <Route path="/engine/play" element={<Arrival name="play" />} />
+              <Route path="/tools/editor" element={<Arrival name="editor" />} />
+            </Routes>
+          </LeftPanelProvider>
         </RightPanelProvider>
       </MemoryRouter>
     </AppThemeWithLang>,
@@ -241,6 +245,59 @@ describe("the User PGNs section", () => {
     await userEvent.click(screen.getByTestId("user-pgn-detail-close"));
 
     expect(screen.getByTestId("user-pgns-list")).toBeInTheDocument();
+  });
+
+  describe("sibling-nav left panel", () => {
+    const siblings = itemsInLibraryCategory(PLAYED, pgnCatalog);
+    const other = siblings.find((sibling) => sibling.id !== played.id)!;
+
+    it("replaces the sidebar with the folder's other games, the current one active", () => {
+      renderAt(`/pgn/${PLAYED}/${played.id}`);
+
+      const panel = screen.getByTestId("layout-left-panel");
+      const active = screen.getByTestId(`user-pgn-sibling-nav-item-${played.id}`);
+      const otherRow = screen.getByTestId(`user-pgn-sibling-nav-item-${other.id}`);
+
+      expect(panel).toContainElement(active);
+      expect(panel).toContainElement(otherRow);
+      expect(active).toHaveAttribute("aria-current", "true");
+      expect(otherRow).not.toHaveAttribute("aria-current");
+      expect(screen.getAllByTestId(/^user-pgn-sibling-nav-item-/)).toHaveLength(
+        siblings.length,
+      );
+    });
+
+    it("navigates to a sibling game when clicked", async () => {
+      renderAt(`/pgn/${PLAYED}/${played.id}`);
+
+      await userEvent.click(
+        screen.getByTestId(`user-pgn-sibling-nav-item-${other.id}`),
+      );
+
+      if (other.kind !== "game") throw new Error("expected a game");
+      expect(screen.getByTestId("board")).toHaveAttribute(
+        "data-position",
+        fenAtPly(other.game, 0),
+      );
+      expect(
+        screen.getByTestId(`user-pgn-sibling-nav-item-${other.id}`),
+      ).toHaveAttribute("aria-current", "true");
+    });
+
+    it("closes back to the folder's list", async () => {
+      renderAt(`/pgn/${PLAYED}/${played.id}`);
+
+      await userEvent.click(screen.getByTestId("user-pgn-sibling-nav-close"));
+
+      expect(screen.getByTestId("user-pgns-list")).toBeInTheDocument();
+    });
+
+    it("keeps the right-panel hand-offs and close button unaffected", () => {
+      renderAt(`/pgn/${PLAYED}/${played.id}`);
+
+      expect(screen.getByTestId("user-pgn-open-analysis")).toBeInTheDocument();
+      expect(screen.getByTestId("user-pgn-detail-close")).toBeInTheDocument();
+    });
   });
 
   it("says so, and renders no board, for a folder that does not exist", () => {

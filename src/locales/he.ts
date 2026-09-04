@@ -328,6 +328,10 @@ const he: typeof en = {
       position: "אין עמדה כזו בקטגוריה הזו.",
       back: "חזרה אל מטים בסיסיים",
     },
+    leftPanel: {
+      ariaLabel: "פריטים נוספים ב{{category}}",
+      close: "סגירה",
+    },
   },
   positions: {
     list: {
@@ -357,6 +361,10 @@ const he: typeof en = {
       category: "אין קטגוריית סופי משחק כזו.",
       position: "אין עמדה כזו בקטגוריה הזו.",
       back: "חזרה אל עמדות סופי המשחק",
+    },
+    leftPanel: {
+      ariaLabel: "פריטים נוספים ב{{category}}",
+      close: "סגירה",
     },
   },
   userPgns: {
@@ -392,6 +400,10 @@ const he: typeof en = {
       category: "אין תיקיית PGN כזו.",
       position: "אין משחק כזה בתיקייה הזו.",
       back: "חזרה אל קובצי ה-PGN שלי",
+    },
+    leftPanel: {
+      ariaLabel: "פריטים נוספים ב{{category}}",
+      close: "סגירה",
     },
   },
   footer: {

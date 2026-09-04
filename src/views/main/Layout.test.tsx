@@ -11,6 +11,7 @@ import i18n from "../../i18n";
 import AppThemeWithLang from "../../theme/AppThemeWithLang";
 import { DefaultLayout } from "./Layout";
 import { RightPanel } from "./rightPanel";
+import { LeftPanel } from "./leftPanel";
 
 /** The one throwaway screen most of these tests put behind the `<Outlet />`. */
 const blankScreen: RouteObject[] = [
@@ -273,6 +274,112 @@ describe("route-driven right panel slot", () => {
     renderShell(panelRoutes);
 
     expect(nearestCache(screen.getByTestId("panel-content"))).toBe("muirtl");
+  });
+});
+
+describe("route-driven left panel slot", () => {
+  const sidebarContainer = () => screen.getByTestId("layout-sidebar-container");
+
+  /** A screen that claims the sidebar's slot, and owns the state it shows there. */
+  const LeftPanelScreen = () => {
+    const [count, setCount] = useState(0);
+
+    return (
+      <div data-testid="screen">
+        <Link to="/plain">away</Link>
+        <button onClick={() => setCount((c) => c + 1)}>bump</button>
+        <LeftPanel>
+          <div data-testid="left-panel-content">sibling nav {count}</div>
+        </LeftPanel>
+      </div>
+    );
+  };
+
+  /** Index route claims the slot; "/plain" claims nothing. */
+  const leftPanelRoutes: RouteObject[] = [
+    { index: true, element: <LeftPanelScreen /> },
+    { path: "plain", element: <div data-testid="screen" /> },
+  ];
+
+  it("shows the ordinary sidebar when no route claims the slot", () => {
+    renderShell();
+
+    expect(screen.getByTestId("layout-sidebar")).toBeInTheDocument();
+    expect(screen.queryByTestId("layout-left-panel")).toBeNull();
+  });
+
+  it("replaces the sidebar with a route's registered panel", () => {
+    renderShell(leftPanelRoutes);
+
+    const content = screen.getByTestId("left-panel-content");
+    expect(sidebarContainer()).toContainElement(content);
+    expect(screen.queryByTestId("layout-sidebar")).toBeNull();
+  });
+
+  it("keeps the panel live: it re-renders with the screen that owns it", async () => {
+    renderShell(leftPanelRoutes);
+
+    expect(screen.getByTestId("left-panel-content")).toHaveTextContent(
+      "sibling nav 0",
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "bump" }));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("left-panel-content")).toHaveTextContent(
+        "sibling nav 1",
+      ),
+    );
+  });
+
+  it("restores the ordinary sidebar when the registering route is navigated away from", async () => {
+    const { router } = renderShell(leftPanelRoutes);
+    expect(screen.getByTestId("left-panel-content")).toBeInTheDocument();
+
+    await act(() => router.navigate("/plain"));
+
+    expect(screen.queryByTestId("left-panel-content")).toBeNull();
+    expect(screen.queryByTestId("layout-left-panel")).toBeNull();
+    expect(screen.getByTestId("layout-sidebar")).toBeInTheDocument();
+
+    // …and back again: the slot is reusable, not a one-shot.
+    await act(() => router.navigate("/"));
+    expect(screen.getByTestId("left-panel-content")).toBeInTheDocument();
+  });
+
+  it("keeps the same fixed width whichever content occupies the slot", () => {
+    renderShell(leftPanelRoutes);
+
+    // The sidebar box swaps *content*, not the row's proportions — the board
+    // square's own maths (bound only by the panel's aside on the right) does
+    // not have to change for this slot.
+    expect(sidebarContainer()).toHaveStyle({
+      width: "280px",
+      flexShrink: "0",
+    });
+  });
+
+  it("does not disturb the right panel while the left one is claimed", () => {
+    const bothPanelsRoute: RouteObject[] = [
+      {
+        index: true,
+        element: (
+          <div data-testid="screen">
+            <LeftPanel>
+              <div data-testid="left-panel-content">siblings</div>
+            </LeftPanel>
+            <RightPanel>
+              <div data-testid="panel-content">analysis</div>
+            </RightPanel>
+          </div>
+        ),
+      },
+    ];
+
+    renderShell(bothPanelsRoute);
+
+    expect(screen.getByTestId("left-panel-content")).toBeInTheDocument();
+    expect(screen.getByTestId("panel-content")).toBeInTheDocument();
   });
 });
 
