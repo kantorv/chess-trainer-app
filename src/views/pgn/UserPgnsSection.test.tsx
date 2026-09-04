@@ -88,9 +88,9 @@ describe("the User PGNs section", () => {
       expect(screen.getByTestId(`user-pgn-card-${item.id}`)).toBeInTheDocument();
     }
 
-    const panel = screen.getByTestId("layout-right-panel");
-    expect(panel).toHaveTextContent("Zwischenzug best games [part1]");
-    expect(panel).toHaveTextContent("Games: 9");
+    const topBar = screen.getByTestId("user-pgns-list-top-bar");
+    expect(topBar).toHaveTextContent("Zwischenzug best games [part1]");
+    expect(topBar).toHaveTextContent("Games: 9");
   });
 
   it("gives a game card a footer of what the PGN tags actually say", () => {
@@ -136,7 +136,7 @@ describe("the User PGNs section", () => {
   it("serves a folder the manifest nested, from the same one splat route", () => {
     renderAt(`/pgn/${STUDY}`);
 
-    expect(screen.getByTestId("layout-right-panel")).toHaveTextContent(
+    expect(screen.getByTestId("user-pgns-list-top-bar")).toHaveTextContent(
       "Queen vs Rook, Rosettes",
     );
     expect(screen.getByTestId("user-pgn-card-chapter-1")).toHaveAttribute(

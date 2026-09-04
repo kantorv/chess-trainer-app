@@ -1,7 +1,15 @@
+import { useState } from "react";
 import Box from "@mui/material/Box";
 import Card from "@mui/material/Card";
 import CardActionArea from "@mui/material/CardActionArea";
+import TextField from "@mui/material/TextField";
+import ToggleButton from "@mui/material/ToggleButton";
+import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
+import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
+import SearchRounded from "@mui/icons-material/SearchRounded";
+import ViewComfyRounded from "@mui/icons-material/ViewComfyRounded";
+import ViewModuleRounded from "@mui/icons-material/ViewModuleRounded";
 import { Link as RouterLink } from "react-router";
 import { useTranslation } from "react-i18next";
 import { Chessboard, type ChessboardOptions } from "react-chessboard";
@@ -15,7 +23,9 @@ import {
   type LibraryItem,
 } from "../../lib/libraryCatalog";
 import { RightPanel } from "../main/rightPanel";
+import { cardSizeTrack, DEFAULT_CARD_SIZE, type CardSize } from "./cardSize";
 import LibraryCardFooter from "./LibraryCardFooter";
+import { filterLibraryItems } from "./librarySearch";
 import { sectionHome, type LibrarySection } from "./section";
 
 /**
@@ -34,13 +44,38 @@ import { sectionHome, type LibrarySection } from "./section";
  * that is the question it asks; a game by how it ended, how long it ran and
  * where it was played, because "White to play" says nothing about a game you are
  * about to replay from move one. The preview board is not a branch at all —
- * `libraryItemFen` gives both kinds their starting position.
+ * `libraryItemFen` gives both kinds their starting position. The search is not
+ * one either: `librarySearch.ts` folds both kinds into one string.
  *
  * A card deep-links to `<routeBase>/<category path>/<id>`. The sidebar's active
  * state is an exact path match by design (`"/"` is a prefix of every route), so
  * the category's entry does *not* stay lit while a detail page is open — the
  * detail screen carries its own way back rather than the shared renderer
  * changing its matching rule for these sections.
+ *
+ * ### Two regions, and only one of them scrolls
+ *
+ * The shell hands this screen a **fixed square** and scrolls nothing inside it,
+ * so the screen has to divide that height up itself: a flex column, a top bar
+ * that does not shrink, and a grid that takes the rest and is the only thing
+ * with `overflowY`. `minHeight: 0` on the column *and* on the grid is what lets
+ * the grid be shorter than its content; without it a flex item refuses to
+ * shrink past it.
+ *
+ * Three declarations make the scroll actually happen, and the third is the one
+ * that was missing before: `overflowY` is nothing without content taller than
+ * the box, and a grid of `auto` rows inside a box of definite height has no
+ * such content — the rows are stretched to share that height out, so the cards
+ * shrink (and are clipped by `Card`'s own `overflow: hidden`) instead of the
+ * grid overflowing. `gridAutoRows: "max-content"` on the grid below is what
+ * makes a row as tall as the card in it.
+ *
+ * The top bar carries what the reader acts on before picking a card — the
+ * category's name and how many are in it, the name search, and how big the
+ * cards should be. The right-hand panel keeps the hint alone; a category with
+ * nothing in it has no hint to give, so it registers no panel at all and the
+ * shell's own placeholder stands, exactly as the unknown-category miss below
+ * already does.
  */
 
 /**
@@ -70,6 +105,26 @@ function LibraryList({ section, categoryPath }: Props) {
   const { t, i18n } = useTranslation();
   const language = asAppLanguage(i18n.language);
 
+  const [cardSize, setCardSize] = useState<CardSize>(DEFAULT_CARD_SIZE);
+  const [query, setQuery] = useState("");
+
+  /*
+    A filter belongs to the category it was typed into: carrying "rook" across
+    to the next folder would show it as empty, which reads as missing data
+    rather than as a search still running. The card size is the opposite — a
+    reader who wants big cards wants them in every folder — so it is not reset.
+
+    Adjusted during render against the previous path rather than in an effect,
+    which `react-hooks/set-state-in-effect` rejects; React discards this pass
+    and re-runs with the cleared query before anything is committed. The same
+    idiom `Sidebar.tsx` uses to follow the route.
+  */
+  const [shownCategory, setShownCategory] = useState(categoryPath);
+  if (shownCategory !== categoryPath) {
+    setShownCategory(categoryPath);
+    setQuery("");
+  }
+
   const found = findLibraryCategory(categoryPath, section.catalog);
   const items = itemsInLibraryCategory(categoryPath, section.catalog);
 
@@ -98,54 +153,184 @@ function LibraryList({ section, categoryPath }: Props) {
     );
   }
 
+  const visible = filterLibraryItems(items, query, language);
+  const searching = query.trim() !== "";
+
   return (
     <>
       <Box
         data-testid={section.listTestId}
         sx={{
           height: "100%",
-          // The shell hands this screen a square and nothing scrolls it, so the
-          // grid scrolls itself — a category can hold more cards than fit.
-          overflowY: "auto",
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
-          gap: 2,
-          alignContent: "start",
+          display: "flex",
+          flexDirection: "column",
+          // A flex item will not shrink past its content unless told to, and
+          // the grid below is taller than the square by design.
+          minHeight: 0,
         }}
       >
-        {items.map((item) => (
-          <Card key={item.id} variant="outlined">
-            <CardActionArea
-              component={RouterLink}
-              to={`${section.routeBase}/${item.category}/${item.id}`}
-              data-testid={`${section.itemTestId}-card-${item.id}`}
+        <Box
+          data-testid={`${section.listTestId}-top-bar`}
+          sx={{
+            flexShrink: 0,
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            gap: 1.5,
+            pb: 1.5,
+            mb: 1.5,
+            borderBottom: "1px solid",
+            borderColor: "divider",
+          }}
+        >
+          <Box sx={{ minWidth: 0, marginInlineEnd: "auto" }}>
+            <Typography
+              variant="subtitle2"
+              sx={{ fontWeight: 700, lineHeight: 1.3 }}
             >
-              <Box sx={{ p: 1 }}>
-                <Box sx={{ width: "100%", aspectRatio: "1 / 1" }}>
-                  <Chessboard options={previewOptions(section, item)} />
-                </Box>
-              </Box>
-              <LibraryCardFooter section={section} item={item} />
-            </CardActionArea>
-          </Card>
-        ))}
+              {categoryLabel(found, (key) => t(key), language)}
+            </Typography>
+            {items.length > 0 && (
+              <Typography
+                data-testid={`${section.listTestId}-count`}
+                variant="caption"
+                sx={{ display: "block", color: "text.secondary" }}
+              >
+                {t(`${section.chromeKey}.list.count`, { count: visible.length })}
+              </Typography>
+            )}
+          </Box>
+
+          <TextField
+            size="small"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder={t(`${section.chromeKey}.list.search`)}
+            slotProps={{
+              htmlInput: {
+                "data-testid": `${section.listTestId}-search`,
+                "aria-label": t(`${section.chromeKey}.list.search`),
+              },
+              input: {
+                startAdornment: (
+                  <SearchRounded
+                    fontSize="small"
+                    sx={{ color: "text.secondary", mr: 0.75 }}
+                  />
+                ),
+              },
+            }}
+            sx={{ flex: "1 1 12rem", minWidth: "9rem", maxWidth: "20rem" }}
+          />
+
+          <ToggleButtonGroup
+            exclusive
+            size="small"
+            value={cardSize}
+            // `null` when the pressed button is the one already selected: the
+            // cards have to be *some* size, so that is a no-op.
+            onChange={(_event, next: CardSize | null) =>
+              next !== null && setCardSize(next)
+            }
+            aria-label={t(`${section.chromeKey}.list.cardSize.label`)}
+            sx={{ flexShrink: 0 }}
+          >
+            <ToggleButton
+              value="compact"
+              data-testid={`${section.listTestId}-card-size-compact`}
+              aria-label={t(`${section.chromeKey}.list.cardSize.compact`)}
+            >
+              <Tooltip title={t(`${section.chromeKey}.list.cardSize.compact`)}>
+                <ViewComfyRounded fontSize="small" />
+              </Tooltip>
+            </ToggleButton>
+            <ToggleButton
+              value="comfortable"
+              data-testid={`${section.listTestId}-card-size-comfortable`}
+              aria-label={t(`${section.chromeKey}.list.cardSize.comfortable`)}
+            >
+              <Tooltip
+                title={t(`${section.chromeKey}.list.cardSize.comfortable`)}
+              >
+                <ViewModuleRounded fontSize="small" />
+              </Tooltip>
+            </ToggleButton>
+          </ToggleButtonGroup>
+        </Box>
+
+        {visible.length === 0 ? (
+          <Box
+            data-testid={
+              searching
+                ? `${section.listTestId}-no-matches`
+                : `${section.listTestId}-empty`
+            }
+            sx={{ flex: 1, minHeight: 0, display: "grid", placeItems: "center", p: 2 }}
+          >
+            <Typography
+              variant="body2"
+              sx={{ color: "text.secondary", textAlign: "center" }}
+            >
+              {searching
+                ? t(`${section.chromeKey}.list.noMatches`)
+                : t(`${section.chromeKey}.list.empty`)}
+            </Typography>
+          </Box>
+        ) : (
+          <Box
+            data-testid={`${section.listTestId}-grid`}
+            sx={{
+              // The only scroller on the screen: the top bar above it stays
+              // put, and a category with more cards than fit scrolls here.
+              flex: 1,
+              minHeight: 0,
+              overflowY: "auto",
+              overflowX: "hidden",
+              display: "grid",
+              gridTemplateColumns: cardSizeTrack(cardSize),
+              /*
+                **This is the line that makes it scroll.** An `auto` row inside
+                a grid whose own height is definite — which this one's is, as a
+                flex item filling the square — is stretched to share that
+                height out, and `alignContent: "start"` does not stop it: the
+                rows came out at exactly `(742 - gaps) / 5`, so nine cards fit
+                in one screenful by being squashed to a quarter of their height
+                and clipped by `Card`'s own `overflow: hidden`. Sized by their
+                content instead, the rows overflow and the grid scrolls, which
+                is the whole point of the region.
+              */
+              gridAutoRows: "max-content",
+              gap: 2,
+              alignContent: "start",
+            }}
+          >
+            {visible.map((item) => (
+              <Card key={item.id} variant="outlined">
+                <CardActionArea
+                  component={RouterLink}
+                  to={`${section.routeBase}/${item.category}/${item.id}`}
+                  data-testid={`${section.itemTestId}-card-${item.id}`}
+                >
+                  <Box sx={{ p: 1 }}>
+                    <Box sx={{ width: "100%", aspectRatio: "1 / 1" }}>
+                      <Chessboard options={previewOptions(section, item)} />
+                    </Box>
+                  </Box>
+                  <LibraryCardFooter section={section} item={item} />
+                </CardActionArea>
+              </Card>
+            ))}
+          </Box>
+        )}
       </Box>
 
-      <RightPanel>
-        <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-          {categoryLabel(found, (key) => t(key), language)}
-        </Typography>
-        <Typography variant="body2" sx={{ color: "text.secondary", mt: 0.5 }}>
-          {items.length === 0
-            ? t(`${section.chromeKey}.list.empty`)
-            : t(`${section.chromeKey}.list.count`, { count: items.length })}
-        </Typography>
-        {items.length > 0 && (
-          <Typography variant="body2" sx={{ color: "text.secondary", mt: 2 }}>
+      {items.length > 0 && (
+        <RightPanel>
+          <Typography variant="body2" sx={{ color: "text.secondary" }}>
             {t(`${section.chromeKey}.list.hint`)}
           </Typography>
-        )}
-      </RightPanel>
+        </RightPanel>
+      )}
     </>
   );
 }
