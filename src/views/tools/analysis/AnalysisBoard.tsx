@@ -14,8 +14,14 @@ import {
   type PieceDropHandlerArgs,
 } from "react-chessboard";
 import { FenParseError, parseFen } from "../../../lib/fen";
+import { resolveGameReference } from "../../../lib/gameReference";
 import type { GameTree } from "../../../lib/gameTree";
-import { EmptyPgnError, PgnParseError, parsePgnTrees } from "../../../lib/pgn";
+import {
+  EmptyPgnError,
+  PgnParseError,
+  parsePgnTree,
+  parsePgnTrees,
+} from "../../../lib/pgn";
 import { RightPanel } from "../../main/rightPanel";
 import EvalBar, {
   EVAL_BAR_GAP_PX,
@@ -36,14 +42,25 @@ import { useAnalysisBoard } from "./useAnalysisBoard";
  * - the **right-hand panel** (`<RightPanel>`) holds `AnalysisPanel` — the
  *   Moves / Engine / Variations / Position tabs over the board controls.
  *
- * ### Arriving from the Board Editor
+ * ### Arriving with a position, or with a game
  *
- * `/tools/analysis?fen=<position>` opens on that position. The FEN travels in
- * the URL rather than in router state so that the link survives being
- * bookmarked, shared or reloaded, and it is validated here — `parseFen` is the
- * gate, and a parameter that will not pass it is ignored rather than allowed to
- * throw on someone else's mistyped link. The hook takes it as its *initial*
- * state, so nothing is written from an effect.
+ * `/tools/analysis?fen=<position>` opens on that position — the Board Editor's
+ * hand-off. `/tools/analysis?game=<reference>` opens on a whole game out of a
+ * library, side lines and all — the User PGNs hand-off, where what travels is a
+ * catalog reference rather than the PGN, because a game does not fit in a URL
+ * (`lib/gameReference.ts`).
+ *
+ * Both travel in the URL rather than in router state so that the link survives
+ * being bookmarked, shared or reloaded, and both are validated here — `parseFen`
+ * and `resolveGameReference` are the gates, and a parameter that will not pass
+ * one is ignored rather than allowed to throw on someone else's mistyped link.
+ * The hook takes the result as its *initial* state, so nothing is written from
+ * an effect.
+ *
+ * The game is re-read from its PGN text with `parsePgnTrees`' single-game
+ * parser rather than taken from the catalog's parsed `Game`: the catalog parses
+ * a **mainline** (`chess.js` `loadPgn` discards `( … )`), and an analysis board
+ * is the one screen those side lines are the whole point for.
  *
  * All the behaviour lives in `useAnalysisBoard`; this component is the layout,
  * the board options, and the ingestion state that the Position tab and the drop
@@ -82,7 +99,24 @@ function AnalysisBoard() {
     }
   }, [requested]);
 
-  const state = useAnalysisBoard(initialFen);
+  /*
+    The game handed over by a library detail page, if this is that arrival. Same
+    discipline as the FEN above: resolved and parsed once, and a reference that
+    names nothing — or a game whose side lines will not parse — opens the screen
+    empty rather than throwing on a bad link.
+  */
+  const requestedGame = searchParams.get("game");
+  const initialTree = useMemo(() => {
+    const found = resolveGameReference(requestedGame);
+    if (found === undefined) return undefined;
+    try {
+      return parsePgnTree(found.pgn);
+    } catch {
+      return undefined;
+    }
+  }, [requestedGame]);
+
+  const state = useAnalysisBoard(initialFen, initialTree);
 
   /*
     Ingestion state: what the reader has typed, what came out of the last

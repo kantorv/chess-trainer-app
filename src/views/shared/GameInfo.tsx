@@ -1,10 +1,16 @@
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import { useTranslation } from "react-i18next";
-import { gameTag, type Game } from "../../../lib/gameModel";
+import { gameTag, type Game } from "../../lib/gameModel";
 
 /**
  * The Info tab: a game's PGN tag pairs, as a two-column list.
+ *
+ * Shared, like `MoveList` and `BoardControls` beside it, because two screens
+ * show a loaded game's headers: Load PGN's Info tab and the User PGNs detail
+ * page. It takes a `Game` and knows nothing about which one is rendering it,
+ * and its keys are the top-level `gamePanel.info.*` the shared board controls
+ * already read from.
  *
  * The named tags come first, in the order the PGN spec prints them and with
  * translated labels; anything else the file carried follows under its own raw

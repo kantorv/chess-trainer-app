@@ -1,8 +1,10 @@
 import type { SvgIconComponent } from "@mui/icons-material";
 import FolderRoundedIcon from "@mui/icons-material/FolderRounded";
 import LibraryBooksRoundedIcon from "@mui/icons-material/LibraryBooksRounded";
+import SnippetFolderRoundedIcon from "@mui/icons-material/SnippetFolderRounded";
 import ViewListRoundedIcon from "@mui/icons-material/ViewListRounded";
 
+import { pgnCatalog } from "../../lib/pgnCatalog";
 import { positionsCatalog } from "../../lib/positionsCatalog";
 import type { LibraryCatalog, LibraryCategory } from "../../lib/libraryCatalog";
 import type { NavFolder } from "./navFolders";
@@ -114,7 +116,7 @@ export const libraryNavItems = (
   return items;
 };
 
-/** How the Positions section is generated — the only shipped use of the above. */
+/** How the Positions section is generated. */
 export const positionsNavOptions: LibraryNavOptions = {
   rootId: "positions",
   rootLabelKey: "nav.folders.positions",
@@ -131,3 +133,29 @@ export const positionsNavFolder = (): NavFolder =>
 /** The Positions list screens, built from the shipped catalog. */
 export const positionsNavItems = (): NavItem[] =>
   libraryNavItems(positionsCatalog, positionsNavOptions);
+
+/**
+ * How the User PGNs section is generated.
+ *
+ * The same generator over a catalog whose categories came out of `.pgn` files
+ * rather than out of JSON — which is the whole point of building the subtree
+ * from a catalog rather than from the data file behind one. Nothing here knows
+ * that a folder is a file, and nothing had to change for it: **dropping a
+ * `.pgn` into `src/data/pgn/` puts a folder in the sidebar.**
+ */
+export const userPgnsNavOptions: LibraryNavOptions = {
+  rootId: "user-pgns",
+  rootLabelKey: "nav.folders.userPgns",
+  rootIcon: SnippetFolderRoundedIcon,
+  routeBase: "/pgn",
+  categoryIcon: FolderRoundedIcon,
+  screenIcon: ViewListRoundedIcon,
+};
+
+/** The User PGNs folder subtree, built from the shipped catalog. */
+export const userPgnsNavFolder = (): NavFolder =>
+  libraryNavFolder(pgnCatalog, userPgnsNavOptions);
+
+/** The User PGNs list screens, built from the shipped catalog. */
+export const userPgnsNavItems = (): NavItem[] =>
+  libraryNavItems(pgnCatalog, userPgnsNavOptions);

@@ -340,8 +340,9 @@ Consequences for a caller:
 | `/games/load-pgn` | [`views/games/load_pgn/LoadPgn.tsx`](../../src/views/games/load_pgn/LoadPgn.tsx) | (composed) | A PGN pasted in, parsed to a `Game`, walked with the shared `MoveList` / `useGameNavigation` / `BoardControls` |
 | `/tools/analysis` | [`views/tools/analysis/AnalysisBoard.tsx`](../../src/views/tools/analysis/AnalysisBoard.tsx) | (composed) | Analysis: a **variation tree** (`lib/gameTree.ts`), PGN/FEN set-up and export, both colours movable, engine and eval bar switched independently |
 | `/mates/:category` | [`views/library/LibraryList.tsx`](../../src/views/library/LibraryList.tsx) | (composed) | A read-only preview board per card, several on one page — so `options.id` is the position's id, not a constant. `views/mates/list/MatesList.tsx` is the binding that reads the route parameter |
-| `/mates/:category/:id` | [`views/library/LibraryDetail.tsx`](../../src/views/library/LibraryDetail.tsx) | (composed) | One catalog position, read-only, facing the side to move, with the `?fen=` hand-off to the three screens that read one. `views/mates/detail/MateDetail.tsx` is the binding |
+| `/mates/:category/:id` | [`views/library/LibraryPositionDetail.tsx`](../../src/views/library/LibraryPositionDetail.tsx) | (composed) | One catalog position, read-only, facing the side to move, with the `?fen=` hand-off to the three screens that read one. `LibraryDetail.tsx` resolves the URL and dispatches on the item's kind; `views/mates/detail/MateDetail.tsx` is the binding |
 | `/positions/*` | [`views/positions/PositionsSection.tsx`](../../src/views/positions/PositionsSection.tsx) | (composed) | The same two screens over the endgame library, behind one splat route: the segments are resolved against a catalog nested to any depth. Some positions have the **defending** side to move, and the board faces it |
+| `/pgn/*` | [`views/pgn/UserPgnsSection.tsx`](../../src/views/pgn/UserPgnsSection.tsx) | (composed) | The same two screens again, over a library whose items are whole **games** out of the project's `.pgn` files. A card previews the game's starting position; the detail screen is [`views/library/LibraryGameDetail.tsx`](../../src/views/library/LibraryGameDetail.tsx), which replays it over the shared `MoveList` / `BoardControls` / `useGameNavigation` and hands it on with `?game=` |
 | `/tools/editor` | [`views/tools/editor/BoardEditor.tsx`](../../src/views/tools/editor/BoardEditor.tsx) | `SparePieces` | Position editing: `ChessboardProvider` + spare-piece palettes, `{ skipValidation: true }`, illegal positions reported rather than refused, hand-off to either of the two screens above. Takes a `?fen=` starting position, and offers a reset back to it |
 
 The `Main.tsx` file next to each board is a layout-only wrapper (an MUI `Box`
@@ -373,6 +374,18 @@ you need the smallest version of one.
   [`views/shared/EngineBoardSquare.tsx`](../../src/views/shared/EngineBoardSquare.tsx),
   which both engine-play screens render. **A third screen with an eval bar
   renders that, rather than copying the `calc()`.**
+
+**And two the library sections add:**
+
+- **A read-only board is a board, and it still takes an `options.id` that is
+  unique on the page.** A list screen renders one per card, so the id is the
+  item's id (`LibraryList`'s `previewOptions`), never a constant.
+- **A position turns the board; a game does not.** `LibraryPositionDetail` faces
+  the side to move, because that is what `/engine/play` will do with the same FEN
+  a click later and the board must not turn under the reader on the way over.
+  `LibraryGameDetail` opens at ply 0 facing White and offers the flip control,
+  because a PGN's side to move at ply 0 says nothing about which side is being
+  studied. The same rule the root `CLAUDE.md` states for the three board screens.
 
 **And one the Masked Pieces screen adds:**
 

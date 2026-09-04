@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router";
 import i18n from "../../../i18n";
 import AppThemeWithLang from "../../../theme/AppThemeWithLang";
 import { parsePgnGames } from "../../../lib/pgn";
@@ -61,14 +62,16 @@ const game = parsePgnGames(pgn)[0];
  * that slot from the moment it mounts (the ingestion controls live there), so
  * the `fallback` below is only ever proof that it *is* filled.
  */
-const renderScreen = () =>
+const renderScreen = (entry = "/games/load-pgn") =>
   render(
-    <AppThemeWithLang>
-      <RightPanelProvider>
-        <LoadPgn />
-        <RightPanelOutlet fallback={<div data-testid="panel-fallback" />} />
-      </RightPanelProvider>
-    </AppThemeWithLang>,
+    <MemoryRouter initialEntries={[entry]}>
+      <AppThemeWithLang>
+        <RightPanelProvider>
+          <LoadPgn />
+          <RightPanelOutlet fallback={<div data-testid="panel-fallback" />} />
+        </RightPanelProvider>
+      </AppThemeWithLang>
+    </MemoryRouter>,
   );
 
 const board = () => screen.getByTestId("pgn-board");

@@ -5,7 +5,7 @@ import Tabs from "@mui/material/Tabs";
 import { useTranslation } from "react-i18next";
 import type { Game } from "../../../lib/gameModel";
 import BoardControls from "../../shared/BoardControls";
-import GameInfo from "./GameInfo";
+import GameInfo from "../../shared/GameInfo";
 import MoveList from "../../shared/MoveList";
 
 /**

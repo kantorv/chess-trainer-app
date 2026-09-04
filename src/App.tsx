@@ -11,6 +11,7 @@ import { default as BoardEditorScreen  } from './views/tools/editor/Main'
 import { default as MatesListScreen  } from './views/mates/list/Main'
 import { default as MateDetailScreen  } from './views/mates/detail/Main'
 import { default as PositionsScreen  } from './views/positions/Main'
+import { default as UserPgnsScreen  } from './views/pgn/Main'
 
 
 
@@ -72,6 +73,15 @@ const routes = createBrowserRouter(
         {
           path: "/positions/*",
           element: <PositionsScreen />
+        },
+        // The User PGNs library. The same one splat route, over content that is
+        // not a JSON file at all: the folders are the `.pgn` files under
+        // `src/data/pgn/` and the items are the games inside them
+        // (`lib/pgnCatalog.ts`). Dropping a file in adds a folder and its games
+        // at `/pgn/<folder>` and `/pgn/<folder>/<game>` with no edit here.
+        {
+          path: "/pgn/*",
+          element: <UserPgnsScreen />
         }
 
       ]

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router";
 import i18n from "../../../i18n";
 import AppThemeWithLang from "../../../theme/AppThemeWithLang";
 import { parsePgnGames } from "../../../lib/pgn";
@@ -65,14 +66,16 @@ const renderPanel = (
 };
 
 /** The whole screen, so the flip actually reaches a board. */
-const renderScreen = () =>
+const renderScreen = (entry = "/games/load-pgn") =>
   render(
-    <AppThemeWithLang>
-      <RightPanelProvider>
-        <LoadPgn />
-        <RightPanelOutlet />
-      </RightPanelProvider>
-    </AppThemeWithLang>,
+    <MemoryRouter initialEntries={[entry]}>
+      <AppThemeWithLang>
+        <RightPanelProvider>
+          <LoadPgn />
+          <RightPanelOutlet />
+        </RightPanelProvider>
+      </AppThemeWithLang>
+    </MemoryRouter>,
   );
 
 beforeEach(async () => {

@@ -1,0 +1,21 @@
+{
+  "folders": {
+    "studies": { "en": "Studies", "he": "מחקרים" }
+  },
+  "files": {
+    "lichess_study_queen-vs-rook-rosettes_by_methurst_2021.07.08.pgn": {
+      "under": "studies",
+      "label": { "en": "Queen vs Rook, Rosettes", "he": "מלכה נגד צריח, רוזטות" },
+      "order": 10
+    },
+    "lichess_study_puzzles-custom-set-1_by_lalala732_2026.05.03.pgn": {
+      "under": "studies",
+      "label": { "en": "Puzzles, custom set #1", "he": "חידות, סט מותאם #1" },
+      "order": 20
+    },
+    "lichess_study_zwischenzug-best-games-part1_by_lalala732_2026.04.12.pgn": {
+      "under": "studies",
+      "order": 30
+    }
+  }
+}

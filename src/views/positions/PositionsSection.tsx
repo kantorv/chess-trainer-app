@@ -29,12 +29,12 @@ function PositionsSection() {
   const segments = (params["*"] ?? "").split("/").filter(Boolean);
   const location = resolveLibraryPath(segments, positionsSection.catalog);
 
-  if (location.kind === "position") {
+  if (location.kind === "item") {
     return (
       <LibraryDetail
         section={positionsSection}
         categoryPath={location.category.path}
-        positionId={location.position.id}
+        positionId={location.item.id}
       />
     );
   }

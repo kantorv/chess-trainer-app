@@ -8,7 +8,7 @@ import ViewListRoundedIcon from "@mui/icons-material/ViewListRounded";
 
 import type { LocalizedText } from "../../lib/libraryCatalog";
 import type { NavFolderId } from "./navFolders";
-import { positionsNavItems } from "./navFromLibrary";
+import { positionsNavItems, userPgnsNavItems } from "./navFromLibrary";
 
 export type NavItem = {
   /** Route path, matched against `useLocation().pathname` for the active state. */
@@ -27,11 +27,12 @@ export type NavItem = {
  * repeating a list item per route, so adding a screen is one entry here plus
  * the route in `App.tsx` and a string in both catalogs.
  *
- * The exception, and the reason `label` exists above, is the Positions section:
- * its list screens are **generated** from `src/data/positions.json`
- * (`navFromLibrary.ts`), one per category at any depth, and are named from the
- * data. `/positions/*` is a single splat route, so a new category needs no
- * entry here and no route either.
+ * The exceptions, and the reason `label` exists above, are the two generated
+ * sections: the Positions list screens come from `src/data/positions.json` and
+ * the User PGNs ones from the `.pgn` files under `src/data/pgn/`
+ * (`navFromLibrary.ts`), one per category at any depth, both named from their
+ * data. Each is served by a single splat route, so a new category — or a new
+ * PGN file — needs no entry here and no route either.
  */
 export const navItems: readonly NavItem[] = [
   {
@@ -77,6 +78,7 @@ export const navItems: readonly NavItem[] = [
     folder: "mates-complex",
   },
   ...positionsNavItems(),
+  ...userPgnsNavItems(),
   {
     to: "/tools/analysis",
     labelKey: "nav.analysisBoard",

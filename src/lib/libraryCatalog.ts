@@ -1,15 +1,37 @@
 import type { AppLanguage } from "../i18n";
 import { FenParseError, parseFen } from "./fen";
+import { initialFenOf, type Game } from "./gameModel";
 import { TreeManager } from "./treeManager";
 
 /**
- * A **position library**, as data — the layer under both the Mates section and
- * the Positions section.
+ * A **library**, as data — the layer under the Mates section, the Positions
+ * section and the User PGNs section alike.
  *
- * A library is a tree of categories with a flat list of positions hanging off
- * it, and a JSON file is the only thing an extension touches: adding a
- * category *at any depth*, or a position inside one, is an entry in that file
- * and nothing else — no TypeScript, no locale key, no component edit.
+ * A library is a tree of categories with a flat list of *items* hanging off it,
+ * and its data files are the only thing an extension touches: adding a category
+ * *at any depth*, or an item inside one, is an entry in that data and nothing
+ * else — no TypeScript, no locale key, no component edit, no route.
+ *
+ * ## An item is a position **or** a game
+ *
+ * The first two sections list positions: one FEN, to be looked at and handed
+ * on. The third lists whole games out of the project's `.pgn` files, and a game
+ * is not a FEN — it is headers, a starting position and a line of moves. So
+ * {@link LibraryItem} is a union discriminated by `kind`, and the two shared
+ * screens branch on it exactly once each: the list screen for what a card
+ * previews and what its caption says, the detail screen for which of the two
+ * detail bodies it renders.
+ *
+ * Two producers fill a catalog, and neither knows about the other:
+ *
+ * | Producer | From | Items |
+ * | --- | --- | --- |
+ * | {@link loadLibraryCatalog} | a JSON file of FEN rows | positions |
+ * | `loadPgnLibrary` (`lib/pgnLibrary.ts`) | the `.pgn` files under `src/data/pgn/` | games |
+ *
+ * Both build their result through {@link libraryCatalogOf}, which is what keeps
+ * `positions` — the projection the two position-shaped sections speak in — from
+ * ever drifting from `items`.
  *
  * Three rules the shape rests on, two of them inherited from the Mates catalog
  * this generalises:
@@ -67,25 +89,77 @@ export type LibraryCategory = {
   children: readonly LibraryCategory[];
 };
 
-/** One position. `fen` has been through `parseFen`; `category` is a full path. */
-export type LibraryPosition = {
+/** What every item carries, whichever kind it is. `category` is a full path. */
+type LibraryItemBase = {
   id: string;
   category: LibraryCategoryId;
-  fen: string;
   name: LocalizedText;
   description?: LocalizedText;
 };
 
+/** One position. `fen` has been through `parseFen`. */
+export type LibraryPosition = LibraryItemBase & {
+  kind: "position";
+  fen: string;
+};
+
+/**
+ * One game — a chess.com export, a lichess study chapter — as a library item.
+ *
+ * It carries **both** its own PGN text and the parsed mainline. The parse is
+ * what validated the entry in the first place (an unparsable game can only be
+ * known unparsable by parsing it, and a library must *report* that rather than
+ * throw), so its result is kept rather than thrown away and re-derived on the
+ * detail screen. The text is kept because a destination may want more than the
+ * mainline: `/tools/analysis` re-reads it with `parsePgnTrees` to get the side
+ * lines that `chess.js` `loadPgn` discards.
+ */
+export type LibraryGame = LibraryItemBase & {
+  kind: "game";
+  /** The single-game PGN chunk, exactly as it stood in the file. */
+  pgn: string;
+  /** That chunk parsed — mainline only, which is what a replay screen walks. */
+  game: Game;
+};
+
+/** A position to look at, or a game to replay. */
+export type LibraryItem = LibraryPosition | LibraryGame;
+
 /**
  * A loaded library. `categories` are the roots; `problems` is English and
- * diagnostic — what the data file got wrong, for a developer and for the tests,
- * not a string to render at a reader.
+ * diagnostic — what the data got wrong, for a developer and for the tests, not
+ * a string to render at a reader.
+ *
+ * `items` is the one list; `positions` is the projection of it the two
+ * position-shaped sections read, built by {@link libraryCatalogOf} so it cannot
+ * come to disagree with `items`.
  */
 export type LibraryCatalog = {
   categories: readonly LibraryCategory[];
+  items: readonly LibraryItem[];
   positions: readonly LibraryPosition[];
   problems: readonly string[];
 };
+
+/**
+ * Assemble a catalog — the one constructor, used by both producers.
+ *
+ * It exists for the `positions` projection: deriving it here rather than asking
+ * each producer to fill it is what makes "every position in `positions` is an
+ * item in `items`" true by construction rather than by convention.
+ */
+export const libraryCatalogOf = (
+  categories: readonly LibraryCategory[],
+  items: readonly LibraryItem[],
+  problems: readonly string[],
+): LibraryCatalog => ({
+  categories,
+  items,
+  positions: items.filter(
+    (item): item is LibraryPosition => item.kind === "position",
+  ),
+  problems,
+});
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -111,7 +185,8 @@ const localizedTextOf = (value: unknown): LocalizedText | undefined => {
 };
 
 /**
- * Validate raw JSON into a library. Never throws: everything it rejects comes
+ * Validate raw JSON into a library of **positions** — the producer behind
+ * `mates.json` and `positions.json`. Never throws: everything it rejects comes
  * back in `problems`, and what survives is safe for a screen to render.
  *
  * Takes the raw data as a parameter rather than reading an import, so the tests
@@ -121,7 +196,7 @@ export const loadLibraryCatalog = (raw: unknown): LibraryCatalog => {
   const problems: string[] = [];
 
   if (!isRecord(raw)) {
-    return { categories: [], positions: [], problems: ["Catalog is not an object."] };
+    return libraryCatalogOf([], [], ["Catalog is not an object."]);
   }
 
   /*
@@ -243,6 +318,7 @@ export const loadLibraryCatalog = (raw: unknown): LibraryCatalog => {
       seenPositions.add(id);
       const description = localizedTextOf(entry.description);
       positions.push({
+        kind: "position",
         id,
         category: entry.category,
         fen,
@@ -252,7 +328,7 @@ export const loadLibraryCatalog = (raw: unknown): LibraryCatalog => {
     });
   }
 
-  return { categories, positions, problems };
+  return libraryCatalogOf(categories, positions, problems);
 };
 
 /**
@@ -278,9 +354,23 @@ export const findLibraryCategory = (
     : allCategories(catalog).find((category) => category.path === path);
 
 /**
- * That category's own positions, in the order the data lists them. A
- * sub-category's positions are its own — they do not roll up into the parent's
- * list, or a top-level category would show everything beneath it twice.
+ * That category's own items, in the order the data lists them — **what the list
+ * screen renders**, whichever kind the section holds. A sub-category's items are
+ * its own: they do not roll up into the parent's list, or a top-level category
+ * would show everything beneath it twice.
+ */
+export const itemsInLibraryCategory = (
+  path: string | undefined,
+  catalog: LibraryCatalog,
+): readonly LibraryItem[] =>
+  path === undefined
+    ? []
+    : catalog.items.filter((item) => item.category === path);
+
+/**
+ * The same, narrowed to positions — the vocabulary the Mates binding speaks, and
+ * the shape its tests assert. A section whose every item is a position gets the
+ * same list either way.
  */
 export const positionsInLibraryCategory = (
   path: string | undefined,
@@ -291,10 +381,22 @@ export const positionsInLibraryCategory = (
     : catalog.positions.filter((position) => position.category === path);
 
 /**
- * One position, addressed the way the URL addresses it. Both parts have to
- * match: a real id asked for under a category it is not in is a miss rather
- * than a redirect.
+ * One item, addressed the way the URL addresses it. Both parts have to match: a
+ * real id asked for under a category it is not in is a miss rather than a
+ * redirect.
  */
+export const findLibraryItem = (
+  categoryPath: string | undefined,
+  id: string | undefined,
+  catalog: LibraryCatalog,
+): LibraryItem | undefined =>
+  categoryPath === undefined || id === undefined
+    ? undefined
+    : catalog.items.find(
+        (item) => item.category === categoryPath && item.id === id,
+      );
+
+/** The same, narrowed to positions — see {@link positionsInLibraryCategory}. */
 export const findLibraryPosition = (
   categoryPath: string | undefined,
   id: string | undefined,
@@ -309,7 +411,7 @@ export const findLibraryPosition = (
 /** Where a URL landed. The four cases a library screen has to render. */
 export type LibraryLocation =
   | { kind: "category"; category: LibraryCategory }
-  | { kind: "position"; category: LibraryCategory; position: LibraryPosition }
+  | { kind: "item"; category: LibraryCategory; item: LibraryItem }
   | { kind: "unknown-category" }
   | { kind: "unknown-position"; category: LibraryCategory };
 
@@ -322,8 +424,8 @@ export type LibraryLocation =
  * category tree from the longest prefix down, and whatever is left over (at
  * most one segment) is a position id. That is what lets a single splat route
  * serve a library nested to any depth: the router never has to know whether
- * `.../rosettes` is a sub-category or a position, because the data does. A
- * category and a position of the same name in the same place resolve to the
+ * `.../rosettes` is a sub-category or an item, because the data does. A
+ * category and an item of the same name in the same place resolve to the
  * category — an ambiguity the data can simply avoid.
  */
 export const resolveLibraryPath = (
@@ -338,10 +440,10 @@ export const resolveLibraryPath = (
     if (rest.length === 0) return { kind: "category", category };
     if (rest.length > 1) return { kind: "unknown-position", category };
 
-    const position = findLibraryPosition(category.path, rest[0], catalog);
-    return position === undefined
+    const item = findLibraryItem(category.path, rest[0], catalog);
+    return item === undefined
       ? { kind: "unknown-position", category }
-      : { kind: "position", category, position };
+      : { kind: "item", category, item };
   }
 
   return { kind: "unknown-category" };
@@ -370,12 +472,26 @@ export const categoryLabel = (
 };
 
 /**
- * The side to move, read off the FEN's second field.
+ * The position an item *starts* from: a position's own FEN, or the position a
+ * game's first move is played from (its `FEN` tag, or the standard start).
+ *
+ * This is what a card previews and what a detail board opens on, so the two
+ * kinds share one accessor and neither screen re-derives it.
+ */
+export const libraryItemFen = (item: LibraryItem): string =>
+  item.kind === "position" ? item.fen : initialFenOf(item.game);
+
+/**
+ * The side to move in that starting position, read off the FEN's second field.
  *
  * Load-bearing rather than cosmetic: `/engine/play` derives `playAs` and the
- * board orientation from an incoming position's side to move, and every library
- * screen faces its board the same way. Read here rather than by constructing a
- * `chess.js`, which `parseFen` has already done on the way in.
+ * board orientation from an incoming position's side to move, and a library
+ * *position* screen faces its board the same way. Read here rather than by
+ * constructing a `chess.js`, which `parseFen` has already done on the way in.
+ *
+ * A **game** screen deliberately does not turn its board by this — a PGN opens
+ * at ply 0, where the side to move says nothing about which side is being
+ * studied (see the root `CLAUDE.md`).
  */
-export const sideToMoveOf = (position: LibraryPosition): "w" | "b" =>
-  position.fen.split(" ")[1] === "b" ? "b" : "w";
+export const sideToMoveOf = (item: LibraryItem): "w" | "b" =>
+  libraryItemFen(item).split(" ")[1] === "b" ? "b" : "w";

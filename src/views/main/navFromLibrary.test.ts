@@ -2,12 +2,15 @@ import { describe, expect, it } from "vitest";
 import GridViewRoundedIcon from "@mui/icons-material/GridViewRounded";
 
 import { allCategories, loadLibraryCatalog } from "../../lib/libraryCatalog";
+import { pgnCatalog } from "../../lib/pgnCatalog";
 import { positionsCatalog } from "../../lib/positionsCatalog";
 import {
   libraryNavFolder,
   libraryNavItems,
   positionsNavFolder,
   positionsNavItems,
+  userPgnsNavFolder,
+  userPgnsNavItems,
   type LibraryNavOptions,
 } from "./navFromLibrary";
 import { buildNavTree, folderPath, navLabelKeys, navTree } from "./navTree";
@@ -160,5 +163,70 @@ describe("the generated Positions subtree, as shipped", () => {
         .map((category) => `/positions/${category.path}`)
         .sort(),
     );
+  });
+});
+
+/*
+  The second shipped use of the generator, and the one that shows it is a
+  generator rather than a Positions-shaped special case: the same functions over
+  a catalog whose categories came out of `.pgn` files instead of out of JSON.
+  Nothing in `navFromLibrary.ts` knows the difference, and nothing had to.
+*/
+describe("the generated User PGNs subtree", () => {
+  it("makes a folder per PGN file, named from the data", () => {
+    const folder = userPgnsNavFolder();
+
+    expect(folder.id).toBe("user-pgns");
+    expect(folder.labelKey).toBe("nav.folders.userPgns");
+    // The section is chrome and is named from the catalog; a *file* is content
+    // and is named from itself, so it carries a `label` and no key.
+    for (const child of folder.children ?? []) {
+      expect(child.labelKey).toBeUndefined();
+      expect(child.label?.en).toBeTruthy();
+    }
+  });
+
+  it("nests a folder exactly as the manifest nested the category", () => {
+    const studies = (userPgnsNavFolder().children ?? []).find(
+      (child) => child.id === "user-pgns:studies",
+    );
+
+    expect(studies).toBeDefined();
+    expect((studies?.children ?? []).length).toBeGreaterThan(0);
+  });
+
+  it("puts every generated screen into the shipped nav tree, under User PGNs", () => {
+    for (const item of userPgnsNavItems()) {
+      const breadcrumb = folderPath(item.to, navTree());
+
+      expect(breadcrumb[0], `${item.to} is not under User PGNs`).toBe("user-pgns");
+      expect(breadcrumb.at(-1)).toBe(item.folder);
+      expect(navItemsInFolder(item.folder)).toEqual([item]);
+    }
+  });
+
+  it("contributes no catalog key beyond the section's own", () => {
+    const keys = navLabelKeys();
+
+    expect(keys).toContain("nav.folders.userPgns");
+    expect(keys.filter((key) => key.startsWith("nav.folders.userPgns."))).toEqual([]);
+  });
+
+  it("reaches the same folders the catalog declares, and no others", () => {
+    // Dropping a `.pgn` into `src/data/pgn/` is a route the sidebar offers, with
+    // nothing else edited. This is that promise, asserted.
+    expect(userPgnsNavItems().map((item) => item.to).sort()).toEqual(
+      allCategories(pgnCatalog)
+        .map((category) => `/pgn/${category.path}`)
+        .sort(),
+    );
+  });
+
+  it("cannot collide with the other generated section's ids", () => {
+    const positions = new Set(positionsNavItems().map((item) => item.folder));
+
+    for (const item of userPgnsNavItems()) {
+      expect(positions.has(item.folder)).toBe(false);
+    }
   });
 });

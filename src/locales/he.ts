@@ -31,6 +31,7 @@ const he: typeof en = {
       matesAdvanced: "מתקדם",
       matesComplex: "מורכב",
       positions: "עמדות",
+      userPgns: "קבצי PGN שלי",
     },
   },
   home: {
@@ -341,6 +342,32 @@ const he: typeof en = {
       category: "אין קטגוריית סופי משחק כזו.",
       position: "אין עמדה כזו בקטגוריה הזו.",
       back: "חזרה אל עמדות סופי המשחק",
+    },
+  },
+  userPgns: {
+    list: {
+      count: "משחקים: {{count}}",
+      empty: "אין עדיין משחקים בקובץ הזה.",
+      hint: "בחרו משחק כדי לשחזר אותו מסע אחר מסע, ואז העבירו אותו ללוח הניתוח או קחו את העמדה שעל המסך אל המנוע.",
+      moves_one: "מסע {{count}}",
+      moves_other: "{{count}} מסעים",
+    },
+    detail: {
+      back: "חזרה אל {{category}}",
+      fen: "העמדה במסע הזה (FEN)",
+      openInAnalysis: "פתיחה בלוח הניתוח",
+      openInLoadPgn: "פתיחה בטעינת PGN",
+      playWithEngine: "משחק העמדה הזו",
+      openInEditor: "עריכת העמדה הזו",
+    },
+    sideToMove: {
+      w: "הלבן במסע",
+      b: "השחור במסע",
+    },
+    notFound: {
+      category: "אין תיקיית PGN כזו.",
+      position: "אין משחק כזה בתיקייה הזו.",
+      back: "חזרה אל קובצי ה-PGN שלי",
     },
   },
   footer: {
