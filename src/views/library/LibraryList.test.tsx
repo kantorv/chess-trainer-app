@@ -60,6 +60,8 @@ const renderList = (section: LibrarySection, categoryPath: string) =>
 
 const MATES = "basic";
 const STUDY = "lichess-study-queen-vs-rook-rosettes-by-methurst-2021-07-08";
+/** The next User PGNs folder along, which ships no notes of its own. */
+const UNANNOTATED = "lichess-study-puzzles-custom-set-1-by-lalala732-2026-05-03";
 
 const firstMate = itemsInLibraryCategory(MATES, matesSection.catalog)[0];
 
@@ -112,6 +114,64 @@ describe("LibraryList", () => {
       expect(screen.getByTestId("layout-right-panel")).toHaveTextContent(
         "Pick a position to open it on a board",
       );
+    });
+  });
+
+  describe("a folder's notes", () => {
+    it("fills the shell panel when the folder has some", () => {
+      /*
+        The rosettes study ships an `.mdx` beside its `.pgn`, and this is the
+        whole of the seam: the section descriptor carries a lookup keyed by
+        category path, and the panel renders what it finds there. That the file
+        compiles at all is also asserted here — Vitest runs off the same Vite
+        config, so a missing MDX plugin fails this test rather than only the
+        production build.
+      */
+      renderList(userPgnsSection, STUDY);
+
+      const notes = screen.getByTestId("user-pgns-list-notes");
+      expect(notes).toBeInTheDocument();
+      expect(
+        within(notes).getByRole("heading", { name: "Queen vs Rook, Rosettes" }),
+      ).toBeInTheDocument();
+      // Formatted, not a string: the MDX became real elements.
+      expect(within(notes).getByRole("table")).toBeInTheDocument();
+      expect(
+        within(notes).getByRole("link", { name: "methurst" }),
+      ).toHaveAttribute("href", "https://lichess.org/@/methurst");
+    });
+
+    it("scrolls them itself, because the shell's aside does not", () => {
+      // The aside is a flex column with `overflow: hidden`, and `RightPanel`
+      // portals into a `display: contents` host — so this box is a flex child
+      // of it and notes longer than the panel have to scroll here.
+      renderList(userPgnsSection, STUDY);
+
+      expect(screen.getByTestId("user-pgns-list-notes")).toHaveStyle({
+        flex: "1",
+        minHeight: "0px",
+        overflowY: "auto",
+      });
+    });
+
+    it("keeps the hint for a folder with none", () => {
+      renderList(userPgnsSection, UNANNOTATED);
+
+      expect(screen.queryByTestId("user-pgns-list-notes")).toBeNull();
+      expect(screen.getByTestId("layout-right-panel")).toHaveTextContent(
+        "Pick a game to replay it",
+      );
+    });
+
+    it("keeps the hint for a whole section that carries none", () => {
+      // Mates and Positions leave `folderNotes` unset, so nothing about their
+      // panels changed.
+      expect(matesSection.folderNotes).toBeUndefined();
+      expect(positionsSection.folderNotes).toBeUndefined();
+
+      renderList(matesSection, MATES);
+
+      expect(screen.queryByTestId("mates-list-notes")).toBeNull();
     });
   });
 

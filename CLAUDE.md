@@ -67,12 +67,12 @@ change by whether it *adds* to that count, not by the exit code.
 | `src/lib/matesCatalog.ts` | A thin binding over the shared layer in the Mates section's own vocabulary (`findMateCategory`, `positionsInCategory`, `findMatePosition`), plus the shipped catalog. |
 | `src/data/positions.json` | **The endgame Positions library** — categories nested to any depth, each with its own `{ en, he }` name, and the positions inside them. The only file adding a category *or* a position touches. |
 | `src/lib/positionsCatalog.ts` | That file loaded, once, through the same shared loader. |
-| `src/data/pgn/` | **The User PGNs library** — the project's `.pgn` files themselves: three lichess study exports (queen-vs-rook rosettes, a custom puzzle set, and nine annotated master games). One file is one folder, each game inside it one item. The only thing adding content touches. |
+| `src/data/pgn/` | **The User PGNs library** — the project's `.pgn` files themselves: three lichess study exports (queen-vs-rook rosettes, a custom puzzle set, and nine annotated master games). One file is one folder, each game inside it one item. A folder's optional **notes** are a sibling `.mdx` of the same stem. The only thing adding content touches. |
 | `src/data/pgn.json` | That section's *optional* manifest: renames, translates, nests and orders a folder. Every field is an override — a file it says nothing about still appears, and one it nests but does not label is still named from its own `StudyName` tag, which the shipped entry for the master-games study relies on. |
 | `src/lib/pgnLibrary.ts` | **The second producer of a `LibraryCatalog`** — `loadPgnLibrary` turns `path -> PGN text` plus that manifest into categories and `LibraryGame` items, naming each from the file's `StudyName` / a game's `ChapterName` / its players. Non-throwing: a broken game, an empty file, a manifest naming a file that is not there all land in `problems`. Pure — it takes its files as a parameter. |
 | `src/lib/pgnCatalog.ts` | That loader over the shipped files, once: an eager `import.meta.glob('../data/pgn/*.pgn', { query: '?raw' })`, so Vite inlines the text at build time and the sidebar can be built from the result at module scope. |
 | `src/lib/gameReference.ts` | **The `?game=` carrier** — `pgn/<category path>/<id>`, formatted by `gameReferenceOf` and resolved by `resolveGameReference` through the same `resolveLibraryPath`. A game does not fit in a URL, so what travels is a reference into the catalog. |
-| `src/views/library/` | The section-agnostic screens all three libraries render: `LibraryList.tsx` (a fixed top bar — the category's name and count, the name search, the card-size toggle — over the only thing on the screen that scrolls, the card grid of preview boards; its pure `librarySearch.ts` and `cardSize.ts` under it, and the hint alone left in the right-hand panel), `LibraryDetail.tsx` (which resolves the URL, renders the miss, and dispatches on the item's kind), `LibraryPositionDetail.tsx` (one position, read-only, facing the side to move, with the three `?fen=` hand-offs), `LibraryGameDetail.tsx` (the game replayed over the shared `MoveList` / `BoardControls` / `useGameNavigation`, with the `?game=` and `?fen=` hand-offs), `LibraryCardFooter.tsx` and its pure `gameSummary.ts` (a card's footer, and the one branch the list screen makes on the item's kind), `BackToCategory.tsx`, and `section.ts`, which is what tells one section from another — route base, catalog, chrome keys, test ids, `?game=` key. |
+| `src/views/library/` | The section-agnostic screens all three libraries render: `LibraryList.tsx` (a fixed top bar — the category's name and count, the name search, the card-size toggle — over the only thing on the screen that scrolls, the card grid of preview boards; its pure `librarySearch.ts` and `cardSize.ts` under it, and the folder's notes — or the hint, when it has none — in the right-hand panel), `LibraryDetail.tsx` (which resolves the URL, renders the miss, and dispatches on the item's kind), `LibraryPositionDetail.tsx` (one position, read-only, facing the side to move, with the three `?fen=` hand-offs), `LibraryGameDetail.tsx` (the game replayed over the shared `MoveList` / `BoardControls` / `useGameNavigation`, with the `?game=` and `?fen=` hand-offs), `LibraryCardFooter.tsx` and its pure `gameSummary.ts` (a card's footer, and the one branch the list screen makes on the item's kind), `BackToCategory.tsx`, `folderNotes.ts` / `pgnFolderNotes.ts` / `LibraryNotes.tsx` (a folder's authored MDX notes — the pure path lookup, the shipped `.mdx` glob, and the panel that styles and scrolls them), and `section.ts`, which is what tells one section from another — route base, catalog, chrome keys, test ids, `?game=` key, folder notes. |
 | `src/views/mates/` | The Mates section, as a **binding**: `list/MatesList.tsx` and `detail/MateDetail.tsx` read `/mates/:category(/:id)` and hand it to the two shared screens. Neither knows anything about JSON. |
 | `src/views/positions/` | The Positions section: `PositionsSection.tsx` is **one component behind every `/positions/*` URL**, resolving the splat through the catalog and rendering whichever shared screen the answer calls for. |
 | `src/views/pgn/` | The User PGNs section: `UserPgnsSection.tsx` is the same one component behind every `/pgn/*` URL, over a catalog whose items are games. |
@@ -268,6 +268,50 @@ Two things follow that are worth knowing before touching the layer:
   annotated master game fills four lines and a chapter that is a position and a
   comment shows its name and its length and stops. Neither renders a
   placeholder row.
+
+## A folder's notes are MDX, and they are not in the catalog
+
+A library folder can carry **authored notes** — what a study is, who wrote it,
+what to look for — and they fill the right-hand panel of its list screen in
+place of the one-line hint. Adding them is the section's one-file promise
+again: **`my_study.pgn` is described by `my_study.mdx` sitting next to it**, same
+stem, no manifest field, no locale key, no component edit.
+
+```
+src/data/pgn/<study>.mdx ──import.meta.glob──▶ pgnFolderNotes.ts ──▶ section.folderNotes
+      (authored)            (@mdx-js/rollup)     folderNotesOf()          │
+                                                 path ← slugify(stem)     ▼
+                                                 + manifest `under`   LibraryList → RightPanel → LibraryNotes
+```
+
+Three decisions hold it together:
+
+- **A `ComponentType` never enters `src/lib/`.** The obvious home for notes is a
+  field on `LibraryCategory`, and that is exactly what it must not be: the lib
+  layer is pure data, and its tests compare catalogs as values. So the notes are
+  a **second lookup keyed by the same category path**, resolved in the view
+  layer and reaching the screens through the `LibrarySection` descriptor —
+  which is what keeps `LibraryList` from learning what `.mdx` is, and what would
+  let Mates or Positions carry notes by filling one field.
+- **The key is the path `loadPgnLibrary` derived**, built with the same
+  `slugify` and the same manifest `under` prefix — not a second copy of the
+  rule. Get it wrong and nothing breaks loudly: the note sits in the bundle
+  addressing nothing and the panel quietly keeps the hint, so
+  `folderNotes.test.ts` asserts every shipped note names a folder the catalog
+  actually has.
+- **MDX, not Markdown, and not a string.** What the glob yields is a component,
+  so a note can `import` and render a real component when prose stops being
+  enough. `vite.config.ts` puts `@mdx-js/rollup` ahead of the React plugin
+  (`enforce: 'pre'`) with `remark-gfm` for tables, and Vitest runs off that same
+  config — so a broken MDX setup fails a list-screen test, not only the build.
+
+`LibraryNotes.tsx` is the one place authored elements are styled: MDX emits bare
+`h2` / `p` / `table` / `a`, which carry no MUI styling at all, so it applies a
+small typographic reset in theme tokens (following light and dark for free) and
+scrolls itself — the shell's aside deliberately does not scroll, and
+`RightPanel` portals into a `display: contents` host, so `flex: 1` +
+`minHeight: 0` + `overflowY: auto` is what keeps a long note off the board
+square. Nothing there pins direction: the aside mirrors under Hebrew by design.
 
 ## Handing a game on: `?game=`, beside `?fen=`
 

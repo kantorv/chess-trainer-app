@@ -3,6 +3,8 @@ import { matesCatalog } from "../../lib/matesCatalog";
 import { pgnCatalog } from "../../lib/pgnCatalog";
 import { positionsCatalog } from "../../lib/positionsCatalog";
 import type { LibraryCatalog } from "../../lib/libraryCatalog";
+import type { FolderNotes } from "./folderNotes";
+import { pgnFolderNotes } from "./pgnFolderNotes";
 
 /**
  * What a **library section** is, as a value.
@@ -49,6 +51,19 @@ export type LibrarySection = {
    * the `?fen=` hand-offs alone.
    */
   gameReferenceKey?: string;
+  /**
+   * This section's authored folder notes, keyed by category path
+   * ([`folderNotes.ts`](./folderNotes.ts)). A folder with an entry here shows it
+   * in the right-hand panel of its list screen in place of the static hint; a
+   * folder without one, and a section that leaves this unset entirely, keep the
+   * hint exactly as before.
+   *
+   * It is a field rather than something `LibraryList` looks up, because the
+   * lookup is what tells the sections apart: User PGNs resolves it from `.mdx`
+   * files beside its `.pgn` files, and Mates and Positions could carry notes
+   * later — from anywhere — by filling this in and nothing else.
+   */
+  folderNotes?: FolderNotes;
 };
 
 /**
@@ -92,4 +107,5 @@ export const userPgnsSection: LibrarySection = {
   listTestId: "user-pgns-list",
   itemTestId: "user-pgn",
   gameReferenceKey: PGN_REFERENCE_KEY,
+  folderNotes: pgnFolderNotes,
 };
