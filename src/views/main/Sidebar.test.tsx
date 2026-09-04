@@ -8,7 +8,7 @@ import AppThemeWithLang from "../../theme/AppThemeWithLang";
 import SideBar from "./Sidebar";
 import { navItems, navItemsInFolder } from "./navItems";
 import { navFolders, type NavFolder } from "./navFolders";
-import { folderChain, navLabel, type NavTreeNode } from "./navTree";
+import { folderPath, navLabel, type NavTreeNode } from "./navTree";
 
 const renderAt = (path: string, tree?: NavTreeNode[]) =>
   render(
@@ -22,23 +22,6 @@ const renderAt = (path: string, tree?: NavTreeNode[]) =>
 /** A shipped folder with more than one screen, by its translated name. Folders are buttons, not links. */
 const toolsFolder = () =>
   screen.getByRole("button", { name: i18n.t("nav.folders.tools") });
-
-/**
- * Every folder in a subtree, at any depth — sub-folders are folder rows too, so
- * a button count that includes an open folder's children is this and not a
- * length. Counted recursively rather than by hand, so nesting one more is a data
- * edit here as well as in `navFolders.ts`.
- */
-const folderCount = (folders: readonly { children?: readonly unknown[] }[]): number =>
-  folders.reduce(
-    (total, folder) =>
-      total +
-      1 +
-      folderCount(
-        (folder.children ?? []) as readonly { children?: readonly unknown[] }[],
-      ),
-    0,
-  );
 
 /**
  * The name a row renders, for a folder or a screen — through `navLabel`, the
@@ -98,9 +81,10 @@ describe("sidebar navigation", () => {
     const user = userEvent.setup();
 
     for (const item of navItems) {
-      // The screen's folder has to be opened first — and, for a nested one, its
-      // parent before it.
-      for (const id of folderChain(item.folder)) {
+      // The screen's folder chain has to be opened first — and `folderPath`
+      // gives it as the *rendered* tree has it, after a redundant leaf-category
+      // folder has been folded into the screen itself.
+      for (const id of folderPath(item.to)) {
         const row = screen.getByRole("button", { name: folderNameOf(id) });
         if (row.getAttribute("aria-expanded") === "false") await user.click(row);
       }
@@ -165,8 +149,8 @@ describe("the folder tree", () => {
     renderAt("/tools/analysis");
 
     // Top-level rows only: a sub-folder lives in its parent's `Collapse` body,
-    // which is unmounted while that parent is shut. Opening `mates` is what
-    // brings the three category rows into the tree — see `folderCount` below.
+    // which is unmounted while that parent is shut. Opening Positions is what
+    // brings its one surviving sub-folder row into the tree.
     expect(screen.getAllByRole("button")).toHaveLength(navFolders.length);
     expect(toolsFolder()).toHaveAttribute("aria-expanded", "true");
 
@@ -187,23 +171,22 @@ describe("the folder tree", () => {
     const user = userEvent.setup();
 
     await user.click(
-      screen.getByRole("button", { name: i18n.t("nav.folders.mates") }),
+      screen.getByRole("button", { name: i18n.t("nav.folders.positions") }),
     );
 
     /*
-      The top-level rows plus everything under Mates, at any depth — and only
-      that: one chain is open at a time, so the Positions section's own
-      sub-folders are still unmounted inside their shut parent.
+      Opening Positions mounts its rows. A leaf category folds to a plain link,
+      but a category that still has sub-categories of its own — Queen vs Rook —
+      stays a collapsible folder row, and comes in shut. One chain is open at a
+      time, so nothing under any other section is mounted.
     */
-    const mates = navFolders.find((f) => f.id === "mates")?.children ?? [];
-    expect(screen.getAllByRole("button")).toHaveLength(
-      navFolders.length + folderCount(mates),
-    );
-    for (const category of mates) {
-      expect(
-        screen.getByRole("button", { name: nameOf(category) }),
-      ).toHaveAttribute("aria-expanded", "false");
-    }
+    const queenVsRook = screen.getByRole("button", {
+      name: folderNameOf("positions:queen-vs-rook"),
+    });
+    expect(queenVsRook).toHaveAttribute("aria-expanded", "false");
+
+    // The top-level rows, plus the single sub-folder Positions brought with it.
+    expect(screen.getAllByRole("button")).toHaveLength(navFolders.length + 1);
   });
 
   it("starts with everything shut on a route that is no screen", () => {
@@ -333,16 +316,22 @@ describe("the folder tree", () => {
     );
     const user = userEvent.setup();
 
-    const basic = () =>
-      screen.getByRole("button", { name: i18n.t("nav.folders.matesBasic") });
-    expect(basic()).toHaveAttribute("aria-expanded", "true");
+    // `/mates/basic` is a plain link now — the redundant "Basic" sub-folder was
+    // folded away — so the section that holds it is Mates, and it opens with the
+    // route.
+    const mates = () =>
+      screen.getByRole("button", { name: i18n.t("nav.folders.mates") });
+    expect(mates()).toHaveAttribute("aria-expanded", "true");
+    expect(
+      screen.getByRole("link", { name: i18n.t("nav.matesBasic") }),
+    ).toHaveAttribute("aria-current", "page");
 
     await user.click(screen.getByRole("link", { name: "go to a position" }));
 
-    expect(basic()).toHaveAttribute("aria-expanded", "true");
+    expect(mates()).toHaveAttribute("aria-expanded", "true");
     expect(
-      screen.getByRole("button", { name: i18n.t("nav.folders.mates") }),
-    ).toHaveAttribute("aria-expanded", "true");
+      screen.getByRole("link", { name: i18n.t("nav.matesBasic") }),
+    ).toBeVisible();
   });
 });
 

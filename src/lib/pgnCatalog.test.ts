@@ -9,34 +9,66 @@ import {
 import { pgnCatalog } from "./pgnCatalog";
 
 /**
- * The **shipped** User PGNs library — the glob, the manifest and the three
- * `.pgn` files under `src/data/pgn/`, as they actually load.
+ * The **shipped** User PGNs library — the glob, the manifest and the `.pgn`
+ * files under `src/data/pgn/`, as they actually load.
  *
  * `pgnLibrary.test.ts` is where the loader's behaviour is pinned down against
  * fixtures. What is asserted here is that the real files come through it: that
- * every game in them parses, that the manifest nests and names the two studies,
- * and — the promise the section rests on — that the file the manifest says
- * nothing about is listed anyway.
+ * their games parse, that the manifest names some of the studies, and — the
+ * promise the section rests on — that a file the manifest says nothing about is
+ * listed anyway.
+ *
+ * The three lichess-export studies sit at the **top level** of the section: the
+ * manifest renames and orders them but does not nest them. The three
+ * "Chess Fundamentals, Capablanca" parts *are* nested — the manifest groups
+ * them under one `chess-fundamentals-capablanca` folder — which is the shipped
+ * proof that `under` builds a folder tree.
  */
-const ROSETTES =
-  "studies/lichess-study-queen-vs-rook-rosettes-by-methurst-2021-07-08";
-const PUZZLES =
-  "studies/lichess-study-puzzles-custom-set-1-by-lalala732-2026-05-03";
-const GAMES =
-  "studies/lichess-study-zwischenzug-best-games-part1-by-lalala732-2026-04-12";
+const ROSETTES = "lichess-study-queen-vs-rook-rosettes-by-methurst-2021-07-08";
+const PUZZLES = "lichess-study-puzzles-custom-set-1-by-lalala732-2026-05-03";
+const GAMES = "lichess-study-zwischenzug-best-games-part1-by-lalala732-2026-04-12";
+
+const CAPABLANCA = "chess-fundamentals-capablanca";
+const CAPABLANCA_PARTS = [1, 2, 3].map((n) => {
+  const dates = { 1: "2021-02-16", 2: "2021-03-05", 3: "2021-03-25" };
+  return `${CAPABLANCA}/lichess-study-chess-fundamentals-by-jr-capablanca-part-${n}-of-3-by-frankv53-${dates[n as 1 | 2 | 3]}`;
+});
+
+/**
+ * The one thing the Capablanca export the loader cannot represent: ten
+ * chapters — seven blank "chapter divider" boards and three king-less pawn /
+ * piece skeletons — whose `FEN` tag has no king, which `chess.js` refuses to
+ * load. They drop into `problems` and the other 84 chapters still load.
+ */
+const KINGLESS_DIAGRAM = /Invalid FEN: missing white king/;
 
 describe("the shipped User PGNs catalog", () => {
-  it("loads every file with nothing to report", () => {
-    expect(pgnCatalog.problems).toEqual([]);
+  it("loads every file, reporting only the ten king-less Capablanca diagrams", () => {
+    expect(pgnCatalog.problems).toHaveLength(10);
+    expect(
+      pgnCatalog.problems.every((problem) => KINGLESS_DIAGRAM.test(problem)),
+    ).toBe(true);
   });
 
-  it("finds all three files, under the folder the manifest nests them in", () => {
+  it("finds the three lichess studies at the top level, and the Capablanca parts nested under one folder", () => {
     const paths = allCategories(pgnCatalog).map((category) => category.path);
 
-    expect(paths).toContain("studies");
     expect(paths).toContain(ROSETTES);
     expect(paths).toContain(PUZZLES);
     expect(paths).toContain(GAMES);
+    // The three lichess exports are single-segment paths — not nested.
+    for (const path of [ROSETTES, PUZZLES, GAMES]) {
+      expect(path).not.toContain("/");
+    }
+
+    // The Capablanca parts hang off one grouping folder the manifest names.
+    expect(findLibraryCategory(CAPABLANCA, pgnCatalog)?.label).toEqual({
+      en: "Chess Fundamentals, Capablanca",
+      he: "יסודות השחמט, קפבלנקה",
+    });
+    for (const part of CAPABLANCA_PARTS) {
+      expect(paths).toContain(part);
+    }
   });
 
   it("names a folder from the manifest, and one the manifest did not label from its own file", () => {
@@ -56,9 +88,11 @@ describe("the shipped User PGNs catalog", () => {
     });
   });
 
-  it("holds every game in the three files", () => {
-    // 18 rosette chapters + 28 puzzle chapters + 9 annotated master games.
-    expect(pgnCatalog.items).toHaveLength(55);
+  it("holds every game the files could yield", () => {
+    // 18 rosette chapters + 28 puzzle chapters + 9 annotated master games,
+    // plus the Capablanca parts: 44 + 26 + 14 chapters once the ten king-less
+    // diagrams are dropped.
+    expect(pgnCatalog.items).toHaveLength(55 + 84);
     expect(pgnCatalog.items.every((item) => item.kind === "game")).toBe(true);
     // A game is not a position, so the projection the other two sections read is
     // empty for this one.

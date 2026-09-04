@@ -89,13 +89,18 @@ describe("MatesList", () => {
     );
   });
 
-  it("shows the category and its count in the shell panel", () => {
+  it("shows the category and its count in the list's own top bar", () => {
+    // Both moved out of the shell panel and above the cards, where the reader
+    // is already looking; the panel keeps the hint alone.
     renderAt("/mates/complex");
 
-    const panel = screen.getByTestId("layout-right-panel");
-    expect(panel).toHaveTextContent("Complex");
-    expect(panel).toHaveTextContent(
+    const topBar = screen.getByTestId("mates-list-top-bar");
+    expect(topBar).toHaveTextContent("Complex");
+    expect(topBar).toHaveTextContent(
       `Positions: ${positionsInCategory("complex").length}`,
+    );
+    expect(screen.getByTestId("layout-right-panel")).toHaveTextContent(
+      "Pick a position to open it on a board",
     );
   });
 

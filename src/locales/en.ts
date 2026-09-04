@@ -394,6 +394,18 @@ const en = {
       count: "Positions: {{count}}",
       empty: "No positions in this category yet.",
       hint: "Pick a position to open it on a board, then hand it to the Analysis Board or play it against the engine.",
+      /**
+       * The list screen's top bar: the name search and the card-size toggle.
+       * Both are chrome the app ships in every section, so unlike a position's
+       * own name they belong here — see the section's own comment above.
+       */
+      search: "Search positions",
+      noMatches: "No positions match that search.",
+      cardSize: {
+        label: "Card size",
+        compact: "Compact cards",
+        comfortable: "Comfortable cards",
+      },
     },
     /** The detail screen's panel. */
     detail: {
@@ -432,6 +444,13 @@ const en = {
       count: "Positions: {{count}}",
       empty: "No positions in this category yet.",
       hint: "Pick a position to open it on a board, then hand it to the Analysis Board or play it against the engine.",
+      search: "Search positions",
+      noMatches: "No positions match that search.",
+      cardSize: {
+        label: "Card size",
+        compact: "Compact cards",
+        comfortable: "Comfortable cards",
+      },
     },
     /** The detail screen's panel. */
     detail: {
@@ -483,6 +502,18 @@ const en = {
        */
       moves_one: "{{count}} move",
       moves_other: "{{count}} moves",
+      /**
+       * The same two controls as the position sections carry, worded for a
+       * library of games — a search here matches a chapter's title, its
+       * players and its opening, not a position's name.
+       */
+      search: "Search games",
+      noMatches: "No games match that search.",
+      cardSize: {
+        label: "Card size",
+        compact: "Compact cards",
+        comfortable: "Comfortable cards",
+      },
     },
     /** The detail screen's panel. */
     detail: {

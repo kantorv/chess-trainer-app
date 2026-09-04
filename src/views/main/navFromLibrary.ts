@@ -6,7 +6,11 @@ import ViewListRoundedIcon from "@mui/icons-material/ViewListRounded";
 
 import { pgnCatalog } from "../../lib/pgnCatalog";
 import { positionsCatalog } from "../../lib/positionsCatalog";
-import type { LibraryCatalog, LibraryCategory } from "../../lib/libraryCatalog";
+import {
+  itemsInLibraryCategory,
+  type LibraryCatalog,
+  type LibraryCategory,
+} from "../../lib/libraryCatalog";
 import type { NavFolder } from "./navFolders";
 import type { NavItem } from "./navItems";
 
@@ -26,11 +30,18 @@ import type { NavItem } from "./navItems";
  * Two things make that work:
  *
  * - **A category is a folder holding exactly one screen**, its own list, both
- *   carrying the category's name. That is the shape Mates already ships (the
- *   *Basic* folder holding the *Basic mates* screen), so the sidebar reads the
- *   same in both sections, and a category with sub-categories holds them
- *   alongside its own list rather than instead of it. A *position* stays a
- *   route rather than a nav entry, or the sidebar would grow without bound.
+ *   carrying the category's name — and a category with sub-categories holds
+ *   them alongside its own list rather than instead of it. For a *leaf*
+ *   category that folder is redundant, so `collapseLeafCategories` in
+ *   `navTree.ts` folds it back down to just the screen before the sidebar
+ *   renders it (the same fold the hand-written Mates sub-folders now get). A
+ *   *position* stays a route rather than a nav entry, or the sidebar would grow
+ *   without bound.
+ * - **A category that only groups sub-categories — no items of its own — gets
+ *   no list screen**, just the folder. A manifest group like
+ *   `chess-fundamentals-capablanca` holds its three parts and nothing else, so
+ *   a list screen for it would be a second, empty row named the same as the
+ *   folder it sits in. It is `collapseLeafCategories`' `group` shape.
  * - **A generated node is named from the data**, so it carries `label` rather
  *   than a `labelKey` — see `navTree.ts`. There is no locale key to write, and
  *   `locales.test.ts` keeps asserting exactly what it asserted before.
@@ -83,13 +94,18 @@ export const libraryNavFolder = (
 });
 
 /**
- * One list screen per category, at every depth, each filed under that
- * category's generated folder.
+ * One list screen per category that has items of its own, at every depth, each
+ * filed under that category's generated folder.
+ *
+ * A category that **only groups sub-categories** — a manifest group like
+ * `chess-fundamentals-capablanca` — is skipped: it keeps its folder (from
+ * {@link libraryNavFolder}) but gets no screen, so the sidebar does not show a
+ * second row named the same as the folder holding it.
  *
  * Emitted **children before the category's own screen**, which is the order
  * `buildNavTree` lays a folder out in (sub-folders first, then that folder's
  * own screens). Registration order is otherwise invisible — `navItemsInFolder`
- * filters, and each generated folder holds exactly one screen — but keeping the
+ * filters, and each generated folder holds at most one screen — but keeping the
  * two in step means "the tree's screens are `navItems`, in order" stays an
  * assertion rather than an approximation.
  */
@@ -102,6 +118,10 @@ export const libraryNavItems = (
   const walk = (categories: readonly LibraryCategory[]) => {
     for (const category of categories) {
       walk(category.children);
+      const groupsOnly =
+        category.children.length > 0 &&
+        itemsInLibraryCategory(category.path, catalog).length === 0;
+      if (groupsOnly) continue;
       items.push({
         to: `${options.routeBase}/${category.path}`,
         ...(category.labelKey !== undefined ? { labelKey: category.labelKey } : {}),

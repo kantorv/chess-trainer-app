@@ -82,7 +82,7 @@ describe("the Positions section", () => {
     for (const position of listed) {
       expect(screen.getByTestId(`position-card-${position.id}`)).toBeInTheDocument();
     }
-    expect(screen.getByTestId("layout-right-panel")).toHaveTextContent(
+    expect(screen.getByTestId("positions-list-top-bar")).toHaveTextContent(
       "Rook and pawn vs Rook",
     );
   });
@@ -104,10 +104,14 @@ describe("the Positions section", () => {
     */
     renderAt("/positions/queen-vs-rook/rosettes");
 
-    const panel = screen.getByTestId("layout-right-panel");
-    expect(panel).toHaveTextContent("Rosettes");
-    // Rosettes ships as structure with no positions in it yet.
-    expect(panel).toHaveTextContent("No positions in this category yet.");
+    expect(screen.getByTestId("positions-list-top-bar")).toHaveTextContent(
+      "Rosettes",
+    );
+    // Rosettes ships as structure with no positions in it yet — said where the
+    // cards would have been, rather than off in the panel.
+    expect(screen.getByTestId("positions-list-empty")).toHaveTextContent(
+      "No positions in this category yet.",
+    );
     expect(screen.queryByTestId("board")).toBeNull();
   });
 

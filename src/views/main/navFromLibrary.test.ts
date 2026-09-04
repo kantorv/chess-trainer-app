@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import GridViewRoundedIcon from "@mui/icons-material/GridViewRounded";
 
-import { allCategories, loadLibraryCatalog } from "../../lib/libraryCatalog";
+import {
+  allCategories,
+  itemsInLibraryCategory,
+  loadLibraryCatalog,
+} from "../../lib/libraryCatalog";
+import { loadPgnLibrary } from "../../lib/pgnLibrary";
 import { pgnCatalog } from "../../lib/pgnCatalog";
 import { positionsCatalog } from "../../lib/positionsCatalog";
 import {
@@ -13,8 +18,15 @@ import {
   userPgnsNavItems,
   type LibraryNavOptions,
 } from "./navFromLibrary";
-import { buildNavTree, folderPath, navLabelKeys, navTree } from "./navTree";
+import {
+  buildNavTree,
+  collapseLeafCategories,
+  folderPath,
+  navLabelKeys,
+  navTree,
+} from "./navTree";
 import { navItemsInFolder } from "./navItems";
+import { navFolders } from "./navFolders";
 import { TreeManager } from "../../lib/treeManager";
 import type { NavFolder } from "./navFolders";
 
@@ -29,7 +41,13 @@ const options: LibraryNavOptions = {
   screenIcon: icon,
 };
 
-/** A three-level library, deeper than anything shipped. */
+const KQ_VS_K = "7k/8/8/8/8/8/4Q3/4K3 w - - 0 1";
+
+/**
+ * A three-level library, deeper than anything shipped. Every category carries a
+ * position of its own, so every one of them is a listable screen — the
+ * `groupsOnly` skip below has its own fixture.
+ */
 const catalog = loadLibraryCatalog({
   categories: [
     {
@@ -45,12 +63,59 @@ const catalog = loadLibraryCatalog({
     },
     { id: "sibling", label: { en: "Sibling" } },
   ],
-  positions: [],
+  positions: [
+    { id: "p-outer", category: "outer", fen: KQ_VS_K, name: { en: "Outer" } },
+    { id: "p-inner", category: "outer/inner", fen: KQ_VS_K, name: { en: "Inner" } },
+    {
+      id: "p-deepest",
+      category: "outer/inner/deepest",
+      fen: KQ_VS_K,
+      name: { en: "Deepest" },
+    },
+    { id: "p-sibling", category: "sibling", fen: KQ_VS_K, name: { en: "Sibling" } },
+  ],
+});
+
+/** A library whose top category only groups two leaves — no items of its own. */
+const groupingCatalog = loadLibraryCatalog({
+  categories: [
+    {
+      id: "group",
+      label: { en: "Group" },
+      children: [
+        { id: "a", label: { en: "A" } },
+        { id: "b", label: { en: "B" } },
+      ],
+    },
+  ],
+  positions: [
+    { id: "p-a", category: "group/a", fen: KQ_VS_K, name: { en: "A" } },
+    { id: "p-b", category: "group/b", fen: KQ_VS_K, name: { en: "B" } },
+  ],
 });
 
 /** Every folder id in a subtree, depth-first. */
 const idsOf = (folders: readonly NavFolder[]) =>
   new TreeManager<NavFolder>(folders).collectIds("id");
+
+/** The shipped tree before the leaf-category fold — the registration contract. */
+const rawShippedTree = () => buildNavTree(navFolders, navItemsInFolder);
+
+/**
+ * A generated screen is in the shipped (rendered) tree under `section`, and the
+ * fold only ever shortened its breadcrumb — it never moved the screen to a
+ * different branch or dropped it. `folder` is the folder the screen *names*,
+ * still the last id of its breadcrumb in the un-folded tree.
+ */
+const expectFiledUnder = (to: string, folder: string, section: string) => {
+  const registered = folderPath(to, rawShippedTree());
+  const rendered = folderPath(to, navTree());
+
+  expect(rendered[0], `${to} is not under ${section}`).toBe(section);
+  expect(rendered.length).toBeGreaterThan(0);
+  expect(registered.at(-1)).toBe(folder);
+  expect(registered.slice(0, rendered.length)).toEqual(rendered);
+};
 
 describe("libraryNavFolder", () => {
   const folder = libraryNavFolder(catalog, options);
@@ -87,13 +152,30 @@ describe("libraryNavFolder", () => {
 describe("libraryNavItems", () => {
   const items = libraryNavItems(catalog, options);
 
-  it("gives every category one list screen, at its own route", () => {
+  it("gives every category that has items one list screen, at its own route", () => {
     expect(items.map((item) => item.to)).toEqual([
       "/lib/outer/inner/deepest",
       "/lib/outer/inner",
       "/lib/outer",
       "/lib/sibling",
     ]);
+  });
+
+  it("gives a category that only groups sub-categories a folder but no screen", () => {
+    /*
+      The manifest-group shape: `group` has two leaves under it and nothing of
+      its own. It stays a folder (see `libraryNavFolder`), but a list screen for
+      it would be a second row named "Group" sitting inside the "Group" folder.
+    */
+    const grouped = libraryNavItems(groupingCatalog, options);
+
+    expect(grouped.map((item) => item.to)).toEqual([
+      "/lib/group/a",
+      "/lib/group/b",
+    ]);
+    expect(idsOf(libraryNavFolder(groupingCatalog, options).children ?? [])).toContain(
+      "lib:group",
+    );
   });
 
   it("files each screen under that category's own folder", () => {
@@ -133,12 +215,10 @@ describe("the generated Positions subtree, as shipped", () => {
 
   it("puts every one of them into the shipped nav tree, under Positions", () => {
     for (const item of positionsNavItems()) {
-      // The breadcrumb is the whole chain from the top, so this asserts both
-      // that the screen is in the tree and that it hangs under the section.
-      const breadcrumb = folderPath(item.to, navTree());
-
-      expect(breadcrumb[0], `${item.to} is not under Positions`).toBe("positions");
-      expect(breadcrumb.at(-1)).toBe(item.folder);
+      // In the tree the sidebar renders, a redundant leaf-category folder is
+      // folded away — so the screen hangs one level up, but under the same
+      // section and never on a different branch.
+      expectFiledUnder(item.to, item.folder, "positions");
       expect(navItemsInFolder(item.folder)).toEqual([item]);
     }
   });
@@ -186,21 +266,49 @@ describe("the generated User PGNs subtree", () => {
     }
   });
 
-  it("nests a folder exactly as the manifest nested the category", () => {
-    const studies = (userPgnsNavFolder().children ?? []).find(
-      (child) => child.id === "user-pgns:studies",
+  it("keeps a manifest group that gathers several files as one folder", () => {
+    /*
+      The multi-file grouping path: two `.pgn` files nested under one named
+      folder via `folders.<id>` + a per-file `under`. Each file's own folder is
+      a leaf and folds down to a screen, but the group folder then holds several
+      of those, so it survives the fold as a folder that lists both files.
+    */
+    const grouped = loadPgnLibrary(
+      {
+        "alpha.pgn": '[Event "Alpha"]\n\n1. e4 e5 *\n',
+        "beta.pgn": '[Event "Beta"]\n\n1. d4 d5 *\n',
+      },
+      {
+        folders: { lessons: { en: "Lessons", he: "שיעורים" } },
+        files: {
+          "alpha.pgn": { under: "lessons" },
+          "beta.pgn": { under: "lessons" },
+        },
+      },
+    );
+    expect(grouped.problems).toEqual([]);
+
+    const opts: LibraryNavOptions = { ...options, rootId: "grp", routeBase: "/grp" };
+    const items = libraryNavItems(grouped, opts);
+    const tree = collapseLeafCategories(
+      buildNavTree([libraryNavFolder(grouped, opts)], (id) =>
+        items.filter((item) => item.folder === id),
+      ),
     );
 
-    expect(studies).toBeDefined();
-    expect((studies?.children ?? []).length).toBeGreaterThan(0);
+    const lessons = tree[0].children?.find((node) => node.id === "grp:lessons");
+    expect(lessons?.kind).toBe("folder");
+
+    const routes = (lessons?.children ?? [])
+      .filter((node) => node.kind === "screen")
+      .map((node) => node.to);
+    expect(routes).toContain("/grp/lessons/alpha");
+    expect(routes).toContain("/grp/lessons/beta");
   });
 
   it("puts every generated screen into the shipped nav tree, under User PGNs", () => {
     for (const item of userPgnsNavItems()) {
-      const breadcrumb = folderPath(item.to, navTree());
-
-      expect(breadcrumb[0], `${item.to} is not under User PGNs`).toBe("user-pgns");
-      expect(breadcrumb.at(-1)).toBe(item.folder);
+      expectFiledUnder(item.to, item.folder, "user-pgns");
       expect(navItemsInFolder(item.folder)).toEqual([item]);
     }
   });
@@ -212,13 +320,18 @@ describe("the generated User PGNs subtree", () => {
     expect(keys.filter((key) => key.startsWith("nav.folders.userPgns."))).toEqual([]);
   });
 
-  it("reaches the same folders the catalog declares, and no others", () => {
+  it("reaches every catalog folder that has games, and no others", () => {
     // Dropping a `.pgn` into `src/data/pgn/` is a route the sidebar offers, with
-    // nothing else edited. This is that promise, asserted.
+    // nothing else edited. This is that promise, asserted — but a manifest group
+    // (`chess-fundamentals-capablanca`) holds only its parts, so it is a folder
+    // without a screen and is not among the routes.
+    const listable = allCategories(pgnCatalog).filter(
+      (category) => itemsInLibraryCategory(category.path, pgnCatalog).length > 0,
+    );
+    expect(listable.length).toBeLessThan(allCategories(pgnCatalog).length);
+
     expect(userPgnsNavItems().map((item) => item.to).sort()).toEqual(
-      allCategories(pgnCatalog)
-        .map((category) => `/pgn/${category.path}`)
-        .sort(),
+      listable.map((category) => `/pgn/${category.path}`).sort(),
     );
   });
 

@@ -14,10 +14,9 @@ import { userPgnsSection } from "../library/section";
  * which takes the longest prefix of the segments that names a category and reads
  * whatever is left over as an item id. `App.tsx` therefore never learns how the
  * `.pgn` files are organised — `/pgn/chess-com-games-2026-08-30`,
- * `/pgn/studies/queen-vs-rook-rosettes` and
- * `/pgn/studies/queen-vs-rook-rosettes/chapter-1` are all this one route, and
- * dropping a file in (or nesting it through `src/data/pgn.json`) changes none of
- * it.
+ * `/pgn/queen-vs-rook-rosettes` and `/pgn/queen-vs-rook-rosettes/chapter-1` are
+ * all this one route, as is any deeper path a `src/data/pgn.json` group nests,
+ * and dropping a file in changes none of it.
  *
  * The four outcomes are the four a library can have, and each is one of the two
  * shared screens: a category listed, one item shown, an unknown category, or a
@@ -26,7 +25,7 @@ import { userPgnsSection } from "../library/section";
 function UserPgnsSection() {
   const params = useParams();
   // `filter(Boolean)` drops the empty segments a trailing or doubled slash
-  // leaves behind, so `/pgn/studies/` is the category, not a miss.
+  // leaves behind, so `/pgn/queen-vs-rook-rosettes/` is the category, not a miss.
   const segments = (params["*"] ?? "").split("/").filter(Boolean);
   const location = resolveLibraryPath(segments, userPgnsSection.catalog);
 
