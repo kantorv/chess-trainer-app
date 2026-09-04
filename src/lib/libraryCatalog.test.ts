@@ -6,6 +6,7 @@ import {
   findLibraryCategory,
   findLibraryItem,
   findLibraryPosition,
+  itemCountUnder,
   itemsInLibraryCategory,
   libraryCatalogOf,
   libraryItemFen,
@@ -110,6 +111,21 @@ describe("loadLibraryCatalog reads a nested library", () => {
       positionsInLibraryCategory("queen-vs-rook", catalog).map((p) => p.id),
     ).toEqual(["philidor"]);
     expect(positionsInLibraryCategory("queen-vs-rook/rosettes", catalog)).toEqual([]);
+  });
+
+  it("rolls a category's whole subtree up for a folder card's count", () => {
+    const catalog = nested();
+    const countIn = (path: string) => {
+      const category = findLibraryCategory(path, catalog);
+      if (category === undefined) throw new Error(`no category ${path}`);
+      return itemCountUnder(category, catalog);
+    };
+
+    // The one place the rollup happens, and the opposite rule to the list
+    // above: a folder card stands for everything behind the click.
+    expect(countIn("queen-vs-rook")).toBe(2);
+    expect(countIn("queen-vs-rook/deeper")).toBe(1);
+    expect(countIn("queen-vs-rook/rosettes")).toBe(0);
   });
 
   it("addresses a position by category path and id together", () => {

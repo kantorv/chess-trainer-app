@@ -56,8 +56,15 @@ export type NavFolder = {
  * per `.pgn` file under `src/data/pgn/`. Both are named from their data, so
  * adding a category — or dropping a PGN file in — changes this tree without
  * touching this file, which is the whole of those sections' promise.
+ *
+ * **A function, not a constant**, and that is the whole of what uploads cost
+ * the navigation: the User PGNs library grows a folder when the reader uploads
+ * a `.pgn` (`lib/pgnUploads.ts`), so the tree is built when it is asked for
+ * rather than when this module is imported. `navTree()` already rebuilt on
+ * every call, and `Sidebar.tsx` re-renders on a store change, so the new folder
+ * appears without a reload. Everything else here is unchanged.
  */
-export const navFolders: readonly NavFolder[] = [
+export const navFolders = (): readonly NavFolder[] => [
   {
     id: "engine",
     labelKey: "nav.folders.engine",

@@ -4,7 +4,8 @@ import LibraryBooksRoundedIcon from "@mui/icons-material/LibraryBooksRounded";
 import SnippetFolderRoundedIcon from "@mui/icons-material/SnippetFolderRounded";
 import ViewListRoundedIcon from "@mui/icons-material/ViewListRounded";
 
-import { pgnCatalog } from "../../lib/pgnCatalog";
+import { userPgnsLibrary } from "../../lib/pgnCatalog";
+import { pgnKindOf } from "../../lib/pgnKind";
 import { positionsCatalog } from "../../lib/positionsCatalog";
 import {
   itemsInLibraryCategory,
@@ -52,6 +53,18 @@ import type { NavItem } from "./navItems";
  */
 
 export type LibraryNavOptions = {
+  /**
+   * Whether this category gets a list screen of its own. The default rule is
+   * below in {@link libraryNavItems}: everything except a category that only
+   * groups sub-categories and holds nothing itself.
+   *
+   * A section overrides it when one of its grouping folders has a screen worth
+   * reaching anyway — the User PGNs **collection**, whose index page is a real
+   * screen (`views/pgn/PgnCollection.tsx`) rather than a list that would come
+   * out empty, and its **Uploads** folder, whose screen is the upload button
+   * itself and therefore has to be there before anything is in the folder.
+   */
+  hasScreen?: (category: LibraryCategory) => boolean;
   /** Folder id of the section's root folder, and the namespace of every id under it. */
   rootId: string;
   /** The root folder's name — chrome, since the *section* is part of the app. */
@@ -121,7 +134,8 @@ export const libraryNavItems = (
       const groupsOnly =
         category.children.length > 0 &&
         itemsInLibraryCategory(category.path, catalog).length === 0;
-      if (groupsOnly) continue;
+      // The section may claim a group anyway — see `hasScreen`.
+      if (groupsOnly && options.hasScreen?.(category) !== true) continue;
       items.push({
         to: `${options.routeBase}/${category.path}`,
         ...(category.labelKey !== undefined ? { labelKey: category.labelKey } : {}),
@@ -164,6 +178,17 @@ export const positionsNavItems = (): NavItem[] =>
  * `.pgn` into `src/data/pgn/` puts a folder in the sidebar.**
  */
 export const userPgnsNavOptions: LibraryNavOptions = {
+  /*
+    A **collection** — one `.pgn` holding several studies — groups sub-folders
+    and holds nothing itself, so the default rule would give it no screen. It
+    has one: `PgnCollection` is the file's index page, with its counts, its
+    author and its authored notes, and a folder that only expands would leave
+    that unreachable. Every other group (a manifest shelf) keeps the default.
+  */
+  hasScreen: (category) => {
+    const kind = pgnKindOf(category.path, userPgnsLibrary().kinds);
+    return kind === "collection" || kind === "uploads";
+  },
   rootId: "user-pgns",
   rootLabelKey: "nav.folders.userPgns",
   rootIcon: SnippetFolderRoundedIcon,
@@ -172,10 +197,14 @@ export const userPgnsNavOptions: LibraryNavOptions = {
   screenIcon: ViewListRoundedIcon,
 };
 
-/** The User PGNs folder subtree, built from the shipped catalog. */
+/**
+ * The User PGNs folder subtree, built from the **live** library — the shipped
+ * files plus whatever the reader has uploaded, which is why this section's
+ * registries are functions called per render rather than constants.
+ */
 export const userPgnsNavFolder = (): NavFolder =>
-  libraryNavFolder(pgnCatalog, userPgnsNavOptions);
+  libraryNavFolder(userPgnsLibrary(), userPgnsNavOptions);
 
-/** The User PGNs list screens, built from the shipped catalog. */
+/** The User PGNs list screens, from that same live library. */
 export const userPgnsNavItems = (): NavItem[] =>
-  libraryNavItems(pgnCatalog, userPgnsNavOptions);
+  libraryNavItems(userPgnsLibrary(), userPgnsNavOptions);

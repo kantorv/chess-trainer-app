@@ -1,8 +1,17 @@
 import { describe, expect, it } from "vitest";
 
-import type { LibraryGame, LibraryItem, LibraryPosition } from "../../lib/libraryCatalog";
+import type {
+  LibraryCategory,
+  LibraryGame,
+  LibraryItem,
+  LibraryPosition,
+} from "../../lib/libraryCatalog";
 import { parsePgnGames } from "../../lib/pgn";
-import { filterLibraryItems, searchTextOf } from "./librarySearch";
+import {
+  filterLibraryCategories,
+  filterLibraryItems,
+  searchTextOf,
+} from "./librarySearch";
 
 /*
   Fixtures rather than the shipped catalogs: what the filter has to get right is
@@ -125,5 +134,41 @@ describe("filterLibraryItems", () => {
 
   it("returns nothing for a query nothing carries", () => {
     expect(filterLibraryItems(items, "zugzwang", "en")).toEqual([]);
+  });
+});
+
+describe("filterLibraryCategories", () => {
+  const folder = (id: string, name: string): LibraryCategory => ({
+    id,
+    path: `studies/${id}`,
+    label: { en: name },
+    children: [],
+  });
+
+  const folders = [
+    folder("lightning", "Queen vs Rook, Lightning"),
+    folder("thorn", "Queen vs Rook, Thorn"),
+    folder("euwe", "Queen vs Rook, Euwe position"),
+  ];
+
+  const label = (category: LibraryCategory) => category.label?.en ?? "";
+
+  it("returns the folders by reference for an empty query", () => {
+    expect(filterLibraryCategories(folders, "   ", label)).toBe(folders);
+  });
+
+  it("matches a folder's name, case-insensitively and in any word order", () => {
+    expect(
+      filterLibraryCategories(folders, "LIGHTNING", label).map((c) => c.id),
+    ).toEqual(["lightning"]);
+    expect(
+      filterLibraryCategories(folders, "position euwe", label).map((c) => c.id),
+    ).toEqual(["euwe"]);
+  });
+
+  it("matches nothing a folder's name does not say", () => {
+    // A folder card prints its name and its count, so its name is all it is
+    // findable by — the same rule the item filter follows.
+    expect(filterLibraryCategories(folders, "zugzwang", label)).toEqual([]);
   });
 });

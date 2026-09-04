@@ -1,0 +1,3170 @@
+[Event "Queen vs Rook, Adjacent Rosettes: Chapter 1"]
+[Date "2021.07.28"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Adjacent Rosettes"]
+[ChapterName "Chapter 1"]
+[ChapterURL "https://lichess.org/study/HinA5URr/gUDL8NpO"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/8/3r4/5k2/2Q5/4K3/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.28"]
+[UTCTime "00:25:36"]
+
+{ In this rosette, the kings are adjacent to each other. This is the non-cutoff type, because the white queen does not cut off the black king from the rook, and the black rook does not cut off the white king from the black king.
+In all non-cutoff adjacent rosettes, white plays the same idea: to attack the rook from an adjacent square. }
+1. Qc5+ Ke6 2. Ke4 Kd7 3. Qb5+ { Best for white is to give check from the pseudo-thorn position. } 3... Kc7 4. Ke5 Rg6 5. Qc4+ Rc6 6. Qb4 Rh6 7. Qe7+ Kc6 8. Qe8+ Kc7 9. Kd5 Rd6+ 10. Kc5 Rd7 { pseudo-Euwe position } *
+
+
+[Event "Queen vs Rook, Adjacent Rosettes: Chapter 2"]
+[Date "2021.07.28"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Adjacent Rosettes"]
+[ChapterName "Chapter 2"]
+[ChapterURL "https://lichess.org/study/HinA5URr/jJOYicLL"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/8/4k3/2r5/5K2/3Q4/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.28"]
+[UTCTime "00:40:41"]
+
+{ This is an adjacent rosette, cutoff type. The white queen cuts off the black king from the black rook, and the black rook cuts of the white king from the black king.
+There is one plan that works well for white in most situations, and the two exceptions are for clear and obvious reasons. The best plan is to drive the black king towards the rook on the horizontal. }
+1. Qg6+ Kd5 2. Qe4+ Kd6 3. Qd4+ Rd5 4. Qf6+ Kc5 5. Ke4 { Thorn position } 5... Rd7 { Black creates the same rosette again. } 6. Qc3+ Kd6 7. Qe5+ Kc6 8. Qe6+ Rd6 9. Qc4+ Kd7 10. Ke5 { Thorn position } 10... Rb6 11. Qf7+ Kc6 12. Qd5+ Kc7 13. Qc5+ Rc6 14. Qe7+ Kb6 15. Kd5 { Thorn position } 15... Rc8 16. Qb4+ Kc7 17. Qd6+ Kb7 18. Qd7+ Rc7 19. Qb5+ Kc8 20. Kd6 Rg7 21. Qf5+ Kb7 22. Qe4+ Kb8 23. Kc6 Rb7 24. Qe8+ Ka7 25. Qd8 { Philidor position } *
+
+
+[Event "Queen vs Rook, Adjacent Rosettes: Chapter 3"]
+[Date "2021.07.28"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Adjacent Rosettes"]
+[ChapterName "Chapter 3"]
+[ChapterURL "https://lichess.org/study/HinA5URr/KScI0sPx"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/8/4k3/2r5/5K2/3Q4/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.28"]
+[UTCTime "01:03:06"]
+
+1. Qg6+ { Black's second option is Kd7. } 1... Kd7 2. Ke4 { Moving the king towards the rook. } 2... Rb5 { Maintains the 4th rank cut-off and eyes b1 for a harassment defense. } 3. Qf6 Rc5 { is good defense, creating an opposite rosette, third rank type. } *
+
+
+[Event "Queen vs Rook, Adjacent Rosettes: Chapter 4"]
+[Date "2021.07.28"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Adjacent Rosettes"]
+[ChapterName "Chapter 4"]
+[ChapterURL "https://lichess.org/study/HinA5URr/W0KmYTdw"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/8/4k3/2r5/5K2/3Q4/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.28"]
+[UTCTime "01:11:03"]
+
+1. Qg6+ Ke7 { Black's third option is Ke7. } 2. Ke4 { Again, approach the rook with the king. } 2... Rb5 { Maintaining the 4th rank cut-off, and eyeing b1 for a harassment defense. } 3. Qc6 Rb1 4. Qc3 Rh1 5. Kf4 { This is the most efficient move. The white king will attack the rook if it checks from the h file, and move to e5 if it checks from f1. } 5... Rf1+ 6. Ke5 { Black must return to a close defense. } 6... Rf7 7. Qc8 { Euwe position } *
+
+
+[Event "Queen vs Rook, Adjacent Rosettes: Chapter 5"]
+[Date "2021.07.28"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Adjacent Rosettes"]
+[ChapterName "Chapter 5"]
+[ChapterURL "https://lichess.org/study/HinA5URr/klHKXCZF"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/8/5k2/7r/4K3/6Q1/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.28"]
+[UTCTime "01:21:15"]
+
+{ The black rook on the edge of the board still functions as a Cutoff Adjacent Rosette. }
+1. Qd6+ Kf7 2. Kf4 { With the black king out of the center, the black rook is dominated and cannot maintain a fourth rank defense. } 2... Rh7 3. Kg5 Rg7+ 4. Kh6 { Absolute seventh extension } *
+
+
+[Event "Queen vs Rook, Adjacent Rosettes: Chapter 6"]
+[Date "2021.07.28"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Adjacent Rosettes"]
+[ChapterName "Chapter 6"]
+[ChapterURL "https://lichess.org/study/HinA5URr/cIRbFTz5"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "3k4/5r2/2K5/4Q3/8/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.28"]
+[UTCTime "01:25:50"]
+
+1. Qb8+ Ke7 { When the black king is on the edge, Ke7 is the only option } 2. Qd6+ Ke8 3. Qe6+ Kf8 4. Kd6 Kg7 { Lightning position } 5. Qg4+ Kf6 6. Qg8 { Euwe position } *
+
+
+[Event "Queen vs Rook, Adjacent Rosettes: Chapter 7"]
+[Date "2021.07.28"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Adjacent Rosettes"]
+[ChapterName "Chapter 7"]
+[ChapterURL "https://lichess.org/study/HinA5URr/habI341M"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/8/8/2k5/4r3/1K6/3Q4/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.28"]
+[UTCTime "01:34:11"]
+
+{ In this cutoff adjacent rosette, our key move Qa5+ would be possible. However, if our key would place the queen on or over the edge of the board, do not follow the main plan, because this pushes black towards the center of the board. In all such situations, look at the position of the black king. If it is not on the edge of the board, then play: }
+1. Qd3 { attacking the rook with the queen. } 1... Rd4 2. Qc2+ Kd5 3. Qf5+ { Remember this pattern of checking first on the file, then on the rank. Now the black pieces are forced to separate. } 3... Kd6 4. Kc3 { Attack a hanging rook } *
+
+
+[Event "Queen vs Rook, Adjacent Rosettes: Chapter 8"]
+[Date "2021.07.28"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Adjacent Rosettes"]
+[ChapterName "Chapter 8"]
+[ChapterURL "https://lichess.org/study/HinA5URr/nHnMPpYk"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "6k1/4r3/7K/5Q2/8/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.28"]
+[UTCTime "01:42:40"]
+
+{ Again, white cannot play the main move. This time the black king is on the edge of the board. In this case, checking from the diagonal adjacent to the rook is best. }
+1. Qd5+ Kf8 2. Kg6 Re6+ 3. Kf5 Re1 { Black's best move is to adopt a distant defense. } 4. Qc4 { White's key idea is to control the checking square, f1. Note that the black king cannot leave the 1st rank without conceding a fork. } 4... Rb1 5. Qd3 { White queen controls both f1 and a6. } 5... Rb7 6. Qd6+ { Giving check from the diagonal next to the diagonal of the rook } 6... Kg7 7. Qd4+ Kh7 8. Kf6 Rg7 9. Qh4+ Kg8 10. Qh5 { Philidor position } *
+
+
+[Event "Queen vs Rook, Adjacent Rosettes: Chapter 9"]
+[Date "2021.07.28"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Adjacent Rosettes"]
+[ChapterName "Chapter 9"]
+[ChapterURL "https://lichess.org/study/HinA5URr/NvPCdw3b"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/8/8/2k5/4r3/1K6/3Q4/8 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.28"]
+[UTCTime "01:52:58"]
+
+{ As in our other adjacent rosettes, black to play rejoins king with rook and attacks whichever white piece is convenient. If possible, the rook then turns to attack the other piece. }
+1... Rd4 2. Qf2 Kd5 { No second attack possible, but the king runs toward the center. } *
+
+
+[Event "Queen vs Rook, Adjacent Rosettes: Chapter 10"]
+[Date "2021.07.28"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Adjacent Rosettes"]
+[ChapterName "Chapter 10"]
+[ChapterURL "https://lichess.org/study/HinA5URr/xaNSFL4q"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/8/3k4/1K6/4r3/2Q5/8/8 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.28"]
+[UTCTime "01:56:26"]
+
+{ This is an adjacent rosette, non-cutoff type, but the same rule applies: rejoin rook with king and attack whichever white piece is convenient. }
+1... Re5+ 2. Kb6 Kd5 { Again, no second attack but the king moves toward the center. } *
+
+
+[Event "Queen vs Rook, Opposite Rosettes: Chapter 1"]
+[Date "2021.07.29"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Opposite Rosettes"]
+[ChapterName "Chapter 1"]
+[ChapterURL "https://lichess.org/study/jDfh0Bs7/2moDyFvD"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/8/3k4/5Q2/2r5/4K3/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.29"]
+[UTCTime "00:46:14"]
+
+{ This is an opposite rosette, third rank type. White plays one main line with two exceptions. }
+1. Qf6+ Kc5 (1... Kd5 2. Kd3 Rc6 3. Qd4+ Ke6 4. Ke4 Rd6 { Body Check position } (4... Ke7 5. Qg7+ Kd6 6. Qe5+ Kd7 7. Kd5 Ra6 8. Qg7+ Ke8 9. Qc7 Rf6 10. Ke5 Rg6 { Third rank defense killing position })) 2. Qe5+ Kb4 3. Kd3 { Thorn } 3... Rc6 { Adjacent rosette, cut-off type. } 4. Qb2+ Kc5 5. Qd4+ Kb5 6. Qd5+ Kb6 7. Kd4 { Wedge } *
+
+
+[Event "Queen vs Rook, Opposite Rosettes: Chapter 2"]
+[Date "2021.07.29"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Opposite Rosettes"]
+[ChapterName "Chapter 2"]
+[ChapterURL "https://lichess.org/study/jDfh0Bs7/A1V6OFWQ"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/5k2/3Q4/6r1/4K3/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.29"]
+[UTCTime "01:00:35"]
+
+{ This position is reflected and shifted away from the center, but the same procedure applies. }
+1. Qd7+ Kf6 2. Kf4 Rh5 3. Qd6+ Kf7 { The rook is dominated on rank 5. } 4. Kg4 Rh7 5. Kg5 Rg7+ 6. Kh6 { Absolute Seventh extension } 6... Rg8 7. Qd5+ { Skewer the rook } 7... Kf8 { Trapezoid position - white transfers the move to black. } 8. Qa8+ Kf7 9. Qa2+ Kf8 10. Qd5 { Trapezoid position with black to play, the rook is lost. } 10... Rh8+ 11. Kg6 Ke7 12. Qe5+ Kd7 13. Qxh8 *
+
+
+[Event "Queen vs Rook, Opposite Rosettes: Chapter 3"]
+[Date "2021.07.29"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Opposite Rosettes"]
+[ChapterName "Chapter 3"]
+[ChapterURL "https://lichess.org/study/jDfh0Bs7/lkigN7Pi"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/8/8/4Q3/2K5/5k2/3r4/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.29"]
+[UTCTime "01:09:12"]
+
+{ This position is reflected and rotated, but the same procedure applies. }
+1. Qf5+ Ke2 (1... Ke3 2. Qh3+ Ke4 3. Qh1+ Ke3 4. Qe1+ Re2 5. Qg3+ Kd2 6. Qg5+ Kc2 7. Qf4 Rd2 8. Qe4+ Kb2 9. Kb4 Rc2 10. Qe1 { pseudo-Euwe position }) 2. Kc3 Ke1 3. Qb1+ Rd1 4. Qa2 Kf1 5. Qh2 Re1 6. Kd2 { Absolute Seventh position } 6... Re8 7. Qh5 Rf8 8. Ke3 Kg2 9. Qg5+ Kh3 10. Qh6+ Kg4 11. Qxf8 *
+
+
+[Event "Queen vs Rook, Opposite Rosettes: Chapter 4"]
+[Date "2021.07.29"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Opposite Rosettes"]
+[ChapterName "Chapter 4"]
+[ChapterURL "https://lichess.org/study/jDfh0Bs7/B8IENBf1"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/8/4k3/6Q1/3r4/5K2/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.29"]
+[UTCTime "01:18:19"]
+
+{ The first exception to our general principle is this: don't use it when it forces the black king towards the center! If the black king can move towards the center while approaching his rook, instead attack the rook with the white king, and try to pivot the position clock-wise. }
+1. Ke3 { Attack the hanging rook } 1... Rd5 2. Qg8+ { Skewer the rook } 2... Ke5 3. Qe8+ Kf6 4. Ke4 { Attack the hanging rook } 4... Rg5 5. Qf8+ Kg6 6. Kf4 { Absolute Seventh extension } *
+
+
+[Event "Queen vs Rook, Opposite Rosettes: Chapter 5"]
+[Date "2021.07.29"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Opposite Rosettes"]
+[ChapterName "Chapter 5"]
+[ChapterURL "https://lichess.org/study/jDfh0Bs7/gbGfVOPj"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/2Q5/4K3/1k6/3r4/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.29"]
+[UTCTime "01:26:39"]
+
+{ This position has been rotated and translated, but the black king still has the white queen cornered. Attack the hanging rook. }
+1. Ke5 Rd2 2. Qc3 Rd7 { Third rank defense (on fourth rank) killing position. } 3. Qf3 { Away from the edge of the board, black has a few options. } 3... Ka5 4. Qb3 Rd8 5. Ke6 Rd4 6. Qc3+ Rb4 7. Qa3+ Kb5 8. Kd5 { Euwe position } *
+
+
+[Event "Queen vs Rook, Opposite Rosettes: Chapter 6"]
+[Date "2021.07.29"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Opposite Rosettes"]
+[ChapterName "Chapter 6"]
+[ChapterURL "https://lichess.org/study/jDfh0Bs7/GBLEHyBE"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "1k6/3Q4/r7/2K5/8/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.29"]
+[UTCTime "01:32:45"]
+
+{ The other exception is if both black pieces are on the edge of the board. In this case, back the queen up one square in order to dominate the rook on rank 6. }
+1. Qe7 Kc8 2. Kb5 Ra1 { White gives checks on the back two ranks and forks the rook. } 3. Qf8+ Kc7 4. Qg7+ Kd6 5. Qxa1 *
+
+
+[Event "Queen vs Rook, Interior Cages: Chapter 1"]
+[Date "2021.07.08"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Interior Cages"]
+[ChapterName "Chapter 1"]
+[ChapterURL "https://lichess.org/study/yjskAXnC/MSZ0kKLb"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/3k4/7r/4K3/2Q5/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.08"]
+[UTCTime "05:20:38"]
+
+1. Qf7+ { Queen gives check and covers both the h5 and e6 checking squares } 1... Kc6 { Black king moves toward center } 2. Qe8+ { Again, queen gives check and covers both checking squares, h5 and e6 } 2... Kc7 3. Kd5 { Now white can bring the king forward, because there is only one check since the queen covers the c6 square. } 3... Rd6+ 4. Kc5 { Cage position } 4... Rd7 { Best defense for black is to drop back and block the queen's diagonal. An alternative is retreat to a6, the side away from the queen. } (4... Ra6 5. Qe7+ Kb8 { In this position, the queen controls both d8 and e8, so black cannot sustain a 3rd rank defense. The queen controls d6,e6,and f6 directly, and g6 and h6 indirectly through forks, so attacking the rook by moving the king to b6 covers a6, b6, and c6 and forces the rook to move off the 3rd rank. } 6. Kb5 Ra7 7. Qe5+ Kb7 8. Qd4 Kb8 9. Kb6 Rb7+ 10. Ka6 { Diagonal cage } 10... Kc8 11. Qh8+ Kc7 12. Qg7+ { skewer }) 5. Qe5+ { White gives check with the queen... } 5... Kb7 { Giving black the choices of b7 or d8. } (5... Kd8 6. Qb8+ Ke7 7. Kc6 Rd8 8. Qc7+ Ke8 { Absolute seventh } 9. Qg7 Rd1 10. Qg4 { attack the rook } 10... Rd8 11. Qg5 { Trapezoid position } 11... Rd7 12. Qg8+ Ke7 13. Qg7+ { skewer } 13... Ke6 14. Qxd7+) 6. Kb5 { If b7, then white follows with his king. } 6... Rc7 7. Qd5+ { After rook rejoins king, white simply repeats the pattern. } 7... Kc8 { Wishbone on back rank, invert } (7... Ka7 8. Qe4 Rf7 9. Qd4+ Kb8 10. Qd6+ Ka7 11. Kc6 Rb7 12. Qd8 { Philidor position }) 8. Qa8+ Kd7 9. Kb6 Rc8 10. Qb7+ Kd8 { Absolute seventh } 11. Qf7 Rc1 12. Qf4 { attack the rook } 12... Rd1 13. Qh4+ Kc8 14. Qg4+ { fork } 14... Kd8 15. Qxd1+ *
+
+
+[Event "Queen vs Rook, Interior Cages: Chapter 2"]
+[Date "2021.07.08"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Interior Cages"]
+[ChapterName "Chapter 2"]
+[ChapterURL "https://lichess.org/study/yjskAXnC/SIrsnBDm"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "6Q1/4k3/5r2/4K3/8/8/8/8 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.08"]
+[UTCTime "06:06:39"]
+
+{ In this position, white has the same cage as before, but now black has more room on the opposite side of the queen to set up a 3rd rank defense. }
+1... Rb6 2. Qg7+ Kd8 3. Qf7 Rc6 4. Kd5 Rb6 { And we have reached the critical position for breaking the third rank defense. } *
+
+
+[Event "Queen vs Rook, Interior Cages: Chapter 3"]
+[Date "2021.07.08"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Interior Cages"]
+[ChapterName "Chapter 3"]
+[ChapterURL "https://lichess.org/study/yjskAXnC/vqhfbr1Z"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "3Q4/1k6/2r5/1K6/8/8/8/8 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.08"]
+[UTCTime "06:14:46"]
+
+{ In this position, there is no space opposite the queen for the rook to retreat to, so blocking the queen's diagonal on c7 is the best option. }
+1... Rc7 2. Qd5+ Ka7 (2... Kc8 { wishbone position } 3. Qa8+ { Invert the wishbone... } 3... Kd7 4. Kb6 { and create the thorn. } 4... Rc8 5. Qb7+ Kd8 6. Qf7 { Absolute seventh }) 3. Qe4 { Maintaining control of the long diagonal } 3... Rd7 4. Kc6 Rb7 5. Qa4+ Kb8 6. Qa5 { Philidor position } *
+
+
+[Event "Queen vs Rook, Interior Cages: Chapter 4"]
+[Date "2021.07.08"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Interior Cages"]
+[ChapterName "Chapter 4"]
+[ChapterURL "https://lichess.org/study/yjskAXnC/aaLxdBYG"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "6Q1/4k3/5r2/4K3/8/8/8/8 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.08"]
+[UTCTime "06:33:12"]
+
+{ As a general principle for second rank cages, black is advised to shift the rook along the third rank to the side opposite the queen. }
+1... Rb6 2. Qg7+ Kd8 { The black king has access to e8 and it is possible the white queen will neglect to cover it. } 3. Qf7 Ra6 (3... Rb5+ { Notice that this check is not good, after... } 4. Kd6 Rb6+ 5. Kd5 Kc8 6. Kc5 Rb7 { the 3rd rank defense is broken. }) 4. Kd5 Rb6 { critical position for breaking 3rd rank defense } *
+
+
+[Event "Queen vs Rook, Interior Cages: Chapter 5"]
+[Date "2021.07.08"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Interior Cages"]
+[ChapterName "Chapter 5"]
+[ChapterURL "https://lichess.org/study/yjskAXnC/lZogkPet"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/2Q5/4k3/3r4/4K3/8/8/8 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.08"]
+[UTCTime "06:49:54"]
+
+{ If the cage is on the 3rd rank, black has more options for his rook, but still no good king moves. The best option is still to drop the rook back to d6. Another option is to establish a 4th rank defense by moving the rook to g5. }
+1... Rg5 (1... Rd6 2. Qg7 Rc6 3. Qg6+ Kd7 4. Qf7+ Kd6 5. Kd4 Rb6 6. Qf6+ Kc7 7. Qe7+ Kc6 8. Kc4 Rb7 9. Qe6+ Kc7 10. Kc5 Kd8 11. Qf5 Kc7 12. Qf3 Ra7 13. Qc6+ Kb8 14. Qe4 Kc7 15. Qe5+ Kb7 16. Kb5 Ra2) 2. Qc6+ Ke7 3. Qc3 Ke6 4. Qh3+ Kf6 5. Qh6+ Rg6 { White can give check with Qf4+ and proceed as for the third rank defense, but in the fourth rank case there is a quicker option, Qf8+, leading to Euwe in 2 moves. } 6. Qf8+ Kg5 7. Ke5 Kh5 8. Qh8+ Kg4 9. Qh7 Kg5 { Euwe } 10. Qh3 Rg7 11. Qg3+ Kh6 12. Qh4+ Kg6 13. Ke6 Rg8 14. Qe4+ Kg7 15. Ke7 *
+
+
+[Event "Queen vs Rook, 2nd Rank Fortress: Chapter 2"]
+[Date "2021.07.13"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, 2nd Rank Fortress"]
+[ChapterName "Chapter 2"]
+[ChapterURL "https://lichess.org/study/NUuZ8Ppp/4IAaizEq"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "4k3/4r3/8/2Q2K2/8/8/8/8 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.13"]
+[UTCTime "15:38:06"]
+
+1... Kd7 2. Qb4 Rf7+ 3. Ke5 Re7+ 4. Kd5 Ke8 5. Qg4 Kf8 6. Kd6 Rg7 7. Qf4+ Kg8 8. Ke6 Rg6+ 9. Kf5 Rg7 10. Qc4+ Kh7 11. Qd4 Rf7+ 12. Kg5 Rc7 13. Qe4+ Kg8 14. Qe6+ Kh7 15. Kf6 Rg7 16. Qe8 Ra7 17. Qe4+ Kg8 18. Qd5+ Kh7 19. Qh1+ Kg8 20. Qg1+ Kh7 21. Qxa7+ Kh6 22. Qg1 Kh5 23. Qg5# *
+
+
+[Event "Queen vs Rook, Lightning: Chapter 1"]
+[Date "2021.07.25"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Lightning"]
+[ChapterName "Chapter 1"]
+[ChapterURL "https://lichess.org/study/POYzlBuV/hl5NAN0c"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/4K3/4Q3/3r4/3k4/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.25"]
+[UTCTime "20:22:48"]
+
+{ On most of the board, white's best approach is to start with one of two checks. }
+1. Qg4+ Kc5 2. Qc8+ Kd4 3. Qc2 Re5+ { This is too easy for white. } 4. Kd6 Rd5+ 5. Kc6 { Absolute seventh extension } *
+
+
+[Event "Queen vs Rook, Lightning: Chapter 2"]
+[Date "2021.07.25"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Lightning"]
+[ChapterName "Chapter 2"]
+[ChapterURL "https://lichess.org/study/POYzlBuV/gpFZbMRS"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/8/8/6rk/4KQ2/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.25"]
+[UTCTime "20:28:45"]
+
+{ Employ the same ideas: }
+1. Qh2+ Kg6 2. Qd6+ Kh5 { Wishbone extension } 3. Qe7 *
+
+
+[Event "Queen vs Rook, Lightning: Chapter 3"]
+[Date "2021.07.25"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Lightning"]
+[ChapterName "Chapter 3"]
+[ChapterURL "https://lichess.org/study/POYzlBuV/AdasX9vH"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/8/3KQ3/5rk1/8/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.25"]
+[UTCTime "20:31:53"]
+
+{ Employ the same ideas: }
+1. Qe3+ Kh4 2. Ke6 { Attack a hanging rook. } 2... Rg5 3. Kf6 Rg3 4. Qf4+ Kh3 5. Kf5 Kg2 { Lightning position } 6. Qd2+ Kf3 { Euwe position } 7. Qd1+ Kf2 8. Kf4 Rh3 9. Qd2+ Kg1 10. Qe2 Rh2 11. Qe1+ Kg2 12. Kg4 Rh8 13. Qe4+ Kf1 14. Qb1+ Ke2 15. Qb2+ Kd3 16. Qxh8 *
+
+
+[Event "Queen vs Rook, Lightning: Chapter 4"]
+[Date "2021.07.25"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Lightning"]
+[ChapterName "Chapter 4"]
+[ChapterURL "https://lichess.org/study/POYzlBuV/zdIJYGPV"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/8/3K4/3Q4/2r5/2k5/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.25"]
+[UTCTime "20:39:26"]
+
+{ In our previous examples, black stood more than 3 files from the edge. When the black pieces stand closer to the edge, white should prefer a different approach. }
+1. Ke5 { Wedge } 1... Ra4 { Maintaining the cutoff } 2. Qc6+ Rc4 3. Qf3+ Kb4 { Wishbone extension } 4. Qe2 *
+
+
+[Event "Queen vs Rook, Lightning: Chapter 5"]
+[Date "2021.07.25"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Lightning"]
+[ChapterName "Chapter 5"]
+[ChapterURL "https://lichess.org/study/POYzlBuV/W6yw1047"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/8/8/8/8/4QK2/2kr4/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.25"]
+[UTCTime "20:45:03"]
+
+1. Ke4 { Wedge } 1... Kc1 2. Qg5 Kd1 3. Ke3 Rb2 4. Qd5+ Kc1 { Second Rank Fortress } *
+
+
+[Event "Queen vs Rook, Lightning: Chapter 6"]
+[Date "2021.07.25"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Lightning"]
+[ChapterName "Chapter 6"]
+[ChapterURL "https://lichess.org/study/POYzlBuV/E1TysWQ2"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/8/k7/r7/1Q6/1K6/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.25"]
+[UTCTime "20:48:55"]
+
+{ When both black pieces are on the edge of the board, white can make a king move to create an absolute seventh position. }
+1. Kc4 Ra2 2. Qb1 Ra5 3. Qb8 { Absolute seventh } 3... Rh5 4. Qe8 { Queen controls checking square on h5 } 4... Rh6 5. Kc5 Kb7 6. Qf7+ Kc8 7. Qf8+ Kd7 8. Qxh6 *
+
+
+[Event "Queen vs Rook, Lightning: Chapter 7"]
+[Date "2021.07.25"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Lightning"]
+[ChapterName "Chapter 7"]
+[ChapterURL "https://lichess.org/study/POYzlBuV/ba9R8EVw"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/4Q3/8/5k2/5r2/4K3/8/8 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.25"]
+[UTCTime "20:56:22"]
+
+{ We saw this position before in the Absolute Seventh Extension. }
+1... Rg4 2. Qf7+ Kg5 3. Kf3 Kh6 4. Qf8+ Rg7 5. Kf4 Kg6 6. Qf5+ Kh6 7. Qf6+ Kh7 8. Kf5 { Wedge position } 8... Kg8 { With the lightning position in the corner, white's only move to make progress is to retreat along the long diagonal. } 9. Qd4 Kf8 10. Kf6 Rf7+ 11. Kg6 { Diagonal cage } 11... Ke8 12. Qh8+ Rf8 13. Qg7 { Absolute seventh } *
+
+
+[Event "Queen vs Rook, Wishbone extension: black on f or g file"]
+[Date "2021.07.24"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Wishbone extension"]
+[ChapterName "black on f or g file"]
+[ChapterURL "https://lichess.org/study/30VmQVKW/tXCZGg3Q"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/8/8/5k2/5r2/8/4K3/6Q1 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.24"]
+[UTCTime "17:35:34"]
+
+{ There is no standard move or tactic that always works in this position. White usually moves the queen to encircle black and force him towards the nearest edge. }
+1. Qc5+ Ke4 2. Qe7+ Kd5 3. Ke3 { attack the hanging rook } 3... Rc4 4. Qd7+ Kc5 5. Kd3 { Absolute seventh extension } 5... Rb4 6. Qc7+ Kb5 7. Kc3 Ka6 8. Qc8+ Rb7 9. Kc4 Kb6 10. Qc5+ Ka6 11. Qc6+ Ka7 12. Kc5 Kb8 13. Qf3 Kc7 14. Qg2 Kc8 15. Kc6 Rc7+ 16. Kb6 { Diagonal cage } 16... Re7 17. Qd5 { Rosette } 17... Re1 18. Kc6 Rc1+ 19. Kd6 { Javelin position } 19... Kb8 20. Qb3+ Kc8 21. Qa3 Rd1+ 22. Kc6 Kb8 23. Qb3+ Kc8 24. Qxd1 *
+
+
+[Event "Queen vs Rook, Wishbone extension: black on e file"]
+[Date "2021.07.24"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Wishbone extension"]
+[ChapterName "black on e file"]
+[ChapterURL "https://lichess.org/study/30VmQVKW/vjhDsW68"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/8/4k3/4r3/8/3K4/5Q2/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.24"]
+[UTCTime "17:50:03"]
+
+1. Qg3 Kd5 2. Qf3+ Ke6 3. Kd4 { Thorn } *
+
+
+[Event "Queen vs Rook, Wishbone extension: black on b,c, or d file"]
+[Date "2021.07.24"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Wishbone extension"]
+[ChapterName "black on b,c, or d file"]
+[ChapterURL "https://lichess.org/study/30VmQVKW/oCu3lLCc"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/8/3k4/3r4/8/2K5/4Q3/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.24"]
+[UTCTime "17:54:06"]
+
+{ In this position, creating the pseudo-thorn is best for white. }
+1. Qe4 Re5 2. Qg6+ Kd5 3. Kd3 Kc5 4. Qf6 Rd5+ 5. Ke4 { thorn } *
+
+
+[Event "Queen vs Rook, Wishbone extension: black king on 2nd rank"]
+[Date "2021.07.24"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Wishbone extension"]
+[ChapterName "black king on 2nd rank"]
+[ChapterURL "https://lichess.org/study/30VmQVKW/UlwZglu0"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/2k5/2r5/8/1K6/3Q4/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.24"]
+[UTCTime "18:03:03"]
+
+1. Qd5 Rd6 2. Qf7+ Kb6 3. Qc4 Rc6 { body check } 4. Qf4 Kb7 5. Qf7+ Kb6 6. Qd7 { Euwe position } *
+
+
+[Event "Queen vs Rook, Wishbone extension: black king on e file, 1st rank"]
+[Date "2021.07.24"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Wishbone extension"]
+[ChapterName "black king on e file, 1st rank"]
+[ChapterURL "https://lichess.org/study/30VmQVKW/jif85uTl"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "4k3/4r3/8/3K4/5Q2/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.24"]
+[UTCTime "18:10:28"]
+
+1. Qg5 Kf7 2. Qf5+ Kg7 3. Kd6 { attack a hanging rook } 3... Ra7 4. Qe5+ Kh7 { Both white pieces attack from the long side of the board, but stand badly for the white queen to protect the white king from checks. White transforms the position to attack from opposite sides. } 5. Qe4+ Kg8 6. Ke6 Ra6+ 7. Ke7 Ra7+ 8. Ke8 Rg7 { Black must return to a close defense } 9. Qd5+ Kh7 10. Kf8 { Diagonal cage } 10... Kh6 11. Qh1+ Kg6 12. Qg2+ Kf5 13. Kxg7 *
+
+
+[Event "Queen vs Rook, Wishbone extension: black king on f file, 2nd rank"]
+[Date "2021.07.24"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Wishbone extension"]
+[ChapterName "black king on f file, 2nd rank"]
+[ChapterURL "https://lichess.org/study/30VmQVKW/LdZrXhNH"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/5k2/5r2/8/4K3/6Q1/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.24"]
+[UTCTime "18:21:17"]
+
+1. Qc7+ Ke6 2. Qg7 { Euwe position } *
+
+
+[Event "Queen vs Rook, Wedge for Black: Chapter 1"]
+[Date "2021.07.25"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Wedge for Black"]
+[ChapterName "Chapter 1"]
+[ChapterURL "https://lichess.org/study/3vmifivB/hAizBnW3"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/8/2kr4/4Q3/4K3/8/8/8 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.25"]
+[UTCTime "01:47:19"]
+
+{ When it is black to play, the best strategy is to maintain the cutoff. This is always a good move so long as the rook can separate from the king by at least one rank. }
+1... Rd8 2. Qc3+ Kb5 3. Ke5 Rh8 { Harassment defense } 4. Qd3+ Kc5 5. Qd6+ Kc4 6. Qe6+ Kb4 7. Qf6 Rc8 8. Qb6+ Kc3 9. Kd5 Rg8 10. Qf6+ Kd2 11. Kc5 { removing the king from the diagonal of the rook } 11... Rc8+ 12. Kd4 Rc2 13. Qf1 { Euwe position } 13... Rb2 14. Qf2+ Kc1 15. Qe1+ Kc2 16. Kc4 Ra2 17. Qe4+ Kb2 18. Kb4 Ra7 19. Qd4+ Kc2 20. Qxa7 *
+
+
+[Event "Queen vs Rook, Wedge for Black: Chapter 2"]
+[Date "2021.07.25"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Wedge for Black"]
+[ChapterName "Chapter 2"]
+[ChapterURL "https://lichess.org/study/3vmifivB/9wHLvRPC"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/8/2kr4/4Q3/4K3/8/8/8 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.25"]
+[UTCTime "02:03:30"]
+
+1... Kd7 2. Qb5+ Ke7 3. Qb7+ Kf6 4. Qc7 Ke6 5. Qc4+ { reaching familiar positions } 5... Kf6 6. Kf4 Re6 7. Qc7 Kg6 8. Qc8 Re1 9. Qh3 Kf7 10. Kf5 Re7 11. Qb3+ Kg7 12. Qc4 Rf7+ 13. Ke6 Rf6+ 14. Ke7 Rg6 15. Qc3+ Kg8 16. Qd4 Rg3 17. Qd5+ Kh7 18. Qf5+ Kg8 19. Kf6 Rg7 20. Qh5 { Philidor } 20... Rg1 *
+
+
+[Event "Queen vs Rook, Wedge for Black: Chapter 3"]
+[Date "2021.07.25"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Wedge for Black"]
+[ChapterName "Chapter 3"]
+[ChapterURL "https://lichess.org/study/3vmifivB/SQjJSZZh"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "2kr4/4Q3/4K3/8/8/8/8/8 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.25"]
+[UTCTime "02:08:51"]
+
+{ When the wedge position occurs with black on the edge of the board, it is an absolute seventh. Black must play a distant defense with Rg8, Rh8, or Rd1. }
+ *
+
+
+[Event "Queen vs Rook, Body Guard: White to play"]
+[Date "2021.07.24"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Body Guard"]
+[ChapterName "White to play"]
+[ChapterURL "https://lichess.org/study/T049EV8K/DzUZnPfV"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/8/8/2QK4/8/3kr3/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.24"]
+[UTCTime "02:46:39"]
+
+{ If queen and rook facing each other is the body check position, then this is the body guard. It is not nearly as strong for black, and is easy to push back using natural moves. }
+1. Qc4+ Kd2 2. Kd4 Rf3 3. Qa2+ Ke1 4. Qc2 { Rosette } 4... Rf2 5. Qc1+ Ke2 6. Ke4 { Euwe position } *
+
+
+[Event "Queen vs Rook, Body Guard: Black to play"]
+[Date "2021.07.24"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Body Guard"]
+[ChapterName "Black to play"]
+[ChapterURL "https://lichess.org/study/T049EV8K/56mGW2pC"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/8/8/2QK4/8/3kr3/8/8 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.24"]
+[UTCTime "02:54:40"]
+
+1... Rf3 2. Qd4+ Ke2 3. Ke4 { cage } 3... Rh3 4. Qb2+ Kd1 5. Qf2 Ra3 6. Kd4 Rb3 { Third rank defense killing position } *
+
+
+[Event "Queen vs Rook, Body Guard: 3rd rank, rook near edge"]
+[Date "2021.07.24"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Body Guard"]
+[ChapterName "3rd rank, rook near edge"]
+[ChapterURL "https://lichess.org/study/T049EV8K/ex7PsZM4"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/8/8/3QK3/8/4kr2/8/8 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.24"]
+[UTCTime "02:58:34"]
+
+{ If the black rook is closer to the edge than the king, then the king steps back one square to make space for the rook on the queen side. }
+1... Ke2 2. Qc4+ Kd2 { Opposite rosette, second rank type } *
+
+
+[Event "Queen vs Rook, Body Guard: 2nd rank, rook near edge"]
+[Date "2021.07.24"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Body Guard"]
+[ChapterName "2nd rank, rook near edge"]
+[ChapterURL "https://lichess.org/study/T049EV8K/aSg1uJK0"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/8/8/8/3QK3/8/4kr2/8 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.24"]
+[UTCTime "03:03:36"]
+
+1... Rg2 2. Qe3+ Kf1 3. Qc1+ Kf2 4. Kf4 Ke2 5. Qc2+ Kf1 6. Qd1+ Kf2 7. Qh1 { Euwe position } *
+
+
+[Event "Queen vs Rook, Body Guard: 2nd rank, center"]
+[Date "2021.07.24"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Body Guard"]
+[ChapterName "2nd rank, center"]
+[ChapterURL "https://lichess.org/study/T049EV8K/FSJxmhRF"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/8/8/8/2QK4/8/3kr3/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.24"]
+[UTCTime "03:09:03"]
+
+1. Qc3+ Kd1 2. Qa1+ Kd2 3. Qf1 { Euwe position } 3... Re7 4. Qf4+ Ke2 5. Qg4+ Kf1 6. Kd3 Rf7 7. Ke3 Ra7 8. Qf3+ Kg1 9. Qg3+ Kh1 10. Qg8 Rc7 11. Qd5+ Kg1 12. Qg5+ Kh1 13. Kf2 Rf7+ 14. Kg3 Kg1 15. Qc1+ Rf1 16. Qb2 Rf2 17. Qxf2+ *
+
+
+[Event "Queen vs Rook, Thorn: White to play"]
+[Date "2021.07.24"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Thorn"]
+[ChapterName "White to play"]
+[ChapterURL "https://lichess.org/study/dBbz17jJ/3edIihuj"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/8/4rk2/8/3K2Q1/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.24"]
+[UTCTime "00:51:33"]
+
+1. Qf4+ Ke7 { Creating the wishbone position with the black king on the second rank. In this position, attacking with the king is best. } 2. Kd5 Rg6 { Rosette } 3. Qc7+ Kf6 4. Qe5+ Kf7 5. Qf5+ Rf6 6. Qd7+ Kg6 7. Ke5 { We have repeated the thorn position, but one rank closer to the edge. As the pieces get closer to the edge, black's rook will have fewer squares safe from forks. } 7... Rf7 8. Qe6+ Kg7 9. Qg4+ Kh6 { Not a third rank defense, because the black king has no access to h4 or h5. } 10. Ke6 { Attack the hanging rook } 10... Rg7 11. Qh4+ Kg6 12. Qh8 { Euwe position } 12... Ra7 13. Qf6+ Kh5 14. Qf3+ { Check from the diagonal in front of the rook } 14... Kg6 15. Qg2+ Kh5 16. Qh1+ Kg4 17. Qg1+ { fork } 17... Kf3 18. Qxa7 *
+
+
+[Event "Queen vs Rook, Thorn: Black to play"]
+[Date "2021.07.24"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Thorn"]
+[ChapterName "Black to play"]
+[ChapterURL "https://lichess.org/study/dBbz17jJ/h98qUJ5v"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/8/6k1/6r1/8/5Q1K/8/8 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.24"]
+[UTCTime "01:15:41"]
+
+{ With black to play, checking the king is the best defense, working equally well everywhere on the board. }
+1... Rh5+ 2. Kg4 Rg5+ 3. Kh4 Re5 { Cutoff adjacent rosette } *
+
+
+[Event "Queen vs Rook, Body Check: Chapter 1"]
+[Date "2021.07.23"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Body Check"]
+[ChapterName "Chapter 1"]
+[ChapterURL "https://lichess.org/study/jGkvtsxc/lwf8tB8A"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/8/8/3KQ3/8/3kr3/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.23"]
+[UTCTime "00:11:13"]
+
+{ When it is possible for black to form this position, it is usually the longest distance to mate. White has three good options. When black is on the third rank, and the black king is at least as far from the edge as the rook is, then white's best way to play the body check position is to move to an Euwe position. }
+1. Qb2 Rf3 2. Qb3+ Ke2 3. Qc2+ Ke3 4. Ke5 Rg3 5. Qc3+ Kf2 6. Qd2+ Kf3 7. Kf5 Rg2 { Since we are using the Euwe method on the third rank, at this point Rg2 is black's most effective defense. } 8. Qf4+ Ke2 9. Ke4 { taking opposition with the king } 9... Rf2 { Not the absolute best move (Rg8) this close to the edge. } 10. Qc1 { Euwe position } 10... Rg2 11. Qc2+ Kf1 12. Qd1+ Kf2 13. Kf4 Rh2 14. Qd4+ Kg2 15. Kg4 Rh7 16. Qe4+ Kf2 17. Qxh7 *
+
+
+[Event "Queen vs Rook, Body Check: Chapter 2"]
+[Date "2021.07.23"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Body Check"]
+[ChapterName "Chapter 2"]
+[ChapterURL "https://lichess.org/study/jGkvtsxc/62hjt4wk"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/8/5rk1/8/5QK1/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.23"]
+[UTCTime "00:31:11"]
+
+{ If the black king is very near to the edge of the board, then white is better off threatening to encircle black. }
+1. Qc4 { threatening Qg8+ } 1... Kg7 2. Qc7+ Kg6 3. Qe7 { Euwe position } 3... Rf1 4. Qe4+ Kh6 5. Qe3+ Kg7 6. Kg5 Kf7 7. Qd3 Rg1+ 8. Kf5 Rg7 9. Qd8 Rh7 10. Qd5+ Kg7 11. Kg5 Rh2 12. Qe5+ Kf7 13. Qxh2 *
+
+
+[Event "Queen vs Rook, Body Check: Chapter 3"]
+[Date "2021.07.23"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Body Check"]
+[ChapterName "Chapter 3"]
+[ChapterURL "https://lichess.org/study/jGkvtsxc/OFfShlia"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/8/5rk1/8/5QK1/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.23"]
+[UTCTime "00:42:26"]
+
+1. Qe4+ { Although it is not the fastest line, Qe4+ is simple to play. } 1... Kf7 2. Kg5 Rd6 { Rosette. When black can form a rosette, it is usually best to do so. } *
+
+
+[Event "Queen vs Rook, Body Check: Chapter 4"]
+[Date "2021.07.23"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Body Check"]
+[ChapterName "Chapter 4"]
+[ChapterURL "https://lichess.org/study/jGkvtsxc/axJfGusW"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/8/2rk4/8/2QK4/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.23"]
+[UTCTime "00:48:58"]
+
+{ When the rook is closer to the edge than the king, then an immediate transition to the Euwe position is best for white. }
+1. Qf7 Rc7 2. Qf6+ Kd7 3. Kd5 Kc8 4. Qf4 { aiming for a cage by controlling this diagonal } 4... Kd8 5. Kd6 Rd7+ 6. Kc6 { Diagonal cage } 6... Ke8 7. Qb8+ Rd8 8. Qa7 { Absolute seventh } 8... Kf8 9. Qh7 Re8 10. Kd7 Re1 11. Qh4 Rf1 12. Ke6 Kg7 13. Qg3+ Kh6 14. Qh3+ Kg5 15. Qxf1 *
+
+
+[Event "Queen vs Rook, Body Check: Chapter 5"]
+[Date "2021.07.23"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Body Check"]
+[ChapterName "Chapter 5"]
+[ChapterURL "https://lichess.org/study/jGkvtsxc/GSkbQI47"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/8/4rk2/8/4QK2/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.23"]
+[UTCTime "00:59:15"]
+
+1. Qh7 Rd6 2. Qf5+ Ke7 3. Ke5 Rc6 4. Qh7+ Kd8 5. Kd5 Ra6 6. Qf7 Rb6 { Third rank defense kill position } *
+
+
+[Event "Queen vs Rook, Body Check: Chapter 6"]
+[Date "2021.07.23"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Body Check"]
+[ChapterName "Chapter 6"]
+[ChapterURL "https://lichess.org/study/jGkvtsxc/YjwnDCda"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/8/8/2rk4/8/2QK4/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.23"]
+[UTCTime "01:02:49"]
+
+{ Usually, a body check with black having more space means that white has misplayed. Still the same procedure works. }
+1. Qf6 Rc6 2. Qd4+ Ke6 3. Ke4 Ke7 4. Qg7+ Kd6 5. Qg6+ Kd7 6. Qf7+ Kd6 7. Kd4 { Euwe position } 7... Rc8 8. Qf6+ Kc7 { As usual, walk into the discovered check and follow the king } 9. Kc5 Kd7+ 10. Kd5 Kc7 { and the proper solution to this position is: } 11. Qc6+ Kb8 12. Qb6+ Ka8 13. Kd6 Rh8 { pendulum checks } 14. Qa5+ Kb7 15. Qb4+ Ka6 16. Qa3+ Kb5 17. Qb2+ Kc4 18. Qxh8 *
+
+
+[Event "Queen vs Rook, Diagonal Extension: Black to play"]
+[Date "2021.07.21"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Diagonal Extension"]
+[ChapterName "Black to play"]
+[ChapterURL "https://lichess.org/study/8i74lTUe/iDLTAPxT"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/1k6/2r5/3K4/4Q3/8/8/8 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.21"]
+[UTCTime "22:11:42"]
+
+{ Black to play must give ground. }
+1... Kb6 2. Qb4+ Kc7 3. Qa5+ Kb7 4. Qb5+ Rb6 5. Qd7+ Kb8 6. Kc5 Ra6 { Rosette, the solution is Qe7... } 7. Qe7 Kc8 8. Kb5 { which along with Kb5 controls every square on rank 6. } 8... Ra1 9. Qf8+ Kc7 10. Qg7+ Kd6 11. Qxa1 *
+
+
+[Event "Queen vs Rook, Diagonal Extension: White to play"]
+[Date "2021.07.21"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Diagonal Extension"]
+[ChapterName "White to play"]
+[ChapterURL "https://lichess.org/study/8i74lTUe/q7om0FW5"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/1k6/2r5/3K4/4Q3/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.21"]
+[UTCTime "22:19:40"]
+
+{ With white to play, the position is complicated. Qd4 (or Qe5) places the queen on the corner of a 4x3 box from the black king, preventing any potential distant defense. }
+1. Qd4 Rb6 2. Kc5 Rc6+ 3. Kb5 { cage } 3... Rc7 4. Qe4+ Kc8 5. Kb6 { diagonal cage } 5... Kd8 6. Qa8+ Rc8 7. Qb7 { Absolute seventh } *
+
+
+[Event "Queen vs Rook, Clear the Center: Chapter 1"]
+[Date "2021.07.13"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Clear the Center"]
+[ChapterName "Chapter 1"]
+[ChapterURL "https://lichess.org/study/bKYZ0kJ8/NVmkzBVV"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/8/5Q2/3r4/4k3/2K5/8/8 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.13"]
+[UTCTime "09:50:52"]
+
+1... Rc5+ 2. Kb4 { Attack the hanging rook } 2... Rf5 3. Qc6+ { Give diagonal check } 3... Kd4 4. Qc4+ Ke5 5. Kc5 { take opposition with king } 5... Rf6 6. Qe2+ { black must retreat to the f file } (6. Qd5+ Kf4 7. Kd4 Kg4 8. Ke3 Rf5 9. Qg2+ Kh5 10. Ke4 Rf7 11. Qg3 Rf6 12. Ke5 Rf7 13. Qd3 Kg5 14. Qd8+ Kg6 15. Qg8+ Rg7 16. Qe6+ Kh7 17. Kf5 Rg2 18. Qe4 Rg7 19. Kf6+ Kg8 20. Qa8+ Kh7 21. Qe8 Ra7 22. Qe4+ Kg8 23. Qd5+ Kh7 24. Qh1+ Kg8 25. Qg1+ Kh7 26. Qxa7+ Kh6 27. Qg1 Kh5 28. Qg5#) 6... Kf4 7. Qe7 Rf5+ 8. Kd4 { Takes opposition, occupies the center } 8... Kg3 9. Qd6+ Kf3 10. Kd3 { take opposition } 10... Rf4 11. Qg6 { f2 only king move } 11... Kf2 12. Qh6 { Attack hanging rook, sets up cage } 12... Rf3+ 13. Ke4 { diagonal cage on e3 } 13... Kg3 14. Qd2 Rf1 { adjacent rosette, } 15. Qd3+ Kg2 { 2nd rank fortress } 16. Qe2+ Rf2 17. Qg4+ Kh2 18. Ke3 { attack the hanging rook } 18... Rf1 { opposite rosette, 3rd rank on the edge } 19. Qg5 Kh3 20. Ke2 { attack the hanging rook } 20... Ra1 21. Qh6+ Kg3 22. Qg7+ { fork } 22... Kf4 23. Qxa1 Kf5 24. Qc1 Ke5 25. Qc6 Kd4 26. Qd6+ Kc3 27. Qf4 Kb2 28. Qb4+ Ka1 29. Kd1 Ka2 30. Kc1 Ka1 31. Qb1# *
+
+
+[Event "Queen vs Rook, Euwe position: Black to play"]
+[Date "2021.07.09"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Euwe position"]
+[ChapterName "Black to play"]
+[ChapterURL "https://lichess.org/study/nXdKtGa4/tU5QXb3A"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "6Q1/3rk3/8/4K3/8/8/8/8 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.09"]
+[UTCTime "02:00:14"]
+
+{ With black to move, a simple procedure forces black to retreat. }
+1... Rc7 (1... Rd1 { Give check with the queen until the checking square e1 is covered, then bring king closer. } 2. Qg5+ Kf8 3. Qf4+ Ke7 4. Qh4+ Kf8 5. Ke6 { threatening mate on h8. } 5... Kg7 6. Qg4+ Kh6 7. Qxd1) 2. Qg7+ Kd8 3. Qf8+ Kd7 4. Kd5 Rb7 (4... Rc1 5. Qf5+ Ke8 6. Qg6+ Kd7 7. Qg4+ Ke8 8. Kd6 Kf7 9. Qf4+ Kg6 10. Qxc1) 5. Qf7+ Kc8 6. Qe8+ Kc7 7. Kc5 Ra7 (7... Rb1 8. Qe5+ Kd8 9. Qh8+ Kd7 10. Qh7+ Ke6 11. Qxb1) 8. Qe5+ Kb7 9. Kb5 Ra2 (9... Ra3 10. Qe7+ { fork }) (9... Ka8 10. Qe4+ Kb8 11. Kb6 { cage } 11... Rc7 (11... Ra6+ 12. Kxa6) 12. Qe5 { pin }) (9... Kc8 10. Kb6 { cage } 10... Rb7+ 11. Kc6 Rd7 12. Qf5 { pin }) (9... Ra8 10. Qe4+ Ka7 11. Qe7+ Kb8 12. Kb6 Ra6+ 13. Kxa6) 10. Qd5+ { fork } *
+
+
+[Event "Queen vs Rook, Euwe position: White to play, 1 ...Rd2"]
+[Date "2021.07.09"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Euwe position"]
+[ChapterName "White to play, 1 ...Rd2"]
+[ChapterURL "https://lichess.org/study/nXdKtGa4/JxUSYbNV"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "6Q1/3rk3/8/4K3/8/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.09"]
+[UTCTime "02:38:43"]
+
+{ With white to play, there is no need for white to pass the move. He should simply move to the other knight's position on the back rank. }
+1. Qc8 Rd2 (1... Rd1 2. Qe6+ Kd8 3. Qg8+ Kc7 4. Qc4+ Kd8 5. Ke6 Re1+ 6. Kd6 Rd1+ 7. Kc6 Rd2 8. Qh4+ Ke8 9. Qe1+ Kf7 10. Qxd2) (1... Rd3 2. Qe6+ Kd8 3. Qg8+ Kc7 4. Qc4+ Kb6 5. Qxd3) (1... Rd8 2. Qe6+ Kf8 3. Kf6 Rd6 4. Qxd6+) 2. Qc5+ Kd7 3. Qb5+ { Queen now controls the checking square e2. } 3... Kc8 4. Ke6 Rc2 5. Kd6 Rh2 6. Qc6+ Kb8 7. Qb6+ Ka8 8. Qb1 { Queen controls the checking square h7, threatening Kc7 on the next move. } 8... Rf2 9. Qe4+ Kb8 10. Qb4+ Ka8 11. Kc6 Rc2+ 12. Kb6 Kb8 13. Qf8+ Rc8 14. Qe7 Rc6+ 15. Kxc6 *
+
+
+[Event "Queen vs Rook, Euwe position: White to play, 1... Rd2, close defense"]
+[Date "2021.07.09"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Euwe position"]
+[ChapterName "White to play, 1... Rd2, close defense"]
+[ChapterURL "https://lichess.org/study/nXdKtGa4/Zdj0c1ll"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "2Q5/3rk3/8/4K3/8/8/8/8 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.09"]
+[UTCTime "02:56:59"]
+
+1... Rd2 { White can also invite black back to play a close defense } 2. Qc7+ Rd7 3. Qc5+ Kd8 (3... Ke8 4. Ke6 { cage } 4... Kd8 5. Qb6+ Kc8 6. Qc6+) (3... Kf7 4. Kf5 Re7 5. Qd5+ Kg7 6. Kg5 Rf7 7. Qe5+ Kh7 8. Qd4 { Queen stays on long diagonal } 8... Rc7 9. Qe4+ Kg8 10. Qe6+ Kh7 11. Kf6 Rg7 (11... Ra7 { Javelin } 12. Qe4+ Kg8 13. Qd5+ Kh7 14. Qh1+ Kg8 15. Qg1+ Kh7 16. Qxa7+) 12. Qe8 { Philidor }) 4. Qf8+ Kc7 5. Ke6 Rh7 6. Qf4+ Kc8 7. Kd6 Rc7 8. Qf5+ Kb8 9. Qe5 { Diagonal position } 9... Rb7 10. Kc6+ Ka7 11. Qa1+ Kb8 12. Qa5 { Philidor position } *
+
+
+[Event "Queen vs Rook, Euwe position: White to play, 1 ...Rd1, close defense"]
+[Date "2021.07.22"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Euwe position"]
+[ChapterName "White to play, 1 ...Rd1, close defense"]
+[ChapterURL "https://lichess.org/study/nXdKtGa4/ES696ejj"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "6Q1/3rk3/8/4K3/8/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.22"]
+[UTCTime "01:34:32"]
+
+1. Qc8 Rd1 2. Qc7+ Rd7 3. Qc5+ Kf7 4. Kf5 Re7 5. Qd5+ Kg7 6. Kg5 Rf7 7. Qe5+ Kh7 (7... Kf8 8. Qh8+ Ke7 9. Kg6 Rf8 10. Qg7+ Ke8 11. Qc7 { Absolute seventh } 11... Rf1 12. Qc4 Re1 13. Qa4+ Kf8 14. Qb4+ Ke8 15. Qxe1+) 8. Qd4 Rc7 9. Qe4+ Kg8 10. Qe6+ Kh7 11. Kf6 Rg7 12. Qe8 { Philidor position } *
+
+
+[Event "Queen vs Rook, Euwe position: White to play, 1 ...Rd1"]
+[Date "2021.07.09"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Euwe position"]
+[ChapterName "White to play, 1 ...Rd1"]
+[ChapterURL "https://lichess.org/study/nXdKtGa4/UhvFkAfb"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "2Q5/3rk3/8/4K3/8/8/8/8 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.09"]
+[UTCTime "03:23:08"]
+
+1... Rd1 { If black chooses d1, white can choose to play against the distance defense. } 2. Qc5+ Kd8 3. Qb4 { Queen covers the checking square e1 } 3... Kc7 4. Ke6 Rd8 5. Qa5+ Kc8 { Trapezoid } 6. Qa7 { Absolute Seventh } 6... Rd1 7. Qa4 Rc1 8. Kd6 Kb7 9. Qb3+ Ka6 10. Qa3+ Kb5 11. Qxc1 *
+
+
+[Event "Queen vs Rook, Euwe position: White to play, 2 ...Kf8"]
+[Date "2021.07.09"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Euwe position"]
+[ChapterName "White to play, 2 ...Kf8"]
+[ChapterURL "https://lichess.org/study/nXdKtGa4/RvJ99uE4"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "2Q5/3rk3/8/4K3/8/8/8/8 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.09"]
+[UTCTime "03:32:36"]
+
+1... Rd1 2. Qc7+ { Black can also try to escape on the king side. } 2... Kf8 { White gives check on b8, targeting the forking square on b6. } 3. Qb8+ Kg7 4. Qb7+ { Still targeting b6, and now also f6 } 4... Kh6 5. Qc6+ Kg5 6. Qg2+ { Now give pendulum checks on g and h files until fork } 6... Kh6 7. Qh3+ Kg5 8. Qg3+ Kh6 9. Qh4+ Kg6 10. Qg4+ Kh6 11. Qxd1 *
+
+
+[Event "Queen vs Rook, Euwe position: White to play, rook one file from edge"]
+[Date "2021.07.09"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Euwe position"]
+[ChapterName "White to play, rook one file from edge"]
+[ChapterURL "https://lichess.org/study/nXdKtGa4/7h6N1cN2"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "4Q3/1rk5/8/2K5/8/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.09"]
+[UTCTime "03:46:36"]
+
+{ With the Euwe position over to the left as shown here, with white to move then Queen to a8 is crushing. }
+1. Qa8 Rb1 (1... Rb2 2. Qc6+ Kb8 3. Qe4 Rb7 4. Kc6 Ka7 5. Qa4+ Kb8 6. Qa5 { Philidor }) 2. Qc6+ Kd8 3. Qd5+ Kc7 4. Qe5+ { White gives check from the long diagonal next to the rook } 4... Kd8 5. Qh8+ Kd7 6. Qh7+ Ke6 7. Qxb1 *
+
+
+[Event "Queen vs Rook, Euwe position: On third rank, 1 ...Rc6"]
+[Date "2021.07.09"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Euwe position"]
+[ChapterName "On third rank, 1 ...Rc6"]
+[ChapterURL "https://lichess.org/study/nXdKtGa4/0hyAGWvC"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/6Q1/3rk3/8/4K3/8/8/8 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.09"]
+[UTCTime "03:53:31"]
+
+{ The same structure may arise with the king and rook on the third rank. White should follow nearly the same procedure as before: }
+1... Rc6 2. Qg6+ Kd7 3. Qf7+ Kd6 4. Kd4 Rb6 5. Qf6+ Kc7 6. Qe7+ Kc6 7. Kc4 { From this position, black has the option of Rb7. } 7... Rb7 8. Qc5+ { Forcing black king to d7... } 8... Kd7 9. Kd5 { and taking opposition. } 9... Rc7 { As the defender, if you can take this "body check" position, it is generally a good option. } 10. Qf8 { White responds by re-creating the Euwe position, this time on the 2nd rank. } 10... Rb7 11. Qf7+ Kc8 12. Qe8+ Kc7 13. Kc5 Ra7 14. Qe5+ Kb7 15. Kb5 *
+
+
+[Event "Queen vs Rook, Euwe position: On third rank, 1 ...Rd7"]
+[Date "2021.07.09"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Euwe position"]
+[ChapterName "On third rank, 1 ...Rd7"]
+[ChapterURL "https://lichess.org/study/nXdKtGa4/M1r9xW00"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/6Q1/3rk3/8/4K3/8/8/8 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.09"]
+[UTCTime "04:05:33"]
+
+{ Returning to the third rank starting position, if black plays Rd7 right away, the same procedure applies for white: }
+1... Rd7 2. Qe5+ Kf7 3. Kf5 Re7 4. Qd5+ Kg7 5. Kg5 Rf7 6. Qd8 (6. Qe5+ Kh7 7. Qd4 Rc7 8. Qe4+ Kg8 9. Qe6+ Kh7 10. Kf6 Rg7 11. Qe8 { Philidor }) 6... Rf1 7. Qd4+ Kf8 8. Kg6 Ke7 9. Qe3+ Kd6 10. Qd3+ Kc5 11. Qxf1 *
+
+
+[Event "Queen vs Rook, Euwe position: On third rank, third rank defense"]
+[Date "2021.07.09"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Euwe position"]
+[ChapterName "On third rank, third rank defense"]
+[ChapterURL "https://lichess.org/study/nXdKtGa4/iisDHuQX"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/6Q1/3rk3/8/4K3/8/8/8 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.09"]
+[UTCTime "04:11:47"]
+
+{ Finally, when playing this position on the third rank, the defender has the option of transitioning to a third rank defense, as follows: }
+1... Rc6 2. Qg6+ Kd7 3. Qf7+ Kd8 4. Kd5 Rb6 { Third rank defense killing position } *
+
+
+[Event "Queen vs Rook, Euwe position: Chapter 11"]
+[Date "2021.07.23"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Euwe position"]
+[ChapterName "Chapter 11"]
+[ChapterURL "https://lichess.org/study/nXdKtGa4/PlQAcF2H"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/2r1k3/8/3K3Q/8/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.23"]
+[UTCTime "01:20:08"]
+
+{ As we have already seen, when the two kings and rook form this triangular pattern, Qh3 is also good, but the Euwe complex may feel more comfortable because it consists of so many forcing moves. }
+1. Qh7+ Kd8 2. Qg8+ Ke7 3. Qg7+ Kd8 4. Qf8+ Kd7 5. Qb8 { Euwe position } 5... Rc2 6. Qf4 Rc7 7. Qf8 Rb7 8. Qf7+ Kc8 9. Qe8+ Kc7 10. Kc5 Ra7 11. Qe5+ Kb7 12. Kb5 Ra2 13. Qd5+ Kc7 14. Qxa2 *
+
+
+[Event "Queen vs Rook, Euwe position: Chapter 12"]
+[Date "2021.07.23"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Euwe position"]
+[ChapterName "Chapter 12"]
+[ChapterURL "https://lichess.org/study/nXdKtGa4/fpFJRUM4"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/2r1k3/8/1Q1K4/8/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.23"]
+[UTCTime "01:32:58"]
+
+{ If the queen is on the rook's side, then the Euwe position can often be achieved by attacking the rook. }
+1. Qb8 Kd7 2. Qf8 { Euwe position } *
+
+
+[Event "Queen vs Rook, Euwe position: Chapter 13"]
+[Date "2021.07.23"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Euwe position"]
+[ChapterName "Chapter 13"]
+[ChapterURL "https://lichess.org/study/nXdKtGa4/lPn8SHlm"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/4r1k1/8/3Q1K2/8/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.23"]
+[UTCTime "01:36:18"]
+
+{ Once the black king has been driven to the edge of the board, the queen concentrates on controlling the long diagonal. }
+1. Kg5 Rf7 2. Qe5+ Kh7 3. Qd4 Re7 4. Kf6 Rg7 5. Qh4+ Kg8 6. Qh5 { Philidor position } *
+
+
+[Event "Queen vs Rook, Pseudo-Euwe: black to play"]
+[Date "2021.07.22"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Pseudo-Euwe"]
+[ChapterName "black to play"]
+[ChapterURL "https://lichess.org/study/m57XG8Zc/FiZP17xS"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "2Q5/4rk2/8/5K2/8/8/8/8 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.22"]
+[UTCTime "03:24:43"]
+
+1... Kg7 2. Qc4 Rf7+ 3. Ke6 Rf6+ 4. Ke7 { cage } 4... Rg6 5. Qc3+ { place queen on long diagonal } 5... Kh6 (5... Kg8 6. Qd4 Rg3 7. Qd5+ Kh7 8. Qf5+ Kg8 9. Kf6 Rg7 10. Qh5 { Philidor }) 6. Kf7 Rg4 7. Qe5 { Creating this rosette is the only good move for white. } 7... Ra4 8. Kf6 Ra6+ 9. Kf5 { Javelin position } 9... Kh7 10. Qc7+ Kh6 11. Qc8 { triple threat } 11... Ra5+ 12. Kf6 Kh7 13. Qc7+ Kh6 14. Qxa5 *
+
+
+[Event "Queen vs Rook, Pseudo-Euwe: pseudo vs standard"]
+[Date "2021.07.22"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Pseudo-Euwe"]
+[ChapterName "pseudo vs standard"]
+[ChapterURL "https://lichess.org/study/m57XG8Zc/qy2XcI2i"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/3Q4/4rk2/8/5K2/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.22"]
+[UTCTime "03:41:04"]
+
+{ White may use the pseudo-Euwe to pass the move to black when a transition to the standard Euwe would concede space. In this position, Qc7 is faster than Qh7, because the black pieces are pushed towards the short side of the board. }
+1. Qc7 Kg6 2. Qc3 Rf6+ 3. Ke5 Kg7 4. Qd4 { diagonal extension } 4... Kg6 5. Qg4+ Kf7 6. Qh5+ Kg7 7. Qg5+ Rg6 8. Qe7+ Kg8 9. Kf5 Rh6 { rosette } 10. Qd7 Kf8 11. Kg5 Rh1 12. Qc8+ Ke7 13. Qb7+ Kd6 14. Qxh1 *
+
+
+[Event "Queen vs Rook, Pseudo-Euwe: harassment defense"]
+[Date "2021.07.22"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Pseudo-Euwe"]
+[ChapterName "harassment defense"]
+[ChapterURL "https://lichess.org/study/m57XG8Zc/6ZwRLbsG"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/3Q4/4rk2/8/5K2/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.22"]
+[UTCTime "03:55:10"]
+
+1. Qc7 Ra6 2. Qd8+ Kf7 3. Kf5 Rh6 4. Qd7+ Kg8 5. Kg5 Rh7 6. Qe8+ Kg7 7. Qe4 Kg8 8. Kg6 Rg7+ 9. Kh6 { Diagonal cage } 9... Kf8 (9... Rf7 10. Qd5 Kh8 11. Qa8+ Rf8 12. Qxf8#) 10. Qa8+ Kf7 11. Qb7+ Ke6 12. Kxg7 *
+
+
+[Event "Queen vs Rook, Corner Defenses: Chapter 1"]
+[Date "2021.07.07"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Corner Defenses"]
+[ChapterName "Chapter 1"]
+[ChapterURL "https://lichess.org/study/8e74TRFZ/y6WUWqAv"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/6rk/8/5K2/2Q5/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.07"]
+[UTCTime "22:51:28"]
+
+{ In corner defenses, white should place his queen on the main diagonal. }
+1. Qd4 Rf7+ 2. Kg5 { With Kg5, white king controls f6, g6, and h6; white queen controls g7 and h8, so h7 and g8 are the black king's only squares. } 2... Rc7 { black adopts a distant defense } 3. Qe4+ { Queen gives check on the diagonal adjacent to the rook } 3... Kg8 4. Qe6+ { White gives check from the other diagonal adjacent to the black rook, and controls the checking square c6 so that the white king can move to f6 on the next move. } 4... Kh7 5. Kf6 Rg7 { Black's best defense is g7. } 6. Qe8 { Philidor } *
+
+
+[Event "Queen vs Rook, Corner Defenses: Chapter 2"]
+[Date "2021.07.07"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Corner Defenses"]
+[ChapterName "Chapter 2"]
+[ChapterURL "https://lichess.org/study/8e74TRFZ/UnJDrCfc"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/6rk/8/5K2/8/6Q1/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.07"]
+[UTCTime "23:09:36"]
+
+{ White's main goal against corner defenses is to place his queen along the main diagonal controlling the corner square. }
+1. Qe5 Rb7 { Best defense for black is a distance defense. } 2. Kg5 { White Kg5 controls f6, g6, and h6. White queen controls g7 and h8. Black king's only squares are g8 and h7. } 2... Ra7 3. Qe4+ { Queen gives check on the diagonal adjacent to the black rook } 3... Kg8 4. Qc4+ { Queen gives check on the other diagonal adjacent to the black rook and covers the checking square a6. } 4... Kh7 5. Kf6 { King moves to target square f6. } 5... Rg7 6. Qh4+ Kg8 7. Qh5 { Philidor } *
+
+
+[Event "Queen vs Rook, Corner Defenses: Chapter 3"]
+[Date "2021.07.07"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Corner Defenses"]
+[ChapterName "Chapter 3"]
+[ChapterURL "https://lichess.org/study/8e74TRFZ/eCqlAaj4"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "7k/6r1/8/2Q2K2/8/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.07"]
+[UTCTime "23:34:11"]
+
+{ If the black pieces are oriented diagonally, placing the white queen on the main diagonal creates a pin. }
+1. Qd4 Kh7 2. Kf6 Kg8 3. Qd8+ Kh7 4. Qe8 { Philidor } *
+
+
+[Event "Queen vs Rook, Corner Defenses: Chapter 4"]
+[Date "2021.07.07"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Corner Defenses"]
+[ChapterName "Chapter 4"]
+[ChapterURL "https://lichess.org/study/8e74TRFZ/Mn9VFJHF"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "7k/7r/4K3/8/4Q3/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.07"]
+[UTCTime "23:44:07"]
+
+{ If rook is ahead of the king on the 2nd rank, again place the white queen on the long diagonal. }
+1. Qe5+ { Philidor position } 1... Rg7 2. Qh5+ Kg8 3. Kf6 *
+
+
+[Event "Queen vs Rook, Corner Defenses: Chapter 5"]
+[Date "2021.07.07"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Corner Defenses"]
+[ChapterName "Chapter 5"]
+[ChapterURL "https://lichess.org/study/8e74TRFZ/3OWjDvYM"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "7r/6k1/4K3/8/4Q3/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.07"]
+[UTCTime "23:54:10"]
+
+{ If black's pieces are oriented diagonally with the king in front, white gives a check from the long diagonal, effectively pinning the king to the rook. }
+1. Qe5+ Kh7 2. Qh5+ { White gives a check on h5... } 2... Kg7 3. Qg5+ { And then takes control of the g file. When the black king retreats to h7... } 3... Kh7 4. Kf7 { King f7 threatens mate on the next move. } 4... Rf8+ { Black can delay mate by 1 move by sacrificing his rook on f8. } 5. Kxf8 *
+
+
+[Event "Queen vs Rook, Corner Defenses: Chapter 6"]
+[Date "2021.07.08"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Corner Defenses"]
+[ChapterName "Chapter 6"]
+[ChapterURL "https://lichess.org/study/8e74TRFZ/m4Adx3Ws"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "6kr/8/3K4/8/3Q4/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.08"]
+[UTCTime "00:04:34"]
+
+{ If the black king restricts its own rook, nothing changes for white. Place the queen on the long diagonal and walk the king in. }
+1. Ke7 Rh7+ 2. Kf6 Rh6+ 3. Kg5 Rh2 4. Qd5+ Kg7 (4... Kh7 5. Qb7+ Kg8 6. Qb8+ { fork } 6... Kf7 7. Qxh2) 5. Qe5+ { fork } 5... Kf7 6. Qxh2 *
+
+
+[Event "Queen vs Rook, Corner Defenses: RK 2nd rank"]
+[Date "2021.07.09"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Corner Defenses"]
+[ChapterName "RK 2nd rank"]
+[ChapterURL "https://lichess.org/study/8e74TRFZ/K3nFCNXG"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/6rk/8/5K2/2Q5/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.09"]
+[UTCTime "12:53:04"]
+
+1. Qd4 Kh8 (1... Rg6 2. Qe4 Rg7 3. Kf6+ Kg8 4. Qa8+ Kh7 5. Qe8) (1... Rg2 2. Kf6 Rg7 3. Qh4+ Kg8 4. Qh5) (1... Rb7 2. Kf6 Rg7 3. Qh4+ Kg8 4. Qh5) (1... Kg8 2. Kf6 Kh7 3. Qh4+ Kg8 4. Qh5) (1... Rg8 2. Qh4+ Kg7 3. Qg5+ Kh7 4. Qh5+ Kg7 5. Qg6+ Kf8 6. Qf6+ Ke8 7. Ke6 Rg6 8. Qxg6+) (1... Rc7 2. Qh4+ Kg7 3. Qg3+ Kf7 4. Qxc7+) (1... Rg3 2. Qh4+ Kg7 3. Qxg3+) (1... Re7 2. Qh4+ Kg7 3. Qxe7+) (1... Rg1) (1... Kh6 2. Qh4#) 2. Kf6 Kh7 3. Qh4+ Kg8 4. Qh5 *
+
+
+[Event "Queen vs Rook, Corner Defenses: RK 1st rank"]
+[Date "2021.07.09"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Corner Defenses"]
+[ChapterName "RK 1st rank"]
+[ChapterURL "https://lichess.org/study/8e74TRFZ/ZIOLIaD3"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "6rk/8/8/5K2/2Q5/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.09"]
+[UTCTime "13:21:33"]
+
+1. Qh4+ Kg7 2. Qg5+ Kh7 3. Qh5+ Kg7 4. Qg6+ Kf8 5. Qf6+ Ke8 6. Ke6 Rg6 7. Qxg6+ *
+
+
+[Event "Queen vs Rook, Corner Defenses: KR 2nd rank"]
+[Date "2021.07.09"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Corner Defenses"]
+[ChapterName "KR 2nd rank"]
+[ChapterURL "https://lichess.org/study/8e74TRFZ/7PMq4O54"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/6kr/8/5K2/2Q5/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.09"]
+[UTCTime "13:25:37"]
+
+1. Qd4+ Kf7 (1... Kf8 2. Kg6 Rh6+ 3. Kxh6) (1... Kg8 2. Kg6 Rh6+ 3. Kxh6) (1... Kh6 2. Qf6+ Kh5 3. Qg5#) 2. Qd5+ Kg7 3. Kg5 Rh2 4. Qe5+ Kf7 5. Qxh2 *
+
+
+[Event "Queen vs Rook, Corner Defenses: KR 1st rank"]
+[Date "2021.07.09"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Corner Defenses"]
+[ChapterName "KR 1st rank"]
+[ChapterURL "https://lichess.org/study/8e74TRFZ/sVt4yMQZ"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "6kr/8/8/2Q2K2/8/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.09"]
+[UTCTime "13:32:41"]
+
+1. Kg6 Rh6+ 2. Kxh6 *
+
+
+[Event "Queen vs Rook, Corner Defenses: RK Diag"]
+[Date "2021.07.09"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Corner Defenses"]
+[ChapterName "RK Diag"]
+[ChapterURL "https://lichess.org/study/8e74TRFZ/0WWV1DEF"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "7k/6r1/8/2Q2K2/8/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.09"]
+[UTCTime "13:37:58"]
+
+1. Qd4 Kh7 (1... Kg8 2. Kf6 Kh7 3. Qh4+ Kg8) 2. Kf6 Kg8 3. Qd8+ Kh7 4. Qe8 *
+
+
+[Event "Queen vs Rook, Corner Defenses: KR Diag"]
+[Date "2021.07.09"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Corner Defenses"]
+[ChapterName "KR Diag"]
+[ChapterURL "https://lichess.org/study/8e74TRFZ/HXJH7P8P"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "7r/6k1/8/2Q2K2/8/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.09"]
+[UTCTime "13:40:58"]
+
+1. Qe7+ Kg8 (1... Kh6 2. Qg5+ Kh7 3. Qg6#) 2. Kg6 Rh6+ 3. Kxh6 *
+
+
+[Event "Queen vs Rook, Cages and Diagonals: Corner Cage"]
+[Date "2021.07.07"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Cages and Diagonals"]
+[ChapterName "Corner Cage"]
+[ChapterURL "https://lichess.org/study/hJM7nMzo/nXjSCYyy"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "1k6/r7/1K6/3Q4/8/8/8/8 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.07"]
+[UTCTime "18:37:27"]
+
+{ This is a cage position, where the white king and queen both control one of the squares in front of the black king, in this case b7. The only way for black to prevent Qd8# on the next move is to sacrifice the rook on c7. }
+1... Rc7 2. Qd6 Ka8 { Setting up stalemate if queen captures. } 3. Kxc7 Ka7 4. Qa3# *
+
+
+[Event "Queen vs Rook, Cages and Diagonals: Edge Cage"]
+[Date "2021.07.07"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Cages and Diagonals"]
+[ChapterName "Edge Cage"]
+[ChapterURL "https://lichess.org/study/hJM7nMzo/H4Gd218f"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "4k3/5r2/4K3/2Q5/8/8/8/8 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.07"]
+[UTCTime "18:50:58"]
+
+1... Rd7 2. Qc6 { Even in the center of the board, the cage position leaves black with sacrificing the rook on d7 as the only way to prevent immediate mate on c8. } *
+
+
+[Event "Queen vs Rook, Cages and Diagonals: Corner Diagonal Cage"]
+[Date "2021.07.07"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Cages and Diagonals"]
+[ChapterName "Corner Diagonal Cage"]
+[ChapterURL "https://lichess.org/study/hJM7nMzo/RQzvF4by"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "6k1/6r1/7K/8/4Q3/8/8/8 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.07"]
+[UTCTime "18:56:22"]
+
+{ The white king and queen both control h7, and white is threatening mate with Qe8. }
+1... Kf8 (1... Rf7 2. Qe8+ Rf8 3. Qg6+ Kh8 4. Qg7#) (1... Kf7 2. Qb7+ Ke6 3. Kxg7) (1... Kh8 2. Qd4 Kg8 3. Qxg7#) 2. Qa8+ Kf7 3. Qb7+ { Skewer } 3... Ke6 4. Kxg7 *
+
+
+[Event "Queen vs Rook, Cages and Diagonals: 2nd Rank Cage"]
+[Date "2021.07.07"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Cages and Diagonals"]
+[ChapterName "2nd Rank Cage"]
+[ChapterURL "https://lichess.org/study/hJM7nMzo/YsUgiQor"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/3k4/2r5/4K3/1Q6/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.07"]
+[UTCTime "19:10:11"]
+
+{ Even away from the edge of the board, a cage position with white to play enables white to force black to retreat towards the edge of the board. }
+1. Qb7+ Rc7 2. Qd5+ Kc8 (2... Ke7 3. Qd6+ { fork }) *
+
+
+[Event "Queen vs Rook, Cages and Diagonals: Edge Diagonal Cage"]
+[Date "2021.07.07"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Cages and Diagonals"]
+[ChapterName "Edge Diagonal Cage"]
+[ChapterURL "https://lichess.org/study/hJM7nMzo/0exIpJ87"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "4k3/4r3/5K2/3Q4/8/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.07"]
+[UTCTime "19:25:15"]
+
+{ In this "near-cage" position, white lacks an immediate mating threat, but giving diagonal check leads to a quick pin, winning the rook. }
+1. Qc6+ Kd8 (1... Kf8 2. Qc5 Kg8 3. Qxe7) (1... Rd7 2. Qb5 Kf8 3. Qxd7) 2. Qd6+ Kc8 3. Kxe7 *
+
+
+[Event "Queen vs Rook, Cages and Diagonals: Corner Diagonal"]
+[Date "2021.07.07"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Cages and Diagonals"]
+[ChapterName "Corner Diagonal"]
+[ChapterURL "https://lichess.org/study/hJM7nMzo/xg1jeXrV"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "k7/1r6/2K5/3Q4/8/8/8/8 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.07"]
+[UTCTime "19:41:09"]
+
+{ This is the diagonal position. Black's best defense is to move his king and concede the Philidor position. Any rook move leads to mate in 2. }
+1... Ka7 (1... Kb8 2. Qa5) (1... Rb1 2. Kc7+ Ka7 3. Qa5#) (1... Rg7) 2. Qd8 *
+
+
+[Event "Queen vs Rook, Cages and Diagonals: Edge Diagonal"]
+[Date "2021.07.07"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Cages and Diagonals"]
+[ChapterName "Edge Diagonal"]
+[ChapterURL "https://lichess.org/study/hJM7nMzo/a7qdzckP"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "1k6/2r5/3K4/4Q3/8/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.07"]
+[UTCTime "19:48:20"]
+
+{ If the diagonal is one square from the corner, white to play can concede the move by Qf4. }
+1. Qf4 Kc8 2. Qf5+ Kb8 (2... Kb7 3. Qb5+ Kc8 4. Qa5 { cage position } 4... Rd7+ 5. Kc6 Rb7 6. Qa6) 3. Qe5 { Re-establishing the diagonal with black to play. } 3... Rb7 (3... Kb7 4. Qb5+ Kc8 5. Qa5 Rd7+ 6. Kc6 Rb7 7. Qa6) (3... Rh7 4. Kc6+ Ka7 5. Qa1+ Kb8 6. Qb1+ Ka7 7. Qxh7+) (3... Kc8 4. Qa5 Rd7+ 5. Kc6 Rb7 6. Qa6) (3... Rc2 4. Qb5+ Ka7 5. Qa4+ Kb6 6. Qxc2) (3... Rc1 4. Qb2+ Ka7 5. Qxc1) (3... Ra7 4. Kc6+ Rc7+ 5. Qxc7+ Ka8) (3... Ka8) 4. Kc6+ Ka7 5. Qa1+ Kb8 6. Qa5 { Philidor position } 6... Rb1 7. Qe5+ *
+
+
+[Event "Queen vs Rook, Cages and Diagonals: Half Philidor"]
+[Date "2021.07.07"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Cages and Diagonals"]
+[ChapterName "Half Philidor"]
+[ChapterURL "https://lichess.org/study/hJM7nMzo/y9OTa0as"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "k7/1r6/3K4/8/8/8/Q7/8 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.07"]
+[UTCTime "20:14:59"]
+
+{ This half-Philidor position bridges the gap between diagonal and Philidor. }
+1... Kb8 2. Qa5 { White sets up a cage with both king and queen controlling c7. Black's only king move leads to a quick mate. } 2... Rg7 (2... Kc8 3. Qa8+ Rb8 4. Qc6+ Kd8 5. Qd7#) (2... Rb1 3. Qc7+ Ka8 4. Qc4 Rb6+ 5. Kc7 Rb7+ 6. Kc6 Ka7 7. Qa2+ Kb8 8. Qa5) (2... Rf7 3. Qg5 Rc7 4. Qe5) (2... Rh7 3. Qd5 Rc7 4. Qe5) (2... Rb2 3. Kc6 Rb7 4. Qd5 Ka8 5. Qa2+ Kb8 6. Qa5) (2... Rb3 3. Kc6 Rb7 4. Qd5 Ka8 5. Qa2+ Kb8 6. Qa5) (2... Ra7 3. Qd8+ Kb7 4. Qc7+ Ka6 5. Qc6+ Ka5 6. Kc5 Rc7 7. Qxc7+) 3. Qe5 { Black's best defense is to concede the diagonal position. } (3. Qb4+ Rb7 4. Qe4 Rb6+ 5. Kd7 Rb3 6. Qe5+ Ka7 7. Qc5+ Kb8 8. Kc6 Rb7 9. Qa5) 3... Rc7 { White transfers the move to black. } (3... Rb7 4. Kc6+ Ka7 5. Qa1+ Kb8 6. Qa5 { Philidor position }) (3... Rg6+ 4. Kd7+ Ka7 5. Qe3+ Ka6 6. Qd3+ { fork }) 4. Qf4 Kc8 5. Qf5+ Kb8 6. Qe5 { Diagonal position with black to move. } 6... Rb7 7. Kc6+ Ka7 8. Qa1+ Kb8 9. Qa5 { Philidor position } *
+
+
+[Event "Queen vs Rook, Alternating Rosettes: Chapter 1"]
+[Date "2021.07.27"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Alternating Rosettes"]
+[ChapterName "Chapter 1"]
+[ChapterURL "https://lichess.org/study/Bn8mONcn/80mTdLQ7"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/8/3r4/5Q2/2K5/4k3/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.27"]
+[UTCTime "03:06:19"]
+
+{ The first type of rosette is an Alternating Rosette in which the colors of the pieces alternate as we go around the ring. With white to play, all Alternating Rosettes are trivial wins for white. }
+1. Qe5+ Kf3 2. Qxd6 *
+
+
+[Event "Queen vs Rook, Alternating Rosettes: Chapter 2"]
+[Date "2021.07.27"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Alternating Rosettes"]
+[ChapterName "Chapter 2"]
+[ChapterURL "https://lichess.org/study/Bn8mONcn/ShAq8h0m"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/8/3r4/5K2/2Q5/4k3/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.27"]
+[UTCTime "03:11:22"]
+
+{ If we reverse the positions of the white pieces to form the second type of Alternating Rosette, it is still a trivial win. }
+1. Qf4+ Kd3 2. Qxd6+ *
+
+
+[Event "Queen vs Rook, Alternating Rosettes: Chapter 3"]
+[Date "2021.07.27"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Alternating Rosettes"]
+[ChapterName "Chapter 3"]
+[ChapterURL "https://lichess.org/study/Bn8mONcn/y3OgejKh"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/8/3r4/5Q2/2K5/4k3/8/8 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.27"]
+[UTCTime "03:15:11"]
+
+{ With black to play it is possible to regroup, and black's position is fine. Black's most tenacious strategy in any rosette is to move toward the center. When already near the center, this usually means rejoining the rook with the king and attacking the opposing pieces.
+White's best move is Kc3, creating a cage on d3. }
+1... Rd4+ { And with best play black is 26 moves away from mate.
+White's best move is now Kc3, creating a cage on d3. } 2. Kc3 Rf4 { Rf4 is not the most dilatory move, but effective and easy for the defender to remember. } 3. Qd3+ Kf2 4. Kd2 Rf3 { Body Check position } *
+
+
+[Event "Queen vs Rook, Alternating Rosettes: Chapter 4"]
+[Date "2021.07.27"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Alternating Rosettes"]
+[ChapterName "Chapter 4"]
+[ChapterURL "https://lichess.org/study/Bn8mONcn/C0RWHx7T"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/8/3r4/5K2/2Q5/4k3/8/8 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.27"]
+[UTCTime "03:27:30"]
+
+{ Again, black to play has no problems. The rook rejoins the king while attacking whichever white piece is handy. }
+1... Rd4 { And with best play black is 25 moves away from mate. } 2. Qc3+ { Not a cage, but white can force black to retreat as follows: } 2... Rd3 3. Qc5+ Kf3 *
+
+
+[Event "Queen vs Rook, Alternating Rosettes: Chapter 5"]
+[Date "2021.07.27"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Alternating Rosettes"]
+[ChapterName "Chapter 5"]
+[ChapterURL "https://lichess.org/study/Bn8mONcn/7XPdEVKg"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/8/1r6/3Q4/K7/2k5/8/8 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.27"]
+[UTCTime "03:38:09"]
+
+{ If we move an Alternating Rosette to the edge of the board, with white to play it remains a trivial win. With black to play, black's strategy remains the same: centralize pieces, if possible by joining rook and king and attacking the opposing pieces. }
+1... Rb4+ 2. Ka5 Rd4 { Rook is more central } 3. Qf5 Kc4 { King is more central. With best play black is 29 moves from mate. } *
+
+
+[Event "Queen vs Rook, Alternating Rosettes: Chapter 7"]
+[Date "2021.07.27"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Alternating Rosettes"]
+[ChapterName "Chapter 7"]
+[ChapterURL "https://lichess.org/study/Bn8mONcn/tWJ6Ytf2"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/8/8/8/3r4/5Q2/2K5/4k3 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.27"]
+[UTCTime "03:45:39"]
+
+{ Still the same plan for black: centralize. }
+1... Rd2+ 2. Kb3 Rf2 { With best play black is 23 moves from mate. } 3. Qe3+ Re2 4. Qc1+ Kf2 { Black is off the back rank. } *
+
+
+[Event "Queen vs Rook, Rosettes: Chapter 1"]
+[Date "2021.07.08"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Rosettes"]
+[ChapterName "Chapter 1"]
+[ChapterURL "https://lichess.org/study/d7fEaXLW/44AHidZR"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/8/3Q4/5r2/2K5/4k3/8/8 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.08"]
+[UTCTime "18:30:42"]
+
+{ There are three different rosette types, with two reflections for each type, for a total of six different rosettes.
+1. The defender does well to create a rosette at any opportunity.
+2. The more space the black pieces have, the less the attacker wants to create a rosette. The less space the black pieces have, the more the attacker wants to create a rosette. If the black king is on the edge, sometimes creating a rosette is the only way to prevail.
+3. The defense always follows the same strategy: move pieces towards the center of the board, or towards the center of the edge if in a corner. Sometimes the defender can accomplish this by moving his king. More often the rook rejoins the king while attacking the opposing pieces. In other locations on the board, the rook may fall back one or two squares to interrupt the queen's natural attacking lines and allow the king to slip behind the rook.
+4. The attacker tries to drive the defending pieces together and push the king towards the edge of the board. Often this is done with an initial check, but if white has less space than black, or is against the edge of the board, it may be more effective to encircle black's pieces, as with Qg3+ in this position. }
+1... Rf4+ *
+
+
+[Event "Queen vs Rook, Rosettes: Chapter 2"]
+[Date "2021.07.08"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Rosettes"]
+[ChapterName "Chapter 2"]
+[ChapterURL "https://lichess.org/study/d7fEaXLW/ohkW0ZQO"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/8/3r4/5Q2/2K5/4k3/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.08"]
+[UTCTime "18:38:33"]
+
+{ The first kind of rosette is an alternating rosette, in which the colors alternate as you go around the circle of pieces. With white to move, all alternating rosettes are trivial wins for white. }
+1. Qc5+ (1. Qe5+ Kd2 2. Qxd6+) 1... Kd2 2. Qxd6+ *
+
+
+[Event "Queen vs Rook, Rosettes: Chapter 3"]
+[Date "2021.07.08"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Rosettes"]
+[ChapterName "Chapter 3"]
+[ChapterURL "https://lichess.org/study/d7fEaXLW/pJM7wcGF"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/8/3r4/5K2/2Q5/4k3/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.08"]
+[UTCTime "18:43:23"]
+
+{ The second rosette is an alternating rosette with the position of the white pieces reversed from the first rosette. Again, with white to move, this is a trivial win for white. }
+1. Qf4+ Kd3 2. Qxd6+ *
+
+
+[Event "Queen vs Rook, Rosettes: Chapter 4"]
+[Date "2021.07.08"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Rosettes"]
+[ChapterName "Chapter 4"]
+[ChapterURL "https://lichess.org/study/d7fEaXLW/4iCQ4XE8"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/8/3k4/5Q2/2r5/4K3/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.08"]
+[UTCTime "18:52:05"]
+
+{ The third kind of rosette is an opposite rosette, (rook on) third rank, with the two kings located opposite each other. White plays one main line with two exceptions. }
+1. Qf6+ Kc5 { If black had moved to the 7th rank, the rook would have been lost to a fork on f7. } (1... Kd5 2. Qf7+ Kc5 { Trapezoid position }) 2. Qe5+ Kb4 (2... Kb6 3. Kd3 Rc5 4. Qe3 Kc6 5. Kd4 Rd5+ 6. Kc4 { cage position }) 3. Kd3 { Turning the wishbone into a thorn } *
+
+
+[Event "Queen vs Rook, Rosettes: Chapter 5"]
+[Date "2021.07.08"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Rosettes"]
+[ChapterName "Chapter 5"]
+[ChapterURL "https://lichess.org/study/d7fEaXLW/GMZfCsg8"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/5k2/3Q4/6r1/4K3/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.08"]
+[UTCTime "19:13:31"]
+
+{ Here the rosette is reflected and one rank closer to the edge, but the same procedure applies: }
+1. Qd7+ Kf6 2. Kf4 { cage position } 2... Rh5 3. Qd6+ Kf7 4. Kg4 Rh7 5. Kg5 Ke8 6. Qb8+ Kf7 7. Qd8 Rg7+ 8. Kf5 { Euwe position } 8... Rh7 9. Qd5+ Kg7 10. Kg5 Rh2 11. Qe5+ { fork } *
+
+
+[Event "Queen vs Rook, Rosettes: Chapter 6"]
+[Date "2021.07.08"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Rosettes"]
+[ChapterName "Chapter 6"]
+[ChapterURL "https://lichess.org/study/d7fEaXLW/F1tuh5n0"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/8/8/4Q3/2K5/5k2/3r4/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.08"]
+[UTCTime "19:25:06"]
+
+{ Again, we have reflected and rotated the position, but the same plan applies. }
+1. Qf5+ Ke3 (1... Ke2 2. Kc3 Ke1 3. Qb1+ Rd1 4. Qa2 Kf1 5. Qh2 { Absolute seventh } 5... Re1 6. Kd2 Re8 7. Qh5 { threatening the rook } 7... Rf8 8. Ke3 Kg2 9. Qg6+ { and fork or triple threat on next move } 9... Kf1 10. Qh6) 2. Qh3+ Ke4 3. Qh1+ Ke3 4. Qe1+ Re2 5. Qg3+ Kd2 6. Qg5+ Kc2 7. Qf4 Rd2 8. Qe4+ Kb2 9. Kb4 Rc2 10. Qe1 Rc8 11. Qe5+ Kc1 12. Kb3 Kd1 13. Qd5+ Ke2 14. Qe6+ { fork } *
+
+
+[Event "Queen vs Rook, Rosettes: Chapter 7"]
+[Date "2021.07.08"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Rosettes"]
+[ChapterName "Chapter 7"]
+[ChapterURL "https://lichess.org/study/d7fEaXLW/ctl7nalN"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/8/4k3/6Q1/3r4/5K2/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.08"]
+[UTCTime "19:41:00"]
+
+{ The first exception to the general principle is not to use it when it would actually force the black king towards the center! Instead, attack the rook with the king and try to pivot the position clockwise. }
+1. Ke3 Rd5 2. Qg8+ { skewer the king and rook } 2... Ke5 3. Qe8+ Kf6 (3... Kd6 4. Ke4 { absolute seventh extension! }) 4. Ke4 { attacking the rook with the king } 4... Rg5 { This position is part of our absolute seventh extension procedure } 5. Qf8+ Kg6 6. Kf4 *
+
+
+[Event "Queen vs Rook, Rosettes: Chapter 8"]
+[Date "2021.07.08"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Rosettes"]
+[ChapterName "Chapter 8"]
+[ChapterURL "https://lichess.org/study/d7fEaXLW/iMtPuaUw"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/2Q5/4K3/1k6/3r4/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.08"]
+[UTCTime "19:53:27"]
+
+{ The same position rotated and translated. }
+1. Ke5 { Attacking the rook with the king } 1... Rd2 { Black plays a third rank defense } 2. Qc3 { taking b4 away from the black king } 2... Rd7 3. Qf3 Ka5 { If black tries something different with Ka5, just pin him to the back rank } 4. Qb3 Rd8 5. Ke6 Rd4 6. Qc3+ Rb4 7. Qa3+ Kb5 8. Kd5 { Euwe position } *
+
+
+[Event "Queen vs Rook, Rosettes: Chapter 9"]
+[Date "2021.07.08"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Rosettes"]
+[ChapterName "Chapter 9"]
+[ChapterURL "https://lichess.org/study/d7fEaXLW/fhOQ64bI"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "1k6/3Q4/r7/2K5/8/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.08"]
+[UTCTime "20:07:56"]
+
+{ The second exception is if both of black's pieces are on the edge of the board. Giving check with the queen doesn't accomplish anything in this position, so instead give the black king one more square by backing up to e7. }
+1. Qe7 Kc8 (1... Ra7 2. Qe5+ Ka8 3. Qd5+ Rb7 4. Qd8+ Ka7 5. Kc6 { Philidor position }) (1... Ra3 2. Kb6 Rb3+ 3. Ka6 Kc8 4. Qe6+ { fork }) (1... Ka8 2. Kb5 Ra2 3. Qe8+ Kb7 4. Qf7+ { fork }) 2. Kb5 { Attack the hanging rook with the king } 2... Ra1 3. Qf8+ Kc7 4. Qg7+ { fork } *
+
+
+[Event "Queen vs Rook, Rosettes: Chapter 10"]
+[Date "2021.07.08"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Rosettes"]
+[ChapterName "Chapter 10"]
+[ChapterURL "https://lichess.org/study/d7fEaXLW/hAbCxFUi"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/8/4k3/2r5/5Q2/3K4/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.08"]
+[UTCTime "20:29:32"]
+
+{ This is an opposite rosette, (rook on) second rank. White has a general plan with two exceptions. }
+1. Qg3 { White falls back one square on the diagonal controlling the square in front of the black king. For black, moving the king forward seems logical. } 1... Kd5 (1... Ke7 2. Kd4 { Attacking the hanging rook } 2... Rf5 3. Qc7+ Kf6 4. Ke4 Kg6 5. Qg3+ Rg5 6. Qd6+ Kh5 7. Qd7 Kh6 8. Kf4 Rg7 9. Qd6+ Kh7 10. Kf5 Rf7+ 11. Ke6 Rg7 12. Qd3+ Kg8 13. Qd4 Rg6+ 14. Ke7 Rg3 15. Qd5+ Kh7 16. Qf5+ Kg8 17. Kf6 Rg7 18. Qh5 { Philidor position }) 2. Qg5+ Kc6 3. Qe7 Rd5+ 4. Kc4 { cage position } *
+
+
+[Event "Queen vs Rook, Rosettes: Chapter 11"]
+[Date "2021.07.08"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Rosettes"]
+[ChapterName "Chapter 11"]
+[ChapterURL "https://lichess.org/study/d7fEaXLW/nJ2NNlp1"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/4r3/6K1/3k4/5Q2/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.08"]
+[UTCTime "20:47:39"]
+
+{ The same position rotated and translated. The same principle applies. }
+1. Qg3 Re6+ { If the rook gives a check... } 2. Kf5 { make the cage. Black must fall back. } 2... Rc6 3. Qe5+ Kc4 4. Ke4 Rc5 5. Qb2 { Euwe position } *
+
+
+[Event "Queen vs Rook, Rosettes: Chapter 12"]
+[Date "2021.07.08"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Rosettes"]
+[ChapterName "Chapter 12"]
+[ChapterURL "https://lichess.org/study/d7fEaXLW/u0jeGBUb"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/2r5/4K3/1k6/3Q4/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.08"]
+[UTCTime "20:57:35"]
+
+{ Same position translated. Same principle applies. }
+1. Qe3 Kc6 { If black tries Kc6... } 2. Qc3+ { Give a check } 2... Kb6 3. Qb4+ Kc6 4. Qb8 { Pseudo-Euwe position } *
+
+
+[Event "Queen vs Rook, Rosettes: Chapter 13"]
+[Date "2021.07.08"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Rosettes"]
+[ChapterName "Chapter 13"]
+[ChapterURL "https://lichess.org/study/d7fEaXLW/UIadnoIK"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/8/8/2Q5/k7/3K4/1r6/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.08"]
+[UTCTime "21:02:45"]
+
+{ If the black king is on the edge of the board, our main strategy of retreating the queen one square on the diagonal eliminates any possibility of stalemate. }
+1. Qd6 Kb3 2. Qb6+ Ka2 3. Qa5+ Kb1 (3... Kb3 4. Qa1 { Euwe position }) 4. Qa4 { Half Philidor } 4... Rb8 (4... Rg2 5. Qe4 Rc2 { Diagonal position } 6. Qe1+ Rc1 7. Qe5 Rc2 8. Qe4 Rb2 9. Kc3+ Ka1 10. Qe1+ Ka2 11. Qd1 { Philidor }) 5. Qe4 { Set up discovered check } 5... Rb3+ 6. Kc4+ Ka1 7. Qd4+ Ka2 8. Qd5 { Diagonal position } *
+
+
+[Event "Queen vs Rook, Rosettes: Chapter 14"]
+[Date "2021.07.08"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Rosettes"]
+[ChapterName "Chapter 14"]
+[ChapterURL "https://lichess.org/study/d7fEaXLW/5le5CW4E"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "4Q3/2k5/5K2/3r4/8/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.08"]
+[UTCTime "21:25:15"]
+
+{ The first exception to the general principle occurs when the queen is on the edge of the board and therefore retreating one square on the diagonal is not possible. In that case, attack the hanging rook with the king. }
+1. Ke6 Rd6+ 2. Ke5 Rd2 { Black will usually adopt a cut-off defense. } 3. Qf7+ Kc6 (3... Kd8 4. Qf4 Re2+ 5. Kd6 Ke8 6. Qg5 { threatening mate on g8 } 6... Kf8 7. Qf5+ Kg7 8. Qg4+ { fork }) 4. Qc4+ { and black has no 3rd rank defense because the black king is off the central ranks } 4... Kd7 5. Qb5+ Kc8 6. Ke6 *
+
+
+[Event "Queen vs Rook, Rosettes: Chapter 15"]
+[Date "2021.07.08"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Rosettes"]
+[ChapterName "Chapter 15"]
+[ChapterURL "https://lichess.org/study/d7fEaXLW/TvDyCYay"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "2Q5/k7/3K4/1r6/8/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.08"]
+[UTCTime "21:42:01"]
+
+{ The second exception is when the white queen and black king are both on the edge of the board. The standard plan is impossible, and Kc6 attacking the hanging rook would blunder a draw with rc5+. In this unique position, instead the queen attacks the rook. }
+1. Qc4 Kb6 (1... Rb6+ 2. Kc5 Rb7 3. Qe4 Rc7+ 4. Kb5 Rf7 5. Qd4+ Kb8 6. Qe5+ Ka7 7. Kc6 Rb7 8. Qa1+ Kb8 9. Qa5 { Philidor position }) (1... Rb7 2. Qd4+ Kb8 3. Kc6 Rc7+ 4. Kb6 Rb7+ 5. Ka6 { cage } 5... Kc8 6. Qh8+ Kc7 7. Qg7+ { skewer }) 2. Qa4 { Euwe position } *
+
+
+[Event "Queen vs Rook, Rosettes: Chapter 16"]
+[Date "2021.07.08"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Rosettes"]
+[ChapterName "Chapter 16"]
+[ChapterURL "https://lichess.org/study/d7fEaXLW/PfnHMMmR"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/8/3r4/5k2/2Q5/4K3/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.08"]
+[UTCTime "22:01:16"]
+
+{ This is an adjacent, non-cutoff rosette position. The two kings are adjacent to each other, the black rook does not cut off the white king from the black king, and the white queen does not cut off the black king from the black rook. In all such rosettes, white plays the same idea: check the king while attacking the rook. }
+1. Qc5+ Ke6 2. Ke4 Kd7 (2... Rd1 3. Qc4+ Kd6 4. Qb4+ Kc7 5. Ke5 Rc1 6. Kd5 Rc6 7. Qa5+ Kb7 8. Qb5+ Rb6 9. Qd7+ Kb8 10. Kc5 Ra6 { And we have arrived at the opposite third-rank cutoff rosette position on the edge. }) 3. Qc4 Re6+ 4. Kd5 Rd6+ 5. Ke5 { thorn } *
+
+
+[Event "Queen vs Rook, Rosettes: Chapter 17"]
+[Date "2021.07.08"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Rosettes"]
+[ChapterName "Chapter 17"]
+[ChapterURL "https://lichess.org/study/d7fEaXLW/QF2F88cw"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/8/4k3/2r5/5K2/3Q4/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.08"]
+[UTCTime "22:18:02"]
+
+{ This position is an adjacent cutoff rosette. The black and white kings are adjacent to each other, the black rook cuts off the white king from the black king, and the white queen cuts off the black king from the black rook. White has a general plan with two exceptions. }
+1. Qg6+ { The white queen gives check on the diagonal, driving the king back towards the rook. } 1... Kd5 2. Qe4+ Kd6 3. Qd4+ Rd5 4. Qf6+ Kc5 5. Ke4 { Form the thorn } 5... Rd7 { Black repeats the original rosette. Repeat the same procedure. } 6. Qc3+ Kd6 7. Qe5+ Kc6 8. Qe6+ Rd6 9. Qc4+ Kd7 10. Ke5 Rb6 { Black repeats the original rosette. Repeat the same procedure. } 11. Qf7+ Kc6 12. Qd5+ Kc7 13. Qc5+ Rc6 14. Qe7+ Kb6 15. Kd5 Rc8 { Black repeats the original rosette. Repeat the same procedure. } 16. Qb4+ Kc7 17. Qd6+ Kb7 18. Qd7+ Rc7 19. Qb5+ Kc8 20. Kd6 Rg7 (20... Ra7 21. Qe8+ Kb7 22. Qd7+ Kb8 23. Qd8+ Kb7 24. Qc7+ Ka6 25. Qc6+ Ka5 26. Kc5) 21. Qf5+ Kb7 22. Qe4+ Kb8 23. Kc6 Rb7 24. Qe8+ Ka7 25. Qd8 { Philidor position } *
+
+
+[Event "Queen vs Rook, Rosettes: Chapter 18"]
+[Date "2021.07.08"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Rosettes"]
+[ChapterName "Chapter 18"]
+[ChapterURL "https://lichess.org/study/d7fEaXLW/drlmrbk3"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/8/4k3/2r5/5K2/3Q4/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.08"]
+[UTCTime "22:45:56"]
+
+{ Returning to the original adjacent cutoff rosette position, another defense for black is Kd7. }
+1. Qg6+ Kd7 { Since the black pieces are already separated, move the king towards the rook. } 2. Ke4 Rb5 3. Qf6 Rc5 4. Kd4 Rb5 { third rank defense killing position } *
+
+
+[Event "Queen vs Rook, Wedge for White: Chapter 1"]
+[Date "2021.07.25"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Wedge for White"]
+[ChapterName "Chapter 1"]
+[ChapterURL "https://lichess.org/study/h5GjJFfx/Ivtd2INH"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/8/2kr4/4Q3/4K3/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.25"]
+[UTCTime "00:59:57"]
+
+{ In this position, white's best plan is always to play for an absolute seventh. }
+1. Qa5 { Threatening Ke5 } 1... Kd7 2. Qb5+ Kc7 3. Ke5 Rg6 4. Qc4+ { Threatening a fork on f7 } 4... Rc6 5. Qb4 { Half-Philidor } 5... Rh6 6. Qe7+ { Black cannot maintain a 3rd rank defense because white controls both central squares. } 6... Kc6 7. Qe8+ Kc7 8. Kd5 Rd6+ 9. Kc5 Rd7 { Euwe position } 10. Qe5+ Kb7 11. Kb5 Rc7 12. Qe8 Rc1 13. Qe4+ Kc8 14. Kb6 Kd7 15. Qd3+ Ke6 16. Qe3+ Kd5 17. Qxc1 *
+
+
+[Event "Queen vs Rook, Wedge for White: Chapter 2"]
+[Date "2021.07.25"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Wedge for White"]
+[ChapterName "Chapter 2"]
+[ChapterURL "https://lichess.org/study/h5GjJFfx/67NoJ7iR"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/8/3KQ3/5r2/5k2/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.25"]
+[UTCTime "01:14:35"]
+
+{ The wedge has been rotated, but the rule is the same. }
+1. Qe2 { Threatening Ke6. } 1... Rf6+ 2. Ke7 { Attack a hanging rook } 2... Rg6 3. Qf2+ Kg4 4. Kf7 Rg5 5. Kf6 { Absolute seventh extension } 5... Kh3 6. Qf1+ Rg2 7. Ke5 { Second rank fortress } *
+
+
+[Event "Queen vs Rook, Wedge for White: Chapter 3"]
+[Date "2021.07.25"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Wedge for White"]
+[ChapterName "Chapter 3"]
+[ChapterURL "https://lichess.org/study/h5GjJFfx/fmvAYEMz"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/8/2kr4/4Q3/4K3/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.25"]
+[UTCTime "01:23:48"]
+
+1. Qa5 { Black has 3 other options to Kd7. } 1... Rd7 2. Qa4+ { Skewering the rook reduces black's mobility. } 2... Kc7 3. Ke5 { Trapezoid position } 3... Re7+ 4. Kf6 { Attack a hanging rook } 4... Rd7 5. Ke6 Rd6+ 6. Ke7 Rb6 { Boomerang position, to be discussed in Second Rank Fortress study } *
+
+
+[Event "Queen vs Rook, Wedge for White: Chapter 4"]
+[Date "2021.07.25"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Wedge for White"]
+[ChapterName "Chapter 4"]
+[ChapterURL "https://lichess.org/study/h5GjJFfx/ax8rhX8k"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/8/2kr4/4Q3/4K3/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.25"]
+[UTCTime "01:31:05"]
+
+1. Qa5 Kb7 2. Ke5 Rh6 3. Qd5+ Kc7 4. Qf7+ Kc6 5. Qe8+ Kb6 6. Kd5 Kb7 7. Qe7+ Ka6 8. Kc5 Rh5+ 9. Kc6 Rh6+ 10. Kc7 { Javelin position } 10... Rh1 11. Qd6+ Ka5 12. Qd5+ Ka4 13. Qxh1 *
+
+
+[Event "Queen vs Rook, Wedge for White: Chapter 5"]
+[Date "2021.07.25"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Wedge for White"]
+[ChapterName "Chapter 5"]
+[ChapterURL "https://lichess.org/study/h5GjJFfx/P1rFquFI"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/8/8/1kr5/3Q4/3K4/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.25"]
+[UTCTime "01:39:28"]
+
+{ If the position is too close to the edge of the board, white's best approach is to check with the queen and push towards the a-file or 8th rank. }
+1. Qd7+ Kb4 2. Qb7+ Ka5 3. Kd4 Rc2 4. Qb3 { A standard third rank defense. } 4... Rf2 { It is unwise to attempt a harassment defense with Rf2, as the rook has too little distance. } 5. Qe3 { stopping all checks } 5... Rf1 6. Qa3+ Kb6 7. Qc5+ Ka6 8. Qc4+ Ka5 9. Qxf1 *
+
+
+[Event "Queen vs Rook, Absolute Seventh Extension: White queen on edge"]
+[Date "2021.07.08"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Absolute Seventh Extension"]
+[ChapterName "White queen on edge"]
+[ChapterURL "https://lichess.org/study/0zBuqMtV/DGR5dyFo"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "3Q4/8/4k3/4r3/8/2K5/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.08"]
+[UTCTime "03:07:42"]
+
+1. Kd4 { Even away from the last rank, the absolute seventh position leaves black with only one move that doesn't lose quickly, retreating the rook. } 1... Rf5 (1... Kf5 2. Qf8+ Ke6 3. Qe8+ Kf5 4. Qxe5+) 2. Qe8+ Kf6 3. Ke4 Rg5 4. Qf8+ Kg6 5. Kf4 Kh7 6. Qd6 { Split the king and the rook. Note that the queen controls c5, d5, and e5 directly, and a5 and b5 indirectly, through forks from c7 and d7. } 6... Rg7 7. Kf5 { Moving the king one step closer } 7... Rf7+ 8. Ke6 Rg7 9. Qd3+ { Giving check and moving the queen to the long diagonal } 9... Kg8 10. Qd4 (10. Qd5 Rg6+ 11. Kf5+ Kh8 12. Qd3 Kh7 13. Qe4 { diagonal position }) 10... Rg6+ 11. Kf5 Rh6 12. Kg5 { Moving the king to attack the rook leaves it with no good squares } 12... Rh2 13. Qd8+ Kf7 14. Qc7+ Ke6 15. Qxh2 *
+
+
+[Event "Queen vs Rook, Absolute Seventh Extension: White queen on 2nd rank"]
+[Date "2021.07.08"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Absolute Seventh Extension"]
+[ChapterName "White queen on 2nd rank"]
+[ChapterURL "https://lichess.org/study/0zBuqMtV/nReEA6RY"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/4Q3/8/5k2/5r2/4K3/8/8 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.08"]
+[UTCTime "03:48:00"]
+
+1... Rg4 2. Qf7+ Kg5 3. Kf3 Kh6 { Here white could split the king and rook with d5 as in the previous chapter, but in this case giving the available check from f8 is the best option. } 4. Qf8+ Rg7 5. Kf4 { Bring the king closer } 5... Kg6 6. Qf5+ { Push the black king back to the h file } 6... Kh6 7. Qf6+ Kh7 8. Kf5 { Taking diagonal opposition with the king, and creating the wedge position. Black can retreat his king or move his rook away from the corner. } 8... Kg8 9. Qd4 { keep the white queen on the long diagonal } 9... Kf8 10. Kf6 { take opposition with the king, preparing to create a cage } 10... Rf7+ 11. Kg6 { cage position } 11... Ke8 12. Qh8+ Rf8 13. Qg7 { absolute seventh position } 13... Rf1 14. Qe5+ Kd8 15. Qd4+ Ke7 16. Qe3+ Kd6 17. Qd3+ Kc5 18. Qxf1 *
+
+
+[Event "Queen vs Rook, Absolute Seventh Extension: White queen on 3rd rank"]
+[Date "2021.07.21"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Absolute Seventh Extension"]
+[ChapterName "White queen on 3rd rank"]
+[ChapterURL "https://lichess.org/study/0zBuqMtV/DfFNkVM5"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/8/8/4kr2/2Q3K1/8/8/8 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.21"]
+[UTCTime "21:38:23"]
+
+{ If the queen is on the third rank from the edge, then white's task is dramatically easier. }
+1... Rf6 2. Qc5+ Ke6 3. Kg5 Rf7 4. Qc6+ Ke7 5. Kg6 Rf8 6. Qc5+ Ke8 { Trapezoid position } 7. Qc7 { Absolute seventh } 7... Rf1 8. Qc4 { Attack the rook } 8... Re1 9. Qa4+ Kf8 10. Qb4+ Ke8 11. Qxe1+ *
+
+
+[Event "Queen vs Rook, Absolute Seventh Extension: White queen on 4th rank"]
+[Date "2021.07.08"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Absolute Seventh Extension"]
+[ChapterName "White queen on 4th rank"]
+[ChapterURL "https://lichess.org/study/0zBuqMtV/igeAEBbS"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/5kr1/3Q4/6K1/8/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.08"]
+[UTCTime "03:36:39"]
+
+1. Kh6 { King to h6 creates the absolute seventh extension position. } 1... Rg8 2. Qd5+ { In this position, queen check pins the king to the rook. } 2... Kf8 { Only move that doesn't lose immediately...creating the trapezoid position, which is lost for black if it is black to play. Therefore, white transfers the move to black. } 3. Qa8+ Kf7 4. Qa2+ Kf8 5. Qd5 { Trapezoid position with black to play } 5... Rh8+ (5... Rg7 6. Qd8+ Kf7 7. Qd7+ Kf6 8. Qxg7+) 6. Kg6 { Threatening mate on d8. } 6... Ke7 7. Qe5+ Kd7 8. Qxh8 *
+
+
+[Event "Queen vs Rook, Pseudo-Thorn: White to play"]
+[Date "2021.07.24"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Pseudo-Thorn"]
+[ChapterName "White to play"]
+[ChapterURL "https://lichess.org/study/UceshZfa/dKY0gsOx"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/4k3/4r3/5Q2/3K4/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.24"]
+[UTCTime "01:23:07"]
+
+{ Because the queen is touching the rook, this position is not a thorn. The best move for white on most of the board is to step forward one square with the king. }
+1. Kd5 *
+
+
+[Event "Queen vs Rook, Pseudo-Thorn: Black king on edge"]
+[Date "2021.07.24"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Pseudo-Thorn"]
+[ChapterName "Black king on edge"]
+[ChapterURL "https://lichess.org/study/UceshZfa/nrpy7niN"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "4k3/4r3/5Q2/3K4/8/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.24"]
+[UTCTime "01:26:48"]
+
+{ When the black king stands on the edge of the board, the best move for white is step back one square and create the wishbone position. }
+1. Qf5 Rd7+ 2. Ke6 Re7+ 3. Kd6 Rg7 { Rosette } *
+
+
+[Event "Queen vs Rook, Pseudo-Thorn: White king across center line"]
+[Date "2021.07.24"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Pseudo-Thorn"]
+[ChapterName "White king across center line"]
+[ChapterURL "https://lichess.org/study/UceshZfa/wbGw1b0D"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/5k2/5r2/6Q1/4K3/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.24"]
+[UTCTime "01:32:20"]
+
+{ Whenever the white king has crossed the centerline of the board, he should again move forward, but give the black king one more file }
+1. Kd5 Rb6 2. Qf4+ Rf6 3. Qg4 { Half-Philidor position } *
+
+
+[Event "Queen vs Rook, Pseudo-Thorn: Black to play"]
+[Date "2021.07.24"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Pseudo-Thorn"]
+[ChapterName "Black to play"]
+[ChapterURL "https://lichess.org/study/UceshZfa/wJIcH249"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/4k3/4r3/5Q2/3K4/8/8/8 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.24"]
+[UTCTime "01:36:49"]
+
+1... Rc6 { Black to play should create an opposite rosette. } *
+
+
+[Event "Queen vs Rook, Third Rank Defense: Chapter 1"]
+[Date "2021.07.07"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Third Rank Defense"]
+[ChapterName "Chapter 1"]
+[ChapterURL "https://lichess.org/study/34ArhgQa/QAysMNuX"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/6Q1/8/5r1k/8/4K3/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.07"]
+[UTCTime "02:35:50"]
+
+1. Ke4 Rf1 2. Qg3 Rf6 3. Ke5 Rf7 4. Qd3 Kg5 (4... Kh6 5. Ke6 Rf8 6. Qa3 Rg8 (6... Kg7 7. Qe7+ Kg8 8. Qa7 Rf1 9. Qa2 Rf7 10. Qd5 Rg7 11. Kf6+ Kh7 12. Qh1+ Kg8 13. Qh5 { Philidor position }) 7. Qe3+ Kh5 8. Qh3+ Kg6 9. Qg4+ Kh7 10. Qe4+ Kh8 11. Qe5+ Rg7 12. Qh5+ Kg8 13. Kf6 { Philidor position }) 5. Qd8+ Kg6 6. Qg8+ Rg7 7. Qe6+ Kh7 8. Kf5 Rg2 9. Qe4 (9. Qd5 Rg7 10. Kf6 Rg6+ 11. Kf7 Rg7+ 12. Kf8 Kh6 13. Qh1+ Kg6 14. Qg2+ Kf5) 9... Rg6 (9... Rf2+ 10. Kg5+ Kg8 11. Qc4+ Kg7 12. Qd4+ Kf7 13. Qxf2+ Ke6 14. Qd4 Ke7 15. Qd5 Kf8 16. Qd7 Kg8 17. Kf6 Kf8 18. Qf7#) 10. Qh4+ Rh6 11. Qd4 Rg6 12. Qe4 Rg7 13. Kf6+ Kg8 14. Qa8+ Kh7 15. Qe8 Ra7 (15... Rg1 16. Qe4+ Kg8 17. Qa8+ Kh7 18. Qa7+ Kg8 19. Qxg1+) 16. Qe4+ Kg8 17. Qd5+ Kh7 18. Qh1+ Kg8 19. Qg1+ Kh7 20. Qxa7+ Kh6 21. Qg1 Kh5 22. Qg5# *
+
+
+[Event "Queen vs Rook, Third Rank Defense: Main Line"]
+[Date "2021.07.14"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Third Rank Defense"]
+[ChapterName "Main Line"]
+[ChapterURL "https://lichess.org/study/34ArhgQa/qFCrHF12"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/8/6Q1/4K3/7k/5r2/8/8 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.14"]
+[UTCTime "11:56:42"]
+
+{ White queen controls h5, one of the central squares on the 1st rank. }
+1... Rf1 { Black moves his rook to a square opposite in color to that occupied by the white king. } 2. Ke4 { White moves his king directly in front of the black king, controlling f3, f4, and f5. } 2... Rf2 3. Qd6 { White queen now controls f6 and f8 directly, and f1 and f7 can be forked from g2 after checking on h2 and g6 after checking on h6, respectively. The black rook has no moves. } 3... Kg4 { Black's best defense is to move the king towards the center. } 4. Qd1+ Kg3 5. Qg1+ Rg2 6. Qe3+ Kh2 7. Kf4 { Aiming for the diagonal position } 7... Rg7 8. Qe5 Rg3 { Diagonal position } (8... Rg2 9. Kf3+ Kg1 10. Qa1+ Kh2 11. Qe1) 9. Qe4 { White triangulates to pass the move to black } 9... Rh3 (9... Rg7 10. Kf3 Rf7+ 11. Ke2 Kg3 12. Qg6+ Kf4 13. Qxf7+) 10. Qd5 Rg3 11. Qe5 Rg2 12. Kf3+ Kg1 13. Qa1+ Kh2 14. Qe1 { Philidor position } *
+
+
+[Event "Queen vs Rook, Third Rank Defense: 3 ...Kh3"]
+[Date "2021.07.15"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Third Rank Defense"]
+[ChapterName "3 ...Kh3"]
+[ChapterURL "https://lichess.org/study/34ArhgQa/8mwSyczm"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/8/3Q4/8/4K2k/8/5r2/8 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.15"]
+[UTCTime "19:05:09"]
+
+{ From this position, black's best defense is Kg4, as we saw in the main line. An alternative, objectively less good, but perhaps catching the attacker by surprise, is Kh3. }
+1... Kh3 2. Ke3 { Attack the hanging rook } 2... Rf1 3. Qd3 { Set up discovered check } 3... Rf6 4. Qc3 { Attack the rook } 4... Rg6 (4... Rf8 5. Ke2+ Kh2 6. Qc7+ Kh1 7. Qc6+ { two forking squares - fork next move wherever king goes } 7... Kh2 8. Qd6+ { fork } 8... Kh3 9. Qxf8) 5. Kf4+ { Give discovered check } 5... Kh2 6. Qc7 { Setting up the diagonal position with tempo. } (6. Qh8+ Kg2 7. Qe5 Kg1 8. Qc5+ Kf1 9. Qc1+ Ke2 10. Qc2+ Ke1 11. Qxg6) 6... Rg3 7. Qe5 { Diagonal position } 7... Rg2 8. Kf3+ Kg1 9. Qa1+ Kh2 10. Qe1 { Philidor position } *
+
+
+[Event "Queen vs Rook, Absolute Seventh: From Edge Diagonal Cage"]
+[Date "2021.07.07"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Absolute Seventh"]
+[ChapterName "From Edge Diagonal Cage"]
+[ChapterURL "https://lichess.org/study/kqCcoBg5/ooFGc6cI"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "4k3/4r3/5K2/8/2Q5/8/8/8 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.07"]
+[UTCTime "05:26:22"]
+
+1... Kd8 (1... Kd7 2. Qd5+ Ke8 3. Qc6+ Kd8 4. Qd6+ Kc8 (4... Rd7 5. Qb8#) 5. Kxe7) 2. Qg8+ Re8 3. Qg7 Re1 (3... Kc8 4. Qa7 Rd8 5. Ke7 (5. Ke6 Rd1 6. Qc5+ { pendulum checks } 6... Kb7 7. Qb4+ Kc7 8. Qc3+ Kb7 9. Qb3+ Ka6 10. Qxd1) 5... Rd1 6. Qa4 Rc1 7. Kd6 Kb7 8. Qb3+ Kc8 9. Qa3 { triple threat } 9... Rd1+ 10. Kc6 Kb8 11. Qb3+ Kc8 12. Qxd1) 4. Qg5 Rd1 5. Ke6+ Kc8 6. Qc5+ Kb7 (6... Kd8 7. Qa5+ Kc8 8. Qc3+ Kd8 9. Qb3 { triple threat } 9... Re1+ 10. Kd6 Kc8 11. Qc3+ Kb7 12. Qxe1) 7. Qb4+ Kc7 8. Qc3+ Kd8 9. Qb3 { triple threat position: white 1) threatens mate on b8, 2) threatens the rook and takes away the d1 checking square allowing Kd6, and 3) if Kd6, there is also a discovered mate threat on g8. } 9... Re1+ 10. Kd6 Kc8 11. Qc3+ Kb7 12. Qxe1 *
+
+
+[Event "Queen vs Rook, Absolute Seventh: From 2nd/3rd Rank Defenses"]
+[Date "2021.07.11"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Absolute Seventh"]
+[ChapterName "From 2nd/3rd Rank Defenses"]
+[ChapterURL "https://lichess.org/study/kqCcoBg5/r92lIHNA"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "3kr3/5Q2/5K2/8/8/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.11"]
+[UTCTime "13:43:13"]
+
+1. Qb7 Re1 2. Qb6+ Kc8 3. Qc5+ Kd7 4. Qd4+ Ke8 5. Qc3 { triple threat } *
+
+
+[Event "Queen vs Rook, Absolute Seventh: One Square Left"]
+[Date "2021.07.11"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Absolute Seventh"]
+[ChapterName "One Square Left"]
+[ChapterURL "https://lichess.org/study/kqCcoBg5/lBW20uJh"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "2kr4/4Q3/4K3/8/8/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.11"]
+[UTCTime "13:50:57"]
+
+{ One square to the left, or any number to the right, our plan still works. }
+1. Qa7 Rd1 2. Qc5+ Kb7 3. Qb4+ Kc7 4. Qc3+ Kd8 5. Qb3 { triple threat } *
+
+
+[Event "Queen vs Rook, Absolute Seventh: Two Squares Left: To Diagonal Position"]
+[Date "2021.07.07"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Absolute Seventh"]
+[ChapterName "Two Squares Left: To Diagonal Position"]
+[ChapterURL "https://lichess.org/study/kqCcoBg5/FNgSUTi5"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "1kr5/3Q4/3K4/8/8/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.07"]
+[UTCTime "07:07:57"]
+
+1. Qf7 { If there is no space to place the queen a knight's move from the black king, instead pass the move to the black rook, which has no good squares. } 1... Rc3 (1... Rh8 2. Qb3+ Ka7 3. Qa2+ Kb6 4. Qb2+ Ka5 5. Qxh8) (1... Ka8 2. Kd7 Rc2 3. Qf4 Rc3 4. Qa4+ Kb7 5. Qb4+ Ka6 6. Qxc3) (1... Rc1 2. Qb3+ Kc8 3. Qa3 { triple threat } 3... Rd1+ 4. Kc6 Kb8 5. Qb3+ Kc8 6. Qxd1) (1... Rc2 2. Qb3+ Ka7 3. Qxc2) (1... Rd8+ 2. Kc6 Rc8+ 3. Kb6 Rc6+ 4. Kxc6) 2. Qf4 { Set up discovered check. } 2... Rc7 { Any other black move loses quickly } (2... Rc2 3. Kd7+ Ka7 4. Qa4+ Kb6) (2... Rc8 3. Kd7+ Ka7) (2... Rd3+ 3. Kc6+ Ka8 4. Qb4) 3. Qe5 { diagonal position } 3... Rb7 4. Kc6+ Ka7 5. Qa1+ Kb8 6. Qa5 { Philidor's position } 6... Rb1 7. Qe5+ Ka7 8. Qd4+ Ka8 9. Qh8+ Ka7 10. Qh7+ *
+
+
+[Event "Queen vs Rook, Absolute Seventh: From Rosette"]
+[Date "2021.07.07"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Absolute Seventh"]
+[ChapterName "From Rosette"]
+[ChapterURL "https://lichess.org/study/kqCcoBg5/rpyaUAEE"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "3r4/1k6/4K3/2Q5/8/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.07"]
+[UTCTime "07:21:13"]
+
+{ From this rosette position, white can create an absolute 7th position as follows: }
+1. Qe7+ { Diagonal check forks king and rook; c8 is black's only move. } 1... Kc8 2. Qa7 { Absolute 7th } 2... Rd1 3. Qa4 Rc1 4. Kd6 Kb7 5. Qb3+ Ka6 6. Qa3+ Kb5 7. Qxc1 *
+
+
+[Event "Queen vs Rook, Absolute Seventh: Via Skewer"]
+[Date "2021.07.07"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Absolute Seventh"]
+[ChapterName "Via Skewer"]
+[ChapterURL "https://lichess.org/study/kqCcoBg5/enxAW94o"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "3r4/2k5/4K3/5Q2/8/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.07"]
+[UTCTime "07:25:06"]
+
+1. Qa5+ { White's second best option for creating an absolute seventh is to skewer the rook. Again, c8 is black's only move. } (1. Qc5+ Kb7 2. Qe7+ Kc8 3. Qa7 { In this case, diagonal checks also work, but sometimes skewering the rook will work in cases where diagonal checks are not available. }) 1... Kc8 2. Qa7 { Absolute 7th } 2... Rd1 3. Qa4 Rc1 4. Kd6 Kb7 5. Qb3+ Ka6 6. Qa3+ *
+
+
+[Event "Queen vs Rook, Absolute Seventh: Diagonal Corner: To Philidor"]
+[Date "2021.07.07"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Absolute Seventh"]
+[ChapterName "Diagonal Corner: To Philidor"]
+[ChapterURL "https://lichess.org/study/kqCcoBg5/DrlRtUNZ"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "r7/1k6/5K2/5Q2/8/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.07"]
+[UTCTime "07:29:41"]
+
+{ When the black king stands diagonally in front of the rook in the corner, skewering the rook from the long diagonal is the only way to make progress. }
+1. Qd5+ Kb8 (1... Ka7 2. Ke7 Rb8 3. Qa5+ Kb7 4. Kd7 Rh8 5. Qd5+ Ka6 6. Kc7 Rh4 7. Kc6 Rh6+ 8. Kc5 Ka7 9. Qf7+ Ka6 10. Qf8 Rh5+ 11. Kc6 Ka7 12. Qf7+ { fork } 12... Ka6 13. Qxh5) 2. Ke6 Ra6+ 3. Kd7 Rb6 4. Qe4 Rb3 5. Qe5+ Ka7 6. Qc5+ Kb8 7. Kc6 Rb7 8. Qa5 { Philidor } *
+
+
+[Event "Queen vs Rook, Absolute Seventh: From Rook in Front of King"]
+[Date "2021.07.12"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Absolute Seventh"]
+[ChapterName "From Rook in Front of King"]
+[ChapterURL "https://lichess.org/study/kqCcoBg5/3sOtDuxj"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "4r3/4k3/4Q3/5K2/8/8/8/8 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.12"]
+[UTCTime "05:51:44"]
+
+1... Kd8 (1... Kf8 2. Qf6+ Kg8 3. Kg6 Re6 4. Qxe6+) 2. Qd5+ Kc8 3. Qf7 Rd8 (3... Re1 4. Qc4+ Kd8 5. Qd4+ Ke8 6. Qa4+ Kf7 7. Qc4+ Ke8 8. Kf6 Kd7 9. Qd3+ Ke8 10. Qb5+ Kd8 11. Qa5+ { fork } 11... Kd7 12. Qxe1) 4. Ke6 Rd3 5. Qf8+ Rd8 6. Qc5+ Kb7 7. Qe7+ Kc8 8. Qa7 { Absolute seventh } *
+
+
+[Event "Queen vs Rook, Absolute Seventh: From Wedge on 2nd Rank"]
+[Date "2021.07.12"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Absolute Seventh"]
+[ChapterName "From Wedge on 2nd Rank"]
+[ChapterURL "https://lichess.org/study/kqCcoBg5/N4N1XTm4"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/7k/6r1/4K2Q/8/8/8/8 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.12"]
+[UTCTime "06:15:18"]
+
+1... Kg7 (1... Rh6 2. Qf7+ Kh8 3. Kf5 Rh1 4. Qe8+ Kg7 5. Qd7+ Kf8 6. Qc8+ Ke7 7. Qb7+ Kd6 8. Qxh1) 2. Qf5 Kh6 3. Qd3 Kh5 (3... Rg8 4. Ke6 { Threatening fatal cage on g6 } 4... Rf8 5. Qa3 Rg8 6. Qe3+ Kh5 7. Qh3+ Kg6 8. Qg4+ Kh7 9. Qe4+ Kh8 10. Qe5+ Rg7 11. Qh5+ Kg8 12. Kf6 { Philidor }) 4. Kf5 Rg5+ 5. Kf6 Kh4 6. Qh7+ Rh5 7. Qg8 Kh3 8. Qg1 Rh4 9. Kg5 { Absolute seventh } *
+
+
+[Event "Queen vs Rook, Philidor position: Chapter 1"]
+[Date "2021.07.08"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Philidor position"]
+[ChapterName "Chapter 1"]
+[ChapterURL "https://lichess.org/study/ofTDh9en/GXyEhJ3S"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "6k1/6r1/5K2/7Q/8/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.08"]
+[UTCTime "00:28:33"]
+
+{ Philidor position with white to play. White transfers move to black via triangulation. }
+1. Qd5+ Kh7 2. Qh1+ Kg8 3. Qh5 Rg1 4. Qd5+ { Check on main diagonal } 4... Kh7 5. Qe4+ { Check again, staying on main diagonal } 5... Kg8 6. Qa8+ { Give check on the 8th rank, adjacent to the forking square on a7. } 6... Kh7 7. Qa7+ { Fork } 7... Kg8 8. Qxg1+ *
+
+
+[Event "Queen vs Rook, Philidor position: Chapter 2"]
+[Date "2021.07.08"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Philidor position"]
+[ChapterName "Chapter 2"]
+[ChapterURL "https://lichess.org/study/ofTDh9en/PImsT3w1"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "6k1/6r1/5K2/7Q/8/8/8/8 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.08"]
+[UTCTime "00:31:21"]
+
+1... Rg3 2. Qd5+ Kh8 3. Qa8+ Kh7 4. Qb7+ Kg8 5. Qb8+ Kh7 6. Qxg3 *
+
+
+[Event "Queen vs Rook, Philidor position: Chapter 3"]
+[Date "2021.07.08"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Philidor position"]
+[ChapterName "Chapter 3"]
+[ChapterURL "https://lichess.org/study/ofTDh9en/XB7F4cfi"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "6k1/6r1/5K2/7Q/8/8/8/8 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.08"]
+[UTCTime "00:35:22"]
+
+1... Ra7 2. Qd5+ Kh7 3. Qh1+ Kg8 4. Qg1+ Kh7 5. Qxa7+ *
+
+
+[Event "Queen vs Rook, Philidor position: Chapter 4"]
+[Date "2021.07.08"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Philidor position"]
+[ChapterName "Chapter 4"]
+[ChapterURL "https://lichess.org/study/ofTDh9en/xsZJUtnK"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "6k1/6r1/5K2/7Q/8/8/8/8 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.08"]
+[UTCTime "00:36:14"]
+
+1... Rc7 2. Qg4+ (2. Qd5+ Kh7 3. Qd3+ Kg8 4. Qd8+ Kh7 5. Qxc7+) 2... Kh7 3. Qh3+ Kg8 4. Qg3+ Kh7 5. Qxc7+ *
+
+
+[Event "Queen vs Rook, Wishbone position: On Edge"]
+[Date "2021.07.12"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Wishbone position"]
+[ChapterName "On Edge"]
+[ChapterURL "https://lichess.org/study/2rOE4vvJ/raGo2YJ9"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "5k2/5r2/8/4Q1K1/8/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.12"]
+[UTCTime "08:00:23"]
+
+{ This is the Wishbone position. When the black king is on the edge of the board, white always follows the same winning procedure: }
+1. Qh8+ Ke7 2. Kg6 { This is the thorn position, so called because of its resemblance to the old English character of that name. Note that white could have created a thorn on the first move, but when the king is on the edge checking with the queen first prevents the formation of a defensive rosette. At all other times, creating the thorn immediately is white's best move. } 2... Rf8 3. Qg7+ Ke8 4. Qc7 { Absolute seventh } *
+
+
+[Event "Queen vs Rook, Wishbone position: White king has black king cornered"]
+[Date "2021.07.12"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Wishbone position"]
+[ChapterName "White king has black king cornered"]
+[ChapterURL "https://lichess.org/study/2rOE4vvJ/bGVhSgt4"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "2k5/2r5/8/1Q1K4/8/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.12"]
+[UTCTime "08:15:45"]
+
+1. Kd6 (1. Qe8+ Kb7 2. Qb5+ { attack the hanging rook } 2... Ka7 (2... Ka8 3. Kd6 Rg7 4. Qe5 Rh7 5. Qd5+ Rb7 6. Qa5+ Kb8 7. Kc6 { Philidor }) 3. Kd6 Rc8 4. Qb4 { rosette, give the black king one square. } 4... Ka6 5. Kd7 { attack the hanging rook } 5... Rh8 6. Qa3+ Kb5 7. Qb2+ { fork } 7... Kc4 8. Qxh8 { and white still needs 8 more moves to mate }) 1... Rg7 2. Qf5+ Kb7 3. Qe4+ Kb8 4. Kc6 Rb7 5. Qe8+ Ka7 6. Qd8 { Philidor } *
+
+
+[Event "Queen vs Rook, Wishbone position: White queen on edge"]
+[Date "2021.07.12"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Wishbone position"]
+[ChapterName "White queen on edge"]
+[ChapterURL "https://lichess.org/study/2rOE4vvJ/WVZzyitM"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "1k6/1r6/8/Q1K5/8/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.12"]
+[UTCTime "08:41:54"]
+
+1. Kc6 { In this position, Kc6 immediately creates Philidor } *
+
+
+[Event "Queen vs Rook, Wishbone position: White king on edge"]
+[Date "2021.07.12"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Wishbone position"]
+[ChapterName "White king on edge"]
+[ChapterURL "https://lichess.org/study/2rOE4vvJ/kUjNG4pO"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "1k6/1r6/8/K1Q5/8/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.12"]
+[UTCTime "08:45:30"]
+
+{ In this position, no diagonal check is available. Instead, create the thorn with the king. }
+1. Ka6 Rd7 2. Qe5+ Kc8 3. Kb6 Kd8 { Now give diagonal check } 4. Qb8+ Ke7 { Wishbone, create the thorn. } 5. Kc6 Rd8 6. Qc7+ Ke8 7. Qg7 { Absolute Seventh } *
+
+
+[Event "Queen vs Rook, Wishbone position: Black to play"]
+[Date "2021.07.12"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Wishbone position"]
+[ChapterName "Black to play"]
+[ChapterURL "https://lichess.org/study/2rOE4vvJ/MYBnLrx9"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "2k5/2r5/8/1K1Q4/8/8/8/8 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.12"]
+[UTCTime "08:59:42"]
+
+1... Rb7+ 2. Kc5 Rc7+ 3. Kb6 Re7 { rosette } 4. Qf5+ Kd8 5. Kc5 Kc7 6. Qd5 Rd7 { body check } 7. Qe5+ Kb7 8. Kb5 Rc7 9. Qe8 Rc1 (9... Ka7 10. Qe4 Rf7 (10... Rb7+ 11. Kc6 Ka8 12. Qa4+ Kb8 13. Qa5 { Philidor }) 11. Qd4+ Kb8 12. Qd6+ Ka7 13. Kc6 Rb7 14. Qd8 { Philidor }) 10. Qe4+ Kc8 11. Kb6 Kd7 12. Qd3+ Ke6 (12... Kc8 13. Qf5+ Kd8 14. Qg5+ { fork } 14... Kd7 15. Qxc1) 13. Qe3+ { fork } 13... Kd5 14. Qxc1 *
+
+
+[Event "Queen vs Rook, Wishbone position: Black to play, white queen near edge"]
+[Date "2021.07.12"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Wishbone position"]
+[ChapterName "Black to play, white queen near edge"]
+[ChapterURL "https://lichess.org/study/2rOE4vvJ/aUPqQ9QB"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "2k5/2r5/8/1Q1K4/8/8/8/8 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.12"]
+[UTCTime "09:11:43"]
+
+{ However, if the queen is close to the edge of the board, then the rosette cannot be formed or would be formed with the rook on the edge, which is bad for black. In that case, run away with the rook along the 7th rank. }
+1... Rd7+ 2. Ke6 { Threaten pin } 2... Rh7 3. Qc4+ Rc7 (3... Kb8 4. Kd6 Rh6+ 5. Kc5 Rh5+ 6. Kb4 Rh8 7. Qf4+ Kb7 8. Qe4+ Ka6 9. Qg6+ Kb7 10. Qg7+ { fork } 10... Kc6 11. Qxh8) 4. Qa4 Rb7 5. Kd6 Rb6+ 6. Kc5 Rb7 7. Qa8+ Kc7 8. Qe8 { Euwe } 8... Ra7 9. Qe5+ Kb7 10. Kb5 *
+
+
+[Event "Queen vs Rook, Wishbone position: King in Front"]
+[Date "2021.07.12"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Wishbone position"]
+[ChapterName "King in Front"]
+[ChapterURL "https://lichess.org/study/2rOE4vvJ/TUu9O6oI"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "3r4/3k4/8/2Q1K3/8/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.12"]
+[UTCTime "09:23:00"]
+
+1. Kd5 Rg8 (1... Rh8 2. Qd6+ Ke8) (1... Ke8+ 2. Ke6 Rd6+ 3. Kxd6) 2. Qd6+ Ke8 3. Qe6+ Kf8 4. Qf6+ Ke8 5. Kd6 Rg6 6. Qxg6+ { Once in a while, black will form the wishbone with his king in front. White should always walk into the discovered check and follow the black king whichever way he goes (if black gives check). } *
+
+
+[Event "Queen vs Rook, Wishbone position: King in Front, Interior"]
+[Date "2021.07.12"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Wishbone position"]
+[ChapterName "King in Front, Interior"]
+[ChapterURL "https://lichess.org/study/2rOE4vvJ/032loh0Q"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/4r3/4k3/8/3K1Q2/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.12"]
+[UTCTime "09:34:17"]
+
+{ Even away from the edge, walking into discovered check and following the black king works best. }
+1. Ke4 Re8 2. Qh6+ Ke7 3. Qb6 Kd7+ 4. Kd5 Re7 5. Qb8 { Euwe } 5... Rf7 6. Qb7+ Ke8 7. Qc8+ Ke7 8. Ke5 Rg7 9. Qc7+ Kf8 10. Qd8+ Kf7 11. Kf5 Rh7 12. Qd5+ Kg7 13. Kg5 *
+
+
+[Event "Queen vs Rook, Javelin position: Fifth Rank"]
+[Date "2021.07.07"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Javelin position"]
+[ChapterName "Fifth Rank"]
+[ChapterURL "https://lichess.org/study/NzXK2wt0/hG3SGsAs"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/8/2KQ4/k6r/8/8/8/8 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.07"]
+[UTCTime "01:44:00"]
+
+{ Javelin position on a central rank }
+1... Rh3 { Prevents Qa3# } 2. Qd2+ { Give checks with the queen from the opposite side of the white king until you reach a position where h5 is covered, then move your king. } 2... Ka4 3. Qd1+ { Now the queen covers h5 and b3. } 3... Ka3 (3... Ka5 4. Kd5 Kb6 5. Qg1+ Kb7 6. Qg2 { set up discovered check } 6... Rh5+ 7. Kc4+ Ka7 8. Qg7+ Ka8 9. Qf8+ Ka7 10. Qf7+ { fork }) 4. Kb5 Kb2 { Give checks with the queen until black king is on a3 and h4 is covered. } 5. Qd4+ Ka2 6. Qd5+ Ka3 7. Qd6+ Kb2 8. Qf6+ { Queen now controls both h4 and c3. } 8... Ka3 9. Kc4 Ka2 10. Qf2+ Ka3 11. Qf1 { Queen threatens to capture rook and mate on a1... } 11... Rh4+ 12. Kc3 { And after king sidesteps check with a3, Queen also threatens mate on a5. Rook can't cover both mating threats. } 12... Ka2 13. Qf2+ { fork } 13... Ka3 14. Qxh4 *
+
+
+[Event "Queen vs Rook, Javelin position: Second Rank"]
+[Date "2021.07.12"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Javelin position"]
+[ChapterName "Second Rank"]
+[ChapterURL "https://lichess.org/study/NzXK2wt0/DUNffQyR"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "1k6/8/2K5/2Q5/8/8/8/1r6 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.12"]
+[UTCTime "23:03:15"]
+
+1. Qe5+ { In this Javelin position, white has no queen-side mate threat. However, white can force a fork by checking from the orbit of the rook, bounded by the two diagonals a2-g8 and b1-h7. } 1... Ka7 2. Qd4+ Ka8 3. Qh8+ Ka7 4. Qh7+ Kb8 5. Qxb1+ *
+
+
+[Event "Queen vs Rook, Javelin position: Third Rank"]
+[Date "2021.07.12"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Javelin position"]
+[ChapterName "Third Rank"]
+[ChapterURL "https://lichess.org/study/NzXK2wt0/qXbU9wWz"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "5k2/8/4K3/4Q3/8/8/8/5r2 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.12"]
+[UTCTime "23:14:44"]
+
+{ With the Javelin on the third rank, note that black's best move from the central javelin position loses to a fork in two moves. }
+1... Kg8 (1... Rh1 2. Qb8+ Kg7 3. Qb7+ Kg6 4. Qxh1) 2. Qg3+ Kf8 3. Qh3 { triple threat } 3... Re1+ 4. Kf6 Kg8 5. Qg3+ Kf8 6. Qxe1 { In distant defenses, when black places his rook on the squares c1 to f1, the white queen hunts it down by checking from an adjacent diagonal. When the rook stands on a1, b1, g1 or h1, the method in this example is used. } *
+
+
+[Event "Queen vs Rook, Javelin position: Fourth Rank"]
+[Date "2021.07.12"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Javelin position"]
+[ChapterName "Fourth Rank"]
+[ChapterURL "https://lichess.org/study/NzXK2wt0/mHYyDoGg"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "4k3/8/3K4/3Q4/8/8/8/4r3 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.12"]
+[UTCTime "23:30:06"]
+
+{ The same is true if we give black an extra rank. White easily forks the rook by giving check on the eighth and then seventh ranks. }
+1... Rg1 (1... Kf8 2. Qf3+ Ke8 3. Qg3 { triple threat } 3... Rd1+ 4. Ke6 Kf8 5. Qf3+ Kg7 6. Qxd1) 2. Qa8+ Kf7 3. Qa7+ Kf6 4. Qxg1 *
+
+
+[Event "Queen vs Rook, Javelin position: Sixth Rank"]
+[Date "2021.07.12"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Javelin position"]
+[ChapterName "Sixth Rank"]
+[ChapterURL "https://lichess.org/study/NzXK2wt0/cuPiFEny"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "2k5/8/1K6/1Q6/8/8/8/2r5 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.12"]
+[UTCTime "23:39:46"]
+
+{ The same process as for the Fifth Rank. }
+1... Re1 2. Qf5+ Kd8 3. Qg5+ { White queen covers c1 and e7. } 3... Ke8 4. Kc7 Kf7 5. Qd5+ Ke7 6. Qc5+ Ke8 7. Qb5+ Kf7 8. Qb3+ { White queen covers d1 and e6. } 8... Ke8 9. Kd6 Kf8 10. Qf3+ Ke8 11. Qg3 { triple threat } 11... Rd1+ 12. Ke6 Kf8 13. Qf3+ Kg7 14. Qxd1 *
+
+
+[Event "Queen vs Rook, Javelin position: Seventh Rank"]
+[Date "2021.07.12"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Javelin position"]
+[ChapterName "Seventh Rank"]
+[ChapterURL "https://lichess.org/study/NzXK2wt0/VcukVWI2"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "1k6/8/K7/Q7/8/8/8/1r6 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.12"]
+[UTCTime "23:50:16"]
+
+1... Rd1 2. Qe5+ Kc8 3. Qf5+ { White queen controls b2 and d7. } 3... Kd8 4. Kb7 Ke7 5. Qg5+ Kf8 6. Qf4+ { Stay on the neighboring diagonal to the rook. } 6... Ke7 7. Qh4+ { This is the critical move. White can fork from g4 or h5, and can skewer the rook from d8 if Kd6. } 7... Kf8 8. Qb4+ Ke8 (8... Kf7 9. Qb3+ { fork }) (8... Kg7 9. Qg4+ { fork }) (8... Kg8 9. Qb3+ { fork }) 9. Qa4+ { fork... } 9... Rd7+ 10. Kc8 { and pin. } 10... Ke7 11. Qxd7+ *
+
+
+[Event "Queen vs Rook, Javelin position: Rook on 3rd Rank"]
+[Date "2021.07.13"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Javelin position"]
+[ChapterName "Rook on 3rd Rank"]
+[ChapterURL "https://lichess.org/study/NzXK2wt0/YllgR0VT"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "3k4/8/4K3/4Q3/8/3r4/8/8 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.13"]
+[UTCTime "00:23:38"]
+
+1... Kc8 2. Qc5+ Kd8 3. Qb5 { Triple threat: white queen threatens the rook and Qb8#... } (3. Qa5+ Ke8 4. Qb5+) 3... Re3+ 4. Kd6 { and now also Qd7#. } 4... Kc8 5. Qc5+ { fork } 5... Kb7 6. Qxe3 *
+
+
+[Event "Queen vs Rook, Javelin position: Rook on 2nd Rank"]
+[Date "2021.07.13"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Javelin position"]
+[ChapterName "Rook on 2nd Rank"]
+[ChapterURL "https://lichess.org/study/NzXK2wt0/do3C0KT5"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "3k4/8/4K3/4Q3/8/8/3r4/8 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.13"]
+[UTCTime "00:42:16"]
+
+{ If the rook starts on the 2nd rank, then a fork is immediate. }
+1... Kc8 2. Qc3+ Kb7 3. Qxd2 *
+
+
+[Event "Queen vs Rook, Javelin position: Creating a Javelin"]
+[Date "2021.07.13"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Javelin position"]
+[ChapterName "Creating a Javelin"]
+[ChapterURL "https://lichess.org/study/NzXK2wt0/auNflp57"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "3k4/8/8/1K2Q3/8/8/8/3r4 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.13"]
+[UTCTime "00:44:55"]
+
+{ White wishes to advance the king to cover c2 and d2. When black checks from behind, the white king takes shelter in front of the queen. }
+1. Kc6 Rc1+ 2. Kd6 Rd1+ 3. Ke6 Rb1 *
+
+
+[Event "Queen vs Rook, Javelin position: One square between king and queen"]
+[Date "2021.07.13"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Javelin position"]
+[ChapterName "One square between king and queen"]
+[ChapterURL "https://lichess.org/study/NzXK2wt0/q2cLIG9c"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "3k4/8/4K3/8/4Q3/8/8/3r4 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.13"]
+[UTCTime "00:52:00"]
+
+{ Even with one square between the king and queen, the javelin still works. While there is no mate threat, the king still shelters in front of the queen. }
+1... Rc1 2. Qd4+ Kc8 3. Kd6 Rc7 4. Qf4 Ra7 { white offers a diagonal set-up } (4... Kb8 5. Qe5 { Diagonal } 5... Rb7 (5... Kb7 6. Qb5+ Kc8 7. Qa5 Rd7+ 8. Kc6 Rb7 9. Qa6 { pin } 9... Kd8 10. Qxb7) 6. Kc6+ Ka7 7. Qa1+ Kb8 8. Qa5 { Philidor }) 5. Qf8+ { If black declines to form diagonal, white gives pendulum checks on the eighth and seventh ranks and approaches the black king to threaten mate. } 5... Kb7 6. Qf7+ Ka8 7. Qe8+ Kb7 8. Qd7+ Kb8 9. Qd8+ Kb7 10. Qc7+ Ka6 11. Qc6+ Ka5 12. Kc5 Rc7 13. Qxc7+ { Even with one square between the king and queen, the javelin still works. While there is no mate threat, the king still shelters in front of the queen. } *
+
+
+[Event "Queen vs Rook, Javelin position: Psuedo-Javelin"]
+[Date "2021.07.13"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Javelin position"]
+[ChapterName "Psuedo-Javelin"]
+[ChapterURL "https://lichess.org/study/NzXK2wt0/Xf3t9NYT"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "4k3/8/5Q2/5K2/8/8/8/4r3 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.13"]
+[UTCTime "01:16:47"]
+
+{ This is not a Javelin, because the queen neither threatens mate nor shelters the white king from checks. Nevertheless, the tactics are the same, checking from a neighboring diagonal to create a fork and/or setting up a triple threat. }
+1. Qc6+ Ke7 (1... Kd8 2. Qd5+ Ke7 3. Qd3 Kf7 4. Qc4+ Ke8 5. Kf6 { Bring your king closer, threatening mate on c8. } 5... Kd7 { Continuing checks from the neighboring diagonal would allow the king to shuttle between c7 and d8, so instead go for the triple threat. } 6. Qd3+ Ke8 7. Qc3 { Triple threat } 7... Rf1+ 8. Ke6 Kd8 9. Qd3+ Kc7 10. Qxf1) (1... Kf8 2. Qc4 { queen covers f1 } 2... Rb1 3. Ke5 Rb2 4. Kd5 Kf7 5. Kd6+ Kg6 6. Qe6+ Kh7 7. Qf7+ Kh6 8. Qf6+ Kh5 9. Qxb2) 2. Qc5+ Kd7 3. Qd4+ Ke8 4. Qa4+ Kf7 5. Qc4+ { Now white queen controls f1... } 5... Ke8 6. Kf6 Kd7 7. Qd3+ { and gives checks from the neighboring diagonal to the rook } 7... Ke8 8. Qb5+ Kd8 9. Qa5+ Kd7 10. Qxe1 *
+
+
+[Event "Queen vs Rook, Javelin position: Pseudo-Javelin with 3 Qc4"]
+[Date "2021.07.13"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Javelin position"]
+[ChapterName "Pseudo-Javelin with 3 Qc4"]
+[ChapterURL "https://lichess.org/study/NzXK2wt0/cAfDCVG6"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "4k3/8/5Q2/5K2/8/8/8/4r3 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.13"]
+[UTCTime "01:51:52"]
+
+1. Qc6+ Kd8 2. Qd5+ Ke7 3. Qc4 { Here we examine 3 Qc4 from the previous position, which looks plausible. Now the black king has access to both central files, which is why Qd3 is superior. } 3... Kd8 { Now the black king can run away to the queen-side if we keep checking on the a6-f1 diagonal. We can deal with this by switching neighboring diagonals. } 4. Qd4+ { Now e8 is the only square for the black king that doesn't result in an immediate fork. } 4... Ke8 5. Qa4+ { And now the white queen switches to the other diagonal. } 5... Kf7 6. Qc4+ { Controlling the checking square f1 } 6... Ke8 7. Kf6 { Bring the king closer, threatening mate on c8. } 7... Kd7 8. Qd3+ Ke8 9. Qb5+ Kd8 10. Qa5+ Kd7 11. Qxe1 *
+
+
+[Event "Queen vs Rook, Harassment Defense: From Fourth Rank Defense"]
+[Date "2021.07.13"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Harassment Defense"]
+[ChapterName "From Fourth Rank Defense"]
+[ChapterURL "https://lichess.org/study/UXxQzHvQ/GJO8IChW"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/4k3/2Q5/6r1/3K4/8/8/8 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.13"]
+[UTCTime "12:25:18"]
+
+{ A common starting position for a harassment defense is when black maintains a cut-off defense on his fourth rank. White has just played Qc6, taking one central square away from the black king. }
+1... Rh5 2. Ke4 { If black played Rg5, then we would reach the killing position for the third rank defense, being applied here on the fourth rank. } 2... Rh1 { Instead, black plays Rh1, threatening a series of checks either from rank 1 or the h file. Because the rook is sheltered from forks by the white king, the black king is relatively free to blockade any progress by the white king. } 3. Qc5+ Ke6 4. Qe5+ Kd7 5. Qg3 { With Qg3, white covers both of the checking squares e1 and h4. } 5... Ke6 6. Qg4+ Kd6 { This is the first key position to remember in defeating a harassment defense. Queen and black king stand at the corners of a 4x3 rectangle, the queen shelters the king from checks on h4 and black's only remaining check from e1 is met by Kd4, with the queen covering d1. White's best plan is to approach the black king. } 7. Kf5 Kc5 { Black's best defense is to move his king. White responds by setting up a discovered check. The queen shelters the king from check on rank 5 and a check from f1 would be met by the discovered check, ending the harassment. } 8. Qg5 Ra1 { This is black's most prolonged defense, but perhaps not his most effective. } 9. Ke4+ { White's king walks toward the rook, where the final assault must occur. } 9... Kb4 10. Qd2+ Kb3 11. Qd3+ Kb2 12. Qd4+ Kb1 13. Kd3 Ra3+ 14. Kd2 Rb3 { This diamond position will be reviewed extensively later. The key move for white is Qe5, maintaining control of the long diagonal. } 15. Qe5 Rb6 16. Qe4+ Ka2 17. Qc4+ Kb1 18. Kc3 Rb2 19. Qa4 { Philidor position } *
+
+
+[Event "Queen vs Rook, Harassment Defense: Alternate Line"]
+[Date "2021.07.13"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Harassment Defense"]
+[ChapterName "Alternate Line"]
+[ChapterURL "https://lichess.org/study/UXxQzHvQ/28g3m0T0"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/4k3/2Q5/6r1/3K4/8/8/8 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.13"]
+[UTCTime "13:28:42"]
+
+{ Let us return to our original position and explore another line of attack. }
+1... Rh5 2. Ke4 Rh1 3. Qc7+ { This approach works reasonably well, and leads to the same zugzwang position } 3... Ke6 4. Qg3 { White has taken and simple and clear path to this position. However, black can shift his rook to the harassment diagonal and cause white some problems. } 4... Rb1 5. Qh3+ { White must first break the blockade of the king, before dealing with the rook. } 5... Ke7 6. Qc3 { White covers the checking squares b4 and e4... } 6... Rh1 { so black returns to h1. } 7. Kf4 Rh2 { Black tries again to hide on the white king's diagonal... } 8. Qg3 Rh7 { but white forces him to retreat to h7. } 9. Qg5+ Kf8 10. Qd8+ Kg7 11. Kg5 Kf7 12. Qd5+ Kg7 13. Qe4 Kg8 14. Kg6 Rg7+ 15. Kh6 { Diagonal cage } 15... Kf8 16. Qa8+ Kf7 17. Qb7+ { skewer } 17... Ke6 18. Kxg7 *
+
+
+[Event "Queen vs Rook, Harassment Defense: Another Harassment Position"]
+[Date "2021.07.13"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Harassment Defense"]
+[ChapterName "Another Harassment Position"]
+[ChapterURL "https://lichess.org/study/UXxQzHvQ/ou8Z5THW"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/8/5k2/8/2Q2K2/8/7r/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.13"]
+[UTCTime "13:52:29"]
+
+{ This is also a harassment position. The rook hides behind the white king, and the black king blockades the white king. White can always defeat this formation by playing for a discovered check. }
+1. Qc6+ Ke7 2. Qe4+ Kf6 3. Qf3 { White sets up a discovered check, threatening Kg3+ and winning the rook. } 3... Rh7 4. Kg4+ Kg7 *
+
+
+[Event "Queen vs Rook, Harassment Defense: From Third Rank Defense"]
+[Date "2021.07.13"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Harassment Defense"]
+[ChapterName "From Third Rank Defense"]
+[ChapterURL "https://lichess.org/study/UXxQzHvQ/4xpJSyP2"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "4k3/2Q5/7r/4K3/8/8/8/8 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.13"]
+[UTCTime "14:05:40"]
+
+{ This same position can occur with black's king on the 1st rank. In this case, the rook will go to h2. This happens when black elects to use a harassment rather than 3rd rank defense. }
+1... Rh2 2. Qc8+ { This is now slightly quicker than Qc6+, while before they were roughly equivalent. } 2... Ke7 3. Qg4 { The queen covers both of the checking squares e1 and h5, and creates the same 4x3 block relative to the black king. } 3... Rb2 { Because the white king began on the 5th - rather than 4th - rank, we are closer to mate than before. But white must know the specific forcing variation here, or black can escape. } 4. Qd4 Rh2 5. Kf5 Rh5+ 6. Kg4 Rb5 { The white pieces directly control squares c5-h5, and the queen can fork a5 and every square on the h file. b5 is the black rook's only move. } 7. Kf4 Rh5 8. Qg7+ Kd8 9. Qf8+ Kd7 10. Qf7+ { fork } 10... Kc6 11. Qxh5 { Successful outcomes for black include:
+1) Giving a series of harassing checks which waste moves, or
+2) Threatening to give a series of checks while white moves about trying to prevent them.
+Successful outcomes for white include:
+1) If black starts giving checks, white can end the checks while also making progress.
+2) Preferably, black shifts to a close or distant defense.
+3) Forcing one of the two key zugzwang positions. } *
+
+
+[Event "Queen vs Rook, Trapezoid position: Chapter 1"]
+[Date "2021.07.09"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Trapezoid position"]
+[ChapterName "Chapter 1"]
+[ChapterURL "https://lichess.org/study/4wNv5u5K/zo3fEEEE"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "2rk4/8/1K6/5Q2/8/8/8/8 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.09"]
+[UTCTime "05:33:33"]
+
+{ This is the trapezoid position; black to move is in zugzwang. Even when it occurs away from the edge of the board, it is good for the attacker. }
+1... Rc7 (1... Rb8+ 2. Kc6 Ke7 (2... Ke8 3. Qe5+ { fork }) (2... Rc8+ 3. Kd6 { threatening mate in 1 } 3... Ke8 4. Qxc8+) 3. Qe5+ { fork } 3... Kf7 4. Qxb8) (1... Rc3 2. Qf6+ { fork } 2... Kd7 3. Qxc3) (1... Ra8 2. Qf8+ { skewer } (2. Qd5+ Ke7 3. Qxa8)) (1... Rc1 2. Qg5+ Kd7 3. Qxc1) (1... Rc4 2. Qd3+ Ke7 3. Qxc4) (1... Ke7 2. Qxc8) 2. Qf8+ Kd7 3. Qf7+ { skewer } 3... Kd6 4. Qxc7+ *
+
+
+[Event "Queen vs Rook, Trapezoid position: Chapter 2"]
+[Date "2021.07.09"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Queen vs Rook, Trapezoid position"]
+[ChapterName "Chapter 2"]
+[ChapterURL "https://lichess.org/study/4wNv5u5K/BZQOjojN"]
+[Annotator "https://lichess.org/@/methurst"]
+[FEN "8/2rk4/8/1K6/5Q2/8/8/8 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.07.09"]
+[UTCTime "05:51:24"]
+
+{ Away from the edge of the board, black to play from the trapezoid position must retreat one of his pieces. }
+1... Kd8 2. Kb6 Re7 3. Kc6 Ke8 4. Qg4 { threatening mate on g8 } 4... Rf7 5. Kd6 Rf6+ 6. Ke5 Kf7 7. Qh5+ Kg7 8. Qg5+ Rg6 9. Qe7+ Kh6 10. Qh4+ Kg7 11. Qe7+ Kh6 12. Kf5 Rg2 (12... Rg8 13. Qh4+ Kg7 14. Qg5+ Kh7 15. Qh5+ Kg7 16. Qg6+ Kf8 17. Qf6+ Ke8 18. Ke6 Rg6 19. Qxg6+) (12... Ra6 13. Qe2 Ra4 14. Qd2+ Kg7 15. Qd7+ Kf8 16. Qxa4 Ke7) 13. Qe3+ Kg7 14. Qd4+ Kh7 15. Kf6 Rg7 16. Qh4+ Kg8 17. Qh5 { Philidor } *
+
+

@@ -110,6 +110,7 @@ const NEW_TREE: GameTree = emptyTree();
 export const useAnalysisBoard = (
   initialFen?: string,
   initialTree?: GameTree,
+  initialPly?: number,
 ) => {
   const engineRef = useRef<Engine | null>(null);
   // Resolved at call time, never during render: StrictMode's mount → unmount →
@@ -171,7 +172,15 @@ export const useAnalysisBoard = (
     ReadonlyMap<string, EngineOption>
   >(() => new Map());
 
-  const navigation = useTreeNavigation(tree);
+  /*
+    A `?move=` rides beside `?game=` and steps the arriving game's *mainline* to
+    that ply. Beside a bare `?fen=` it means nothing — a position has no moves —
+    so it is passed only when a whole game arrived.
+  */
+  const navigation = useTreeNavigation(
+    tree,
+    initialTree === undefined ? undefined : initialPly,
+  );
   const { fen, nodeId, goToNode } = navigation;
 
   // Subscribe once per Engine instance. Declared first: on a StrictMode remount

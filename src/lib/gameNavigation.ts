@@ -32,6 +32,22 @@ export const clampPly = (game: Game, ply: number): number =>
   Math.min(Math.max(Math.trunc(ply), 0), lastPlyOf(game));
 
 /**
+ * The `?move=` query parameter, read. It carries a ply — the same unit this
+ * module speaks — so a study page's URL can name the move the reader is on and
+ * a `?game=` hand-off can open the destination on it.
+ *
+ * The same "validate and ignore what does not pass" rule as `parseFen` and
+ * `resolveGameReference`: an absent, non-numeric or negative value is
+ * `undefined` (ply 0, as if the parameter had not been there), never a throw.
+ * Too *large* a value is not rejected here — that depends on the game, so it is
+ * `clampPly`'s job on read, exactly like a ply from any other source.
+ */
+export const parseMoveParam = (value: string | null): number | undefined => {
+  if (value === null || !/^\d+$/.test(value)) return undefined;
+  return Number.parseInt(value, 10);
+};
+
+/**
  * The position at a ply: the starting position at ply 0, otherwise the FEN the
  * move at that ply already recorded.
  */

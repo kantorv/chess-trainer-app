@@ -394,6 +394,8 @@ const en = {
         which the `typeof en` typing of `he` enforces in the other direction.
       */
       count: "Positions: {{count}}",
+      /** Sub-folders of the category on screen, counted beside its own items. */
+      folders: "Folders: {{count}}",
       empty: "No positions in this category yet.",
       hint: "Pick a position to open it on a board, then hand it to the Analysis Board or play it against the engine.",
       /**
@@ -453,6 +455,8 @@ const en = {
     /** The list screen's panel. */
     list: {
       count: "Positions: {{count}}",
+      /** Sub-categories of the one on screen — Rosettes under Queen vs Rook. */
+      folders: "Categories: {{count}}",
       empty: "No positions in this category yet.",
       hint: "Pick a position to open it on a board, then hand it to the Analysis Board or play it against the engine.",
       search: "Search positions",
@@ -508,6 +512,12 @@ const en = {
     /** The list screen's panel. */
     list: {
       count: "Games: {{count}}",
+      /**
+       * A folder's sub-folders. In this section they are studies: a lichess
+       * export of every study an author wrote is one file holding many, and
+       * `loadPgnLibrary` gives each its own folder.
+       */
+      folders: "Studies: {{count}}",
       empty: "No games in this file yet.",
       hint: "Pick a game to replay it move by move, then hand it to the Analysis Board or take the position on screen to the engine.",
       /**
@@ -530,6 +540,58 @@ const en = {
         compact: "Compact cards",
         comfortable: "Comfortable cards",
       },
+    },
+    /**
+     * The **collection** screen — the index of a `.pgn` file that holds several
+     * studies (`views/pgn/PgnCollection.tsx`), and its left-hand nav.
+     *
+     * A section-specific block, which the shared key shape explicitly allows:
+     * only this section has files, so only this section has a kind of folder
+     * that is a shelf of studies rather than a folder of games.
+     */
+    /**
+     * The **Uploads** screen — the reader's own `.pgn` files
+     * (`views/pgn/PgnUploads.tsx`). Chrome, all of it: the folder ships with
+     * the app and is there before any file is, unlike the folders inside it,
+     * which are named from the files themselves.
+     */
+    uploads: {
+      /** The folder's name, in the sidebar and on the screen. */
+      title: "Uploads",
+      /** The button — a lichess study export is what it is mostly for. */
+      upload: "Upload lichess study",
+      count: "Files: {{count}}",
+      empty: "Nothing uploaded yet. Pick a .pgn file — a lichess study export, a chess.com download, or any PGN.",
+      hint: "In a lichess study, use the study menu → Export chapters, then pick the file here. An export of all of an author's studies works too: each study becomes a folder of its own.",
+      /** Said plainly: this is a browser, not a backup. */
+      storage: "Uploads are kept in this browser only. Clearing site data removes them, and they do not follow you to another device.",
+      remove: "Remove {{name}}",
+      /** What a file turned out to be — the `PgnKind` it loaded as. */
+      kinds: {
+        study: "Study",
+        collection: "Studies",
+        games: "Games",
+        shelf: "Folder",
+        uploads: "Uploads",
+      },
+      /** Why a picked file was not kept. Keyed by `UploadProblem`. */
+      problems: {
+        empty: "{{name}} is empty.",
+        unreadable: "{{name}} holds no game that could be read.",
+        "too-large": "{{name}} is too large to keep in this browser.",
+        storage: "{{name}} could not be saved — this browser's storage is full.",
+      },
+    },
+    collection: {
+      studies_one: "{{count}} study",
+      studies_other: "{{count}} studies",
+      chapters_one: "{{count}} chapter",
+      chapters_other: "{{count}} chapters",
+      /** The `Annotator` tag the chapters agree on, when they do. */
+      by: "by {{author}}",
+      search: "Search studies",
+      noMatches: "No studies match that search.",
+      hint: "Pick a study to see its chapters.",
     },
     /** The detail screen's panel. */
     detail: {

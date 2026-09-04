@@ -749,6 +749,36 @@ describe("Analysis Board — arriving with a whole game", () => {
 
     expect(position()).toMatch(/^rnbqkbnr\/pppppppp/);
   });
+
+  it("opens stepped to the mainline ply a ?move= names", () => {
+    if (withVariations.kind !== "game") throw new Error("expected a game");
+    renderScreen(
+      `/tools/analysis?game=${encodeURIComponent(referenceTo(withVariations))}&move=3`,
+    );
+
+    expect(position()).toBe(withVariations.game.moves[2].fen);
+  });
+
+  it.each(["abc", "-3"])(
+    "ignores a ?move= that is not a ply (%s), as if it were not there",
+    (move) => {
+      if (withVariations.kind !== "game") throw new Error("expected a game");
+      renderScreen(
+        `/tools/analysis?game=${encodeURIComponent(referenceTo(withVariations))}&move=${move}`,
+      );
+
+      expect(position()).toBe(initialFenOf(withVariations.game));
+    },
+  );
+
+  it("clamps a ?move= past the end of the mainline to its last move", () => {
+    if (withVariations.kind !== "game") throw new Error("expected a game");
+    renderScreen(
+      `/tools/analysis?game=${encodeURIComponent(referenceTo(withVariations))}&move=99999`,
+    );
+
+    expect(position()).toBe(withVariations.game.moves.at(-1)!.fen);
+  });
 });
 
 describe("Analysis Board — the shell around it", () => {

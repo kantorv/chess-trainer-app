@@ -3,7 +3,7 @@ import {
   type LibraryCatalog,
   type LibraryGame,
 } from "./libraryCatalog";
-import { pgnCatalog } from "./pgnCatalog";
+import { userPgnsLibrary } from "./pgnCatalog";
 
 /**
  * How a **whole game** crosses between screens: `?game=pgn/<category path>/<id>`.
@@ -33,12 +33,14 @@ import { pgnCatalog } from "./pgnCatalog";
 export const PGN_REFERENCE_KEY = "pgn";
 
 /**
- * Which catalog a reference's first segment names. Read at call time from a
- * plain object rather than passed in, so a destination screen needs no more
- * than the string out of the URL.
+ * Which catalog a reference's first segment names. Read at call time rather
+ * than passed in, so a destination screen needs no more than the string out of
+ * the URL — and *called* rather than held, because the User PGNs library grows
+ * a folder when the reader uploads a file, and a game they just uploaded has to
+ * be as referenceable as one that shipped.
  */
-const catalogsByKey: Record<string, LibraryCatalog> = {
-  [PGN_REFERENCE_KEY]: pgnCatalog,
+const catalogsByKey: Record<string, () => LibraryCatalog> = {
+  [PGN_REFERENCE_KEY]: userPgnsLibrary,
 };
 
 /** The reference for one game — what a detail page puts in the link. */
@@ -65,10 +67,10 @@ export const resolveGameReference = (
   const [sectionKey, ...rest] = reference.split("/").filter(Boolean);
   if (sectionKey === undefined || rest.length === 0) return undefined;
 
-  const catalog = catalogsByKey[sectionKey];
-  if (catalog === undefined) return undefined;
+  const catalogOf = catalogsByKey[sectionKey];
+  if (catalogOf === undefined) return undefined;
 
-  const location = resolveLibraryPath(rest, catalog);
+  const location = resolveLibraryPath(rest, catalogOf());
   return location.kind === "item" && location.item.kind === "game"
     ? location.item
     : undefined;

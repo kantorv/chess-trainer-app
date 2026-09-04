@@ -17,19 +17,19 @@ describe("the shipped nav tree", () => {
   it("mirrors the folder tree at the top and holds every screen as a leaf", () => {
     const tree = navTree();
 
-    expect(tree.map((node) => node.id)).toEqual(navFolders.map((f) => f.id));
+    expect(tree.map((node) => node.id)).toEqual(navFolders().map((f) => f.id));
     expect(tree.every((node) => node.kind === "folder")).toBe(true);
 
     const screens = new TreeManager<NavTreeNode>(tree)
       .toArray()
       .filter((node) => node.kind === "screen");
-    expect(screens.map((node) => node.to)).toEqual(navItems.map((i) => i.to));
+    expect(screens.map((node) => node.to)).toEqual(navItems().map((i) => i.to));
   });
 
   it("files every screen under the folder it names", () => {
-    const raw = buildNavTree(navFolders, navItemsInFolder);
+    const raw = buildNavTree(navFolders(), navItemsInFolder);
 
-    for (const item of navItems) {
+    for (const item of navItems()) {
       /*
         In the raw tree every screen still sits directly under the folder it
         names — that is the registration contract, unchanged.
@@ -63,8 +63,8 @@ describe("the shipped nav tree", () => {
       that must not exist.
     */
     const authoredKeys = [
-      ...navFolders.map((f) => f.labelKey),
-      ...navItems.map((i) => i.labelKey),
+      ...navFolders().map((f) => f.labelKey),
+      ...navItems().map((i) => i.labelKey),
     ].filter((key) => key !== undefined);
 
     expect(navLabelKeys()).toEqual(expect.arrayContaining(authoredKeys));

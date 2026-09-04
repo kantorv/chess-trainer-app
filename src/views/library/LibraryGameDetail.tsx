@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import IconButton from "@mui/material/IconButton";
@@ -11,14 +11,14 @@ import QueryStatsRoundedIcon from "@mui/icons-material/QueryStatsRounded";
 import MenuBookRoundedIcon from "@mui/icons-material/MenuBookRounded";
 import PlayArrowRoundedIcon from "@mui/icons-material/PlayArrowRounded";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
-import { createSearchParams, useNavigate } from "react-router";
+import { createSearchParams, useNavigate, useSearchParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import { Chessboard, type ChessboardOptions } from "react-chessboard";
 
 import { asAppLanguage } from "../../i18n";
 import { gameReferenceOf } from "../../lib/gameReference";
 import { initialFenOf } from "../../lib/gameModel";
-import { startNumbering } from "../../lib/gameNavigation";
+import { parseMoveParam, startNumbering } from "../../lib/gameNavigation";
 import { extractPgnComments, hasPgnComments } from "../../lib/pgnComments";
 import {
   localizedText,
@@ -58,12 +58,17 @@ import type { LibrarySection } from "./section";
  *
  * | Destination | Carries | Why |
  * | --- | --- | --- |
- * | `/tools/analysis`, `/games/load-pgn` | `?game=<reference>` | they replay the *game*, so the whole game has to cross — as a catalog reference, since the PGN itself is far too long for a URL (`lib/gameReference.ts`) |
+ * | `/tools/analysis`, `/games/load-pgn` | `?game=<reference>&move=<ply on screen>` | they replay the *game*, so the whole game has to cross — as a catalog reference, since the PGN itself is far too long for a URL (`lib/gameReference.ts`) — and it opens on the move the reader was on, not back at the start |
  * | `/engine/play`, `/tools/editor` | `?fen=<position at the current ply>` | neither replays anything; what they want is the position on screen, which is exactly what the existing hand-off already carries |
  *
  * The second row is the point: `?fen=` was not extended, wrapped or replaced. A
  * reader who steps to move 24 and hits "Play with Engine" gets move 24, through
  * the same mechanism the Board Editor has always used.
+ *
+ * The page's own URL also learns the ply: every step rewrites `?move=N` with
+ * history **replace**, so one Back from a hand-off returns here at the move
+ * left behind and a copied URL restores it — and ply 0 deletes the parameter
+ * rather than leaving `?move=0` behind.
  */
 
 const TAB_IDS = ["moves", "info", "description"] as const;
@@ -92,8 +97,38 @@ function LibraryGameDetail({ section, category, item }: Props) {
 
   const [tab, setTab] = useState<TabId>("moves");
   const [orientation, setOrientation] = useState<"white" | "black">("white");
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  const { ply, lastPly, fen, arrows, goToPly } = useGameNavigation(item.game);
+  /*
+    The `?move=` arrival. Re-parsed on every render but only the first render's
+    value ever lands — `useGameNavigation` seeds its state from it once, because
+    arriving at the URL is what mounts the screen; there is no effect syncing a
+    later param change back in. A value that will not parse is ply 0, the same
+    as it not being there (`parseMoveParam`).
+  */
+  const { ply, lastPly, fen, arrows, goToPly } = useGameNavigation(
+    item.game,
+    parseMoveParam(searchParams.get("move")),
+  );
+
+  /*
+    ...and reflected back into the URL on every step, with history REPLACE —
+    stepping through a game is one place, not a trail of one URL per move, so
+    one Back press from a hand-off lands here at the move the reader left on.
+    Ply 0 deletes the parameter rather than writing `?move=0`. Other params the
+    URL may carry are left alone.
+  */
+  useEffect(() => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (ply === 0) next.delete("move");
+        else next.set("move", String(ply));
+        return next.toString() === prev.toString() ? prev : next;
+      },
+      { replace: true },
+    );
+  }, [ply, setSearchParams]);
 
   const name = localizedText(item.name, language);
   const description = localizedText(item.description, language);
@@ -148,9 +183,16 @@ function LibraryGameDetail({ section, category, item }: Props) {
   const handOffGameTo = (pathname: string) => () =>
     navigate({
       pathname,
-      search: createSearchParams({
-        game: gameReferenceOf(section.gameReferenceKey ?? "", item),
-      }).toString(),
+      search: createSearchParams(
+        // `move` rides beside `game`: a screen that replays the game opens on
+        // the ply the reader was on, not back at the start. Ply 0 omits it.
+        ply === 0
+          ? { game: gameReferenceOf(section.gameReferenceKey ?? "", item) }
+          : {
+              game: gameReferenceOf(section.gameReferenceKey ?? "", item),
+              move: String(ply),
+            },
+      ).toString(),
     });
 
   /** The position *at the ply on screen*, to a screen that takes a position. */

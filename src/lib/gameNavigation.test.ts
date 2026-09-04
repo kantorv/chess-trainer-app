@@ -9,6 +9,7 @@ import {
   fenAtPly,
   lastPlyOf,
   moveRowsOf,
+  parseMoveParam,
 } from "./gameNavigation";
 
 /** `1. e4 e5 2. Nf3 Nc6 3. Bb5` — five plies, so the last pair is half empty. */
@@ -125,5 +126,25 @@ describe("moveRowsOf", () => {
 
   it("has no rows for a moveless game", () => {
     expect(moveRowsOf(emptyGame)).toEqual([]);
+  });
+});
+
+describe("parseMoveParam", () => {
+  it("reads a ply out of the ?move= parameter", () => {
+    expect(parseMoveParam("0")).toBe(0);
+    expect(parseMoveParam("12")).toBe(12);
+  });
+
+  it("ignores what is not a ply, the way parseFen ignores a bad link", () => {
+    expect(parseMoveParam(null)).toBeUndefined();
+    expect(parseMoveParam("")).toBeUndefined();
+    expect(parseMoveParam("abc")).toBeUndefined();
+    expect(parseMoveParam("-3")).toBeUndefined();
+    expect(parseMoveParam("2.5")).toBeUndefined();
+    expect(parseMoveParam("e4")).toBeUndefined();
+  });
+
+  it("does not bound the value — too large is clampPly's call, not this one's", () => {
+    expect(parseMoveParam("99999")).toBe(99999);
   });
 });

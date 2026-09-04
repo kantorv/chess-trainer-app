@@ -1,7 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter, Route, Routes, useSearchParams } from "react-router";
+import {
+  MemoryRouter,
+  Route,
+  Routes,
+  useLocation,
+  useSearchParams,
+} from "react-router";
 
 import i18n from "../../i18n";
 import AppThemeWithLang from "../../theme/AppThemeWithLang";
@@ -13,6 +19,7 @@ import { fenAtPly } from "../../lib/gameNavigation";
 import { extractPgnComments, hasPgnComments } from "../../lib/pgnComments";
 import { RightPanelOutlet, RightPanelProvider } from "../main/rightPanel";
 import { LeftPanelOutlet, LeftPanelProvider } from "../main/leftPanel";
+import { addUpload, clearUploads } from "../../lib/pgnUploadStore";
 import UserPgnsSection from "./UserPgnsSection";
 
 /* Stubbed for the reason in `.claude/rules/chessboard.md` §8 — jsdom has no
@@ -40,9 +47,15 @@ const Arrival = ({ name }: { name: string }) => {
       data-testid={`${name}-arrival`}
       data-fen={params.get("fen")}
       data-game={params.get("game")}
+      data-move={params.get("move")}
     />
   );
 };
+
+/** What the address bar currently says — for the `?move=` reflection. */
+const LocationSearch = () => (
+  <div data-testid="location-search" data-search={useLocation().search} />
+);
 
 const renderAt = (path: string) =>
   render(
@@ -57,7 +70,11 @@ const renderAt = (path: string) =>
                   <>
                     <UserPgnsSection />
                     <RightPanelOutlet />
-                    <LeftPanelOutlet />
+                    {/* The shell's fallback is the nav tree; naming it is how
+                        the tests below tell "this screen claimed the rail"
+                        from "the app's own sidebar is still there". */}
+                    <LeftPanelOutlet fallback={<span>app sidebar</span>} />
+                    <LocationSearch />
                   </>
                 }
               />
@@ -237,6 +254,90 @@ describe("the User PGNs section", () => {
       "data-fen",
       fenAtPly(played.game, 2),
     );
+  });
+
+  it.each([
+    ["analysis", "user-pgn-open-analysis"],
+    ["load-pgn", "user-pgn-open-load-pgn"],
+  ])("carries the ply on screen to %s as &move=", async (arrival, testId) => {
+    renderAt(`/pgn/${PLAYED}/${played.id}`);
+
+    const next = screen.getByRole("button", {
+      name: i18n.t("gamePanel.controls.next"),
+    });
+    await userEvent.click(next);
+    await userEvent.click(next);
+    await userEvent.click(screen.getByTestId(testId));
+
+    const landed = screen.getByTestId(`${arrival}-arrival`);
+    expect(landed).toHaveAttribute("data-game", `pgn/${PLAYED}/${played.id}`);
+    expect(landed).toHaveAttribute("data-move", "2");
+  });
+
+  it("omits &move= from the hand-off at ply 0", async () => {
+    renderAt(`/pgn/${PLAYED}/${played.id}`);
+
+    await userEvent.click(screen.getByTestId("user-pgn-open-analysis"));
+
+    expect(screen.getByTestId("analysis-arrival")).not.toHaveAttribute(
+      "data-move",
+    );
+  });
+
+  describe("the ?move= in the address bar", () => {
+    const next = () => screen.getByTestId("board-control-next");
+    const first = () => screen.getByTestId("board-control-first");
+    const search = () =>
+      screen.getByTestId("location-search").getAttribute("data-search") ?? "";
+
+    it("reflects the ply on screen, replacing in place", async () => {
+      renderAt(`/pgn/${PLAYED}/${played.id}`);
+      expect(search()).not.toContain("move=");
+
+      await userEvent.click(next());
+      await userEvent.click(next());
+      expect(search()).toContain("move=2");
+      expect(screen.getByTestId("board")).toHaveAttribute(
+        "data-position",
+        fenAtPly(played.game, 2),
+      );
+    });
+
+    it("drops the parameter back at ply 0 rather than writing move=0", async () => {
+      renderAt(`/pgn/${PLAYED}/${played.id}`);
+
+      await userEvent.click(next());
+      expect(search()).toContain("move=1");
+      await userEvent.click(first());
+      expect(search()).not.toContain("move=");
+    });
+
+    it("opens on the ply the URL names", () => {
+      renderAt(`/pgn/${PLAYED}/${played.id}?move=3`);
+
+      expect(screen.getByTestId("board")).toHaveAttribute(
+        "data-position",
+        fenAtPly(played.game, 3),
+      );
+    });
+
+    it("clamps a ply past the end of the game rather than throwing", () => {
+      renderAt(`/pgn/${PLAYED}/${played.id}?move=99999`);
+
+      expect(screen.getByTestId("board")).toHaveAttribute(
+        "data-position",
+        fenAtPly(played.game, played.game.moves.length),
+      );
+    });
+
+    it("ignores a ?move= that is not a ply", () => {
+      renderAt(`/pgn/${PLAYED}/${played.id}?move=abc`);
+
+      expect(screen.getByTestId("board")).toHaveAttribute(
+        "data-position",
+        fenAtPly(played.game, 0),
+      );
+    });
   });
 
   it("closes to the same folder from the top-right close button", async () => {
@@ -423,5 +524,339 @@ describe("the User PGNs section", () => {
     // Chrome out of `src/locales`; the game's name out of its own tag pairs.
     expect(panel).toHaveTextContent(i18n.t("userPgns.detail.openInAnalysis"));
     expect(panel).toHaveTextContent(played.name.en);
+  });
+});
+
+/**
+ * The section's **dispatcher**, which is where the PGN taxonomy
+ * (`lib/pgnKind.ts`) becomes visible: which screen a `/pgn/*` URL gets, and
+ * which sidebar it gets with it.
+ *
+ * Asserted against the shipped catalog rather than a fixture, because the
+ * promise is about the files in `src/data/pgn/`: a kind that stopped being
+ * recognised would be a screen nobody could reach.
+ */
+
+/** The shipped collection: one file, 28 studies, 169 chapters. */
+const COLLECTION = "/pgn/methurst-public-studies";
+const COLLECTION_STUDY = `${COLLECTION}/queen-vs-rook-lightning`;
+
+describe("a collection gets its own index screen", () => {
+  beforeEach(async () => {
+    await i18n.changeLanguage("en");
+  });
+
+  it("says what the file holds, and who wrote it", () => {
+    renderAt(COLLECTION);
+
+    expect(screen.getByTestId("user-pgns-collection-facts")).toHaveTextContent(
+      "28 studies · 169 chapters",
+    );
+    // The Annotator tag every chapter carries, as a link to the profile.
+    expect(screen.getByTestId("user-pgns-collection-author")).toHaveAttribute(
+      "href",
+      "https://lichess.org/@/methurst",
+    );
+    // Not the shared list screen: no cards, no card-size toggle.
+    expect(screen.queryByTestId("user-pgns-list")).toBeNull();
+  });
+
+  it("renders the file's authored notes in the body, above the studies", () => {
+    // The one place a reader of an index wants prose is on the index — so a
+    // collection's sibling `.mdx` fills the body rather than the narrow panel.
+    renderAt(COLLECTION);
+
+    const notes = screen.getByTestId("user-pgns-collection-notes");
+    expect(
+      within(notes).getByRole("heading", {
+        name: "Queen vs Rook — the whole method",
+      }),
+    ).toBeInTheDocument();
+    expect(within(notes).getByRole("table")).toBeInTheDocument();
+  });
+
+  it("lists every study as a row that says how many chapters it holds", () => {
+    renderAt(COLLECTION);
+
+    const row = screen.getByTestId(
+      "user-pgns-collection-study-queen-vs-rook-adjacent-rosettes",
+    );
+    expect(row).toHaveTextContent("Queen vs Rook, Adjacent Rosettes");
+    expect(row).toHaveTextContent("10 chapters");
+    expect(row).toHaveAttribute(
+      "href",
+      `${COLLECTION}/queen-vs-rook-adjacent-rosettes`,
+    );
+    expect(screen.getAllByTestId(/^user-pgns-collection-study-/)).toHaveLength(28);
+  });
+
+  it("filters the studies by name", async () => {
+    renderAt(COLLECTION);
+
+    await userEvent.type(
+      screen.getByTestId("user-pgns-collection-search"),
+      "lightning",
+    );
+    expect(screen.getAllByTestId(/^user-pgns-collection-study-/)).toHaveLength(1);
+
+    await userEvent.clear(screen.getByTestId("user-pgns-collection-search"));
+    await userEvent.type(
+      screen.getByTestId("user-pgns-collection-search"),
+      "zugzwang",
+    );
+    expect(
+      screen.getByTestId("user-pgns-collection-no-matches"),
+    ).toBeInTheDocument();
+  });
+
+  it("leaves the app's own sidebar in place", () => {
+    // The body *is* the list of studies here, so nothing claims the rail.
+    renderAt(COLLECTION);
+
+    expect(screen.getByText("app sidebar")).toBeInTheDocument();
+    expect(screen.queryByTestId("user-pgns-collection-nav")).toBeNull();
+  });
+});
+
+describe("a study inside a collection", () => {
+  beforeEach(async () => {
+    await i18n.changeLanguage("en");
+  });
+
+  it("is the ordinary list screen, chapters and all", () => {
+    // A study is a study wherever it was filed: the shared screen, unchanged.
+    renderAt(COLLECTION_STUDY);
+
+    expect(screen.getByTestId("user-pgns-list")).toBeInTheDocument();
+    expect(screen.getByTestId("user-pgns-list-count")).toHaveTextContent("Games: 7");
+  });
+
+  it("puts the collection's other studies in the sidebar's place", () => {
+    renderAt(COLLECTION_STUDY);
+
+    const nav = screen.getByTestId("user-pgns-collection-nav");
+    expect(screen.queryByText("app sidebar")).toBeNull();
+
+    const active = within(nav).getByTestId(
+      "user-pgns-collection-nav-study-queen-vs-rook-lightning",
+    );
+    expect(active).toHaveAttribute("aria-current", "true");
+    // Two lines and an icon: the name, and what is behind the click.
+    expect(active).toHaveTextContent("Queen vs Rook, Lightning");
+    expect(active).toHaveTextContent("7 chapters");
+    expect(
+      within(nav).getAllByTestId(/^user-pgns-collection-nav-study-/),
+    ).toHaveLength(28);
+  });
+
+  it("offers the way back out, since claiming the rail hides the sidebar", () => {
+    renderAt(COLLECTION_STUDY);
+
+    for (const testId of [
+      "user-pgns-collection-nav-close",
+      "user-pgns-collection-nav-home",
+    ]) {
+      expect(screen.getByTestId(testId)).toHaveAttribute("href", COLLECTION);
+    }
+  });
+
+  it("keeps the chapter's own sibling nav one level down", () => {
+    // Innermost wins: on a chapter the useful list is that study's chapters,
+    // and one panel is claimed at a time.
+    renderAt(`${COLLECTION_STUDY}/chapter-1`);
+
+    expect(screen.getByTestId("user-pgn-sibling-nav")).toBeInTheDocument();
+    expect(screen.queryByTestId("user-pgns-collection-nav")).toBeNull();
+  });
+});
+
+describe("every other kind keeps the screen it had", () => {
+  beforeEach(async () => {
+    await i18n.changeLanguage("en");
+  });
+
+  it("gives a study in its own file the list screen and the app sidebar", () => {
+    renderAt(`/pgn/${STUDY}`);
+
+    expect(screen.getByTestId("user-pgns-list")).toBeInTheDocument();
+    expect(screen.getByText("app sidebar")).toBeInTheDocument();
+    expect(screen.queryByTestId("user-pgns-collection-nav")).toBeNull();
+  });
+
+  it("gives a manifest shelf the list screen, with a card per file", () => {
+    renderAt("/pgn/chess-fundamentals-capablanca");
+
+    expect(screen.getByTestId("user-pgns-list-folder-count")).toHaveTextContent(
+      "Studies: 3",
+    );
+    expect(screen.queryByTestId("user-pgns-collection")).toBeNull();
+  });
+});
+
+/**
+ * **Uploads** — the reader's own files, and the one folder in this section that
+ * is a place rather than a file (`lib/pgnKind.ts`).
+ *
+ * The screen is driven through a real `<input type="file">`: `userEvent.upload`
+ * hands it a `File`, which is what the browser does, so what is asserted is the
+ * whole path — read the file, recognise it, store it, and grow the catalog the
+ * rest of the section reads.
+ */
+const STUDY_PGN = `[Event "Uploaded: Chapter 1"]
+[Result "*"]
+[StudyName "Uploaded Study"]
+[ChapterName "Chapter 1"]
+
+1. e4 e5 *
+
+[Event "Uploaded: Chapter 2"]
+[Result "*"]
+[StudyName "Uploaded Study"]
+[ChapterName "Chapter 2"]
+
+1. d4 d5 *
+
+`;
+
+const pgnFile = (name: string, text = STUDY_PGN) =>
+  new File([text], name, { type: "application/x-chess-pgn" });
+
+describe("the Uploads folder", () => {
+  beforeEach(async () => {
+    await i18n.changeLanguage("en");
+    clearUploads();
+  });
+
+  it("is reachable with nothing in it, and offers the button", () => {
+    renderAt("/pgn/uploads");
+
+    expect(screen.getByTestId("user-pgns-uploads")).toBeInTheDocument();
+    expect(screen.getByTestId("user-pgns-uploads-button")).toHaveTextContent(
+      "Upload lichess study",
+    );
+    expect(screen.getByTestId("user-pgns-uploads-empty")).toBeInTheDocument();
+    expect(screen.getByTestId("user-pgns-uploads-count")).toHaveTextContent(
+      "Files: 0",
+    );
+  });
+
+  it("says where the files are kept", () => {
+    // A reader who uploads a study they care about should know this is a
+    // browser and not a backup.
+    renderAt("/pgn/uploads");
+
+    expect(screen.getByTestId("user-pgns-uploads-storage-note")).toHaveTextContent(
+      "kept in this browser only",
+    );
+  });
+
+  it("keeps a picked file and lists what it turned out to be", async () => {
+    renderAt("/pgn/uploads");
+
+    await userEvent.upload(
+      screen.getByTestId("user-pgns-uploads-input"),
+      pgnFile("my_study.pgn"),
+    );
+
+    const row = await screen.findByTestId("user-pgns-uploads-item-my_study.pgn");
+    // Named from its own StudyName tag, like any other file in the section.
+    expect(row).toHaveTextContent("Uploaded Study");
+    expect(row).toHaveTextContent("Study · Games: 2");
+    expect(row).toHaveAttribute("href", "/pgn/uploads/my-study");
+    expect(screen.getByTestId("user-pgns-uploads-count")).toHaveTextContent(
+      "Files: 1",
+    );
+  });
+
+  it("puts the uploaded study into the catalog the whole section reads", async () => {
+    renderAt("/pgn/uploads");
+    await userEvent.upload(
+      screen.getByTestId("user-pgns-uploads-input"),
+      pgnFile("my_study.pgn"),
+    );
+    await screen.findByTestId("user-pgns-uploads-item-my_study.pgn");
+
+    // The ordinary list screen, at the ordinary splat route.
+    await userEvent.click(screen.getByTestId("user-pgns-uploads-item-my_study.pgn"));
+
+    expect(screen.getByTestId("user-pgns-list-top-bar")).toHaveTextContent(
+      "Uploaded Study",
+    );
+    expect(screen.getByTestId("user-pgn-card-chapter-1")).toBeInTheDocument();
+  });
+
+  it("replays an uploaded chapter like any other game", async () => {
+    addUpload("my_study.pgn", STUDY_PGN);
+    renderAt("/pgn/uploads/my-study/chapter-1");
+
+    expect(screen.getByTestId("board")).toBeInTheDocument();
+    // The shared detail screen, with its hand-offs — nothing knows it was
+    // uploaded rather than shipped.
+    expect(screen.getByTestId("user-pgn-open-analysis")).toBeInTheDocument();
+  });
+
+  it("hands an uploaded game on with ?game=, like a shipped one", async () => {
+    addUpload("my_study.pgn", STUDY_PGN);
+    renderAt("/pgn/uploads/my-study/chapter-1");
+
+    await userEvent.click(screen.getByTestId("user-pgn-open-analysis"));
+
+    expect(screen.getByTestId("analysis-arrival")).toHaveAttribute(
+      "data-game",
+      "pgn/uploads/my-study/chapter-1",
+    );
+  });
+
+  it("splits an uploaded multi-study export into a collection", async () => {
+    const twoStudies = `${STUDY_PGN}[Event "Second: Chapter 1"]
+[Result "*"]
+[StudyName "Second Study"]
+[ChapterName "Chapter 1"]
+
+1. c4 *
+
+`;
+    renderAt("/pgn/uploads");
+    await userEvent.upload(
+      screen.getByTestId("user-pgns-uploads-input"),
+      pgnFile("all_studies.pgn", twoStudies),
+    );
+
+    const row = await screen.findByTestId("user-pgns-uploads-item-all_studies.pgn");
+    expect(row).toHaveTextContent("Studies · Games: 3");
+
+    await userEvent.click(row);
+    // The collection index, recognised rather than declared.
+    expect(screen.getByTestId("user-pgns-collection")).toBeInTheDocument();
+    expect(screen.getByTestId("user-pgns-collection-facts")).toHaveTextContent(
+      "2 studies · 3 chapters",
+    );
+  });
+
+  it("refuses a file with no readable game, and says which", async () => {
+    renderAt("/pgn/uploads");
+
+    await userEvent.upload(
+      screen.getByTestId("user-pgns-uploads-input"),
+      pgnFile("broken.pgn", '[Event "x"]\n\n1. e4 Qxh8 *\n'),
+    );
+
+    expect(await screen.findByTestId("user-pgns-uploads-rejected")).toHaveTextContent(
+      "broken.pgn holds no game that could be read.",
+    );
+    // Nothing was kept, so no empty folder appeared in the sidebar.
+    expect(screen.getByTestId("user-pgns-uploads-empty")).toBeInTheDocument();
+  });
+
+  it("removes one on request", async () => {
+    addUpload("my_study.pgn", STUDY_PGN);
+    renderAt("/pgn/uploads");
+
+    await userEvent.click(
+      screen.getByTestId("user-pgns-uploads-remove-my_study.pgn"),
+    );
+
+    expect(screen.getByTestId("user-pgns-uploads-empty")).toBeInTheDocument();
+    expect(screen.queryByTestId("user-pgns-uploads-item-my_study.pgn")).toBeNull();
   });
 });

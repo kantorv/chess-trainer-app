@@ -1,5 +1,7 @@
-import { loadPgnLibrary } from "./pgnLibrary";
-import type { LibraryCatalog } from "./libraryCatalog";
+import { loadPgnLibrary, type PgnLibrary } from "./pgnLibrary";
+import type { PgnKinds } from "./pgnKind";
+import { mergePgnLibraries, uploadsLibraryOf, type PgnUpload } from "./pgnUploads";
+import { uploadsSnapshot } from "./pgnUploadStore";
 import rawManifest from "../data/pgn.json";
 
 /**
@@ -38,4 +40,46 @@ const files = import.meta.glob("../data/pgn/*.pgn", {
 }) as Record<string, string>;
 
 /** The shipped catalog, loaded once. */
-export const pgnCatalog: LibraryCatalog = loadPgnLibrary(files, rawManifest);
+export const pgnCatalog: PgnLibrary = loadPgnLibrary(files, rawManifest);
+
+/**
+ * What kind of thing each shipped folder is, keyed by category path — a study,
+ * a collection of studies, a shelf of files, a file of played games
+ * ([`pgnKind.ts`](./pgnKind.ts)). It is what `views/pgn/UserPgnsSection.tsx`
+ * dispatches on, and it is re-exported here so a screen imports the catalog and
+ * its kinds from one module.
+ *
+ * The **shipped** kinds. A screen wants `userPgnsLibrary().kinds` below, which
+ * knows about the reader's uploads too.
+ */
+export const pgnKinds: PgnKinds = pgnCatalog.kinds;
+
+/*
+  The live library, memoised on the identity of the uploads snapshot.
+
+  Parsing the uploads is the expensive half of this section (a twenty-eight
+  study export is 169 games), and `userPgnsLibrary()` is called from render —
+  by the section descriptor's `catalog` getter, on every screen. The store
+  returns the same array until its stored text changes, so this rebuilds when
+  the reader uploads or removes a file, and never in between.
+*/
+let live: { uploads: readonly PgnUpload[]; library: PgnLibrary } | undefined;
+
+/**
+ * **The User PGNs library as it stands now**: the shipped files, plus whatever
+ * the reader has uploaded, as one catalog.
+ *
+ * Everything that reads the section goes through this — the section descriptor
+ * ([`views/library/section.ts`](../views/library/section.ts)), the sidebar
+ * generator and the `?game=` references — so an uploaded chapter is listed,
+ * routed, searched and handed on exactly as a shipped one is. `pgnCatalog`
+ * above stays the shipped-only value, which is what the shipped-data tests
+ * assert against.
+ */
+export const userPgnsLibrary = (): PgnLibrary => {
+  const uploads = uploadsSnapshot();
+  if (live === undefined || live.uploads !== uploads) {
+    live = { uploads, library: mergePgnLibraries(pgnCatalog, uploadsLibraryOf(uploads)) };
+  }
+  return live.library;
+};

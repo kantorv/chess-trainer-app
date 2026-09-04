@@ -36,7 +36,7 @@ const nameOf = (node: { labelKey?: string; label?: Parameters<typeof navLabel>[0
 /** A folder's rendered name, at any depth — so a test can name its row. */
 const folderNameOf = (
   id: string,
-  folders: readonly NavFolder[] = navFolders,
+  folders: readonly NavFolder[] = navFolders(),
 ): string => {
   for (const folder of folders) {
     if (folder.id === id) return nameOf(folder);
@@ -61,7 +61,7 @@ describe("sidebar navigation", () => {
 
     // Every screen is reachable — one folder at a time.
     const user = userEvent.setup();
-    for (const folder of navFolders) {
+    for (const folder of navFolders()) {
       if (folder.children) continue;
       await user.click(screen.getByRole("button", { name: nameOf(folder) }));
       for (const item of navItemsInFolder(folder.id)) {
@@ -80,7 +80,7 @@ describe("sidebar navigation", () => {
     renderAt("/");
     const user = userEvent.setup();
 
-    for (const item of navItems) {
+    for (const item of navItems()) {
       // The screen's folder chain has to be opened first — and `folderPath`
       // gives it as the *rendered* tree has it, after a redundant leaf-category
       // folder has been folded into the screen itself.
@@ -88,10 +88,19 @@ describe("sidebar navigation", () => {
         const row = screen.getByRole("button", { name: folderNameOf(id) });
         if (row.getAttribute("aria-expanded") === "false") await user.click(row);
       }
-      expect(screen.getByRole("link", { name: nameOf(item) })).toHaveAttribute(
-        "href",
-        item.to,
-      );
+      /*
+        `getAllBy`, because a name is not an id in a section built from
+        content: the shipped PGN library holds the "Queen vs Rook, Rosettes"
+        study twice — once as its own export, once as one study inside the
+        author's export of all of them — and two rows named alike is what the
+        data says rather than a bug in the tree. What must hold is that a row
+        with this name links here.
+      */
+      const links = screen
+        .getAllByRole("link", { name: nameOf(item) })
+        .map((link) => link.getAttribute("href"));
+
+      expect(links).toContain(item.to);
     }
   }, 30000);
 
@@ -151,7 +160,7 @@ describe("the folder tree", () => {
     // Top-level rows only: a sub-folder lives in its parent's `Collapse` body,
     // which is unmounted while that parent is shut. Opening Positions is what
     // brings its one surviving sub-folder row into the tree.
-    expect(screen.getAllByRole("button")).toHaveLength(navFolders.length);
+    expect(screen.getAllByRole("button")).toHaveLength(navFolders().length);
     expect(toolsFolder()).toHaveAttribute("aria-expanded", "true");
 
     for (const folder of screen.getAllByRole("button")) {
@@ -186,7 +195,7 @@ describe("the folder tree", () => {
     expect(queenVsRook).toHaveAttribute("aria-expanded", "false");
 
     // The top-level rows, plus the single sub-folder Positions brought with it.
-    expect(screen.getAllByRole("button")).toHaveLength(navFolders.length + 1);
+    expect(screen.getAllByRole("button")).toHaveLength(navFolders().length + 1);
   });
 
   it("starts with everything shut on a route that is no screen", () => {
@@ -250,7 +259,7 @@ describe("the folder tree", () => {
     ).toBeInTheDocument();
   });
 
-  it("keeps the open state in memory only — nothing is read or written to storage", async () => {
+  it("keeps the open state in memory only — nothing about it is stored", async () => {
     renderAt("/");
     const user = userEvent.setup();
 
@@ -263,7 +272,16 @@ describe("the folder tree", () => {
     await user.click(toolsFolder());
 
     expect(setItem).not.toHaveBeenCalled();
-    expect(getItem).not.toHaveBeenCalled();
+    /*
+      The sidebar does read one key, and only one: the tree grows a folder per
+      uploaded `.pgn`, so it subscribes to that store and its snapshot checks
+      the revision stamp (`lib/pgnUploadStore.ts`). Nothing it reads is about
+      which folder is open — that is the claim, and it is narrowed rather than
+      dropped.
+    */
+    for (const [key] of getItem.mock.calls) {
+      expect(String(key)).toMatch(/^chessapp\.pgnUploads\.v1/);
+    }
     vi.restoreAllMocks();
   });
 

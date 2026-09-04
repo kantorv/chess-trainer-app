@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Box from "@mui/material/Box";
 import Collapse from "@mui/material/Collapse";
 import List from "@mui/material/List";
@@ -18,9 +18,9 @@ import {
   navTree,
   type NavTreeNode,
 } from "./navTree";
+import { useUploads } from "../pgn/useUploads";
 
-/** The shipped tree, built once — a stable identity for the default prop. */
-const shippedTree = navTree();
+
 
 /** Nesting step, in theme spacing units, plus the row's own base padding. */
 const indentOf = (depth: number) => 2 + depth * 2;
@@ -148,9 +148,24 @@ function TreeRow({ node, depth, expanded, pathname, onToggle }: RowProps) {
  * mount. `tree` is injectable so tests can exercise deeper nesting than the
  * shipped tree.
  */
-function SidebarLinks({ tree = shippedTree }: { tree?: NavTreeNode[] }) {
+function SidebarLinks({ tree: given }: { tree?: NavTreeNode[] }) {
   const { pathname } = useLocation();
   const { t } = useTranslation();
+
+  /*
+    The tree is **derived, not fixed**: the User PGNs section grows a folder
+    when the reader uploads a `.pgn` (`lib/pgnUploads.ts`), so this subscribes
+    to that store and rebuilds when it changes. `navTree()` is a walk over a few
+    dozen nodes, and memoising it also keeps the identity stable — the open-chain
+    state below is seeded from it.
+  */
+  const uploads = useUploads();
+  /* eslint-disable-next-line react-hooks/exhaustive-deps --
+     `navTree()` takes no arguments and reads the uploads store through
+     `navFolders()`, so `uploads` is not a value this callback uses — it is the
+     key that says the store changed, which is exactly what has to invalidate
+     the memo. */
+  const tree = useMemo(() => given ?? navTree(), [given, uploads]);
 
   /*
     The single open chain, top down — the ancestors of one folder, never two

@@ -48,8 +48,15 @@ export type GameNavigation = {
 
 export const useGameNavigation = (
   game: Game | undefined,
+  initialPly = 0,
 ): GameNavigation => {
-  const [requestedPly, setRequestedPly] = useState(0);
+  /*
+    `initialPly` is read once, as the state's seed: it comes from a `?move=`
+    arrival, and arriving at the URL is what mounts the screen, so there is no
+    later change to follow. It is not clamped here on purpose — clamping on
+    *read* below covers it, along with every other source of a ply.
+  */
+  const [requestedPly, setRequestedPly] = useState(initialPly);
 
   /*
     Clamped on read rather than on write. A load or a game switch sets the ply

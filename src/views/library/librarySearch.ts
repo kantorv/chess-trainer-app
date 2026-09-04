@@ -1,6 +1,10 @@
 import type { AppLanguage } from "../../i18n";
 import { gameTag } from "../../lib/gameModel";
-import { localizedText, type LibraryItem } from "../../lib/libraryCatalog";
+import {
+  localizedText,
+  type LibraryCategory,
+  type LibraryItem,
+} from "../../lib/libraryCatalog";
 import { gameSummaryOf } from "./gameSummary";
 
 /**
@@ -86,6 +90,31 @@ export const filterLibraryItems = (
 
   return items.filter((item) => {
     const text = searchTextOf(item, language);
+    return tokens.every((token) => text.includes(token));
+  });
+};
+
+/**
+ * The same filter over a category's **sub-folders**, which the list screen shows
+ * as cards alongside its items — a file of twenty-eight studies is a folder the
+ * reader searches exactly as they search a folder of chapters.
+ *
+ * A folder is findable by its name and by nothing else: that is all its card
+ * prints, and the rule above ("you can find a card by what it says") is what
+ * keeps a search from hiding something for reasons the screen never showed. The
+ * name arrives already resolved, because a category keeps it as a locale key or
+ * as `{ en, he }` and `categoryLabel` is the one place those are told apart.
+ */
+export const filterLibraryCategories = (
+  categories: readonly LibraryCategory[],
+  query: string,
+  label: (category: LibraryCategory) => string,
+): readonly LibraryCategory[] => {
+  const tokens = tokensOf(query);
+  if (tokens.length === 0) return categories;
+
+  return categories.filter((category) => {
+    const text = label(category).toLowerCase();
     return tokens.every((token) => text.includes(token));
   });
 };

@@ -297,4 +297,40 @@ describe("the Load PGN screen — arriving with a game", () => {
 
     expect(screen.getByTestId("game-panel-content-load")).toBeInTheDocument();
   });
+
+  it("opens on the ply a ?move= beside the reference names", () => {
+    renderScreen(
+      `/games/load-pgn?game=${encodeURIComponent(reference)}&move=4`,
+    );
+
+    expect(screen.getByTestId("pgn-board")).toHaveAttribute(
+      "data-position",
+      fenAtPly(played.game, 4),
+    );
+  });
+
+  it.each(["abc", "-3", "2.5"])(
+    "opens at ply 0 for a ?move= that is not a ply (%s)",
+    (move) => {
+      renderScreen(
+        `/games/load-pgn?game=${encodeURIComponent(reference)}&move=${move}`,
+      );
+
+      expect(screen.getByTestId("pgn-board")).toHaveAttribute(
+        "data-position",
+        fenAtPly(played.game, 0),
+      );
+    },
+  );
+
+  it("clamps a ?move= past the end of the game rather than throwing", () => {
+    renderScreen(
+      `/games/load-pgn?game=${encodeURIComponent(reference)}&move=99999`,
+    );
+
+    expect(screen.getByTestId("pgn-board")).toHaveAttribute(
+      "data-position",
+      fenAtPly(played.game, played.game.moves.length),
+    );
+  });
 });

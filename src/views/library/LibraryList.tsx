@@ -25,8 +25,9 @@ import {
 import { RightPanel } from "../main/rightPanel";
 import { cardSizeTrack, DEFAULT_CARD_SIZE, type CardSize } from "./cardSize";
 import LibraryCardFooter from "./LibraryCardFooter";
+import LibraryFolderCard from "./LibraryFolderCard";
 import LibraryNotes from "./LibraryNotes";
-import { filterLibraryItems } from "./librarySearch";
+import { filterLibraryCategories, filterLibraryItems } from "./librarySearch";
 import { sectionHome, type LibrarySection } from "./section";
 
 /**
@@ -47,6 +48,21 @@ import { sectionHome, type LibrarySection } from "./section";
  * about to replay from move one. The preview board is not a branch at all —
  * `libraryItemFen` gives both kinds their starting position. The search is not
  * one either: `librarySearch.ts` folds both kinds into one string.
+ *
+ * ### A category's sub-folders are cards in the same grid
+ *
+ * A library nests — `positions.json` does, the User PGNs manifest groups files
+ * under one folder, and a lichess export of every study its author wrote is one
+ * file holding twenty-eight of them (`lib/pgnLibrary.ts`). Until the folders
+ * were cards only the sidebar could reach them: this screen showed the
+ * category's own items and, for a folder that groups and holds nothing itself,
+ * the word "empty".
+ *
+ * So `found.children` renders ahead of the items, through
+ * {@link LibraryFolderCard}, in the **same grid** — one scroll region, one
+ * search, one card size, and no second kind of screen for a folder of folders.
+ * The search filters both (`filterLibraryCategories`), which is what makes a
+ * file of twenty-eight studies usable at all.
  *
  * A card deep-links to `<routeBase>/<category path>/<id>`. The sidebar's active
  * state is an exact path match by design (`"/"` is a prefix of every route), so
@@ -172,7 +188,11 @@ function LibraryList({ section, categoryPath }: Props) {
   }
 
   const visible = filterLibraryItems(items, query, language);
+  const visibleFolders = filterLibraryCategories(found.children, query, (child) =>
+    categoryLabel(child, (key) => t(key), language),
+  );
   const searching = query.trim() !== "";
+  const nothingToShow = visible.length === 0 && visibleFolders.length === 0;
 
   return (
     <>
@@ -208,15 +228,34 @@ function LibraryList({ section, categoryPath }: Props) {
             >
               {categoryLabel(found, (key) => t(key), language)}
             </Typography>
-            {items.length > 0 && (
-              <Typography
-                data-testid={`${section.listTestId}-count`}
-                variant="caption"
-                sx={{ display: "block", color: "text.secondary" }}
-              >
-                {t(`${section.chromeKey}.list.count`, { count: visible.length })}
-              </Typography>
-            )}
+            {/* What is on screen, counted the way this section counts it — and
+                a folder of folders says how many folders, since "Games: 0" is
+                not what a reader of one is looking at. Both when it holds
+                both. */}
+            <Box sx={{ display: "flex", flexWrap: "wrap", columnGap: 1 }}>
+              {found.children.length > 0 && (
+                <Typography
+                  data-testid={`${section.listTestId}-folder-count`}
+                  component="span"
+                  variant="caption"
+                  sx={{ color: "text.secondary" }}
+                >
+                  {t(`${section.chromeKey}.list.folders`, {
+                    count: visibleFolders.length,
+                  })}
+                </Typography>
+              )}
+              {items.length > 0 && (
+                <Typography
+                  data-testid={`${section.listTestId}-count`}
+                  component="span"
+                  variant="caption"
+                  sx={{ color: "text.secondary" }}
+                >
+                  {t(`${section.chromeKey}.list.count`, { count: visible.length })}
+                </Typography>
+              )}
+            </Box>
           </Box>
 
           <TextField
@@ -276,7 +315,7 @@ function LibraryList({ section, categoryPath }: Props) {
           </ToggleButtonGroup>
         </Box>
 
-        {visible.length === 0 ? (
+        {nothingToShow ? (
           <Box
             data-testid={
               searching
@@ -322,6 +361,16 @@ function LibraryList({ section, categoryPath }: Props) {
               alignContent: "start",
             }}
           >
+            {/* Folders first: they are where the rest of this folder's content
+                is, and a reader scanning for a study should not have to scroll
+                past its neighbours' chapters to find it. */}
+            {visibleFolders.map((child) => (
+              <LibraryFolderCard
+                key={child.path}
+                section={section}
+                category={child}
+              />
+            ))}
             {visible.map((item) => (
               <Card key={item.id} variant="outlined">
                 <CardActionArea
@@ -342,7 +391,11 @@ function LibraryList({ section, categoryPath }: Props) {
         )}
       </Box>
 
-      {items.length > 0 && (
+      {/* A folder with something to click has something to say about clicking
+          it — its own notes, or the hint. A category with neither items nor
+          sub-folders registers no panel at all, so the shell's placeholder
+          stands, exactly as the unknown-category miss above leaves it. */}
+      {(items.length > 0 || found.children.length > 0) && (
         <RightPanel>
           {notes === undefined ? (
             <Typography variant="body2" sx={{ color: "text.secondary" }}>

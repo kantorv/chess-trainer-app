@@ -40,17 +40,28 @@ type Props = {
   notes: ComponentType;
   /** `data-testid` for the region, derived from the section's list id. */
   testId: string;
+  /**
+   * Render inside a scroller that is already there, rather than as one.
+   *
+   * The panel is the usual home for notes and owns its own scrolling. A
+   * collection's index screen puts the same authored prose in the **body**,
+   * above the study list and inside that screen's one scroll region — where a
+   * second `overflowY` would trap the notes in a box of their own. Only the
+   * three layout declarations differ; the typographic reset below is the point
+   * of the component and is shared either way.
+   */
+  inline?: boolean;
 };
 
-function LibraryNotes({ notes: Notes, testId }: Props) {
+function LibraryNotes({ notes: Notes, testId, inline = false }: Props) {
   return (
     <Box
       data-testid={testId}
       sx={{
         // The aside hands out its height and scrolls nothing itself.
-        flex: 1,
-        minHeight: 0,
-        overflowY: "auto",
+        ...(inline
+          ? {}
+          : { flex: 1, minHeight: 0, overflowY: "auto" }),
         overflowX: "hidden",
 
         color: "text.secondary",

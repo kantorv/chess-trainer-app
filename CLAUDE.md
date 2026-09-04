@@ -67,15 +67,17 @@ change by whether it *adds* to that count, not by the exit code.
 | `src/lib/matesCatalog.ts` | A thin binding over the shared layer in the Mates section's own vocabulary (`findMateCategory`, `positionsInCategory`, `findMatePosition`), plus the shipped catalog. |
 | `src/data/positions.json` | **The endgame Positions library** — categories nested to any depth, each with its own `{ en, he }` name, and the positions inside them. The only file adding a category *or* a position touches. |
 | `src/lib/positionsCatalog.ts` | That file loaded, once, through the same shared loader. |
-| `src/data/pgn/` | **The User PGNs library** — the project's `.pgn` files themselves: three lichess study exports (queen-vs-rook rosettes, a custom puzzle set, and nine annotated master games). One file is one folder, each game inside it one item. A folder's optional **notes** are a sibling `.mdx` of the same stem. The only thing adding content touches. |
+| `src/data/pgn/` | **The User PGNs library** — the project's `.pgn` files themselves: three lichess study exports (queen-vs-rook rosettes, a custom puzzle set, and nine annotated master games), the three-part Capablanca study, and one **multi-study** export of an author's twenty-eight queen-vs-rook studies. One file is one folder — or, when it carries several `StudyName`s, a folder of study sub-folders — and each game inside it is one item. A folder's optional **notes** are a sibling `.mdx` of the same stem. The only thing adding content touches. |
 | `src/data/pgn.json` | That section's *optional* manifest: renames, translates, nests and orders a folder. Every field is an override — a file it says nothing about still appears, and one it nests but does not label is still named from its own `StudyName` tag, which the shipped entry for the master-games study relies on. |
-| `src/lib/pgnLibrary.ts` | **The second producer of a `LibraryCatalog`** — `loadPgnLibrary` turns `path -> PGN text` plus that manifest into categories and `LibraryGame` items, naming each from the file's `StudyName` / a game's `ChapterName` / its players. Non-throwing: a broken game, an empty file, a manifest naming a file that is not there all land in `problems`. Pure — it takes its files as a parameter. |
-| `src/lib/pgnCatalog.ts` | That loader over the shipped files, once: an eager `import.meta.glob('../data/pgn/*.pgn', { query: '?raw' })`, so Vite inlines the text at build time and the sidebar can be built from the result at module scope. |
+| `src/lib/pgnLibrary.ts` | **The second producer of a `LibraryCatalog`** — `loadPgnLibrary` turns `path -> PGN text` plus that manifest into categories and `LibraryGame` items, naming each from the file's `StudyName` / a game's `ChapterName` / its players. A file carrying **more than one `StudyName`** splits into a folder of study sub-folders (`studyGroupsOf`); one with a single one, or none, is untouched. Non-throwing: a broken game, an empty file, a manifest naming a file that is not there all land in `problems`. Pure — it takes its files as a parameter. |
+| `src/lib/pgnCatalog.ts` | That loader over the shipped files, once: an eager `import.meta.glob('../data/pgn/*.pgn', { query: '?raw' })`, so Vite inlines the text at build time and the sidebar can be built from the result at module scope. Exports the shipped catalog and its `pgnKinds`, plus **`userPgnsLibrary()`** — that catalog with the reader's uploads folded in, memoised on them, which is what every screen in the section actually reads. |
+| `src/lib/pgnKind.ts` | **The PGN taxonomy** — `study`, `collection`, `shelf`, `games`, `uploads`, what each is recognised by, what screen each gets, and how to add the next one (`repertoire`, `variations`). Types and a lookup only; the recognition is in `pgnLibrary.ts` and the dispatch in `views/pgn/UserPgnsSection.tsx`. |
+| `src/lib/pgnUploads.ts` + `pgnUploadStore.ts` | **The reader's own `.pgn` files** — what an upload is, how it becomes a library under the `uploads` folder (through the same loader), whether a picked file is worth keeping; and the `localStorage` half, whose snapshot is checked against a revision stamp so a megabyte of PGN is not re-read per render. Non-throwing throughout. |
 | `src/lib/gameReference.ts` | **The `?game=` carrier** — `pgn/<category path>/<id>`, formatted by `gameReferenceOf` and resolved by `resolveGameReference` through the same `resolveLibraryPath`. A game does not fit in a URL, so what travels is a reference into the catalog. |
-| `src/views/library/` | The section-agnostic screens all three libraries render: `LibraryList.tsx` (a fixed top bar — the category's name and count, the name search, the card-size toggle — over the only thing on the screen that scrolls, the card grid of preview boards; its pure `librarySearch.ts` and `cardSize.ts` under it, and the folder's notes — or the hint, when it has none — in the right-hand panel), `LibraryDetail.tsx` (which resolves the URL, renders the miss, and dispatches on the item's kind), `LibraryPositionDetail.tsx` (one position, read-only, facing the side to move, with the three `?fen=` hand-offs), `LibraryGameDetail.tsx` (the game replayed over the shared `MoveList` / `BoardControls` / `useGameNavigation`, with the `?game=` and `?fen=` hand-offs), `LibraryCardFooter.tsx` and its pure `gameSummary.ts` (a card's footer, and the one branch the list screen makes on the item's kind), `BackToCategory.tsx`, `folderNotes.ts` / `pgnFolderNotes.ts` / `LibraryNotes.tsx` (a folder's authored MDX notes — the pure path lookup, the shipped `.mdx` glob, and the panel that styles and scrolls them), and `section.ts`, which is what tells one section from another — route base, catalog, chrome keys, test ids, `?game=` key, folder notes. |
+| `src/views/library/` | The section-agnostic screens all three libraries render: `LibraryList.tsx` (a fixed top bar — the category's name and counts, the name search, the card-size toggle — over the only thing on the screen that scrolls, the card grid: this category's **sub-folders** first, as `LibraryFolderCard.tsx`, then its items as preview boards; its pure `librarySearch.ts` and `cardSize.ts` under it, and the folder's notes — or the hint, when it has none — in the right-hand panel), `LibraryDetail.tsx` (which resolves the URL, renders the miss, and dispatches on the item's kind), `LibraryPositionDetail.tsx` (one position, read-only, facing the side to move, with the three `?fen=` hand-offs), `LibraryGameDetail.tsx` (the game replayed over the shared `MoveList` / `BoardControls` / `useGameNavigation`, with the `?game=` and `?fen=` hand-offs), `LibraryCardFooter.tsx` and its pure `gameSummary.ts` (a card's footer, and the one branch the list screen makes on the item's kind), `BackToCategory.tsx`, `folderNotes.ts` / `pgnFolderNotes.ts` / `LibraryNotes.tsx` (a folder's authored MDX notes — the pure path lookup, the shipped `.mdx` glob, and the panel that styles and scrolls them), and `section.ts`, which is what tells one section from another — route base, catalog, chrome keys, test ids, `?game=` key, folder notes. |
 | `src/views/mates/` | The Mates section, as a **binding**: `list/MatesList.tsx` and `detail/MateDetail.tsx` read `/mates/:category(/:id)` and hand it to the two shared screens. Neither knows anything about JSON. |
 | `src/views/positions/` | The Positions section: `PositionsSection.tsx` is **one component behind every `/positions/*` URL**, resolving the splat through the catalog and rendering whichever shared screen the answer calls for. |
-| `src/views/pgn/` | The User PGNs section: `UserPgnsSection.tsx` is the same one component behind every `/pgn/*` URL, over a catalog whose items are games. |
+| `src/views/pgn/` | The User PGNs section: `UserPgnsSection.tsx` is the same one component behind every `/pgn/*` URL, over a catalog whose items are games — and **the one place a PGN kind becomes a screen** (see *What kind of thing a PGN file is* below). Under it, the screens the section's own kinds need: `PgnCollection.tsx` (a multi-study file's index), `PgnCollectionNav.tsx` (its studies in the shell's left rail, while one of them is open), `PgnUploads.tsx` (the reader's own files — the button and the list), the shared two-line `PgnIndexRow.tsx`, the pure `collectionSummary.ts`, and `useUploads.ts` (the `useSyncExternalStore` binding, so `src/lib/` stays free of React). |
 | `src/views/main/navFromLibrary.ts` | Building a sidebar subtree — a folder plus a list screen per category, at any depth — out of a library catalog, and merging it into the authored registries. Pure; `positionsNavFolder()` / `positionsNavItems()` and `userPgnsNavFolder()` / `userPgnsNavItems()` are the two shipped uses — the second over a catalog built from `.pgn` files, which is what shows this is a generator rather than a Positions-shaped special case. |
 | `src/lib/treeManager.ts` | Read-only tree walks (`traverse` / `toArray` / `collectIds` / `findBy` / `getPath`). The seam for anything tree-shaped: `navTree.ts` and `libraryCatalog.ts` are its consumers. |
 
@@ -269,6 +271,54 @@ Two things follow that are worth knowing before touching the layer:
   comment shows its name and its length and stops. Neither renders a
   placeholder row.
 
+## What kind of thing a PGN file is
+
+A `.pgn` is a container, not a genre: the same syntax carries one lichess study,
+an author's whole shelf of them, a month of blitz games and — next — an opening
+repertoire. Those want different screens, so **`loadPgnLibrary` labels every
+folder it makes with a kind** ([`src/lib/pgnKind.ts`](src/lib/pgnKind.ts)) and
+the section binding dispatches on it. The kinds ride *beside* the catalog, in a
+lookup keyed by category path, for the same reason the folder notes do: a
+`LibraryCategory` serves three sections and only this one has files.
+
+| Kind | What it is | Recognised by | Screen |
+| --- | --- | --- | --- |
+| `study` | one study; its chapters are the cards | exactly one `StudyName` | `LibraryList` |
+| `collection` | one file, **several** studies | two or more `StudyName`s | `PgnCollection` — the file's index |
+| `shelf` | a folder of several files | a `pgn.json` `under` path | `LibraryList` (folder cards) |
+| `games` | played games, no study | no `StudyName` | `LibraryList` |
+| `uploads` | not a file — the folder the reader's own files land in | the one folder `lib/pgnUploads.ts` builds | `PgnUploads` — the upload button and what has been uploaded |
+
+Three rules hold the taxonomy together:
+
+- **A kind is recognised where the folder is made, and turned into a screen in
+  exactly one other place** — `views/pgn/UserPgnsSection.tsx`. So adding
+  `repertoire` or `variations` is: a name in `PgnKind`, a rule in
+  `pgnLibrary.ts`, a screen plus one line in that dispatcher. Nothing in
+  `src/lib/libraryCatalog.ts` or `src/views/library/` learns about it, and the
+  other two library sections cannot be affected.
+- **A different folder screen does not mean a different item screen.** A chapter
+  of a collection is the same `LibraryGame` as a game of a chess.com export, so
+  `LibraryDetail`, the `?game=` reference and the sibling nav are untouched by
+  any kind. Only the *folder* screens differ, because only a folder differs.
+- **An upload is not a special kind of content.** A `.pgn` the reader picks at
+  `/pgn/uploads` goes through `loadPgnLibrary` under the same `under:` mechanism
+  a shipped file does, so it is *recognised* like one — an uploaded multi-study
+  export gets the collection index, its chapters route and search and hand
+  themselves on with `?game=`, and nothing downstream knows where the file came
+  from. What it costs is that this one section's library is **live**:
+  `userPgnsLibrary()` (`lib/pgnCatalog.ts`) folds the stored uploads into the
+  shipped catalog and is memoised on them, `userPgnsSection.catalog` is a getter
+  over it, and `navFolders` / `navItems` became functions so the sidebar can
+  grow a folder without a reload. The two position sections are build-time
+  constants still.
+- **A collection is a book, so the table of contents follows the reader down.**
+  Its index screen lists the studies; inside a study, `PgnCollectionNav` puts
+  those studies in the shell's left rail (`leftPanel.tsx`), and inside a chapter
+  `LibrarySiblingNav` replaces them with that study's chapters. One panel at a
+  time and the innermost list wins — and because claiming the rail hides the app
+  sidebar, every one of those panels carries a close.
+
 ## A folder's notes are MDX, and they are not in the catalog
 
 A library folder can carry **authored notes** — what a study is, who wrote it,
@@ -329,13 +379,25 @@ is for:
 
 | Destination | Carries | Because |
 | --- | --- | --- |
-| Analysis Board, Load PGN | `?game=` | they replay a game, so the game has to cross |
+| Analysis Board, Load PGN | `?game=` (+ `?move=` at the ply on screen) | they replay a game, so the game has to cross — and it opens where the reader was |
 | Play with Engine, Board Editor | `?fen=` at the **ply on screen** | neither replays anything; what they want is the position being looked at |
 
 The Analysis Board re-reads the referenced PGN with `parsePgnTree` rather than
 taking the catalog's parsed `Game`: the catalog holds a **mainline** (`chess.js`
 `loadPgn` discards `( … )`), and side lines are the one thing an analysis board
 is for.
+
+**`?move=` rides beside `?game=`, and the study page's own URL too.** A
+reference names the game but not where the reader was in it, so the detail page
+reflects every step into its own URL with history **replace** (`?move=<ply>`,
+the same half-move unit `useGameNavigation` speaks; ply 0 deletes the
+parameter), and the two `?game=` hand-offs append it. Both destinations take it
+as *initial* state like any other arrival — Load PGN as the first render's
+ply, the Analysis Board as a mainline walk (`useTreeNavigation` seeds the node
+id, because its state is a node, not a ply). Validation is the one rule the
+other two parameters already keep: `parseMoveParam` (`lib/gameNavigation.ts`)
+ignores anything that is not a non-negative integer, and a value past the end
+of the game is clamped on read, exactly like a ply from any other source.
 
 The rules the libraries rest on:
 
@@ -372,6 +434,21 @@ The rules the libraries rest on:
   learns how deep `positions.json` nests or how `src/data/pgn/` is organised.
   `/positions/*` and `/pgn/*` are the same route twice. Mates keeps its two
   shipped `:category` routes, because those URLs are bookmarked.
+- **A folder is a card, so a section that nests is browsable without the
+  sidebar.** `LibraryList` renders `found.children` ahead of the items in the
+  same grid (`LibraryFolderCard.tsx`), each counting everything under it
+  (`itemCountUnder` — the one rollup, and the opposite of
+  `itemsInLibraryCategory`'s rule, because a folder card stands for what is
+  behind the click). It is not a branch on the item kind: a folder is not an
+  item. This is what let a **multi-study `.pgn`** — one lichess export holding
+  twenty-eight studies, split into a sub-folder each by `loadPgnLibrary` — cost
+  a card rather than a fourth kind of screen.
+- **A section may claim a screen the default rule would not give it.**
+  `libraryNavItems` skips a category that only groups sub-categories — a second
+  sidebar row named the same as the folder holding it, listing nothing. A User
+  PGNs **collection** is that shape and has a real index screen anyway, so the
+  section overrides it with `hasScreen` (`navFromLibrary.ts`). A manifest shelf
+  does not, and keeps the default.
 - **The nav is generated from the catalog, and named from it.** `navFromLibrary`
   builds a folder plus one list screen per category, at any depth, and splices
   the subtree into `navFolders` / `navItems`; `buildNavTree`, `folderPath`,
@@ -478,7 +555,7 @@ one. Four layers, each consumed by the next:
 | Layer | File | What it owns |
 | --- | --- | --- |
 | Walks | `src/lib/treeManager.ts` | Depth-first reads over any tree. The only place tree traversal is written. |
-| Data | `navFolders.ts` + `navItems.ts` | The folder tree (`{ id, labelKey?, label?, icon, children? }`) and the screens, each naming its `folder`. Mostly authored; the Positions subtree is spliced in from the generator below. |
+| Data | `navFolders()` + `navItems()` | The folder tree (`{ id, labelKey?, label?, icon, children? }`) and the screens, each naming its `folder`. Mostly authored; the Positions and User PGNs subtrees are spliced in from the generator below. **Functions**, because the second of those grows a folder when the reader uploads a `.pgn`. |
 | Generator | `navFromLibrary.ts` | A folder plus one list screen per category of a library catalog, at any depth, named from the data. Run over `src/data/positions.json` and over the `.pgn` files under `src/data/pgn/`. Ids are namespaced (`positions:queen-vs-rook/rosettes`, `user-pgns:studies`) so a generated one cannot collide with an authored one, or with the other section's. |
 | Builder | `navTree.ts` | Pure `buildNavTree` — sub-folders before that folder's own screens at every level — plus `folderPath` (a screen's breadcrumb, and the chain the sidebar opens), `folderChain` (the same for a folder id, itself included), `navLabel` (catalog key *or* data label) and `navLabelKeys` (only the keys). |
 | Renderer | `Sidebar.tsx` | A recursive `TreeRow`. Folders are `aria-expanded` toggles, screens are links. |

@@ -7,6 +7,7 @@ import {
   type LocalizedText,
 } from "./libraryCatalog";
 import { PgnParseError, parsePgnGame, splitPgnGames } from "./pgn";
+import type { PgnKinds } from "./pgnKind";
 
 /**
  * The **User PGNs** library, built out of the `.pgn` files the project ships —
@@ -19,6 +20,32 @@ import { PgnParseError, parsePgnGame, splitPgnGames } from "./pgn";
  * module is pure, takes its files as a parameter and knows nothing about Vite,
  * so the tests feed it text.
  *
+ * ## A file holding several studies is a folder of folders
+ *
+ * Lichess exports *all* of an author's studies as one file, and such a file is
+ * not one study with a lot of chapters — it is many studies whose chapters
+ * happen to share a file. Flattened into one folder its chapter names collide
+ * ("Chapter 1" fourteen times over) and the thing a reader is actually looking
+ * for, the study, is not addressable at all.
+ *
+ * So **a file carrying more than one `StudyName` splits**: its folder becomes a
+ * group, and each study in it becomes a sub-folder named from that tag, in the
+ * order the file first mentions it. A file with one `StudyName` — every shipped
+ * export today — is untouched, and so is one with none.
+ *
+ * That is deliberately *not* a fourth kind of screen. A category holding
+ * sub-categories is what the library layer has always been (`positions.json`
+ * nests, and the manifest's `under` already builds a group here), so the splat
+ * route, the sidebar generator, the list screen and the `?game=` reference all
+ * serve the deeper paths with no edit: `/pgn/<file>/<study>/<chapter>` is
+ * `resolveLibraryPath` doing what it does for `/positions/queen-vs-rook/…`.
+ * The one thing that did change is that a group's list screen now shows its
+ * sub-folders (`views/library/LibraryList.tsx`), because a study you cannot
+ * click is a folder that only the sidebar can reach.
+ *
+ * A game in a multi-study file with **no** `StudyName` stays in the file's own
+ * folder, next to the study sub-folders rather than in a made-up one.
+ *
  * ## Where a name comes from
  *
  * From the PGN itself, and never from `src/locales`:
@@ -26,7 +53,11 @@ import { PgnParseError, parsePgnGame, splitPgnGames } from "./pgn";
  * | Thing | Named from | Falling back to |
  * | --- | --- | --- |
  * | a folder | the manifest's `label`, else the file's `StudyName` tag | the file name, humanised |
+ * | a study sub-folder | its `StudyName` tag | — (a file only splits on that tag) |
  * | a game | its `ChapterName` tag (a study) | `White – Black (Result)` (a game), else `Event`, else its number |
+ *
+ * A multi-study file has no single `StudyName` to be named from, so its own
+ * folder falls to the manifest label or to the file name.
  *
  * ## The manifest is optional, and additive
  *
@@ -43,6 +74,17 @@ import { PgnParseError, parsePgnGame, splitPgnGames } from "./pgn";
  * loads. A broken file must not take the other folders — or the app, since this
  * runs at module scope — down with it.
  */
+
+/**
+ * What this loader returns: an ordinary {@link LibraryCatalog}, plus **what
+ * kind of thing each folder is** (`lib/pgnKind.ts`).
+ *
+ * Two values rather than a field on `LibraryCategory`, because a category is
+ * shared with the two position sections and a `.pgn` kind means nothing there —
+ * the same rule that keeps folder notes out of the catalog. Everything that
+ * takes a `LibraryCatalog` takes this unchanged.
+ */
+export type PgnLibrary = LibraryCatalog & { kinds: PgnKinds };
 
 /** What the manifest may say about one file. Every field is optional. */
 export type PgnManifestEntry = {
@@ -196,22 +238,65 @@ type Building = Omit<LibraryCategory, "children"> & {
   children: LibraryCategory[];
 };
 
+/** One game of a file, parsed, with its 1-based position in that file. */
+type ParsedGame = { game: Game; pgn: string; number: number };
+
+/**
+ * The games of one file, grouped by their `StudyName` tag — the whole of the
+ * multi-study rule, and pure so it can be read on its own.
+ *
+ * Groups come back in the order the file **first mentions** each study, which is
+ * the order a lichess export writes them in and the only order the data offers;
+ * a study's chapters keep their own order inside it. Games with no `StudyName`
+ * share one untitled group, so a mixed file loses nothing.
+ */
+export const studyGroupsOf = (
+  parsed: readonly ParsedGame[],
+): { study?: string; games: ParsedGame[] }[] => {
+  const byStudy = new Map<string, { study?: string; games: ParsedGame[] }>();
+
+  for (const entry of parsed) {
+    const study = gameTag(entry.game.headers, "StudyName");
+    // `""` is the untitled group: a study cannot be named that, since `gameTag`
+    // reports an empty tag as absent.
+    const key = study ?? "";
+    const group = byStudy.get(key);
+    if (group === undefined) {
+      byStudy.set(key, { ...(study !== undefined ? { study } : {}), games: [entry] });
+    } else {
+      group.games.push(entry);
+    }
+  }
+
+  return [...byStudy.values()];
+};
+
 /**
  * Build the library from `path -> raw PGN text` and the optional manifest.
  *
  * Files are taken in manifest `order` (absent sorts last), then by file name, so
  * the sidebar and the list screens agree and neither depends on the order the
  * bundler happened to hand the glob back in.
+ *
+ * A file holding more than one `StudyName` becomes a folder of study
+ * sub-folders — see {@link studyGroupsOf} and the note at the top of the file.
+ *
+ * Every folder is also labelled with a {@link PgnKind}, which is what lets the
+ * section give a collection a different screen from a study
+ * (`views/pgn/UserPgnsSection.tsx`). The kinds ride **beside** the catalog
+ * rather than inside it: `LibraryCategory` serves three sections and only this
+ * one has `.pgn` files behind it.
  */
 export const loadPgnLibrary = (
   files: Record<string, string>,
   rawManifest?: unknown,
-): LibraryCatalog => {
+): PgnLibrary => {
   const problems: string[] = [];
   const manifest = readPgnManifest(rawManifest, problems);
 
   const roots: Building[] = [];
   const byPath = new Map<string, Building>();
+  const kinds: PgnKinds = {};
 
   /**
    * The folder at this path, created — with every ancestor it needs — if it is
@@ -236,6 +321,12 @@ export const loadPgnLibrary = (
       children: [],
     };
     byPath.set(path, category);
+    /*
+      A folder created on the way to another one is a grouping folder and
+      nothing else, so `shelf` is the floor. The caller that meant to create
+      *this* path overwrites it with what the file actually is.
+    */
+    kinds[path] = "shelf";
 
     if (segments.length === 1) {
       roots.push(category);
@@ -278,7 +369,7 @@ export const loadPgnLibrary = (
       of content the section cannot keep — but one broken game among nine costs
       only that game.
     */
-    const parsed: { game: Game; pgn: string; number: number }[] = [];
+    const parsed: ParsedGame[] = [];
     chunks.forEach((chunk, index) => {
       try {
         parsed.push({ game: parsePgnGame(chunk), pgn: chunk, number: index + 1 });
@@ -307,41 +398,92 @@ export const loadPgnLibrary = (
       continue;
     }
 
-    const studyName = gameTag(parsed[0].game.headers, "StudyName");
-    folderAt(
-      path,
-      entry?.label ??
-        (studyName !== undefined
-          ? { en: studyName }
-          : { en: humanizeFileName(fileName) }),
-    );
+    /**
+     * File these games into one category. Ids are unique **within that
+     * category**, which is what a URL addresses one by — so two studies in the
+     * same file may both hold a `chapter-1`, exactly as two files may.
+     */
+    const addGames = (categoryPath: string, games: readonly ParsedGame[]) => {
+      const seen = new Set<string>();
+      for (const { game, pgn, number } of games) {
+        const name = gameDisplayName(game, number);
+        /*
+          A slug can collide (two chess.com games between the same players) or be
+          empty (a chapter title with no ASCII in it). The game's own number
+          settles both, and it is what keeps the id stable: a name-derived id
+          survives a game being inserted earlier in the file, which a purely
+          positional one would not, and a bookmarked URL is the reason that
+          matters.
+        */
+        const base = slugify(name) || "game";
+        let id = seen.has(base) ? `${base}-${number}` : base;
+        while (seen.has(id)) id = `${id}-${number}`;
+        seen.add(id);
 
-    const seen = new Set<string>();
-    for (const { game, pgn, number } of parsed) {
-      const name = gameDisplayName(game, number);
-      /*
-        A slug can collide (two chess.com games between the same players) or be
-        empty (a chapter title with no ASCII in it). The game's own number
-        settles both, and it is what keeps the id stable: a name-derived id
-        survives a game being inserted earlier in the file, which a purely
-        positional one would not, and a bookmarked URL is the reason that
-        matters.
-      */
-      const base = slugify(name) || "game";
-      let id = seen.has(base) ? `${base}-${number}` : base;
-      while (seen.has(id)) id = `${id}-${number}`;
-      seen.add(id);
+        items.push({
+          kind: "game",
+          id,
+          category: categoryPath,
+          pgn,
+          game,
+          name: { en: name },
+        });
+      }
+    };
 
-      items.push({
-        kind: "game",
-        id,
-        category: path,
-        pgn,
-        game,
-        name: { en: name },
-      });
+    const groups = studyGroupsOf(parsed);
+    const studies = groups.filter((group) => group.study !== undefined);
+
+    if (studies.length < 2) {
+      // One study, or none: the file is one folder, as it has always been.
+      const studyName = studies[0]?.study;
+      folderAt(
+        path,
+        entry?.label ??
+          (studyName !== undefined
+            ? { en: studyName }
+            : { en: humanizeFileName(fileName) }),
+      );
+      // A `StudyName` is what makes a file a study; without one it is a file of
+      // played games, and the two are told apart nowhere else (`lib/pgnKind.ts`).
+      kinds[path] = studyName !== undefined ? "study" : "games";
+      addGames(path, parsed);
+      continue;
     }
+
+    /*
+      Several studies in one file. The file's own folder groups them and is
+      named from the manifest or the file name — there is no single `StudyName`
+      it could take, and taking the first study's would name the group after one
+      of the things inside it.
+    */
+    folderAt(path, entry?.label ?? { en: humanizeFileName(fileName) });
+    kinds[path] = "collection";
+
+    const takenSlugs = new Set<string>();
+    groups.forEach((group, index) => {
+      if (group.study === undefined) {
+        // Chapters with no study of their own stay in the file's folder rather
+        // than in a sub-folder invented to hold them.
+        addGames(path, group.games);
+        return;
+      }
+
+      // Same fallbacks a game id gets, for the same reasons: a Hebrew study
+      // title slugs to nothing, and two studies can be named alike.
+      const base = slugify(group.study) || `study-${index + 1}`;
+      let slug = takenSlugs.has(base) ? `${base}-${index + 1}` : base;
+      while (takenSlugs.has(slug)) slug = `${slug}-${index + 1}`;
+      takenSlugs.add(slug);
+
+      const studyPath = `${path}/${slug}`;
+      folderAt(studyPath, { en: group.study });
+      // One study of a collection is a study like any other, and gets the same
+      // screen as a study that came in a file of its own.
+      kinds[studyPath] = "study";
+      addGames(studyPath, group.games);
+    });
   }
 
-  return libraryCatalogOf(roots, items, problems);
+  return { ...libraryCatalogOf(roots, items, problems), kinds };
 };

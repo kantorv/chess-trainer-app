@@ -368,6 +368,28 @@ export const itemsInLibraryCategory = (
     : catalog.items.filter((item) => item.category === path);
 
 /**
+ * How many items sit in this category **and every category under it** — what a
+ * folder card on the list screen counts.
+ *
+ * The rollup {@link itemsInLibraryCategory} deliberately refuses, and for the
+ * same reason: a list of cards must show a category's own items, or a parent
+ * would render everything beneath it a second time. A *folder* card is the
+ * opposite case — it stands for everything behind one click, and "0 games" on a
+ * folder holding six studies of eighteen chapters each would be a lie.
+ */
+export const itemCountUnder = (
+  category: LibraryCategory,
+  catalog: LibraryCatalog,
+): number => {
+  const paths = new Set(
+    new TreeManager<LibraryCategory>([category])
+      .toArray()
+      .map((under) => under.path),
+  );
+  return catalog.items.filter((item) => paths.has(item.category)).length;
+};
+
+/**
  * The same, narrowed to positions — the vocabulary the Mates binding speaks, and
  * the shape its tests assert. A section whose every item is a position gets the
  * same list either way.
