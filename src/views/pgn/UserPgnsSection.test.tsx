@@ -235,14 +235,6 @@ describe("the User PGNs section", () => {
     );
   });
 
-  it("links back to the folder a game sits in", async () => {
-    renderAt(`/pgn/${PLAYED}/${played.id}`);
-
-    await userEvent.click(screen.getByTestId("user-pgn-detail-back"));
-
-    expect(screen.getByTestId("user-pgns-list")).toBeInTheDocument();
-  });
-
   it("closes to the same folder from the top-right close button", async () => {
     renderAt(`/pgn/${PLAYED}/${played.id}`);
 

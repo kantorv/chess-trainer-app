@@ -7,6 +7,10 @@ import Tab from "@mui/material/Tab";
 import Tabs from "@mui/material/Tabs";
 import Typography from "@mui/material/Typography";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
+import QueryStatsRoundedIcon from "@mui/icons-material/QueryStatsRounded";
+import MenuBookRoundedIcon from "@mui/icons-material/MenuBookRounded";
+import PlayArrowRoundedIcon from "@mui/icons-material/PlayArrowRounded";
+import EditRoundedIcon from "@mui/icons-material/EditRounded";
 import { createSearchParams, useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 import { Chessboard, type ChessboardOptions } from "react-chessboard";
@@ -27,7 +31,6 @@ import GameInfo from "../shared/GameInfo";
 import MoveList from "../shared/MoveList";
 import { useGameNavigation } from "../shared/useGameNavigation";
 import { RightPanel } from "../main/rightPanel";
-import BackToCategory from "./BackToCategory";
 import type { LibrarySection } from "./section";
 
 /**
@@ -64,6 +67,16 @@ import type { LibrarySection } from "./section";
 
 const TAB_IDS = ["moves", "info", "description"] as const;
 type TabId = (typeof TAB_IDS)[number];
+
+/** The four hand-offs, sized down to fit beside the close button in the head. */
+const compactButtonSx = {
+  fontSize: "0.6875rem",
+  lineHeight: 1.2,
+  paddingBlock: 0.25,
+  paddingInline: 0.75,
+  minWidth: 0,
+  "& .MuiButton-startIcon": { marginInlineEnd: 0.5 },
+} as const;
 
 type Props = {
   section: LibrarySection;
@@ -170,23 +183,70 @@ function LibraryGameDetail({ section, category, item }: Props) {
                 gap: 1,
               }}
             >
-              <BackToCategory section={section} category={category} />
+              {/*
+                The four hand-offs, top-left — where `BackToCategory` used to
+                sit. That link is gone: it pointed at the same folder the new
+                close button (top-right) does, so keeping both was one exit
+                twice over.
+              */}
+              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+                <Button
+                  size="small"
+                  variant="contained"
+                  startIcon={<QueryStatsRoundedIcon sx={{ fontSize: "1rem" }} />}
+                  onClick={handOffGameTo("/tools/analysis")}
+                  data-testid={`${section.itemTestId}-open-analysis`}
+                  sx={compactButtonSx}
+                >
+                  {t(`${section.chromeKey}.detail.openInAnalysis`)}
+                </Button>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={<MenuBookRoundedIcon sx={{ fontSize: "1rem" }} />}
+                  onClick={handOffGameTo("/games/load-pgn")}
+                  data-testid={`${section.itemTestId}-open-load-pgn`}
+                  sx={compactButtonSx}
+                >
+                  {t(`${section.chromeKey}.detail.openInLoadPgn`)}
+                </Button>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={<PlayArrowRoundedIcon sx={{ fontSize: "1rem" }} />}
+                  onClick={handOffFenTo("/engine/play")}
+                  data-testid={`${section.itemTestId}-play-engine`}
+                  sx={compactButtonSx}
+                >
+                  {t(`${section.chromeKey}.detail.playWithEngine`)}
+                </Button>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={<EditRoundedIcon sx={{ fontSize: "1rem" }} />}
+                  onClick={handOffFenTo("/tools/editor")}
+                  data-testid={`${section.itemTestId}-open-editor`}
+                  sx={compactButtonSx}
+                >
+                  {t(`${section.chromeKey}.detail.openInEditor`)}
+                </Button>
+              </Box>
               {/*
                 A second, terser way out — top-right, the conventional close
-                corner — to the same destination `BackToCategory` links: the
-                folder this game sits in, i.e. the parent PGN index page.
+                corner — to the folder this game sits in, i.e. the parent PGN
+                index page.
               */}
               <IconButton
                 size="small"
                 onClick={() => navigate(`${section.routeBase}/${category.path}`)}
                 aria-label={t(`${section.chromeKey}.detail.close`)}
                 data-testid={`${section.itemTestId}-detail-close`}
-                sx={{ mt: -0.5, mr: -0.5 }}
+                sx={{ mt: -0.5, mr: -0.5, flexShrink: 0 }}
               >
                 <CloseRoundedIcon fontSize="small" />
               </IconButton>
             </Box>
-            <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 700, mt: 1 }}>
               {name}
             </Typography>
             <Typography variant="body2" sx={{ color: "text.secondary", mt: 0.25 }}>
@@ -249,47 +309,6 @@ function LibraryGameDetail({ section, category, item }: Props) {
                     value={fen}
                     testId={`${section.itemTestId}-fen`}
                   />
-                </Box>
-                <Box
-                  sx={{
-                    mt: 2,
-                    display: "flex",
-                    flexWrap: "wrap",
-                    gap: 1,
-                  }}
-                >
-                  <Button
-                    size="small"
-                    variant="contained"
-                    onClick={handOffGameTo("/tools/analysis")}
-                    data-testid={`${section.itemTestId}-open-analysis`}
-                  >
-                    {t(`${section.chromeKey}.detail.openInAnalysis`)}
-                  </Button>
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    onClick={handOffGameTo("/games/load-pgn")}
-                    data-testid={`${section.itemTestId}-open-load-pgn`}
-                  >
-                    {t(`${section.chromeKey}.detail.openInLoadPgn`)}
-                  </Button>
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    onClick={handOffFenTo("/engine/play")}
-                    data-testid={`${section.itemTestId}-play-engine`}
-                  >
-                    {t(`${section.chromeKey}.detail.playWithEngine`)}
-                  </Button>
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    onClick={handOffFenTo("/tools/editor")}
-                    data-testid={`${section.itemTestId}-open-editor`}
-                  >
-                    {t(`${section.chromeKey}.detail.openInEditor`)}
-                  </Button>
                 </Box>
               </>
             )}
