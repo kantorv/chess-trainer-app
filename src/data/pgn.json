@@ -17,6 +17,13 @@
     "lichess_study_zwischenzug-best-games-part1_by_lalala732_2026.04.12.pgn": {
       "order": 30
     },
+    "methurst-public-studies.pgn": {
+      "label": {
+        "en": "Queen vs Rook, all studies",
+        "he": "מלכה נגד צריח, כל המחקרים"
+      },
+      "order": 40
+    },
     "lichess_study_chess-fundamentals-by-jr-capablanca-part-1-of-3_by_frankv53_2021.02.16.pgn": {
       "under": "chess-fundamentals-capablanca",
       "label": { "en": "Part 1 of 3", "he": "חלק 1 מתוך 3" },

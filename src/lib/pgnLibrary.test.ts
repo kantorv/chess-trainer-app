@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { findLibraryCategory, itemsInLibraryCategory } from "./libraryCatalog";
+import {
+  findLibraryCategory,
+  itemsInLibraryCategory,
+  resolveLibraryPath,
+} from "./libraryCatalog";
 import { gameDisplayName, loadPgnLibrary, slugify } from "./pgnLibrary";
 import { parsePgnGame, splitPgnGames } from "./pgn";
 
@@ -52,6 +56,38 @@ const STUDY = `[Event "My Study: Chapter 1"]
 [SetUp "1"]
 
 1. Qb1 *
+`;
+
+/**
+ * A lichess "export all my studies" file: two studies in one file, each with a
+ * chapter named `"Chapter 1"`, and one loose game carrying no `StudyName` at
+ * all.
+ */
+const MULTI_STUDY = `[Event "First Study: Chapter 1"]
+[Result "*"]
+[StudyName "First Study"]
+[ChapterName "Chapter 1"]
+
+1. e4 *
+
+[Event "Second Study: Chapter 1"]
+[Result "*"]
+[StudyName "Second Study"]
+[ChapterName "Chapter 1"]
+
+1. d4 *
+
+[Event "First Study: Chapter 2"]
+[Result "*"]
+[StudyName "First Study"]
+[ChapterName "Chapter 2"]
+
+1. c4 *
+
+[Event "Loose Puzzle"]
+[Result "*"]
+
+1. Nf3 *
 `;
 
 describe("slugify", () => {
@@ -136,6 +172,85 @@ describe("loadPgnLibrary groups a file into a folder of games", () => {
       "alice-bob-1-0",
       "alice-bob-0-1",
     ]);
+  });
+});
+
+describe("loadPgnLibrary splits a file that holds several studies", () => {
+  const catalog = loadPgnLibrary({ "all_my_studies.pgn": MULTI_STUDY });
+  const FILE = "all-my-studies";
+
+  it("makes the file's folder a group, with a sub-folder per StudyName", () => {
+    const group = findLibraryCategory(FILE, catalog);
+
+    // Named from the file, not from one of the studies inside it.
+    expect(group?.label).toEqual({ en: "All my studies" });
+    expect(group?.children.map((child) => child.path)).toEqual([
+      `${FILE}/first-study`,
+      `${FILE}/second-study`,
+    ]);
+    expect(group?.children[1].label).toEqual({ en: "Second Study" });
+  });
+
+  it("orders the studies as the file first mentions them, not as it interleaves them", () => {
+    // "First Study" chapter 2 comes after "Second Study" chapter 1 in the file;
+    // the study still sorts first, and keeps both its chapters.
+    expect(
+      itemsInLibraryCategory(`${FILE}/first-study`, catalog).map((item) => item.id),
+    ).toEqual(["chapter-1", "chapter-2"]);
+  });
+
+  it("lets two studies each hold a chapter-1, since an id is unique per folder", () => {
+    expect(
+      itemsInLibraryCategory(`${FILE}/second-study`, catalog).map((item) => item.id),
+    ).toEqual(["chapter-1"]);
+    expect(catalog.problems).toEqual([]);
+  });
+
+  it("keeps a game with no StudyName in the file's own folder", () => {
+    // Next to the study folders rather than in one invented to hold it.
+    expect(
+      itemsInLibraryCategory(FILE, catalog).map((item) => item.name.en),
+    ).toEqual(["Loose Puzzle"]);
+  });
+
+  it("resolves a chapter from its deeper URL, through the same splat", () => {
+    expect(
+      resolveLibraryPath([FILE, "first-study", "chapter-2"], catalog),
+    ).toMatchObject({ kind: "item", item: { id: "chapter-2" } });
+  });
+
+  it("still lets the manifest rename and nest the file's own folder", () => {
+    const nested = loadPgnLibrary(
+      { "all_my_studies.pgn": MULTI_STUDY },
+      {
+        files: {
+          "all_my_studies.pgn": { under: "shelf", label: { en: "Everything" } },
+        },
+      },
+    );
+
+    expect(findLibraryCategory("shelf/all-my-studies", nested)?.label).toEqual({
+      en: "Everything",
+    });
+    expect(
+      itemsInLibraryCategory("shelf/all-my-studies/first-study", nested),
+    ).toHaveLength(2);
+  });
+
+  it("leaves a file with one StudyName exactly as it was", () => {
+    // The split is the multi-study case and nothing else: every shipped export
+    // but one is a single study, and none of them moved.
+    const single = loadPgnLibrary({ "my_study.pgn": STUDY });
+
+    expect(single.categories[0].children).toEqual([]);
+    expect(itemsInLibraryCategory("my-study", single)).toHaveLength(2);
+  });
+
+  it("leaves a file with no StudyName at all alone too", () => {
+    const played = loadPgnLibrary({ "games.pgn": CHESS_COM });
+
+    expect(played.categories[0].children).toEqual([]);
+    expect(itemsInLibraryCategory("games", played)).toHaveLength(2);
   });
 });
 

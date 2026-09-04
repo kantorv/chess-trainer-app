@@ -394,6 +394,8 @@ const en = {
         which the `typeof en` typing of `he` enforces in the other direction.
       */
       count: "Positions: {{count}}",
+      /** Sub-folders of the category on screen, counted beside its own items. */
+      folders: "Folders: {{count}}",
       empty: "No positions in this category yet.",
       hint: "Pick a position to open it on a board, then hand it to the Analysis Board or play it against the engine.",
       /**
@@ -453,6 +455,8 @@ const en = {
     /** The list screen's panel. */
     list: {
       count: "Positions: {{count}}",
+      /** Sub-categories of the one on screen — Rosettes under Queen vs Rook. */
+      folders: "Categories: {{count}}",
       empty: "No positions in this category yet.",
       hint: "Pick a position to open it on a board, then hand it to the Analysis Board or play it against the engine.",
       search: "Search positions",
@@ -508,6 +512,12 @@ const en = {
     /** The list screen's panel. */
     list: {
       count: "Games: {{count}}",
+      /**
+       * A folder's sub-folders. In this section they are studies: a lichess
+       * export of every study an author wrote is one file holding many, and
+       * `loadPgnLibrary` gives each its own folder.
+       */
+      folders: "Studies: {{count}}",
       empty: "No games in this file yet.",
       hint: "Pick a game to replay it move by move, then hand it to the Analysis Board or take the position on screen to the engine.",
       /**

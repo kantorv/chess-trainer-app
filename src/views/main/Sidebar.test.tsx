@@ -88,10 +88,19 @@ describe("sidebar navigation", () => {
         const row = screen.getByRole("button", { name: folderNameOf(id) });
         if (row.getAttribute("aria-expanded") === "false") await user.click(row);
       }
-      expect(screen.getByRole("link", { name: nameOf(item) })).toHaveAttribute(
-        "href",
-        item.to,
-      );
+      /*
+        `getAllBy`, because a name is not an id in a section built from
+        content: the shipped PGN library holds the "Queen vs Rook, Rosettes"
+        study twice — once as its own export, once as one study inside the
+        author's export of all of them — and two rows named alike is what the
+        data says rather than a bug in the tree. What must hold is that a row
+        with this name links here.
+      */
+      const links = screen
+        .getAllByRole("link", { name: nameOf(item) })
+        .map((link) => link.getAttribute("href"));
+
+      expect(links).toContain(item.to);
     }
   }, 30000);
 

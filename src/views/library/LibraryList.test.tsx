@@ -305,6 +305,81 @@ describe("LibraryList", () => {
     });
   });
 
+  describe("a category's sub-folders", () => {
+    /* Positions ships one of each shape: `queen-vs-rook` holds a position of
+       its own *and* the Rosettes sub-folder, and the multi-study PGN export is
+       a folder of twenty-eight studies and no chapters of its own. */
+    const MIXED = "queen-vs-rook";
+    const MULTI_STUDY = "methurst-public-studies";
+
+    it("renders a folder card in the same grid, ahead of the item cards", () => {
+      renderList(positionsSection, MIXED);
+
+      const grid = screen.getByTestId("positions-list-grid");
+      const folder = within(grid).getByTestId("positions-list-folder-rosettes");
+
+      expect(folder).toHaveAttribute("href", "/positions/queen-vs-rook/rosettes");
+      // Folders first: the rest of the category's content is behind them.
+      const cards = within(grid).getAllByTestId(/^positions-list-folder-|^position-card-/);
+      expect(cards[0]).toBe(folder);
+    });
+
+    it("counts everything under a folder, not the folder's own items", () => {
+      // Its own list is empty; the click behind it leads to 169 chapters.
+      renderList(userPgnsSection, MULTI_STUDY);
+
+      expect(
+        screen.getByTestId("user-pgns-list-folder-queen-vs-rook-adjacent-rosettes"),
+      ).toHaveTextContent("Games: 10");
+    });
+
+    it("counts the folders in the top bar, in the section's own words", () => {
+      renderList(userPgnsSection, MULTI_STUDY);
+
+      expect(screen.getByTestId("user-pgns-list-folder-count")).toHaveTextContent(
+        "Studies: 28",
+      );
+      // No games of its own, so no game count beside it.
+      expect(screen.queryByTestId("user-pgns-list-count")).toBeNull();
+      expect(screen.queryByTestId("user-pgns-list-empty")).toBeNull();
+    });
+
+    it("searches the folders as well as the cards", async () => {
+      const user = userEvent.setup();
+      renderList(userPgnsSection, MULTI_STUDY);
+
+      await user.type(screen.getByTestId("user-pgns-list-search"), "lightning");
+
+      expect(
+        screen.getByTestId("user-pgns-list-folder-queen-vs-rook-lightning"),
+      ).toBeInTheDocument();
+      expect(screen.getAllByTestId(/^user-pgns-list-folder-queen/)).toHaveLength(1);
+      expect(screen.getByTestId("user-pgns-list-folder-count")).toHaveTextContent(
+        "Studies: 1",
+      );
+    });
+
+    it("says nothing matched when the search empties both", async () => {
+      const user = userEvent.setup();
+      renderList(userPgnsSection, MULTI_STUDY);
+
+      await user.type(screen.getByTestId("user-pgns-list-search"), "zugzwang");
+
+      expect(screen.getByTestId("user-pgns-list-no-matches")).toBeInTheDocument();
+      expect(screen.queryByTestId("user-pgns-list-grid")).toBeNull();
+    });
+
+    it("registers the panel for a folder that only holds folders", () => {
+      // It has something to click, so it has something to say about clicking
+      // it — the hint, or this folder's own notes.
+      render(listTree(userPgnsSection, MULTI_STUDY, <span>shell placeholder</span>));
+
+      expect(screen.getByTestId("layout-right-panel")).toHaveTextContent(
+        "Pick a game to replay it",
+      );
+    });
+  });
+
   describe("a category with nothing in it", () => {
     // The Positions section ships one: Rosettes is structure with no positions
     // under it yet.

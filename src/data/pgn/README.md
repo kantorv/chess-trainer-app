@@ -20,6 +20,45 @@ routes are generated from the result.
 - Every card links to `/pgn/<folder>/<game-id>`, where the game replays over
   the shared move list and board controls.
 
+## A file holding several studies
+
+Lichess can export **all** of an author's studies as one file, and that file is
+not one study with a lot of chapters — it is many studies whose chapters happen
+to share a file. Dropped in as it is, its chapter names would collide
+("Chapter 1", fourteen times over) and the thing a reader actually looks for —
+the study — would not be addressable at all.
+
+So a file carrying more than one `StudyName` **splits**, and the drop is still
+the whole of the work:
+
+```
+methurst-public-studies.pgn        ← one file, 28 StudyNames, 169 chapters
+  └── /pgn/methurst-public-studies                    the file's folder
+        ├── …/queen-vs-rook-adjacent-rosettes         one study
+        │     └── …/chapter-1                         one chapter
+        └── …/queen-vs-rook-lightning                 the next study, …
+```
+
+- **A sub-folder per `StudyName`**, named from that tag and ordered as the file
+  first mentions each — a study's own chapters keep their order inside it.
+- **The file's folder is named from the manifest, or from the file name.** There
+  is no single `StudyName` it could take, and naming the group after one of the
+  studies inside it would be worse than a plain file name.
+- **A chapter with no `StudyName` stays in the file's own folder**, beside the
+  study sub-folders rather than in one invented to hold it.
+- **A file with one `StudyName`, or none, is untouched** — the split is the
+  multi-study case and nothing else.
+- **The list screen shows the studies as cards** (`LibraryFolderCard.tsx`), each
+  counting everything behind it, and the search box filters folders as well as
+  chapters. Nothing else changed: `/pgn/*` is one splat route at any depth, the
+  sidebar generator already recursed, and a chapter still hands itself on with
+  `?game=`.
+
+`methurst-public-studies.pgn` is the shipped example. Note that it *contains*
+the standalone `lichess_study_queen-vs-rook-rosettes…` study as one of its 28,
+so the sidebar names that study twice — the data says so, and nothing in the
+section requires a name to be unique across files.
+
 ## Notes for a folder — a sibling `.mdx`
 
 A folder can carry **authored notes**: what the study is, who wrote it, what to
@@ -57,6 +96,7 @@ Never from `src/locales` — a listed study is *content*, not app chrome.
 | Thing | Named from | Falling back to |
 | --- | --- | --- |
 | a **folder** | `src/data/pgn.json` → `files."<name>.pgn".label` | the file's `StudyName` tag, else the file name humanised (`my_study.pgn` → `My study`) |
+| a **study sub-folder** | its `StudyName` tag | — (a file only splits on that tag) |
 | a **game** | its `ChapterName` tag (a study chapter) | `White – Black (Result)` (a played game; the `(Result)` is dropped when absent), else the `Event` tag, else `Game <n>` |
 
 `chess.js` fills a game's seven-tag roster with placeholders (`"?"`,
@@ -107,6 +147,11 @@ hide a file.
   (The same fold applies to the Mates and Positions sections.)
 - A **manifest group** of two or more files stays a **folder** you expand to
   reach each file's list.
+- A **multi-study file** is a folder too: its studies are the rows inside it.
+  Its own row has no list screen unless some chapter in it carried no
+  `StudyName` — a folder that only groups gets the folder and no second row
+  named the same. Its list screen is still reachable by URL, and shows the
+  studies as cards.
 
 ## Nothing throws — problems are reported
 
