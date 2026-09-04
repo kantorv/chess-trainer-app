@@ -51,6 +51,7 @@ const he: typeof en = {
       moves: "מהלכים",
       info: "פרטים",
       load: "טעינת PGN",
+      description: "תיאור",
     },
     controls: {
       first: "עמדת פתיחה",
@@ -380,6 +381,7 @@ const he: typeof en = {
       openInLoadPgn: "פתיחה בטעינת PGN",
       playWithEngine: "משחק העמדה הזו",
       openInEditor: "עריכת העמדה הזו",
+      noDescription: "למשחק הזה אין הערות.",
     },
     sideToMove: {
       w: "הלבן במסע",

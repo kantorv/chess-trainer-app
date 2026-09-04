@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Stack from "@mui/material/Stack";
@@ -11,6 +11,9 @@ import { Chessboard, type ChessboardOptions } from "react-chessboard";
 
 import { asAppLanguage } from "../../i18n";
 import { gameReferenceOf } from "../../lib/gameReference";
+import { initialFenOf } from "../../lib/gameModel";
+import { startNumbering } from "../../lib/gameNavigation";
+import { extractPgnComments, hasPgnComments } from "../../lib/pgnComments";
 import {
   localizedText,
   type LibraryCategory,
@@ -57,7 +60,7 @@ import type { LibrarySection } from "./section";
  * the same mechanism the Board Editor has always used.
  */
 
-const TAB_IDS = ["moves", "info"] as const;
+const TAB_IDS = ["moves", "info", "description"] as const;
 type TabId = (typeof TAB_IDS)[number];
 
 type Props = {
@@ -78,6 +81,25 @@ function LibraryGameDetail({ section, category, item }: Props) {
 
   const name = localizedText(item.name, language);
   const description = localizedText(item.description, language);
+
+  /**
+   * The annotation text the PGN carries — the preamble and every mainline move
+   * comment, re-flowed. Read from the raw chunk rather than the parsed `Game`
+   * because `chess.js` has already flattened the paragraph breaks out of the
+   * latter (see `lib/pgnComments.ts`).
+   */
+  const comments = useMemo(() => extractPgnComments(item.pgn), [item.pgn]);
+  const gameHasComments = hasPgnComments(comments);
+
+  /** `"27. h5"` / `"27... Rf6"` for the move a comment belongs to. */
+  const moveLabel = (targetPly: number): string => {
+    const move = item.game.moves[targetPly - 1];
+    if (move === undefined) return `#${targetPly}`;
+    const { whiteFirst, firstNumber } = startNumbering(initialFenOf(item.game));
+    const slot = targetPly - 1 + (whiteFirst ? 0 : 1);
+    const number = firstNumber + Math.floor(slot / 2);
+    return `${number}${slot % 2 === 0 ? "." : "..."} ${move.san}`;
+  };
 
   const boardOptions: ChessboardOptions = {
     id: `${section.itemTestId}-detail-${item.id}`,
@@ -226,6 +248,77 @@ function LibraryGameDetail({ section, category, item }: Props) {
               </>
             )}
             {tab === "info" && <GameInfo game={item.game} />}
+            {tab === "description" && (
+              <Box data-testid={`${section.itemTestId}-description`}>
+                {!gameHasComments && (
+                  <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                    {t(`${section.chromeKey}.detail.noDescription`)}
+                  </Typography>
+                )}
+
+                {comments.preamble.length > 0 && (
+                  <Box
+                    data-testid={`${section.itemTestId}-description-preamble`}
+                    sx={{ mb: comments.moves.length > 0 ? 2 : 0 }}
+                  >
+                    {comments.preamble.map((paragraph, index) => (
+                      <Typography key={index} variant="body2" sx={{ mb: 1 }}>
+                        {paragraph}
+                      </Typography>
+                    ))}
+                  </Box>
+                )}
+
+                <Stack spacing={1}>
+                  {comments.moves.map((entry) => {
+                    const current = entry.ply === ply;
+                    return (
+                      <Box
+                        key={entry.ply}
+                        component="button"
+                        type="button"
+                        onClick={() => goToPly(entry.ply)}
+                        aria-current={current ? "true" : undefined}
+                        data-testid={`${section.itemTestId}-description-entry-${entry.ply}`}
+                        sx={{
+                          display: "block",
+                          width: "100%",
+                          textAlign: "start",
+                          font: "inherit",
+                          color: "inherit",
+                          cursor: "pointer",
+                          p: 1,
+                          borderRadius: 1,
+                          border: "1px solid",
+                          borderColor: current ? "primary.main" : "divider",
+                          bgcolor: current ? "action.selected" : "transparent",
+                          "&:hover": { bgcolor: "action.hover" },
+                        }}
+                      >
+                        <Typography
+                          variant="caption"
+                          sx={{ display: "block", fontWeight: 700, mb: 0.5 }}
+                        >
+                          {moveLabel(entry.ply)}
+                        </Typography>
+                        {entry.paragraphs.map((paragraph, index) => (
+                          <Typography
+                            key={index}
+                            variant="body2"
+                            sx={{
+                              mb:
+                                index < entry.paragraphs.length - 1 ? 0.75 : 0,
+                            }}
+                          >
+                            {paragraph}
+                          </Typography>
+                        ))}
+                      </Box>
+                    );
+                  })}
+                </Stack>
+              </Box>
+            )}
           </Box>
 
           <BoardControls
