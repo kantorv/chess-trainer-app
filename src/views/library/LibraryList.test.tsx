@@ -59,7 +59,7 @@ const renderList = (section: LibrarySection, categoryPath: string) =>
   render(listTree(section, categoryPath));
 
 const MATES = "basic";
-const STUDY = "studies/lichess-study-queen-vs-rook-rosettes-by-methurst-2021-07-08";
+const STUDY = "lichess-study-queen-vs-rook-rosettes-by-methurst-2021-07-08";
 
 const firstMate = itemsInLibraryCategory(MATES, matesSection.catalog)[0];
 

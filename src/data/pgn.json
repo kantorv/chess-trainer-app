@@ -1,5 +1,10 @@
 {
-  "folders": {},
+  "folders": {
+    "chess-fundamentals-capablanca": {
+      "en": "Chess Fundamentals, Capablanca",
+      "he": "יסודות השחמט, קפבלנקה"
+    }
+  },
   "files": {
     "lichess_study_queen-vs-rook-rosettes_by_methurst_2021.07.08.pgn": {
       "label": { "en": "Queen vs Rook, Rosettes", "he": "מלכה נגד צריח, רוזטות" },
@@ -10,6 +15,21 @@
       "order": 20
     },
     "lichess_study_zwischenzug-best-games-part1_by_lalala732_2026.04.12.pgn": {
+      "order": 30
+    },
+    "lichess_study_chess-fundamentals-by-jr-capablanca-part-1-of-3_by_frankv53_2021.02.16.pgn": {
+      "under": "chess-fundamentals-capablanca",
+      "label": { "en": "Part 1 of 3", "he": "חלק 1 מתוך 3" },
+      "order": 10
+    },
+    "lichess_study_chess-fundamentals-by-jr-capablanca-part-2-of-3_by_frankv53_2021.03.05.pgn": {
+      "under": "chess-fundamentals-capablanca",
+      "label": { "en": "Part 2 of 3", "he": "חלק 2 מתוך 3" },
+      "order": 20
+    },
+    "lichess_study_chess-fundamentals-by-jr-capablanca-part-3-of-3_by_frankv53_2021.03.25.pgn": {
+      "under": "chess-fundamentals-capablanca",
+      "label": { "en": "Part 3 of 3", "he": "חלק 3 מתוך 3" },
       "order": 30
     }
   }
