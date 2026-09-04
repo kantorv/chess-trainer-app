@@ -521,10 +521,10 @@ const en = {
     detail: {
       back: "Back to {{category}}",
       fen: "Position at this move (FEN)",
-      openInAnalysis: "Open in Analysis Board",
-      openInLoadPgn: "Open in Load PGN",
-      playWithEngine: "Play this position",
-      openInEditor: "Edit this position",
+      openInAnalysis: "Analysis",
+      openInLoadPgn: "PGN viewer",
+      playWithEngine: "Play Engine",
+      openInEditor: "Board Editor",
       /** The Description tab's empty state — a game whose PGN carried no comments. */
       noDescription: "This game has no annotations.",
     },

@@ -307,6 +307,36 @@ describe("the User PGNs section", () => {
     );
   });
 
+  it("marks annotated moves in the Moves list and shows the comment when that move is active", async () => {
+    const comments = extractPgnComments(played.pgn);
+    const first = comments.moves[0];
+    expect(first).toBeDefined();
+
+    renderAt(`/pgn/${PLAYED}/${played.id}`);
+
+    // The move list is the Moves tab, which opens by default.
+    expect(
+      screen.getByTestId(`move-comment-icon-${first.ply}`),
+    ).toBeInTheDocument();
+    // A move with no comment carries no marker.
+    const plain = played.game.moves.find(
+      (move) => !comments.moves.some((entry) => entry.ply === move.ply),
+    );
+    expect(plain).toBeDefined();
+    expect(
+      screen.queryByTestId(`move-comment-icon-${plain!.ply}`),
+    ).toBeNull();
+
+    // Nothing under the FEN until the annotated move is the one on screen.
+    expect(screen.queryByTestId("user-pgn-move-comment")).toBeNull();
+
+    await userEvent.click(screen.getByTestId(`move-ply-${first.ply}`));
+
+    const shown = screen.getByTestId("user-pgn-move-comment");
+    expect(shown).toHaveTextContent(played.game.moves[first.ply - 1].san);
+    expect(shown).toHaveTextContent(first.paragraphs[0].slice(0, 20));
+  });
+
   it("shows an explicit empty state for a game with no comments", async () => {
     const PUZZLES =
       "lichess-study-puzzles-custom-set-1-by-lalala732-2026-05-03";
@@ -334,7 +364,7 @@ describe("the User PGNs section", () => {
 
     const panel = screen.getByTestId("layout-right-panel");
     // Chrome out of `src/locales`; the game's name out of its own tag pairs.
-    expect(panel).toHaveTextContent("פתיחה בלוח הניתוח");
+    expect(panel).toHaveTextContent(i18n.t("userPgns.detail.openInAnalysis"));
     expect(panel).toHaveTextContent(played.name.en);
   });
 });

@@ -91,6 +91,15 @@ function LibraryGameDetail({ section, category, item }: Props) {
   const comments = useMemo(() => extractPgnComments(item.pgn), [item.pgn]);
   const gameHasComments = hasPgnComments(comments);
 
+  /** Plies that carry a move comment — the marker set for the move list. */
+  const annotatedPlies = useMemo(
+    () => new Set(comments.moves.map((entry) => entry.ply)),
+    [comments],
+  );
+
+  /** The comment on the move currently on screen, if it has one. */
+  const activeComment = comments.moves.find((entry) => entry.ply === ply);
+
   /** `"27. h5"` / `"27... Rf6"` for the move a comment belongs to. */
   const moveLabel = (targetPly: number): string => {
     const move = item.game.moves[targetPly - 1];
@@ -207,6 +216,7 @@ function LibraryGameDetail({ section, category, item }: Props) {
                   game={item.game}
                   currentPly={ply}
                   onSelectPly={goToPly}
+                  annotatedPlies={annotatedPlies}
                 />
                 <Box sx={{ mt: 2 }}>
                   <CopyableValue
@@ -215,8 +225,50 @@ function LibraryGameDetail({ section, category, item }: Props) {
                     testId={`${section.itemTestId}-fen`}
                   />
                 </Box>
-                <Stack spacing={1} sx={{ mt: 2 }}>
+                {activeComment && (
+                  <Box
+                    data-testid={`${section.itemTestId}-move-comment`}
+                    sx={{
+                      mt: 1.5,
+                      p: 1,
+                      borderRadius: 1,
+                      border: "1px solid",
+                      borderColor: "divider",
+                      bgcolor: "action.hover",
+                    }}
+                  >
+                    <Typography
+                      variant="caption"
+                      sx={{ display: "block", fontWeight: 700, mb: 0.5 }}
+                    >
+                      {moveLabel(activeComment.ply)}
+                    </Typography>
+                    {activeComment.paragraphs.map((paragraph, index) => (
+                      <Typography
+                        key={index}
+                        variant="body2"
+                        sx={{
+                          mb:
+                            index < activeComment.paragraphs.length - 1
+                              ? 0.75
+                              : 0,
+                        }}
+                      >
+                        {paragraph}
+                      </Typography>
+                    ))}
+                  </Box>
+                )}
+                <Box
+                  sx={{
+                    mt: 2,
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: 1,
+                  }}
+                >
                   <Button
+                    size="small"
                     variant="contained"
                     onClick={handOffGameTo("/tools/analysis")}
                     data-testid={`${section.itemTestId}-open-analysis`}
@@ -224,6 +276,7 @@ function LibraryGameDetail({ section, category, item }: Props) {
                     {t(`${section.chromeKey}.detail.openInAnalysis`)}
                   </Button>
                   <Button
+                    size="small"
                     variant="outlined"
                     onClick={handOffGameTo("/games/load-pgn")}
                     data-testid={`${section.itemTestId}-open-load-pgn`}
@@ -231,6 +284,7 @@ function LibraryGameDetail({ section, category, item }: Props) {
                     {t(`${section.chromeKey}.detail.openInLoadPgn`)}
                   </Button>
                   <Button
+                    size="small"
                     variant="outlined"
                     onClick={handOffFenTo("/engine/play")}
                     data-testid={`${section.itemTestId}-play-engine`}
@@ -238,13 +292,14 @@ function LibraryGameDetail({ section, category, item }: Props) {
                     {t(`${section.chromeKey}.detail.playWithEngine`)}
                   </Button>
                   <Button
+                    size="small"
                     variant="outlined"
                     onClick={handOffFenTo("/tools/editor")}
                     data-testid={`${section.itemTestId}-open-editor`}
                   >
                     {t(`${section.chromeKey}.detail.openInEditor`)}
                   </Button>
-                </Stack>
+                </Box>
               </>
             )}
             {tab === "info" && <GameInfo game={item.game} />}

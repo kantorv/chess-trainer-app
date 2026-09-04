@@ -377,10 +377,10 @@ const he: typeof en = {
     detail: {
       back: "חזרה אל {{category}}",
       fen: "העמדה במסע הזה (FEN)",
-      openInAnalysis: "פתיחה בלוח הניתוח",
-      openInLoadPgn: "פתיחה בטעינת PGN",
-      playWithEngine: "משחק העמדה הזו",
-      openInEditor: "עריכת העמדה הזו",
+      openInAnalysis: "ניתוח",
+      openInLoadPgn: "מציג PGN",
+      playWithEngine: "משחק מול המנוע",
+      openInEditor: "עורך הלוח",
       noDescription: "למשחק הזה אין הערות.",
     },
     sideToMove: {
