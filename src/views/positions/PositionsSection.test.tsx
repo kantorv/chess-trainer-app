@@ -11,6 +11,7 @@ import {
 } from "../../lib/libraryCatalog";
 import { positionsCatalog } from "../../lib/positionsCatalog";
 import { RightPanelOutlet, RightPanelProvider } from "../main/rightPanel";
+import { LeftPanelOutlet, LeftPanelProvider } from "../main/leftPanel";
 import PositionsSection from "./PositionsSection";
 
 /* Stubbed for the reason in `.claude/rules/chessboard.md` §8 — jsdom has no
@@ -41,20 +42,23 @@ const renderAt = (path: string) =>
     <AppThemeWithLang>
       <MemoryRouter initialEntries={[path]}>
         <RightPanelProvider>
-          <Routes>
-            <Route
-              path="/positions/*"
-              element={
-                <>
-                  <PositionsSection />
-                  <RightPanelOutlet />
-                </>
-              }
-            />
-            <Route path="/tools/analysis" element={<Arrival name="analysis" />} />
-            <Route path="/engine/play" element={<Arrival name="play" />} />
-            <Route path="/tools/editor" element={<Arrival name="editor" />} />
-          </Routes>
+          <LeftPanelProvider>
+            <Routes>
+              <Route
+                path="/positions/*"
+                element={
+                  <>
+                    <PositionsSection />
+                    <RightPanelOutlet />
+                    <LeftPanelOutlet />
+                  </>
+                }
+              />
+              <Route path="/tools/analysis" element={<Arrival name="analysis" />} />
+              <Route path="/engine/play" element={<Arrival name="play" />} />
+              <Route path="/tools/editor" element={<Arrival name="editor" />} />
+            </Routes>
+          </LeftPanelProvider>
         </RightPanelProvider>
       </MemoryRouter>
     </AppThemeWithLang>,
@@ -165,6 +169,58 @@ describe("the Positions section", () => {
     await userEvent.click(screen.getByTestId("position-detail-back"));
 
     expect(screen.getByTestId("positions-list")).toBeInTheDocument();
+  });
+
+  describe("sibling-nav left panel", () => {
+    const philidor = findLibraryPosition(
+      "rook-and-pawn-vs-rook",
+      "philidor-defense",
+      positionsCatalog,
+    )!;
+
+    it("replaces the sidebar with the category's siblings, the current one active", () => {
+      renderAt(`/positions/rook-and-pawn-vs-rook/${lucena.id}`);
+
+      const panel = screen.getByTestId("layout-left-panel");
+      const active = screen.getByTestId(`position-sibling-nav-item-${lucena.id}`);
+      const other = screen.getByTestId(
+        `position-sibling-nav-item-${philidor.id}`,
+      );
+
+      expect(panel).toContainElement(active);
+      expect(panel).toContainElement(other);
+      expect(active).toHaveAttribute("aria-current", "true");
+      expect(other).not.toHaveAttribute("aria-current");
+    });
+
+    it("navigates to a sibling's detail view when clicked, without a full remount", async () => {
+      renderAt(`/positions/rook-and-pawn-vs-rook/${lucena.id}`);
+      const panelBefore = screen.getByTestId("layout-left-panel");
+
+      await userEvent.click(
+        screen.getByTestId(`position-sibling-nav-item-${philidor.id}`),
+      );
+
+      expect(screen.getByTestId("board")).toHaveAttribute(
+        "data-position",
+        philidor.fen,
+      );
+      expect(
+        screen.getByTestId(`position-sibling-nav-item-${philidor.id}`),
+      ).toHaveAttribute("aria-current", "true");
+      // The slot's host portal survives the navigation — the same node, not a
+      // fresh one — which is what a flash-free swap between siblings means.
+      expect(screen.getByTestId("layout-left-panel")).toBe(panelBefore);
+    });
+
+    it("closes back to the category's list, restoring the ordinary sidebar", async () => {
+      renderAt(`/positions/rook-and-pawn-vs-rook/${lucena.id}`);
+
+      await userEvent.click(screen.getByTestId("position-sibling-nav-close"));
+
+      expect(screen.getByTestId("positions-list")).toBeInTheDocument();
+      expect(screen.queryByTestId("layout-left-panel")).toBeNull();
+    });
   });
 
   it("says so, and renders no board, for a path no category starts", () => {

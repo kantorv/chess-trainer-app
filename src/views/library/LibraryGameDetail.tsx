@@ -31,6 +31,7 @@ import GameInfo from "../shared/GameInfo";
 import MoveList from "../shared/MoveList";
 import { useGameNavigation } from "../shared/useGameNavigation";
 import { RightPanel } from "../main/rightPanel";
+import LibrarySiblingNav from "./LibrarySiblingNav";
 import type { LibrarySection } from "./section";
 
 /**
@@ -158,6 +159,8 @@ function LibraryGameDetail({ section, category, item }: Props) {
 
   return (
     <>
+      <LibrarySiblingNav section={section} category={category} activeId={item.id} />
+
       <Box data-testid={`${section.itemTestId}-detail-board`} sx={{ height: "100%" }}>
         <Chessboard options={boardOptions} />
       </Box>

@@ -16,6 +16,7 @@ import {
 import CopyableValue from "../shared/CopyableValue";
 import { RightPanel } from "../main/rightPanel";
 import BackToCategory from "./BackToCategory";
+import LibrarySiblingNav from "./LibrarySiblingNav";
 import type { LibrarySection } from "./section";
 
 /**
@@ -71,6 +72,8 @@ function LibraryPositionDetail({ section, category, position }: Props) {
 
   return (
     <>
+      <LibrarySiblingNav section={section} category={category} activeId={position.id} />
+
       <Box data-testid={`${section.itemTestId}-detail-board`} sx={{ height: "100%" }}>
         <Chessboard options={boardOptions} />
       </Box>

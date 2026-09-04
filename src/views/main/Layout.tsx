@@ -10,6 +10,7 @@ import { default as SideBar } from './Sidebar';
 import { Footer } from './Footer';
 import { BoardWidgetContext } from './service';
 import { RightPanelOutlet, RightPanelProvider } from './rightPanel';
+import { LeftPanelOutlet, LeftPanelProvider } from './leftPanel';
 import { ForceLTR } from '../../theme/ForceLTR';
 import ColorModeIconDropdown from '../../theme/ColorModeIconDropdown';
 import LanguageSwitch from '../../theme/LanguageSwitch';
@@ -270,7 +271,16 @@ const DefaultLayoutViewport = () => {
                         flexDirection: "column"
                     }}
                 >
-                    <SideBar />
+                    {/*
+                        The per-route left-panel slot (`leftPanel.tsx`), mirroring
+                        the aside's `RightPanelOutlet` below. A library detail
+                        screen renders `<LeftPanel>` to replace the nav tree with a
+                        sibling-item list for as long as it is mounted; with none
+                        registered the outlet renders `<SideBar/>` and this box is
+                        exactly what it always was. Same fixed width either way —
+                        this slot swaps *content*, not the row's proportions.
+                    */}
+                    <LeftPanelOutlet fallback={<SideBar />} />
 
                 </Box>
 
@@ -409,11 +419,15 @@ const DefaultLayoutViewport = () => {
 const DefaultLayout = ()=>
             <BoardWidgetContext.Provider>
                 {/*
-                    Above the viewport, so the aside's outlet and every route
-                    behind the `<Outlet />` share one slot.
+                    Above the viewport, so both outlets and every route behind
+                    the `<Outlet />` share one slot each. Nesting order between
+                    the two providers does not matter — the contexts are
+                    independent.
                 */}
                 <RightPanelProvider>
-                    <DefaultLayoutViewport />
+                    <LeftPanelProvider>
+                        <DefaultLayoutViewport />
+                    </LeftPanelProvider>
                 </RightPanelProvider>
             </BoardWidgetContext.Provider>
 

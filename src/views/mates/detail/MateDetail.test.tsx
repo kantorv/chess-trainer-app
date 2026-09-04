@@ -7,6 +7,7 @@ import i18n from "../../../i18n";
 import AppThemeWithLang from "../../../theme/AppThemeWithLang";
 import { findMatePosition, positionsInCategory } from "../../../lib/matesCatalog";
 import { RightPanelOutlet, RightPanelProvider } from "../../main/rightPanel";
+import { LeftPanelOutlet, LeftPanelProvider } from "../../main/leftPanel";
 import MateDetail from "./MateDetail";
 
 /* Stubbed for the reason in `.claude/rules/chessboard.md` §8 — jsdom has no
@@ -37,21 +38,24 @@ const renderAt = (path: string) =>
     <AppThemeWithLang>
       <MemoryRouter initialEntries={[path]}>
         <RightPanelProvider>
-          <Routes>
-            <Route
-              path="/mates/:category/:id"
-              element={
-                <>
-                  <MateDetail />
-                  <RightPanelOutlet />
-                </>
-              }
-            />
-            <Route path="/mates/:category" element={<div data-testid="list" />} />
-            <Route path="/tools/analysis" element={<Arrival name="analysis" />} />
-            <Route path="/engine/play" element={<Arrival name="play" />} />
-            <Route path="/tools/editor" element={<Arrival name="editor" />} />
-          </Routes>
+          <LeftPanelProvider>
+            <Routes>
+              <Route
+                path="/mates/:category/:id"
+                element={
+                  <>
+                    <MateDetail />
+                    <RightPanelOutlet />
+                    <LeftPanelOutlet />
+                  </>
+                }
+              />
+              <Route path="/mates/:category" element={<div data-testid="list" />} />
+              <Route path="/tools/analysis" element={<Arrival name="analysis" />} />
+              <Route path="/engine/play" element={<Arrival name="play" />} />
+              <Route path="/tools/editor" element={<Arrival name="editor" />} />
+            </Routes>
+          </LeftPanelProvider>
         </RightPanelProvider>
       </MemoryRouter>
     </AppThemeWithLang>,
@@ -130,6 +134,51 @@ describe("MateDetail", () => {
     await userEvent.click(screen.getByTestId("mate-detail-back"));
 
     expect(screen.getByTestId("list")).toBeInTheDocument();
+  });
+
+  describe("sibling-nav left panel", () => {
+    const [firstSibling, secondSibling] = positionsInCategory("basic");
+
+    it("replaces the sidebar with the category's siblings, the current one active", () => {
+      renderAt(pathOf(firstSibling.id));
+
+      const panel = screen.getByTestId("layout-left-panel");
+      const active = screen.getByTestId(
+        `mate-sibling-nav-item-${firstSibling.id}`,
+      );
+      const other = screen.getByTestId(
+        `mate-sibling-nav-item-${secondSibling.id}`,
+      );
+
+      expect(panel).toContainElement(active);
+      expect(panel).toContainElement(other);
+      expect(active).toHaveAttribute("aria-current", "true");
+      expect(other).not.toHaveAttribute("aria-current");
+    });
+
+    it("navigates to a sibling's detail view when clicked", async () => {
+      renderAt(pathOf(firstSibling.id));
+
+      await userEvent.click(
+        screen.getByTestId(`mate-sibling-nav-item-${secondSibling.id}`),
+      );
+
+      expect(screen.getByTestId("board")).toHaveAttribute(
+        "data-position",
+        secondSibling.fen,
+      );
+      expect(
+        screen.getByTestId(`mate-sibling-nav-item-${secondSibling.id}`),
+      ).toHaveAttribute("aria-current", "true");
+    });
+
+    it("closes back to the category's list", async () => {
+      renderAt(pathOf(firstSibling.id));
+
+      await userEvent.click(screen.getByTestId("mate-sibling-nav-close"));
+
+      expect(screen.getByTestId("list")).toBeInTheDocument();
+    });
   });
 
   it("renders no board for an id the category does not have", () => {
