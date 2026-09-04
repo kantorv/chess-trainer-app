@@ -2,8 +2,8 @@
 
 This folder **is** the User PGNs library. Everything the section shows —
 the sidebar folders, the card grids, the replay screens at `/pgn/*` — is built
-from the `.pgn` files sitting here plus the optional manifest one level up
-(`src/data/pgn.json`).
+from the `.pgn` files sitting here, their optional `.mdx` folder notes, and the
+optional manifest one level up (`src/data/pgn.json`).
 
 ## Drop a file in
 
@@ -19,6 +19,36 @@ routes are generated from the result.
   games becomes a folder of 9.
 - Every card links to `/pgn/<folder>/<game-id>`, where the game replays over
   the shared move list and board controls.
+
+## Notes for a folder — a sibling `.mdx`
+
+A folder can carry **authored notes**: what the study is, who wrote it, what to
+look for. They fill the right-hand panel of that folder's list screen, in place
+of the one-line hint it shows otherwise.
+
+Writing them is the same one-file drop the `.pgn` was. Give the note **the file
+name of its PGN with an `.mdx` extension**, sitting right next to it:
+
+```
+lichess_study_queen-vs-rook-rosettes_by_methurst_2021.07.08.pgn   ← the games
+lichess_study_queen-vs-rook-rosettes_by_methurst_2021.07.08.mdx   ← the notes
+```
+
+No manifest field and no locale key — the manifest says nothing about notes, and
+a note is content, so it is written in the language its study is in. A folder
+with no `.mdx` keeps the hint, unchanged.
+
+- **It is MDX, not Markdown.** Headings, lists, **bold**, links, quotes, code
+  and GitHub-flavoured tables all work, and a note can `import` and render a
+  real React component when prose stops being enough.
+- **The panel is narrow and it scrolls.** Write as long a note as the study
+  deserves; `LibraryNotes.tsx` styles the elements and scrolls the overflow, and
+  the board square next to it is not affected.
+- **A note is matched to its folder by path**, so a file the manifest nests
+  under a group finds its notes there too. An `.mdx` whose `.pgn` is missing
+  names no folder and is simply never shown — `src/views/library/folderNotes.ts`
+  is the lookup, and `folderNotes.test.ts` asserts every shipped note addresses
+  a folder that exists.
 
 ## Where the names come from
 
