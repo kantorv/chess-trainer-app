@@ -18,6 +18,15 @@ import type { LibraryCatalog } from "../../lib/libraryCatalog";
  * Mates section's were written before the shared layer existed and its tests
  * name them: `mates-list`, `mate-card-<id>`, `mate-open-analysis`. Keeping them
  * verbatim is what let the refactor leave the shipped section's tests alone.
+ *
+ * **Two ids, not two per widget.** A screen that grows a control derives its id
+ * from the base it already has — the list screen's top bar, search box, card-size
+ * buttons and grid are `${listTestId}-top-bar`, `-search`, `-card-size-<size>`
+ * and `-grid` — rather than adding a field here. A descriptor field is for a
+ * name that could not have been derived, which is what `listTestId` and
+ * `itemTestId` are; three fields per new control would make a shared screen
+ * expensive to add anything to, and each section would have to be edited to say
+ * something no section actually differs on.
  */
 export type LibrarySection = {
   /** Route base, no trailing slash — `"/mates"`, `"/positions"`. */

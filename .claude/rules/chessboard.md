@@ -339,7 +339,7 @@ Consequences for a caller:
 | `/masked/play` | [`views/masked/play/MaskedPlay.tsx`](../../src/views/masked/play/MaskedPlay.tsx) | `Pieces` | The same screen with the pieces in disguise: `options.pieces` built from a `PieceMask` (`lib/pieceMask.ts`), and the notation masked to match. `usePlayWithEngine` reused verbatim |
 | `/games/load-pgn` | [`views/games/load_pgn/LoadPgn.tsx`](../../src/views/games/load_pgn/LoadPgn.tsx) | (composed) | A PGN pasted in, parsed to a `Game`, walked with the shared `MoveList` / `useGameNavigation` / `BoardControls` |
 | `/tools/analysis` | [`views/tools/analysis/AnalysisBoard.tsx`](../../src/views/tools/analysis/AnalysisBoard.tsx) | (composed) | Analysis: a **variation tree** (`lib/gameTree.ts`), PGN/FEN set-up and export, both colours movable, engine and eval bar switched independently |
-| `/mates/:category` | [`views/library/LibraryList.tsx`](../../src/views/library/LibraryList.tsx) | (composed) | A read-only preview board per card, several on one page — so `options.id` is the position's id, not a constant. `views/mates/list/MatesList.tsx` is the binding that reads the route parameter |
+| `/mates/:category` | [`views/library/LibraryList.tsx`](../../src/views/library/LibraryList.tsx) | (composed) | A read-only preview board per card, several on one page — so `options.id` is the position's id, not a constant. A fixed top bar (name + count, search, card-size toggle) over the one region that scrolls. `views/mates/list/MatesList.tsx` is the binding that reads the route parameter |
 | `/mates/:category/:id` | [`views/library/LibraryPositionDetail.tsx`](../../src/views/library/LibraryPositionDetail.tsx) | (composed) | One catalog position, read-only, facing the side to move, with the `?fen=` hand-off to the three screens that read one. `LibraryDetail.tsx` resolves the URL and dispatches on the item's kind; `views/mates/detail/MateDetail.tsx` is the binding |
 | `/positions/*` | [`views/positions/PositionsSection.tsx`](../../src/views/positions/PositionsSection.tsx) | (composed) | The same two screens over the endgame library, behind one splat route: the segments are resolved against a catalog nested to any depth. Some positions have the **defending** side to move, and the board faces it |
 | `/pgn/*` | [`views/pgn/UserPgnsSection.tsx`](../../src/views/pgn/UserPgnsSection.tsx) | (composed) | The same two screens again, over a library whose items are whole **games** out of the project's `.pgn` files. A card previews the game's starting position; the detail screen is [`views/library/LibraryGameDetail.tsx`](../../src/views/library/LibraryGameDetail.tsx), which replays it over the shared `MoveList` / `BoardControls` / `useGameNavigation` and hands it on with `?game=` |
@@ -375,11 +375,23 @@ you need the smallest version of one.
   which both engine-play screens render. **A third screen with an eval bar
   renders that, rather than copying the `calc()`.**
 
-**And two the library sections add:**
+**And three the library sections add:**
 
 - **A read-only board is a board, and it still takes an `options.id` that is
   unique on the page.** A list screen renders one per card, so the id is the
   item's id (`LibraryList`'s `previewOptions`), never a constant.
+- **A screen that scrolls inside the board square divides that square up
+  itself, and a grid of `auto` rows will not scroll.** The shell hands the
+  screen a fixed-height box and scrolls nothing in it, so `LibraryList` is a
+  flex column — a `flexShrink: 0` top bar over a `flex: 1; minHeight: 0;
+  overflowY: auto` region. That much is the usual pattern; the trap is the
+  next line. An `auto` grid row inside a box whose height is *definite* is
+  stretched to share that height out — `alignContent: "start"` does not stop it
+  — so the cards were squashed to a quarter of their height, clipped by `Card`'s
+  own `overflow: hidden`, and there was never any overflow to scroll.
+  **`gridAutoRows: "max-content"` is what makes a row as tall as the card in
+  it**, and therefore what makes the region scroll at all. Any board screen that
+  grids content inside the square needs the same.
 - **A position turns the board; a game does not.** `LibraryPositionDetail` faces
   the side to move, because that is what `/engine/play` will do with the same FEN
   a click later and the board must not turn under the reader on the way over.
