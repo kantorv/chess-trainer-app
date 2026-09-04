@@ -10,6 +10,7 @@ import { matesSection } from "../library/section";
 import { pgnCatalog } from "../../lib/pgnCatalog";
 import { initialFenOf } from "../../lib/gameModel";
 import { fenAtPly } from "../../lib/gameNavigation";
+import { extractPgnComments, hasPgnComments } from "../../lib/pgnComments";
 import { RightPanelOutlet, RightPanelProvider } from "../main/rightPanel";
 import UserPgnsSection from "./UserPgnsSection";
 
@@ -258,6 +259,73 @@ describe("the User PGNs section", () => {
       "There is no such game in this folder.",
     );
     expect(screen.queryByTestId("board")).toBeNull();
+  });
+
+  it("opens on the Moves tab, not the new Description tab", () => {
+    renderAt(`/pgn/${PLAYED}/${played.id}`);
+
+    expect(
+      screen.getByTestId("user-pgn-detail-content-moves"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("user-pgn-detail-content-description"),
+    ).toBeNull();
+  });
+
+  it("shows the chapter's re-flowed preamble in the Description tab", async () => {
+    // Rosettes Chapter 1 opens with a multi-paragraph note on the starting
+    // position and carries no per-move comments.
+    renderAt(`/pgn/${STUDY}/chapter-1`);
+
+    await userEvent.click(screen.getByTestId("user-pgn-tab-description"));
+
+    const preamble = screen.getByTestId("user-pgn-description-preamble");
+    expect(preamble).toHaveTextContent("three different rosette types");
+    // The numbered points the source wrote with single newlines survive as
+    // their own paragraphs.
+    expect(preamble.querySelectorAll("p").length).toBeGreaterThan(1);
+  });
+
+  it("labels each move comment and jumps the board to that ply on click", async () => {
+    const comments = extractPgnComments(played.pgn);
+    const first = comments.moves[0];
+    expect(first).toBeDefined();
+
+    renderAt(`/pgn/${PLAYED}/${played.id}`);
+    await userEvent.click(screen.getByTestId("user-pgn-tab-description"));
+
+    const entry = screen.getByTestId(
+      `user-pgn-description-entry-${first.ply}`,
+    );
+    expect(entry).toHaveTextContent(played.game.moves[first.ply - 1].san);
+
+    await userEvent.click(entry);
+
+    expect(screen.getByTestId("board")).toHaveAttribute(
+      "data-position",
+      fenAtPly(played.game, first.ply),
+    );
+  });
+
+  it("shows an explicit empty state for a game with no comments", async () => {
+    const PUZZLES =
+      "lichess-study-puzzles-custom-set-1-by-lalala732-2026-05-03";
+    const bare = itemsInLibraryCategory(PUZZLES, pgnCatalog).find(
+      (item) =>
+        item.kind === "game" && !hasPgnComments(extractPgnComments(item.pgn)),
+    );
+    if (bare === undefined || bare.kind !== "game") {
+      throw new Error("expected a puzzle chapter with no comments");
+    }
+
+    renderAt(`/pgn/${PUZZLES}/${bare.id}`);
+    await userEvent.click(screen.getByTestId("user-pgn-tab-description"));
+
+    const panel = screen.getByTestId("user-pgn-description");
+    expect(panel).toHaveTextContent("This game has no annotations.");
+    expect(
+      screen.queryAllByTestId(/^user-pgn-description-entry-/),
+    ).toHaveLength(0);
   });
 
   it("translates its chrome, and takes its content from the PGN, under Hebrew", async () => {
