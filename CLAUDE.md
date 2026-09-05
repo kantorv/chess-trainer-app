@@ -399,6 +399,21 @@ other two parameters already keep: `parseMoveParam` (`lib/gameNavigation.ts`)
 ignores anything that is not a non-negative integer, and a value past the end
 of the game is clamped on read, exactly like a ply from any other source.
 
+**A game can also declare its own opening ply: the `StartPly` tag.**
+`[StartPly "27"]` in a `.pgn` says the game opens at ply 27 — a puzzle
+collection's chapters each open at the position they are about, rather than at
+the game's start. The declaration lives in the content file, not in
+`src/data/pgn.json` (which stays folder chrome), so a reader's uploaded file
+declares it exactly as a shipped one does. `initialPlyOf`
+(`lib/gameNavigation.ts`) is the one reader: absent, unreadable or
+past-the-end is "no declaration" — ply 0, with an out-of-range value ignored
+whole rather than clamped, because a tag naming a move the game does not have
+is a broken tag, not a request for the final position. Precedence composes at
+each of the three places a game opens (the detail page, Load PGN, the Analysis
+Board) as one line: `parseMoveParam(?move=) ?? initialPlyOf(game)` — an
+explicit `?move=` wins over the tag, the tag wins over ply 0. Card preview
+boards are untouched: a card previews the game, not the puzzle point.
+
 The rules the libraries rest on:
 
 - **A position's name lives in the data, not in `src/locales`.** `he` is typed

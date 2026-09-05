@@ -6,6 +6,9 @@ import i18n from "../../../i18n";
 import AppThemeWithLang from "../../../theme/AppThemeWithLang";
 import { initialFenOf } from "../../../lib/gameModel";
 import { pgnCatalog } from "../../../lib/pgnCatalog";
+import { parsePgnGames } from "../../../lib/pgn";
+import { fenAtPly } from "../../../lib/gameNavigation";
+import { addUpload, clearUploads } from "../../../lib/pgnUploadStore";
 import { MAX_VARIATIONS_OFFERED } from "../../../lib/engineAnalysis";
 import { RightPanelOutlet, RightPanelProvider } from "../../main/rightPanel";
 import AnalysisBoard from "./AnalysisBoard";
@@ -778,6 +781,45 @@ describe("Analysis Board — arriving with a whole game", () => {
     );
 
     expect(position()).toBe(withVariations.game.moves.at(-1)!.fen);
+  });
+
+  describe("with a StartPly tag", () => {
+    /*
+      Seeded through an upload: the tag lives in the PGN text itself, so an
+      uploaded file declares it exactly as a shipped one would. The ply is a
+      *mainline* walk, the same unit a `?move=` speaks.
+    */
+    const START_PLY_PGN = `[Event "Uploaded: Chapter 1"]
+[Result "*"]
+[StudyName "Uploaded Study"]
+[ChapterName "Chapter 1"]
+[StartPly "3"]
+
+1. e4 e5 2. Nf3 Nc6 3. Bb5 *
+
+`;
+
+    const tagged = parsePgnGames(START_PLY_PGN)[0];
+    const taggedReference = "pgn/uploads/my-study/chapter-1";
+
+    beforeEach(() => {
+      clearUploads();
+      addUpload("my_study.pgn", START_PLY_PGN);
+    });
+
+    it("opens on the mainline ply the game's StartPly tag declares", () => {
+      renderScreen(`/tools/analysis?game=${encodeURIComponent(taggedReference)}`);
+
+      expect(position()).toBe(fenAtPly(tagged, 3));
+    });
+
+    it("lets an explicit ?move= win over the tag", () => {
+      renderScreen(
+        `/tools/analysis?game=${encodeURIComponent(taggedReference)}&move=1`,
+      );
+
+      expect(position()).toBe(fenAtPly(tagged, 1));
+    });
   });
 });
 
