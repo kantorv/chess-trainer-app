@@ -18,7 +18,11 @@ import { Chessboard, type ChessboardOptions } from "react-chessboard";
 import { asAppLanguage } from "../../i18n";
 import { gameReferenceOf } from "../../lib/gameReference";
 import { initialFenOf } from "../../lib/gameModel";
-import { parseMoveParam, startNumbering } from "../../lib/gameNavigation";
+import {
+  initialPlyOf,
+  parseMoveParam,
+  startNumbering,
+} from "../../lib/gameNavigation";
 import { extractPgnComments, hasPgnComments } from "../../lib/pgnComments";
 import {
   localizedText,
@@ -103,12 +107,13 @@ function LibraryGameDetail({ section, category, item }: Props) {
     The `?move=` arrival. Re-parsed on every render but only the first render's
     value ever lands — `useGameNavigation` seeds its state from it once, because
     arriving at the URL is what mounts the screen; there is no effect syncing a
-    later param change back in. A value that will not parse is ply 0, the same
-    as it not being there (`parseMoveParam`).
+    later param change back in. A value that will not parse falls back to the
+    game's own `StartPly` tag — the ply a puzzle chapter declares it opens on —
+    and a game without one opens at ply 0, as it always has.
   */
   const { ply, lastPly, fen, arrows, goToPly } = useGameNavigation(
     item.game,
-    parseMoveParam(searchParams.get("move")),
+    parseMoveParam(searchParams.get("move")) ?? initialPlyOf(item.game),
   );
 
   /*

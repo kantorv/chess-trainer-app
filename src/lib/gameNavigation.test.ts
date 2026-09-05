@@ -7,6 +7,7 @@ import {
   arrowsAtPly,
   clampPly,
   fenAtPly,
+  initialPlyOf,
   lastPlyOf,
   moveRowsOf,
   parseMoveParam,
@@ -146,5 +147,39 @@ describe("parseMoveParam", () => {
 
   it("does not bound the value — too large is clampPly's call, not this one's", () => {
     expect(parseMoveParam("99999")).toBe(99999);
+  });
+});
+
+describe("initialPlyOf", () => {
+  /** The fixture above (`game`) has five plies; `startPly` reheads it. */
+  const startPly = (value: string | undefined): Game => ({
+    ...game,
+    headers: value === undefined ? {} : { StartPly: value },
+  });
+
+  it("is 0 for a game that declares no StartPly", () => {
+    expect(initialPlyOf(game)).toBe(0);
+  });
+
+  it("reads the ply the StartPly tag declares", () => {
+    expect(initialPlyOf(startPly("0"))).toBe(0);
+    expect(initialPlyOf(startPly("3"))).toBe(3);
+    expect(initialPlyOf(startPly("5"))).toBe(5);
+  });
+
+  it.each(["abc", "-3", "2.5", "e4", ""])(
+    "treats a value that is not a ply (%s) as no declaration",
+    (value) => {
+      expect(initialPlyOf(startPly(value))).toBe(0);
+    },
+  );
+
+  it("ignores a ply past the end of the game whole, rather than clamping it", () => {
+    expect(initialPlyOf(startPly("6"))).toBe(0);
+    expect(initialPlyOf(startPly("99999"))).toBe(0);
+  });
+
+  it("ignores the PGN placeholders gameTag reports as absent", () => {
+    expect(initialPlyOf(startPly("?"))).toBe(0);
   });
 });

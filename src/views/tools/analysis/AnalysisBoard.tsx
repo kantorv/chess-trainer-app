@@ -15,7 +15,7 @@ import {
 } from "react-chessboard";
 import { FenParseError, parseFen } from "../../../lib/fen";
 import { resolveGameReference } from "../../../lib/gameReference";
-import { parseMoveParam } from "../../../lib/gameNavigation";
+import { initialPlyOf, parseMoveParam } from "../../../lib/gameNavigation";
 import type { GameTree } from "../../../lib/gameTree";
 import {
   EmptyPgnError,
@@ -107,25 +107,32 @@ function AnalysisBoard() {
     empty rather than throwing on a bad link.
   */
   const requestedGame = searchParams.get("game");
+  const arrived = useMemo(
+    () => resolveGameReference(requestedGame),
+    [requestedGame],
+  );
   const initialTree = useMemo(() => {
-    const found = resolveGameReference(requestedGame);
-    if (found === undefined) return undefined;
+    if (arrived === undefined) return undefined;
     try {
-      return parsePgnTree(found.pgn);
+      return parsePgnTree(arrived.pgn);
     } catch {
       return undefined;
     }
-  }, [requestedGame]);
+  }, [arrived]);
 
   /*
     The `?move=` that rode beside the `?game=`, if any: the mainline ply the
     board opens on. Read with the same discipline as its siblings — parsed once,
     and a value that will not parse is as absent as the parameter being missing.
+    Then the game's own `StartPly` tag has its say: a puzzle chapter opens on
+    the position it is about, and a game without one opens at ply 0.
   */
   const requestedMove = searchParams.get("move");
   const initialPly = useMemo(
-    () => parseMoveParam(requestedMove),
-    [requestedMove],
+    () =>
+      parseMoveParam(requestedMove) ??
+      (arrived === undefined ? undefined : initialPlyOf(arrived.game)),
+    [requestedMove, arrived],
   );
 
   const state = useAnalysisBoard(initialFen, initialTree, initialPly);

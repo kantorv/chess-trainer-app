@@ -9,6 +9,7 @@ import { finalFenOf } from "../../../lib/gameModel";
 import { RightPanelOutlet, RightPanelProvider } from "../../main/rightPanel";
 import { itemsInLibraryCategory } from "../../../lib/libraryCatalog";
 import { pgnCatalog } from "../../../lib/pgnCatalog";
+import { addUpload, clearUploads } from "../../../lib/pgnUploadStore";
 import { fenAtPly } from "../../../lib/gameNavigation";
 import LoadPgn from "./LoadPgn";
 
@@ -332,5 +333,49 @@ describe("the Load PGN screen — arriving with a game", () => {
       "data-position",
       fenAtPly(played.game, played.game.moves.length),
     );
+  });
+
+  describe("with a StartPly tag", () => {
+    /*
+      Seeded through an upload: the tag lives in the PGN text itself, so an
+      uploaded file declares it exactly as a shipped one would.
+    */
+    const START_PLY_PGN = `[Event "Uploaded: Chapter 1"]
+[Result "*"]
+[StudyName "Uploaded Study"]
+[ChapterName "Chapter 1"]
+[StartPly "3"]
+
+1. e4 e5 2. Nf3 Nc6 3. Bb5 *
+
+`;
+
+    const tagged = parsePgnGames(START_PLY_PGN)[0];
+    const taggedReference = "pgn/uploads/my-study/chapter-1";
+
+    beforeEach(() => {
+      clearUploads();
+      addUpload("my_study.pgn", START_PLY_PGN);
+    });
+
+    it("opens on the ply the game's StartPly tag declares", () => {
+      renderScreen(`/games/load-pgn?game=${encodeURIComponent(taggedReference)}`);
+
+      expect(screen.getByTestId("pgn-board")).toHaveAttribute(
+        "data-position",
+        fenAtPly(tagged, 3),
+      );
+    });
+
+    it("lets an explicit ?move= win over the tag", () => {
+      renderScreen(
+        `/games/load-pgn?game=${encodeURIComponent(taggedReference)}&move=1`,
+      );
+
+      expect(screen.getByTestId("pgn-board")).toHaveAttribute(
+        "data-position",
+        fenAtPly(tagged, 1),
+      );
+    });
   });
 });

@@ -16,6 +16,7 @@ import { matesSection } from "../library/section";
 import { pgnCatalog } from "../../lib/pgnCatalog";
 import { initialFenOf } from "../../lib/gameModel";
 import { fenAtPly } from "../../lib/gameNavigation";
+import { parsePgnGames } from "../../lib/pgn";
 import { extractPgnComments, hasPgnComments } from "../../lib/pgnComments";
 import { RightPanelOutlet, RightPanelProvider } from "../main/rightPanel";
 import { LeftPanelOutlet, LeftPanelProvider } from "../main/leftPanel";
@@ -336,6 +337,63 @@ describe("the User PGNs section", () => {
       expect(screen.getByTestId("board")).toHaveAttribute(
         "data-position",
         fenAtPly(played.game, 0),
+      );
+    });
+  });
+
+  describe("the StartPly tag", () => {
+    /*
+      The second source of an opening ply: a game's `[StartPly "N"]` tag pair.
+      Seeded through an upload, which is also the proof that a reader's own file
+      gets the feature — it goes through the same loader and the same detail
+      screen as a shipped one.
+    */
+    const START_PLY_PGN = `[Event "Uploaded: Chapter 1"]
+[Result "*"]
+[StudyName "Uploaded Study"]
+[ChapterName "Chapter 1"]
+[StartPly "3"]
+
+1. e4 e5 2. Nf3 Nc6 3. Bb5 *
+
+`;
+
+    const tagged = parsePgnGames(START_PLY_PGN)[0];
+
+    beforeEach(() => {
+      clearUploads();
+    });
+
+    it("opens on the ply the tag declares when the URL names none", () => {
+      addUpload("my_study.pgn", START_PLY_PGN);
+      renderAt("/pgn/uploads/my-study/chapter-1");
+
+      expect(screen.getByTestId("board")).toHaveAttribute(
+        "data-position",
+        fenAtPly(tagged, 3),
+      );
+    });
+
+    it("lets an explicit ?move= win over the tag", () => {
+      addUpload("my_study.pgn", START_PLY_PGN);
+      renderAt("/pgn/uploads/my-study/chapter-1?move=1");
+
+      expect(screen.getByTestId("board")).toHaveAttribute(
+        "data-position",
+        fenAtPly(tagged, 1),
+      );
+    });
+
+    it("opens at ply 0 when the tag names a ply the game does not have", () => {
+      addUpload(
+        "my_study.pgn",
+        START_PLY_PGN.replace('[StartPly "3"]', '[StartPly "99"]'),
+      );
+      renderAt("/pgn/uploads/my-study/chapter-1");
+
+      expect(screen.getByTestId("board")).toHaveAttribute(
+        "data-position",
+        fenAtPly(tagged, 0),
       );
     });
   });

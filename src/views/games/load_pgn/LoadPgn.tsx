@@ -11,7 +11,7 @@ import { useSearchParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import { Chessboard, type ChessboardOptions } from "react-chessboard";
 import { resolveGameReference } from "../../../lib/gameReference";
-import { parseMoveParam } from "../../../lib/gameNavigation";
+import { initialPlyOf, parseMoveParam } from "../../../lib/gameNavigation";
 import { EmptyPgnError, PgnParseError, parsePgnGames } from "../../../lib/pgn";
 import type { Game } from "../../../lib/gameModel";
 import { RightPanel } from "../../main/rightPanel";
@@ -47,10 +47,12 @@ import { useGameNavigation } from "../../shared/useGameNavigation";
  * state, because arriving at the URL mounts the screen; a reference that names
  * nothing opens the empty screen, exactly as a mistyped `?fen=` does elsewhere.
  *
- * It opens at **ply 0**, where a pasted game opens at its final position. The
- * difference is not an inconsistency: a paste opens at the end because that is
- * the proof it all parsed, while a game a reader picked out of a library and
- * asked to open is one they mean to replay — and a replay starts at the start.
+ * It opens at **ply 0**, where a pasted game opens at its final position —
+ * unless the game declares otherwise with a `StartPly` tag (see
+ * `initialPlyOf`). The difference from a paste is not an inconsistency: a
+ * paste opens at the end because that is the proof it all parsed, while a game
+ * a reader picked out of a library and asked to open is one they mean to
+ * replay — and a replay starts where the game says it starts.
  */
 
 function LoadPgn() {
@@ -70,13 +72,16 @@ function LoadPgn() {
   /*
     The `?move=` that rode beside the `?game=`, if this is that hand-off: the
     ply the reader was on becomes the first render's ply (clamped on read, like
-    any ply). Absent or unreadable means ply 0 — the arrival's long-standing
-    default.
+    any ply). Absent or unreadable, the arrived game's own `StartPly` tag is the
+    next say — a puzzle chapter opens on the position it is about — and a game
+    without one opens at ply 0, the arrival's long-standing default.
   */
   const requestedMove = searchParams.get("move");
   const initialPly = useMemo(
-    () => parseMoveParam(requestedMove) ?? 0,
-    [requestedMove],
+    () =>
+      parseMoveParam(requestedMove) ??
+      (arrived === undefined ? 0 : initialPlyOf(arrived.game)),
+    [requestedMove, arrived],
   );
 
   const [games, setGames] = useState<readonly Game[]>(() =>
