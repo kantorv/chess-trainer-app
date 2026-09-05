@@ -8,18 +8,21 @@ import { useTranslation } from "react-i18next";
 import { formatScore } from "../../../lib/engineAnalysis";
 import BestVariations from "../../shared/BestVariations";
 import BoardControls from "../../shared/BoardControls";
+import CurrentOpening from "../../shared/CurrentOpening";
 import MoveList from "../../shared/MoveList";
 import EngineSettings from "./EngineSettings";
 import type { PlayWithEngineState } from "./usePlayWithEngine";
 
 /**
- * The Play with Engine screen's whole right-hand panel: a tab strip, the tab's
- * content, and the board controls pinned to the foot — the same three-region
- * column the Load PGN panel uses, because it is the same shell aside and the
- * same non-scrolling flex column (`Layout.tsx`).
+ * The Play with Engine screen's whole right-hand panel: the live opening line,
+ * a tab strip, the tab's content, and the board controls pinned to the foot —
+ * the same three-region column the Load PGN panel uses, because it is the same
+ * shell aside and the same non-scrolling flex column (`Layout.tsx`).
  *
  * ```
  * ┌──────────────────────────┐
+ * │ King's Pawn Game    B00  │  current opening — fixed
+ * ├──────────────────────────┤
  * │ Game │ Engine │ Lines    │  tab strip — fixed
  * ├──────────────────────────┤
  * │ the active tab           │  scrolls
@@ -58,6 +61,9 @@ function EnginePanel({ state }: { state: PlayWithEngineState }) {
         gap: 1,
       }}
     >
+      {/* The opening at the ply on screen — it steps back with the board. */}
+      <CurrentOpening fen={state.fen} testId="engine-current-opening" />
+
       <Tabs
         value={tab}
         onChange={(_event, next: TabId) => setTab(next)}

@@ -108,6 +108,15 @@ const harness = vi.hoisted(() => {
 
 vi.mock("../../../lib/engine", () => ({ default: harness.FakeEngine }));
 
+
+/* The opening book stays stubbed — the panel's new opening line must not pull
+   the real ~3MB eco.json into a screen test. */
+vi.mock("../../../lib/openings", () => ({
+  loadOpeningBook: () => Promise.resolve({}),
+  getPositionBook: () => ({}),
+  findOpening: () => undefined,
+}));
+
 vi.mock("react-chessboard", () => ({
   Chessboard: ({ options }: { options: Record<string, never> }) => {
     harness.board.options = options;

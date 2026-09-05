@@ -18,6 +18,15 @@ import LoadPgn from "./LoadPgn";
   This stub records the arrows as well as the position, which is what the
   "recomputed, never accumulated" assertions read.
 */
+
+/* The opening book stays stubbed — the panel's new opening line must not pull
+   the real ~3MB eco.json into a screen test. */
+vi.mock("../../../lib/openings", () => ({
+  loadOpeningBook: () => Promise.resolve({}),
+  getPositionBook: () => ({}),
+  findOpening: () => undefined,
+}));
+
 vi.mock("react-chessboard", () => ({
   Chessboard: ({
     options,

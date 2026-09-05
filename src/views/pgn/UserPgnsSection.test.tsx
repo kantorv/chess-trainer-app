@@ -25,6 +25,15 @@ import UserPgnsSection from "./UserPgnsSection";
 
 /* Stubbed for the reason in `.claude/rules/chessboard.md` §8 — jsdom has no
    layout engine, and a real board throws from its mount effect. */
+
+/* The opening book stays stubbed — the panel's new opening line must not pull
+   the real ~3MB eco.json into a screen test. */
+vi.mock("../../lib/openings", () => ({
+  loadOpeningBook: () => Promise.resolve({}),
+  getPositionBook: () => ({}),
+  findOpening: () => undefined,
+}));
+
 vi.mock("react-chessboard", () => ({
   Chessboard: ({
     options,

@@ -9,6 +9,7 @@ import { formatScore } from "../../../lib/engineAnalysis";
 import type { PieceMask } from "../../../lib/pieceMask";
 import BestVariations from "../../shared/BestVariations";
 import BoardControls from "../../shared/BoardControls";
+import CurrentOpening from "../../shared/CurrentOpening";
 import MoveList from "../../shared/MoveList";
 import EngineSettings from "../../engine/play/EngineSettings";
 import type { PlayWithEngineState } from "../../engine/play/usePlayWithEngine";
@@ -20,6 +21,8 @@ import MaskEditor from "./MaskEditor";
  *
  * ```
  * ┌──────────────────────────────────┐
+ * │ King's Pawn Game           B00   │  current opening — fixed
+ * ├──────────────────────────────────┤
  * │ Game │ Engine │ Lines │ Masking  │  tab strip — fixed
  * ├──────────────────────────────────┤
  * │ the active tab                   │  scrolls
@@ -81,6 +84,12 @@ function MaskedPanel({
         gap: 1,
       }}
     >
+      {/*
+        The opening at the ply on screen. It names the *real* line — the mask
+        disguises how pieces are drawn, never what the game is.
+      */}
+      <CurrentOpening fen={state.fen} testId="masked-current-opening" />
+
       <Tabs
         value={tab}
         onChange={(_event, next: TabId) => setTab(next)}

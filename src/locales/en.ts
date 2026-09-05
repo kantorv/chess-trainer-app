@@ -190,10 +190,6 @@ const en = {
     versus: "vs",
     movesLoaded: "Moves: {{total}}",
     emptyState: "No game loaded yet.",
-    controls: {
-      /** Opens the Openings screen on the position at the ply on screen. */
-      openInOpenings: "Open in Openings",
-    },
     errors: {
       empty: "No PGN found in that input.",
       /** `detail` is the underlying chess.js message — English, but specific. */
@@ -248,10 +244,6 @@ const en = {
       engine: "Engine",
       lines: "Variations",
       position: "Position",
-    },
-    controls: {
-      /** Opens the Openings screen on the position at the ply on screen. */
-      openInOpenings: "Open in Openings",
     },
     /** The variation tree, where a move list has to say more than "Moves". */
     tree: {
@@ -397,6 +389,8 @@ const en = {
       unknown: "No known opening yet.",
       /** The book itself is still loading. */
       loading: "Loading the opening book…",
+      /** The ECO chip's accessible name — it is the link into the explorer. */
+      open: "Explore {{eco}} in the Openings explorer",
     },
     nextMoves: {
       empty: "No legal moves from here.",
@@ -637,7 +631,6 @@ const en = {
       openInLoadPgn: "PGN viewer",
       playWithEngine: "Play Engine",
       openInEditor: "Board Editor",
-      openInOpenings: "Openings",
       /** The Description tab's empty state — a game whose PGN carried no comments. */
       noDescription: "This game has no annotations.",
     },

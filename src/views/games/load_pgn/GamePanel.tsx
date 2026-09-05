@@ -1,25 +1,26 @@
 import { useState, type ReactNode } from "react";
 import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
 import Tab from "@mui/material/Tab";
 import Tabs from "@mui/material/Tabs";
-import TravelExploreRoundedIcon from "@mui/icons-material/TravelExploreRounded";
 import { useTranslation } from "react-i18next";
 import type { Game } from "../../../lib/gameModel";
 import BoardControls from "../../shared/BoardControls";
+import CurrentOpening from "../../shared/CurrentOpening";
 import GameInfo from "../../shared/GameInfo";
 import MoveList from "../../shared/MoveList";
 
 /**
- * The screen's whole right-hand panel: a tab strip, the tab's content, and the
- * board controls pinned to the foot.
+ * The screen's whole right-hand panel: the live opening line, a tab strip, the
+ * tab's content, and the board controls pinned to the foot.
  *
- * Three regions stacked in a column that fills the shell's aside — the aside is
+ * Regions stacked in a column that fills the shell's aside — the aside is
  * a non-scrolling flex column for exactly this (see `Layout.tsx`), so the tab
  * strip and the controls stay put while only the content between them scrolls.
  *
  * ```
  * ┌──────────────────────────┐
+ * │ King's Pawn Game    B00  │  current opening — fixed
+ * ├──────────────────────────┤
  * │ Moves │ Info │ Load PGN  │  tab strip — fixed
  * ├──────────────────────────┤
  * │ the active tab           │  scrolls
@@ -41,10 +42,10 @@ type GamePanelProps = {
   game: Game | undefined;
   ply: number;
   lastPly: number;
+  /** The position at the ply on screen — what the opening line names. */
+  fen: string;
   onSelectPly: (ply: number) => void;
   onFlip: () => void;
-  /** Open the Openings explorer on the position at the ply on screen. */
-  onOpenInOpenings: () => void;
   /** The Load PGN tab's contents — owned by the screen, which holds the ingestion state. */
   ingest: ReactNode;
 };
@@ -53,9 +54,9 @@ function GamePanel({
   game,
   ply,
   lastPly,
+  fen,
   onSelectPly,
   onFlip,
-  onOpenInOpenings,
   ingest,
 }: GamePanelProps) {
   const { t } = useTranslation();
@@ -90,6 +91,12 @@ function GamePanel({
         gap: 1,
       }}
     >
+      {/*
+        The opening at the ply on screen — with no game loaded this is the
+        starting position, which the book honestly reports as not yet named.
+      */}
+      <CurrentOpening fen={fen} testId="load-pgn-current-opening" />
+
       <Tabs
         value={tab}
         onChange={(_event, next: TabId) => setTab(next)}
@@ -122,19 +129,6 @@ function GamePanel({
         )}
         {tab === "info" && <GameInfo game={game} />}
         {tab === "load" && ingest}
-      </Box>
-
-      <Box sx={{ flexShrink: 0 }}>
-        <Button
-          size="small"
-          variant="outlined"
-          fullWidth
-          startIcon={<TravelExploreRoundedIcon fontSize="small" />}
-          data-testid="load-pgn-open-in-openings"
-          onClick={onOpenInOpenings}
-        >
-          {t("loadPgn.controls.openInOpenings")}
-        </Button>
       </Box>
 
       <BoardControls
