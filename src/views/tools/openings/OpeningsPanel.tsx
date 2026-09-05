@@ -11,6 +11,7 @@ import RestartAltRoundedIcon from "@mui/icons-material/RestartAltRounded";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import BoardControls from "../../shared/BoardControls";
+import CurrentOpening from "../../shared/CurrentOpening";
 import MoveList from "../../shared/MoveList";
 import type { OpeningsState } from "./useOpenings";
 
@@ -60,7 +61,6 @@ function OpeningsPanel({ state }: { state: OpeningsState }) {
       }}
     >
       <Box
-        data-testid="openings-current"
         sx={{
           flexShrink: 0,
           display: "flex",
@@ -68,27 +68,14 @@ function OpeningsPanel({ state }: { state: OpeningsState }) {
           gap: 1,
         }}
       >
-        <Box sx={{ flexGrow: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 1 }}>
-          {state.currentOpening ? (
-            <>
-              <Typography
-                variant="subtitle2"
-                dir="ltr"
-                sx={{ fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis" }}
-              >
-                {state.currentOpening.name}
-              </Typography>
-              <Chip size="small" dir="ltr" label={state.currentOpening.eco} />
-            </>
-          ) : (
-            <Typography variant="body2" sx={{ color: "text.secondary" }}>
-              {t(
-                state.bookLoaded
-                  ? "openings.current.unknown"
-                  : "openings.current.loading",
-              )}
-            </Typography>
-          )}
+        {/*
+          The shared "current opening" line every game screen carries — here it
+          looks up the same book `useOpenings` already loaded (the promise is
+          cached), and its ECO chip links back to this very screen with the
+          position on screen as `?fen=`.
+        */}
+        <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+          <CurrentOpening fen={state.fen} testId="openings-current" />
         </Box>
 
         <Button

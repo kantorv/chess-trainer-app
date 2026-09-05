@@ -11,7 +11,6 @@ import QueryStatsRoundedIcon from "@mui/icons-material/QueryStatsRounded";
 import MenuBookRoundedIcon from "@mui/icons-material/MenuBookRounded";
 import PlayArrowRoundedIcon from "@mui/icons-material/PlayArrowRounded";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
-import TravelExploreRoundedIcon from "@mui/icons-material/TravelExploreRounded";
 import { createSearchParams, useNavigate, useSearchParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import { Chessboard, type ChessboardOptions } from "react-chessboard";
@@ -32,6 +31,7 @@ import {
 } from "../../lib/libraryCatalog";
 import BoardControls from "../shared/BoardControls";
 import CopyableValue from "../shared/CopyableValue";
+import CurrentOpening from "../shared/CurrentOpening";
 import GameInfo from "../shared/GameInfo";
 import MoveList from "../shared/MoveList";
 import { useGameNavigation } from "../shared/useGameNavigation";
@@ -79,7 +79,7 @@ import type { LibrarySection } from "./section";
 const TAB_IDS = ["moves", "info", "description"] as const;
 type TabId = (typeof TAB_IDS)[number];
 
-/** The four hand-offs, sized down to fit beside the close button in the head. */
+/** The three hand-offs, sized down to fit beside the close button in the head. */
 const compactButtonSx = {
   fontSize: "0.6875rem",
   lineHeight: 1.2,
@@ -235,7 +235,7 @@ function LibraryGameDetail({ section, category, item }: Props) {
               }}
             >
               {/*
-                The four hand-offs, top-left — where `BackToCategory` used to
+                The three hand-offs, top-left — where `BackToCategory` used to
                 sit. That link is gone: it pointed at the same folder the new
                 close button (top-right) does, so keeping both was one exit
                 twice over.
@@ -281,16 +281,6 @@ function LibraryGameDetail({ section, category, item }: Props) {
                 >
                   {t(`${section.chromeKey}.detail.openInEditor`)}
                 </Button>
-                <Button
-                  size="small"
-                  variant="outlined"
-                  startIcon={<TravelExploreRoundedIcon sx={{ fontSize: "1rem" }} />}
-                  onClick={handOffFenTo("/tools/openings")}
-                  data-testid={`${section.itemTestId}-open-openings`}
-                  sx={compactButtonSx}
-                >
-                  {t(`${section.chromeKey}.detail.openInOpenings`)}
-                </Button>
               </Box>
               {/*
                 A second, terser way out — top-right, the conventional close
@@ -315,6 +305,16 @@ function LibraryGameDetail({ section, category, item }: Props) {
                 count: item.game.moves.length,
               })}
             </Typography>
+            {/*
+              The opening at the ply on screen, stepping with the reader — the
+              live lookup that replaced the "Open in Openings" hand-off button.
+            */}
+            <Box sx={{ mt: 1 }}>
+              <CurrentOpening
+                fen={fen}
+                testId={`${section.itemTestId}-current-opening`}
+              />
+            </Box>
           </Box>
 
           <Tabs

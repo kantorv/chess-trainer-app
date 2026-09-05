@@ -1,15 +1,14 @@
 import { useState, type ReactNode } from "react";
 import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
 import Tab from "@mui/material/Tab";
 import Tabs from "@mui/material/Tabs";
 import Typography from "@mui/material/Typography";
-import TravelExploreRoundedIcon from "@mui/icons-material/TravelExploreRounded";
 import { useTranslation } from "react-i18next";
 import { formatScore } from "../../../lib/engineAnalysis";
 import BestVariations from "../../shared/BestVariations";
 import BoardControls from "../../shared/BoardControls";
+import CurrentOpening from "../../shared/CurrentOpening";
 import AnalysisSettings from "./AnalysisSettings";
 import VariationTree from "./VariationTree";
 import type { AnalysisBoardState } from "./useAnalysisBoard";
@@ -22,6 +21,8 @@ import type { AnalysisBoardState } from "./useAnalysisBoard";
  *
  * ```
  * ┌──────────────────────────────────┐
+ * │ King's Pawn Game           B00   │  current opening — fixed
+ * ├──────────────────────────────────┤
  * │ Moves │ Engine │ Lines │ Position│  tab strip — fixed
  * ├──────────────────────────────────┤
  * │ the active tab                   │  scrolls
@@ -49,13 +50,10 @@ type TabId = (typeof TAB_IDS)[number];
 function AnalysisPanel({
   state,
   position,
-  onOpenInOpenings,
 }: {
   state: AnalysisBoardState;
   /** The Position tab's content — see the note above on why it comes in. */
   position: ReactNode;
-  /** Open the Openings explorer on the position at the ply on screen. */
-  onOpenInOpenings: () => void;
 }) {
   const { t } = useTranslation();
   const [tab, setTab] = useState<TabId>("moves");
@@ -73,6 +71,12 @@ function AnalysisPanel({
         gap: 1,
       }}
     >
+      {/*
+        The opening at the node on screen — it follows the reader down side
+        lines, the way the evaluation line below it does.
+      */}
+      <CurrentOpening fen={state.fen} testId="analysis-current-opening" />
+
       <Tabs
         value={tab}
         onChange={(_event, next: TabId) => setTab(next)}
@@ -175,19 +179,6 @@ function AnalysisPanel({
             </Typography>
           ))}
         {tab === "position" && position}
-      </Box>
-
-      <Box sx={{ flexShrink: 0 }}>
-        <Button
-          size="small"
-          variant="outlined"
-          fullWidth
-          startIcon={<TravelExploreRoundedIcon fontSize="small" />}
-          data-testid="analysis-open-in-openings"
-          onClick={onOpenInOpenings}
-        >
-          {t("analysis.controls.openInOpenings")}
-        </Button>
       </Box>
 
       <BoardControls

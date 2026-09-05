@@ -19,6 +19,15 @@ import LoadPgn from "./LoadPgn";
   screen is about — the stub records the position it is handed, so the tests can
   still assert that the loaded game reaches it.
 */
+
+/* The opening book stays stubbed — the panel's new opening line must not pull
+   the real ~3MB eco.json into a screen test. */
+vi.mock("../../../lib/openings", () => ({
+  loadOpeningBook: () => Promise.resolve({}),
+  getPositionBook: () => ({}),
+  findOpening: () => undefined,
+}));
+
 vi.mock("react-chessboard", () => ({
   Chessboard: ({ options }: { options: { id?: string; position?: string } }) => (
     <div

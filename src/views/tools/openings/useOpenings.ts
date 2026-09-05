@@ -2,13 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Chess, type Square } from "chess.js";
 import { gameFromChess, type Game } from "../../../lib/gameModel";
 import {
-  findOpening,
   getPositionBook,
   loadOpeningBook,
   nextMoveOpenings,
   type NextMoveOpening,
   type OpeningBook,
-  type OpeningEntry,
   type PositionBook,
 } from "../../../lib/openings";
 import { useGameNavigation } from "../../shared/useGameNavigation";
@@ -64,11 +62,6 @@ export const useOpenings = (initialFen?: string) => {
       cancelled = true;
     };
   }, []);
-
-  const currentOpening: OpeningEntry | undefined = useMemo(
-    () => (book === null ? undefined : findOpening(book, fen, positionBook)),
-    [book, fen, positionBook],
-  );
 
   const nextMoves: NextMoveOpening[] = useMemo(
     () => (book === null ? [] : nextMoveOpenings(fen, book, positionBook)),
@@ -177,9 +170,6 @@ export const useOpenings = (initialFen?: string) => {
     resolvePromotion,
     onPieceDrop,
     newGame,
-    /** `undefined` while the book itself is still loading, not yet looked up. */
-    bookLoaded: book !== null,
-    currentOpening,
     nextMoves,
     playMove,
   };
