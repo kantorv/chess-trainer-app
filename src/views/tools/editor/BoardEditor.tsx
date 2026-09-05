@@ -322,6 +322,7 @@ function BoardEditor() {
             state={state}
             onContinueToAnalysis={handOffTo("/tools/analysis")}
             onPlayFromHere={handOffTo("/engine/play")}
+            onOpenInOpenings={handOffTo("/tools/openings")}
             fen={
               <FenSetup
                 fenText={fenText}

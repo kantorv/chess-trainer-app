@@ -18,6 +18,7 @@ const he: typeof en = {
     loadPgn: "טעינת PGN",
     analysisBoard: "לוח ניתוח",
     boardEditor: "עורך העמדות",
+    openings: "פתיחות",
     matesBasic: "מטים בסיסיים",
     matesAdvanced: "מטים מתקדמים",
     matesComplex: "מטים מורכבים",
@@ -140,6 +141,9 @@ const he: typeof en = {
     versus: "נגד",
     movesLoaded: "מהלכים: {{total}}",
     emptyState: "עדיין לא נטען משחק.",
+    controls: {
+      openInOpenings: "פתיחה במסך הפתיחות",
+    },
     errors: {
       empty: "לא נמצא PGN בקלט.",
       parse: "לא ניתן לקרוא את ה-PGN הזה. {{detail}}",
@@ -181,6 +185,9 @@ const he: typeof en = {
       engine: "מנוע",
       lines: "וריאציות",
       position: "עמדה",
+    },
+    controls: {
+      openInOpenings: "פתיחה במסך הפתיחות",
     },
     tree: {
       title: "מהלכים ווריאציות",
@@ -258,6 +265,7 @@ const he: typeof en = {
       flip: "היפוך הלוח",
       analysis: "המשך בלוח הניתוח",
       play: "שחקו מכאן",
+      openings: "פתיחה במסך הפתיחות",
     },
     problems: {
       title: "לא ניתן לשחק מהעמדה הזו עדיין:",
@@ -293,6 +301,12 @@ const he: typeof en = {
         file: "לא ניתן לקרוא את הקובץ.",
       },
     },
+  },
+  openings: {
+    tabs: { nextMoves: "מהלכים אפשריים", moves: "מהלכים" },
+    current: { unknown: "אין פתיחה מוכרת עדיין.", loading: "טוען את ספר הפתיחות…" },
+    nextMoves: { empty: "אין מהלכים חוקיים מכאן.", unknown: "לא פתיחה מוכרת" },
+    controls: { newGame: "משחק חדש" },
   },
   mates: {
     categories: {
@@ -425,6 +439,7 @@ const he: typeof en = {
       openInLoadPgn: "מציג PGN",
       playWithEngine: "משחק מול המנוע",
       openInEditor: "עורך הלוח",
+      openInOpenings: "פתיחות",
       noDescription: "למשחק הזה אין הערות.",
     },
     sideToMove: {

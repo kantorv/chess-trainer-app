@@ -3,6 +3,7 @@ import SportsEsportsRoundedIcon from "@mui/icons-material/SportsEsportsRounded";
 import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
 import AccountTreeRoundedIcon from "@mui/icons-material/AccountTreeRounded";
 import DashboardCustomizeRoundedIcon from "@mui/icons-material/DashboardCustomizeRounded";
+import TravelExploreRoundedIcon from "@mui/icons-material/TravelExploreRounded";
 import VisibilityOffRoundedIcon from "@mui/icons-material/VisibilityOffRounded";
 import ViewListRoundedIcon from "@mui/icons-material/ViewListRounded";
 
@@ -93,6 +94,12 @@ export const navItems = (): readonly NavItem[] => [
     to: "/tools/editor",
     labelKey: "nav.boardEditor",
     icon: DashboardCustomizeRoundedIcon,
+    folder: "tools",
+  },
+  {
+    to: "/tools/openings",
+    labelKey: "nav.openings",
+    icon: TravelExploreRoundedIcon,
     folder: "tools",
   },
 ];

@@ -1,7 +1,9 @@
 import { useState, type ReactNode } from "react";
 import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
 import Tab from "@mui/material/Tab";
 import Tabs from "@mui/material/Tabs";
+import TravelExploreRoundedIcon from "@mui/icons-material/TravelExploreRounded";
 import { useTranslation } from "react-i18next";
 import type { Game } from "../../../lib/gameModel";
 import BoardControls from "../../shared/BoardControls";
@@ -41,6 +43,8 @@ type GamePanelProps = {
   lastPly: number;
   onSelectPly: (ply: number) => void;
   onFlip: () => void;
+  /** Open the Openings explorer on the position at the ply on screen. */
+  onOpenInOpenings: () => void;
   /** The Load PGN tab's contents — owned by the screen, which holds the ingestion state. */
   ingest: ReactNode;
 };
@@ -51,6 +55,7 @@ function GamePanel({
   lastPly,
   onSelectPly,
   onFlip,
+  onOpenInOpenings,
   ingest,
 }: GamePanelProps) {
   const { t } = useTranslation();
@@ -117,6 +122,19 @@ function GamePanel({
         )}
         {tab === "info" && <GameInfo game={game} />}
         {tab === "load" && ingest}
+      </Box>
+
+      <Box sx={{ flexShrink: 0 }}>
+        <Button
+          size="small"
+          variant="outlined"
+          fullWidth
+          startIcon={<TravelExploreRoundedIcon fontSize="small" />}
+          data-testid="load-pgn-open-in-openings"
+          onClick={onOpenInOpenings}
+        >
+          {t("loadPgn.controls.openInOpenings")}
+        </Button>
       </Box>
 
       <BoardControls

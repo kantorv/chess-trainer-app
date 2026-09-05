@@ -22,6 +22,7 @@ const en = {
     loadPgn: "Load PGN",
     analysisBoard: "Analysis Board",
     boardEditor: "Board Editor",
+    openings: "Openings",
     /**
      * The three mates list screens. Each sits alone inside its own sub-folder,
      * so the label repeats the folder's word — with the section qualifier,
@@ -189,6 +190,10 @@ const en = {
     versus: "vs",
     movesLoaded: "Moves: {{total}}",
     emptyState: "No game loaded yet.",
+    controls: {
+      /** Opens the Openings screen on the position at the ply on screen. */
+      openInOpenings: "Open in Openings",
+    },
     errors: {
       empty: "No PGN found in that input.",
       /** `detail` is the underlying chess.js message — English, but specific. */
@@ -243,6 +248,10 @@ const en = {
       engine: "Engine",
       lines: "Variations",
       position: "Position",
+    },
+    controls: {
+      /** Opens the Openings screen on the position at the ply on screen. */
+      openInOpenings: "Open in Openings",
     },
     /** The variation tree, where a move list has to say more than "Moves". */
     tree: {
@@ -332,9 +341,10 @@ const en = {
       arrivalPosition: "Reset",
       clearBoard: "Clear board",
       flip: "Flip board",
-      /** The two hand-offs: both open another screen on the position being edited. */
+      /** The three hand-offs: each opens another screen on the position being edited. */
       analysis: "Continue on the Analysis Board",
       play: "Play from here",
+      openings: "Open in Openings",
     },
     problems: {
       title: "This position cannot be played from yet:",
@@ -371,6 +381,30 @@ const en = {
         parseGame: "Could not read game {{number}} in this file. {{detail}}",
         file: "Could not read that file.",
       },
+    },
+  },
+  /**
+   * The Openings screen. Chrome only: an opening's name and ECO code come
+   * from the bundled eco.json data (`lib/openings.ts`), not from here.
+   */
+  openings: {
+    tabs: {
+      nextMoves: "Next moves",
+      moves: "Moves",
+    },
+    current: {
+      /** The book has loaded, but this position is not in it. */
+      unknown: "No known opening yet.",
+      /** The book itself is still loading. */
+      loading: "Loading the opening book…",
+    },
+    nextMoves: {
+      empty: "No legal moves from here.",
+      /** A legal move eco.json has no name for. */
+      unknown: "Not a named opening",
+    },
+    controls: {
+      newGame: "New game",
     },
   },
   /**
@@ -603,6 +637,7 @@ const en = {
       openInLoadPgn: "PGN viewer",
       playWithEngine: "Play Engine",
       openInEditor: "Board Editor",
+      openInOpenings: "Openings",
       /** The Description tab's empty state — a game whose PGN carried no comments. */
       noDescription: "This game has no annotations.",
     },

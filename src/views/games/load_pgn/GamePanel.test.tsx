@@ -57,6 +57,7 @@ const renderPanel = (
         lastPly={5}
         onSelectPly={onSelectPly}
         onFlip={onFlip}
+        onOpenInOpenings={vi.fn()}
         ingest={<div data-testid="ingest" />}
         {...props}
       />
@@ -100,6 +101,7 @@ describe("the game panel's tabs", () => {
           lastPly={0}
           onSelectPly={vi.fn()}
           onFlip={vi.fn()}
+          onOpenInOpenings={vi.fn()}
           ingest={<div data-testid="ingest" />}
         />
       </AppThemeWithLang>,
@@ -114,6 +116,7 @@ describe("the game panel's tabs", () => {
           lastPly={5}
           onSelectPly={vi.fn()}
           onFlip={vi.fn()}
+          onOpenInOpenings={vi.fn()}
           ingest={<div data-testid="ingest" />}
         />
       </AppThemeWithLang>,

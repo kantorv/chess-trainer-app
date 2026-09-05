@@ -11,6 +11,7 @@ import QueryStatsRoundedIcon from "@mui/icons-material/QueryStatsRounded";
 import MenuBookRoundedIcon from "@mui/icons-material/MenuBookRounded";
 import PlayArrowRoundedIcon from "@mui/icons-material/PlayArrowRounded";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
+import TravelExploreRoundedIcon from "@mui/icons-material/TravelExploreRounded";
 import { createSearchParams, useNavigate, useSearchParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import { Chessboard, type ChessboardOptions } from "react-chessboard";
@@ -279,6 +280,16 @@ function LibraryGameDetail({ section, category, item }: Props) {
                   sx={compactButtonSx}
                 >
                   {t(`${section.chromeKey}.detail.openInEditor`)}
+                </Button>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={<TravelExploreRoundedIcon sx={{ fontSize: "1rem" }} />}
+                  onClick={handOffFenTo("/tools/openings")}
+                  data-testid={`${section.itemTestId}-open-openings`}
+                  sx={compactButtonSx}
+                >
+                  {t(`${section.chromeKey}.detail.openInOpenings`)}
                 </Button>
               </Box>
               {/*
