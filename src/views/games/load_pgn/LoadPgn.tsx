@@ -7,7 +7,11 @@ import {
   type FormEvent,
 } from "react";
 import Box from "@mui/material/Box";
-import { useSearchParams } from "react-router";
+import {
+  createSearchParams,
+  useNavigate,
+  useSearchParams,
+} from "react-router";
 import { useTranslation } from "react-i18next";
 import { Chessboard, type ChessboardOptions } from "react-chessboard";
 import { resolveGameReference } from "../../../lib/gameReference";
@@ -57,6 +61,7 @@ import { useGameNavigation } from "../../shared/useGameNavigation";
 
 function LoadPgn() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
   /*
@@ -268,6 +273,14 @@ function LoadPgn() {
             lastPly={lastPly}
             onSelectPly={goToPly}
             onFlip={flipBoard}
+            onOpenInOpenings={() =>
+              navigate({
+                pathname: "/tools/openings",
+                // The position at the ply on screen, the same `?fen=` carrier
+                // every other position hand-off uses.
+                search: createSearchParams({ fen }).toString(),
+              })
+            }
             ingest={
               <PgnIngest
                 games={games}

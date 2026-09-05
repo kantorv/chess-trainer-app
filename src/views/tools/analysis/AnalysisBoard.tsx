@@ -6,7 +6,11 @@ import {
   type FormEvent,
 } from "react";
 import Box from "@mui/material/Box";
-import { useSearchParams } from "react-router";
+import {
+  createSearchParams,
+  useNavigate,
+  useSearchParams,
+} from "react-router";
 import { useTranslation } from "react-i18next";
 import {
   Chessboard,
@@ -81,6 +85,7 @@ import { useAnalysisBoard } from "./useAnalysisBoard";
  */
 function AnalysisBoard() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
   /*
@@ -354,6 +359,14 @@ function AnalysisBoard() {
         >
           <AnalysisPanel
             state={state}
+            onOpenInOpenings={() =>
+              navigate({
+                pathname: "/tools/openings",
+                // The position at the node on screen, the same `?fen=`
+                // carrier every other position hand-off uses.
+                search: createSearchParams({ fen: state.fen }).toString(),
+              })
+            }
             position={
               <PositionSetup
                 games={games}

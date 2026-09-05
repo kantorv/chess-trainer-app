@@ -1,9 +1,11 @@
 import { useState, type ReactNode } from "react";
 import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
 import Tab from "@mui/material/Tab";
 import Tabs from "@mui/material/Tabs";
 import Typography from "@mui/material/Typography";
+import TravelExploreRoundedIcon from "@mui/icons-material/TravelExploreRounded";
 import { useTranslation } from "react-i18next";
 import { formatScore } from "../../../lib/engineAnalysis";
 import BestVariations from "../../shared/BestVariations";
@@ -47,10 +49,13 @@ type TabId = (typeof TAB_IDS)[number];
 function AnalysisPanel({
   state,
   position,
+  onOpenInOpenings,
 }: {
   state: AnalysisBoardState;
   /** The Position tab's content — see the note above on why it comes in. */
   position: ReactNode;
+  /** Open the Openings explorer on the position at the ply on screen. */
+  onOpenInOpenings: () => void;
 }) {
   const { t } = useTranslation();
   const [tab, setTab] = useState<TabId>("moves");
@@ -170,6 +175,19 @@ function AnalysisPanel({
             </Typography>
           ))}
         {tab === "position" && position}
+      </Box>
+
+      <Box sx={{ flexShrink: 0 }}>
+        <Button
+          size="small"
+          variant="outlined"
+          fullWidth
+          startIcon={<TravelExploreRoundedIcon fontSize="small" />}
+          data-testid="analysis-open-in-openings"
+          onClick={onOpenInOpenings}
+        >
+          {t("analysis.controls.openInOpenings")}
+        </Button>
       </Box>
 
       <BoardControls

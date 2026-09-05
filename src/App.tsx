@@ -8,6 +8,7 @@ import { default as PlayWithEngineScreen  } from './views/engine/play/Main'
 import { default as MaskedPlayScreen  } from './views/masked/play/Main'
 import { default as AnalysisBoardScreen  } from './views/tools/analysis/Main'
 import { default as BoardEditorScreen  } from './views/tools/editor/Main'
+import { default as OpeningsScreen  } from './views/tools/openings/Main'
 import { default as MatesListScreen  } from './views/mates/list/Main'
 import { default as MateDetailScreen  } from './views/mates/detail/Main'
 import { default as PositionsScreen  } from './views/positions/Main'
@@ -48,6 +49,10 @@ const routes = createBrowserRouter(
         {
           path: "/tools/editor",
           element: <BoardEditorScreen />
+        },
+        {
+          path: "/tools/openings",
+          element: <OpeningsScreen />
         },
         // The Mates library. Two patterns, however many categories and
         // positions the data grows to: the category is a parameter, so

@@ -12,6 +12,7 @@ import DeleteSweepRoundedIcon from "@mui/icons-material/DeleteSweepRounded";
 import SwapVertRoundedIcon from "@mui/icons-material/SwapVertRounded";
 import InsightsRoundedIcon from "@mui/icons-material/InsightsRounded";
 import SportsEsportsRoundedIcon from "@mui/icons-material/SportsEsportsRounded";
+import TravelExploreRoundedIcon from "@mui/icons-material/TravelExploreRounded";
 import { useTranslation } from "react-i18next";
 import PositionFields from "./PositionFields";
 import type { BoardEditorState } from "./useBoardEditor";
@@ -63,6 +64,8 @@ type EditorPanelProps = {
   onContinueToAnalysis: () => void;
   /** Start a game against the engine from this position, likewise. */
   onPlayFromHere: () => void;
+  /** Open the Openings explorer on this position, likewise. */
+  onOpenInOpenings: () => void;
 };
 
 function EditorPanel({
@@ -71,6 +74,7 @@ function EditorPanel({
   pgn,
   onContinueToAnalysis,
   onPlayFromHere,
+  onOpenInOpenings,
 }: EditorPanelProps) {
   const { t } = useTranslation();
   const [tab, setTab] = useState<TabId>("position");
@@ -135,6 +139,14 @@ function EditorPanel({
       testId: "editor-continue-analysis",
       variant: "contained" as const,
       onClick: onContinueToAnalysis,
+    },
+    {
+      key: "openings",
+      label: t("editor.controls.openings"),
+      icon: <TravelExploreRoundedIcon fontSize="small" />,
+      testId: "editor-open-in-openings",
+      variant: "outlined" as const,
+      onClick: onOpenInOpenings,
     },
   ];
 
