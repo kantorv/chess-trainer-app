@@ -1,0 +1,599 @@
+[Event "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3): Chapter 3 - Planning a Win in Middlegame Play (Ex. 43-49)"]
+[Date "2021.03.05"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3)"]
+[ChapterName "Chapter 3 - Planning a Win in Middlegame Play (Ex. 43-49)"]
+[ChapterURL "https://lichess.org/study/CaZ01HLL/zHt9zXyI"]
+[Annotator "https://lichess.org/@/frankv53"]
+[FEN "8/8/8/8/8/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.03.05"]
+[UTCTime "09:00:44"]
+
+ *
+
+
+[Event "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3): Ex.43: Attacking Without the Aid of Knights"]
+[Date "2021.03.05"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3)"]
+[ChapterName "Ex.43: Attacking Without the Aid of Knights"]
+[ChapterURL "https://lichess.org/study/CaZ01HLL/BceSq90w"]
+[Annotator "https://lichess.org/@/frankv53"]
+[FEN "2kr4/ppp1qp2/4bQ2/8/3P2r1/N1P5/PP4P1/R1B2RK1 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.03.05"]
+[UTCTime "09:00:44"]
+
+1... Rdg8 2. Rf2 (2. Qxe7 Rxg2+ 3. Kh1 Bd5 { and mate follows in a few moves. }) 2... Rxg2+ 3. Kf1 Bc4+ 4. Nxc4 Rg1# *
+
+
+[Event "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3): Ex.44: Attacking Without the Aid of Knights"]
+[Date "2021.03.05"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3)"]
+[ChapterName "Ex.44: Attacking Without the Aid of Knights"]
+[ChapterURL "https://lichess.org/study/CaZ01HLL/AO3dhLLe"]
+[Annotator "https://lichess.org/@/frankv53"]
+[FEN "kr2r3/pRp3pp/Q1P5/5R2/Pp1q4/3pp2P/6PK/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.03.05"]
+[UTCTime "09:00:44"]
+
+{ White, however, has a more forceful move, and he mates in three moves as follows: }
+1. Rxa7+ Qxa7 2. Ra5 { black moves anywhere } 2... Rb7 { and White mates. } *
+
+
+[Event "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3): Ex.45: Attacking Without the Aid of Knights"]
+[Date "2021.03.05"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3)"]
+[ChapterName "Ex.45: Attacking Without the Aid of Knights"]
+[ChapterURL "https://lichess.org/study/CaZ01HLL/yGTfFu6Y"]
+[Annotator "https://lichess.org/@/frankv53"]
+[FEN "3q1kn1/r5p1/1ppr1pQn/p2ppP2/P3P2R/1BPPB3/1P3PK1/7R w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.03.05"]
+[UTCTime "09:00:44"]
+
+1. Rxh6 gxh6 2. Bxh6+ Ke7 3. Qh7+ Ke8 4. Qxg8+ Kd7 5. Qh7+ Qe7 6. Bf8 Qxh7 7. Rxh7+ Ke8 8. Rxa7 { black resigned. } *
+
+
+[Event "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3): Ex.46: Attacking With Knights as a Prominent Force"]
+[Date "2021.03.05"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3)"]
+[ChapterName "Ex.46: Attacking With Knights as a Prominent Force"]
+[ChapterURL "https://lichess.org/study/CaZ01HLL/mPNDVAzw"]
+[Annotator "https://lichess.org/@/frankv53"]
+[FEN "4r2r/p1pb1ppk/2ppn2p/1q3N1N/4PPP1/1P2Q3/4R2P/2R3K1 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.03.05"]
+[UTCTime "09:00:44"]
+
+1. Nfxg7 Nc5 { Evidently an error which made the winning easier for White, as he simply took the Rook with the Knight and kept up the attack. } (1... Nxg7 2. Nf6+ Kg6 3. Nxd7 f6 4. e5 Kf7 5. Nxf6 Ke7 6. Ne4 { and Black should lose. }) *
+
+
+[Event "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3): Ex.47: Attacking With Knights as a Prominent Force"]
+[Date "2021.03.05"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3)"]
+[ChapterName "Ex.47: Attacking With Knights as a Prominent Force"]
+[ChapterURL "https://lichess.org/study/CaZ01HLL/rO4fRHCL"]
+[Annotator "https://lichess.org/@/frankv53"]
+[FEN "r1bq1rk1/pp2nppp/4p3/2n5/8/2NBPN2/PP3PPP/R2Q1RK1 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.03.05"]
+[UTCTime "09:00:44"]
+
+{ The game continues: }
+1. Bxh7+ Kxh7 2. Ng5+ Kg6 { Best.
+If: } (2... Kh6 3. Nxf7+ { wins the Queen. }) (2... Kh8 3. Qh5+ { with an irresistible attack. }) 3. Qg4 f5 4. Qg3 Kh6 { White finally won. } *
+
+
+[Event "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3): Ex.48: Winning by Indirect Attack"]
+[Date "2021.03.05"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3)"]
+[ChapterName "Ex.48: Winning by Indirect Attack"]
+[ChapterURL "https://lichess.org/study/CaZ01HLL/AOeUFJLR"]
+[Annotator "https://lichess.org/@/frankv53"]
+[FEN "2r1r1k1/2p2pbp/2ppq1p1/8/2n1P3/2N2P2/PPPBQ1PP/1R3RK1 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.03.05"]
+[UTCTime "09:00:44"]
+
+{ The game continues: }
+1... Ra8 2. a4 { White's best move was } (2. b3 Nxd2 3. Qxd2 Ra3 { and Black would ultimately win the a-pawn, always keeping a slight advantage in position. }) 2... Nxd2 3. Qxd2 Qc4 4. Rfd1 Reb8 { Black could have regained the Pawn by playing 4...Bxc3, but he sees that there is more to be had, and therefore increases the pressure against White's Queen side. He now threatens, among other things, ...Rxb2. } 5. Qe3 Rb4 { Threatening to win the exchange by ...Bd4 } 6. Qg5 Bd4+ 7. Kh1 Rab8 { This threatens to win the Knight, and thus forces White to give up the exchange. } 8. Rxd4 Qxd4 9. Rd1 Qc5 { Now Black will recover his Pawn. } *
+
+
+[Event "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3): Ex.49: Winning by Indirect Attack"]
+[Date "2021.03.05"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3)"]
+[ChapterName "Ex.49: Winning by Indirect Attack"]
+[ChapterURL "https://lichess.org/study/CaZ01HLL/jIGN8A6c"]
+[Annotator "https://lichess.org/@/frankv53"]
+[FEN "r4rk1/p3q1pp/1pb5/2pn1p2/8/3BPN2/PP2QPPP/2RR2K1 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.03.05"]
+[UTCTime "09:00:44"]
+
+{ The game continues as follows: }
+1. Nd4 cxd4 2. Rxc6 Nb4 { There is nothing better, as White threatened Bc4. } 3. Bc4+ Kh8 4. Re6 d3 5. Rxd3 { And White, with the better position, is a Pawn ahead. } *
+
+
+[Event "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3): Chapter 4 - General Theory (Ex.50-55)"]
+[Date "2021.03.05"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3)"]
+[ChapterName "Chapter 4 - General Theory (Ex.50-55)"]
+[ChapterURL "https://lichess.org/study/CaZ01HLL/miA6BiUy"]
+[Annotator "https://lichess.org/@/frankv53"]
+[FEN "8/8/8/8/8/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.03.05"]
+[UTCTime "09:00:44"]
+
+ *
+
+
+[Event "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3): Ex.50: Direct Attacks en masse"]
+[Date "2021.03.05"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3)"]
+[ChapterName "Ex.50: Direct Attacks en masse"]
+[ChapterURL "https://lichess.org/study/CaZ01HLL/CridCZ2F"]
+[Annotator "https://lichess.org/@/frankv53"]
+[FEN "r1bq1rk1/pp2nppp/4p3/2n5/8/2NBPN2/PP3PPP/R2Q1RK1 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.03.05"]
+[UTCTime "09:00:44"]
+
+1. Bxh7+ Kxh7 2. Ng5+ Kg6 3. Qg4 f5 4. Qg3 Kh6 5. Qh4+ Kg6 6. Qh7+ Kf6 { If: } (6... Kxg5 7. Qxg7+ { and mate in a few moves. }) 7. e4 Ng6 8. exf5 exf5 9. Rad1 Nd3 10. Qh3 Ndf4 11. Qg3 Qc7 12. Rfe1 Ne2+ { This blunder loses at once, but the game could not be saved in any case; e.g. } (12... Be6 13. Rxe6+ Nxe6 14. Nd5#) *
+
+
+[Event "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3): Ex.51: Direct Attacks en masse"]
+[Date "2021.03.05"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3)"]
+[ChapterName "Ex.51: Direct Attacks en masse"]
+[ChapterURL "https://lichess.org/study/CaZ01HLL/yU4tv29X"]
+[Annotator "https://lichess.org/@/frankv53"]
+[FEN "r1bq1k1r/b5pp/1nRN4/4p3/1P2P1n1/5NB1/P4PPP/3Q1RK1 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.03.05"]
+[UTCTime "09:00:44"]
+
+{ The climax of the combination started with }
+1. Bh4 Qd7 { White is still threatening mate, and the best way to avoid it is for Black to give back all the material he has gained and to remain three Pawns behind. } 2. Nxc8 Qxc6 3. Qd8+ Qe8 { If: } (3... Kf7 4. Nd6+ { King moves, and White mates. }) 4. Be7+ Kf7 5. Nd6+ Kg6 6. Nh4+ Kh5 { If: } (6... Kh6 7. Ndf5+ Kh5 8. Nxg7+ Kh6 9. Nhf5+ Kg6 10. Qd6+ { and mate next move. }) 7. Nxe8 Rxd8 8. Nxg7+ Kh6 9. Ngf5+ Kh5 10. h3! *
+
+
+[Event "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3): Ex.52: The force of the Threatened Attack"]
+[Date "2021.03.05"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "C10"]
+[Opening "French Defense: Rubinstein Variation, Capablanca Line"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3)"]
+[ChapterName "Ex.52: The force of the Threatened Attack"]
+[ChapterURL "https://lichess.org/study/CaZ01HLL/39hFSQHA"]
+[Annotator "https://lichess.org/@/frankv53"]
+[UTCDate "2021.03.05"]
+[UTCTime "09:00:44"]
+
+1. e4 e6 2. d4 d5 3. Nc3 dxe4 4. Nxe4 Nd7 5. Nf3 Ngf6 6. Nxf6+ Nxf6 7. Ne5 { This move was first shown to me by the talented Venezuelan amateur, M. Ayala. The object is to prevent the development of Black's Queen's Bishop via b7, after ...b6, which is Black's usual development in this variation.
+Generally it is bad to move the same piece twice in an opening before the other pieces are out, and the violation of that principle is the only objection that can be made to this move, which otherwise has everything to recommend it. } 7... Bd6 8. Qf3 c6 9. c3 O-O 10. Bg5 Be7 11. Bd3 Ne8 12. Qh3 f5 13. Bxe7 Qxe7 14. O-O Rf6 15. Rfe1 Nd6 16. Re2 Bd7 17. Rae1 Re8 18. c4 Nf7 19. d5! Nxe5 20. Rxe5 g6 21. Qh4 Kg7 22. Qd4 c5 23. Qc3 b6 24. dxe6 Bc8 25. Be2! Bxe6 26. Bf3 Kf7 27. Bd5 Qd6 28. Qe3 Re7 29. Qh6 Kg8 30. h4 a6 31. h5 f4 32. hxg6 hxg6 33. Rxe6 { Black resigns. } *
+
+
+[Event "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3): Ex.53: Relinquishing the Initiative"]
+[Date "2021.03.05"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "C66"]
+[Opening "Ruy Lopez: Berlin Defense, Improved Steinitz Defense"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3)"]
+[ChapterName "Ex.53: Relinquishing the Initiative"]
+[ChapterURL "https://lichess.org/study/CaZ01HLL/SE0aIDow"]
+[Annotator "https://lichess.org/@/frankv53"]
+[UTCDate "2021.03.05"]
+[UTCTime "09:00:44"]
+
+1. e4 e5 2. Nf3 Nc6 3. Bb5 Nf6 4. O-O d6 5. Bxc6+ bxc6 6. d4 Be7 7. Nc3 (7. dxe5 { might be better, but at the time I was not familiar with that variation, and therefore I played what I knew to be good. }) 7... Nd7 8. dxe5 dxe5 9. Qe2 O-O 10. Rd1 Bd6 11. Bg5 Qe8 12. Nh4 g6 { Black offers the exchange in order to gain time and to obtain an attack. Without considering at all whether or not such a course was justified on the part of Black, it is evident that as far as White is concerned there is only one thing to do, viz., to win the exchange and then prepare to weather the storm. Then, once it is passed, to act quickly with all forces to derive the benefit of numerical superiority. } 13. Bh6 Nc5 14. Rd2 Rb8 15. Nd1 Rb4 { To force White to play c4, and thus create a hole at d4 for his Knight.[7] Such grand tactics show the hand of a master. } 16. c4 Ne6 17. Bxf8 Qxf8 18. Ne3 (18. Nf3 { was better. }) 18... Nd4 19. Qd1 c5 { In order to prevent Rxd4 giving back the exchange, but winning a Pawn and relieving the position. } 20. b3 Rb8 { In order to play ...Bb7 without blocking his Rook.
+Black's maneuvering for positional advantage is admirable throughout this game, and if he loses it is due entirely to the fact that the sacrifice of the exchange, without even a Pawn for it, could not succeed against sound defensive play. } 21. Nf3 f5 22. exf5 gxf5 { The position begins to look really dangerous for White. In reality Black's attack is reaching its maximum force. Very soon it will reach the apex, and then White, who is well prepared, will begin his counter action, and through his superiority in material obtain an undoubted advantage. } 23. Nf1 f4 24. Nxd4 cxd4 25. Qh5 Bb7 26. Re1 c5 { He could not play 26...Re8 because of Rxd4. Besides, he wants to be ready to play ...e4. At present White cannot with safety play Rxe5, but he will soon prepare the way for it. Then, by giving up a Rook for a Bishop and a Pawn, he will completely upset Black's attack and come out a Pawn ahead. It is on this basis that White's whole defensive manœuvre is founded. } 27. f3 Re8 28. Rde2 Re6 { Now the Black Rook enters into the game, but White is prepared. It is now time to give back the exchange. } 29. Rxe5 Bxe5 30. Rxe5 Rh6 31. Qe8 Qxe8 32. Rxe8+ Kf7 33. Re5 Rc6 34. Nd2 (34. Rf5+ { might have been better. The text move did not prove as strong as anticipated. }) 34... Kf6 35. Rd5 Re6 36. Ne4+ Ke7 (36... Rxe4 { would lose easily }) 37. Rxc5 d3! { Very fine. White cannot play 38 Rc7+ because of 38...Kd8; 39 Rxb7, Rxe4 winning. } 38. Kf2 Bxe4 39. fxe4 Rxe4 40. Rd5 Re3 { The ending is very difficult to win. At this point White had to make the last move before the game was adjourned. } 41. b4! Re4 42. Rxd3 Rxc4 43. Rh3 Rxb4 44. Rxh7+ Kf6 45. Rxa7 Kf5 46. Kf3 Rb2 47. Ra5+ Kf6 48. Ra4 Kg5 49. Rxf4 Rxa2 50. h4+ Kh5 51. Rf5+ Kh6 52. g4 { Black resigns.
+I have passed over the game lightly because of its difficult nature, and because we are at present concerned more with the opening and the middle-game than we are with the endings, which will be treated separately. } *
+
+
+[Event "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3): Ex.54: Cutting off Pieces from the Scene of Action"]
+[Date "2021.03.05"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "C49"]
+[Opening "Four Knights Game: Spanish Variation, Nimzowitsch Variation"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3)"]
+[ChapterName "Ex.54: Cutting off Pieces from the Scene of Action"]
+[ChapterURL "https://lichess.org/study/CaZ01HLL/GyrmTkWN"]
+[Annotator "https://lichess.org/@/frankv53"]
+[UTCDate "2021.03.05"]
+[UTCTime "09:00:44"]
+
+1. e4 e5 2. Nf3 Nc6 3. Nc3 Nf6 4. Bb5 Bb4 5. O-O O-O 6. Bxc6 { Niemzowitch's variation, which I have played successfully in many a game. It gives White a very solid game. Niemzowitch's idea is that White will in due time be able to play f4, opening a line for his Rooks, which, in combination with the posting of a Knight at f5, should be sufficient to win. He thinks that should Black attempt to stop the Knight from going to f5, he will have to weaken his game in some other way. Whether this is true or not remains to be proved, but in my opinion the move is perfectly good. On the other hand, there is no question that Black can easily develop his pieces. But it must be considered that in this variation White does not attempt to hinder Black's development, he simply attempts to build up a position which he considers impregnable and from which he can start an attack in due course. } 6... dxc6 { The alternative, 6...bxc6; gives White the best of the game, without doubt. } 7. d3 Bd6 8. Bg5 { This move is not at all in accordance with the nature of this variation. The general strategical plan for White is to play h3, to be followed in time by the advance of the g-pawn to g4, and the bringing of the Queen's Knight to f5 via e2 and g3 or d1 and e3. Then, if possible, the King's Knight is linked with the other Knight by placing it at either h4, g3, or e3 as the occasion demands. The White King sometimes remains at g1, and other times it is placed at g2, but mostly at h1.
+Finally, in most cases comes f4, and then the real attack begins. Sometimes it is a direct assault against the King, and at other times it comes simply to finessing for positional advantage in the end-game, after most of the pieces have been exchanged. } 8... h6 9. Bh4 c5 { To prevent d4 and to draw White into playing Nd5, which would prove fatal. Black's plan is to play ...g5, as soon as the circumstances permit, in order to free his Queen and Knight from the pin by the Bishop. } 10. Nd5 { White falls into the trap. Only lack of experience can account for this move. White should have considered that a player of my experience and strength could never allow such a move if it were good. } 10... g5 { After this move White's game is lost. White cannot play 11 Nxg5, because 11...Nxd5 will win a piece. Therefore he must play Bg3, either before or after Nxf6+, with disastrous results in either case, as will be seen. } 11. Nxf6+ Qxf6 12. Bg3 Bg4 13. h3 Bxf3 14. Qxf3 Qxf3 15. gxf3 f6 { A simple examination will show that White is minus a Bishop for all practical purposes. He can only free it by sacrificing one Pawn, and possibly not even then. At least it would lose time besides the Pawn. Black now devotes all his energy to the Queen's side, and, having practically a Bishop more, the result cannot be in doubt. The rest of the game is given, so that the student may see how simple it is to win such a game. } 16. Kg2 a5 17. a4 Kf7 18. Rh1 Ke6 19. h4 Rfb8 { There is no necessity to pay any attention to the King's side, because White gains nothing by exchanging Pawns and opening the King's Rook file. } 20. hxg5 hxg5 21. b3 c6 22. Ra2 b5 23. Rha1 c4 { If White takes the proffered Pawn, Black regains it immediately by ...Rb4 after ...bxc4. } 24. axb5 cxb3 25. cxb3 Rxb5 26. Ra4 Rxb3 27. d4 Rb5 28. Rc4 Rb4 29. Rxc6 Rxd4 { White Resigns. } *
+
+
+[Event "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3): Ex.55: A Player's Motives Criticized in a Specimen Game"]
+[Date "2021.03.05"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "D52"]
+[Opening "Queen's Gambit Declined: Cambridge Springs Defense, Capablanca Variation"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3)"]
+[ChapterName "Ex.55: A Player's Motives Criticized in a Specimen Game"]
+[ChapterURL "https://lichess.org/study/CaZ01HLL/v8ArVZzp"]
+[Annotator "https://lichess.org/@/frankv53"]
+[UTCDate "2021.03.05"]
+[UTCTime "09:00:44"]
+
+1. d4 d5 2. Nf3 Nf6 3. c4 e6 4. Nc3 Nbd7 5. Bg5 c6 6. e3 Qa5 { [One of the objects of Black's method of defense is to attack White's queen's knight doubly by ...Ne4, followed by ...dxc4. But 7 Nd2 is probably a strong way of meeting this threat.]
+There are, besides, two good reasons for this method of defense; first, that it is not as much played as some of the other defenses and consequently not so well known, and second that it leaves Black with two Bishops against B and Kt, which, in a general way, constitutes an advantage. } 7. Bxf6 Nxf6 8. a3 Ne4 9. Qb3 Be7 { This is not the logical place for the Bishop which should have been posted at d6. In the opening, time is of great importance, and therefore the player should be extremely careful in his development and make sure that he posts his pieces in the right places. } 10. Bd3 Nxc3 11. bxc3 dxc4 12. Bxc4 Bf6 { [I did not want White's Knight to come to e5, from where I could not dislodge it by ...f6 without weakening my e-pawn.]
+The same result could be accomplished by playing ...Bd6. Incidentally it bears out my previous statement that the Bishop should have been originally played to d6. } 13. O-O { The alternative was e4, followed by e5, and then O - O. White would thereby assume the initiative but would weaken his Pawn position considerably, and might be compelled to stake all on a violent attack against the King. This is a turning point in the game, and it is in such positions that the temperament and style of the player decide the course of the game. } 13... O-O 14. e4 e5 15. d5 { [White might play 15 Rfd1, keeping the option of breaking up the center later on. I wanted him to advance this Pawn as there is now a fine post for my Bishop at c5.]
+By this move White shows that he does not understand the true value of his position. His only advantage consisted in the undeveloped condition of Black's Queen's Bishop. He should therefore have made a plan to prevent the Bishop from coming out, or if that were not possible, then he should try to force Black to weaken his Pawn position in order to come out with the Bishop.
+There were three moves to consider: first, a4, in order to maintain the White Bishop in the dominating position that it now occupies. This would have been met by Qc7; second, either of the Rooks to d1 in order to threaten 16 dxe5 Bxe5; 17 Nxe5 Qxe5; 18 Bxf7+. This would have been met by ...Bg4; and third, h3 to prevent ...Bg4 and by playing either Rd1, followed up as previously stated to force Black to play ...b5, which would weaken his Queen's side Pawns. Thus by playing h3 White would have attained the desired object. The text move blocks the action of the White Bishop and facilitates Black's development. Hereafter White will act on the defensive, and the interest throughout the rest of the game will center mainly on Black's play and the manner in which he carries out the attack. } 15... Qc7 16. Bd3 { [This seems wrong, as it makes the development of Black's Queen wing easier. At present he cannot play ...b6, because of the reply dxc6 followed by Bd5.] } 16... b6 17. c4 Bb7 18. Rfc1 { [With the idea of Rab1 and c5. But it only compels Black to bring his B to Q B 4, which he would do in any case.] } 18... Be7 19. Rc2 Bc5 20. Qb2 f6 { [It would have been better, probably, to play 20...Rfe8, with the idea of ...f5 presently.]
+Black's play hereabout is weak; it lacks force, and there seems to be no well-defined plan of attack. It is true that these are the most difficult positions to handle in a game. In such cases a player must conceive a plan on a large scale, which promises chances of success, and with it all, it must be a plan that can be carried out with the means at his disposal. From the look of the position it seems that Black's best chance would be to mass his forces for an attack against White's center, to be followed by a direct attack against the King. He should, therefore, play ...Rae8, threatening ...f5. If White is able to defeat this plan, or rather to prevent it, then, once he has fixed some of the White pieces on the King's side, he should quickly shift his attack to the Queen's side, and open a line for his Rooks, which, once they enter in action, should produce an advantage on account of the great power of the two Bishops. } 21. Rb1 Rad8 22. a4 Ba6 23. Rd1 { [White has clearly lost time with his Rook's moves.] } 23... Rfe8 24. Qb3 { [To bring his Queen across after Nh4 and Be2.] } 24... Rd6 25. Nh4 g6 26. Be2 { [I thought this exchange necessary here, as White is threatening to play his Bishop via g4 to e6. If he retook with the Bishop's Pawn I intended to exchange Bishops and rely on the two Pawns to one on the Queen's wing. I did not expect him to retake it with the King's Pawn, which seemed to expose him to a violent King's side attack.]
+Black's judgment in this instance I believe to be faulty. Had White retaken with the Bishop's Pawn, as he expected, he would have had the worst of the Pawn position, as White would have had a passed Pawn well supported on the Queen's side. His only advantage would lie in his having a very well posted Bishop against a badly posted Knight, and on the fact that in such positions as the above, the Bishop is invariably stronger than the Knight. He could and should have prevented all that, by playing ...Bc8, as, had White then replied with Qg3, he could then play ...cxd5, and White would not have been able to retake with the c-pawn on account of ...Bxf2+ winning the exchange. } 26... cxd5 27. exd5 e4 28. g3 e3 { I do not like this move. It would have been better to hold it in reserve and to have played ...f5, to be followed in due time by ...g5 and ...f4, after having placed the Queen at d7, f7, or some other square as the occasion demanded. The text move blocks the action of the powerful Bishop at e5, and tends to make White's position safer than it should have been. The move in itself is a very strong attacking move, but it is isolated, and there is no effective continuation. Such advances as a rule should only be made when they can be followed by a concerted action of the pieces. } 29. f4 Bc8 30. Nf3 Bf5 31. Rb2 Re4 32. Kg2 Qc8 33. Ng1 g5 { [If now 34 Bf3, gxf4; 35 Bxe4, Bxe4+, with a winning attack.] } 34. fxg5 fxg5 35. Rf1 g4 { 35...Rh6 was the alternative. White's only move would have been Kh1. The position now is evidently won for Black, and it is only a question of finding the right course. The final attack is now carried on by Sir George Thomas in an irreproachable manner. } 36. Bd3 Rf6 37. Ne2 Qf8 { [Again preventing Bxe4, by the masked attack on White's Rook. White therefore protects his Rook.]
+If Nf4, e2!; 39 Nxe2, Rxe2+; 40 Rxe2, Be4+!!; 41 Bxe4, best, Rxf1 and White is lost. If, however, against 38 Nf4, Black plays ...Qh6, and White 39 Qc2, I take pleasure in offering the position to my readers as a most beautiful and extraordinary win for Black, beginning with 39...Qh3+!!! I leave the variations for the student to work out. } 38. Rbb1 Qh6 39. Qc2 { [Making a double attack on the Rook—which still cannot be taken—and preparing to defend the h-pawn.]
+If either the Rook or Bishop are taken White would be mated in a few moves. } 39... Qh3+ 40. Kh1 Rxc4!! { [If 40...Rh6; 41 Ng1, Qxg3; 42 Qg2. Black therefore tries to get the Queen away from the defense.]
+A very beautiful move, and the best way to carry on the attack } 41. Qxc4 { [The best defense was 41 Rxf5, but Black would emerge with Queen against Rook and Knight.] } 41... Bxd3 { [Again, not ...Rh6; because of d6+.] } 42. Rxf6 { [If 42 Qxd3, then, at last, ...Rh6 wins.] } 42... Bxc4 43. Nf4 e2! { [The Queen has no escape, but White has no time to take it.] } 44. Rg1 Qf1 { White Resigns. A very fine finish. } *
+
+
+[Event "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3): Chapter 5 - Endgame Strategy (Ex.56-62)"]
+[Date "2021.03.05"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3)"]
+[ChapterName "Chapter 5 - Endgame Strategy (Ex.56-62)"]
+[ChapterURL "https://lichess.org/study/CaZ01HLL/EadTolis"]
+[Annotator "https://lichess.org/@/frankv53"]
+[FEN "8/8/8/8/8/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.03.05"]
+[UTCTime "09:00:44"]
+
+ *
+
+
+[Event "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3): Ex.56: The Sudden Attack from a Different Side"]
+[Date "2021.03.05"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3)"]
+[ChapterName "Ex.56: The Sudden Attack from a Different Side"]
+[ChapterURL "https://lichess.org/study/CaZ01HLL/cygOZhCM"]
+[Annotator "https://lichess.org/@/frankv53"]
+[FEN "6k1/p4p1p/1p4p1/3r4/2r5/P1P4P/2R2PP1/2R1K3 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.03.05"]
+[UTCTime "09:00:44"]
+
+1... Re4+ 2. Re2 Ra4 3. Ra2 h5 { The idea, as will be seen very soon, is to play ...h4 in order to fix White's King's side Pawns with a view to the future. It is evident to Black that White wants to bring his King to b3 to support his two weak isolated Pawns, and thus to free his Rooks. Black, therefore, makes a plan to shift the attack to the King's side at the proper time, in order to obtain some advantage from the greater mobility of his Rooks. } 4. Rd1 Rda5 { in order to force the Rook to the a-file, keeping both Rooks tied up. } 5. Rda1 h4 6. Kd2 Kg7 7. Kc2 Rg5 { Black begins to transfer his attack to the King's side. } 8. Rg1 { A serious mistake, which loses quickly. White should have played 8 Kb3, when Black would have answered 8...Raa5; 9 f3, and Black would have obtained an opening at g3 for his King, which in the end might give him the victory. } 8... Rf4 { Now the King cannot go to b3, because of Rb5+. } 9. Kd3 Rf3+ 10. Ke2 { If 10 gxf3, Rxg1; followed by ...Rh1 winning, } 10... Rxh3 { and Black won after a few moves. } *
+
+
+[Event "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3): Ex.57: The Sudden Attack from a Different Side"]
+[Date "2021.03.05"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3)"]
+[ChapterName "Ex.57: The Sudden Attack from a Different Side"]
+[ChapterURL "https://lichess.org/study/CaZ01HLL/2iMpzJsk"]
+[Annotator "https://lichess.org/@/frankv53"]
+[FEN "2r2rk1/p1pp1p1p/2p2p2/8/8/2PP1P2/PP3P1P/R3R1K1 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.03.05"]
+[UTCTime "09:00:44"]
+
+{ From the position in question the game continued thus: }
+1. Re4 Rfe8 { with the object of repeating White's manœuvre, and also not to allow White the control of the open file. } 2. Rae1 Re6 3. R1e3 Rce8 4. Kf1 Kf8 { Black wants to bring his King to the center of the board in order to be nearer to whatever point White decides to attack. The move is justified at least on the general rule that in such endings the King should be in the middle of the board. He does nothing after all but follow White's footsteps. Besides, it is hard to point out anything better. If 4...d5; 5 Rg4+, followed by Ke2, would leave Black in a very disagreeable position. If 4...f5; 5 Rd4! Rxe3? 6 fxe3, Rxe3; 7 Kf2, Re7; 8 Ra4, winning the a-pawn, which would practically leave White with a passed Pawn ahead on the Queen's side, as the three Pawns of Black on the King's side would be held by the two of White. } 5. Ke2 Ke7 6. Ra4 Ra8 { The student should note that through the same manœuvre Black is forced into a position similar to the one shown in the previous ending. } 7. Ra5! { This move has a manifold object. It practically fixes all of Black's Pawns except the d-pawn, which is the only one that can advance two squares. It specially prevents the advance of Black's f-pawns, and at the same time threatens the advance of White's f-pawns to f4 and f5. By this threat it practically forces Black to play ...d5, which is all White desires, for reasons that will soon become evident. } 7... d5 8. c4! Kd6 { Evidently forced, as the only other move to save a Pawn would have been ...dxc4, which would have left all Black's Pawns isolated and weak. If 8...d4; 9 Re4, Kd6; 10 b4! Re5; 11 Ra6, and Black's game is hopeless. } 9. c5+ Kd7 10. d4 f5 { Apparently very strong, since it forces the exchange of Rooks because of the threat ...Rh6; but in reality it leads to nothing. The best chance was to play ...Rg8. } 11. Rxe6 fxe6 12. f4 { Up to now White had played with finesse, but this last move is weak. 13 Ra3 was the proper way to continue, so as to force Black to give up his a- or c-pawns. } 12... Kc8 13. Kd2 { Again a bad move. 13 Ra3 was the proper continuation, and if then 13...Rb8; 14 b3, Kb7; 15 b4, Ka8; 16 Rb3, with excellent winning chances; in fact, I believe, a won game. } 13... Kb7 { Black misses his only chance. 13...Rb8 would have drawn. } 14. Ra3 Rg8 15. Rh3 Rg7 16. Ke2 Ka6 17. Rh6 Re7 18. Kd3 Kb7 { He goes back with the King to support his e-pawn, and thus be able to utilize his Rook. It is, however, useless, and only White's weak play later on gives him further chances of a draw. } 19. h4 Kc8 20. Rh5 { To prevent the Black Rook from controlling the open file } 20... Kd7 21. Rg5 Rf7 22. Kc3 Kc8 { He must keep his King on that side because White threatens to march with his King to a6 via b4. } 23. Kb4 Rf6 24. Ka5 Kb7 25. a4 a6 26. h5 Rh6 { He can do nothing but wait for White. The text move stops White from moving his Rook, but only for one move. } 27. b4 Rf6 { The only other move was 27...Ka7; when White could play 28 Rg7, or even b5. } 28. b5 { A weak move, which gives Black a fighting chance. In this ending, as is often the case with most players, White plays the best moves whenever the situation is difficult and requires careful handling, but once his position seems to be overwhelming he relaxes his efforts and the result is nothing to be proud of. The right move was 28 Rg7. } 28... axb5 29. axb5 Rf8! 30. Rg7 Ra8+ 31. Kb4 cxb5 32. Kxb5 Ra2 33. c6+ Kb8 34. Rxh7 Rb2+ 35. Ka5 Ra2+ 36. Kb4 Rxf2 { Black misses his last chance: ...Rb2+, forcing the King to c3, in order to avoid the perpetual, would probably draw. The reader must bear in mind that my opponent was then a very young and inexperienced player, and consequently deserves a great deal of credit for the fight he put up. } 37. Re7 Rxf4 { ...Rb2+ followed by ...Rh2 offered better chances. } 38. h6! Rxd4+ 39. Kb5 Rd1 40. h7 Rb1+ 41. Kc5 Rc1+ 42. Kd4 Rd1+ 43. Ke5 Re1+ 44. Kf6 Rh1 45. Re8+ Ka7 46. h8=Q Rxh8 47. Rxh8 Kb6 48. Kxe6 Kxc6 49. Kxf5 Kc5 50. Ke5 { Black resigns.
+This ending shows how easy it is to make weak moves, and how often, even in master-play, mistakes are made and opportunities are lost. It shows that, so long as there is no great advantage of material, even with a good position, a player, no matter how strong, cannot afford to relax his attention even for one move. } *
+
+
+[Event "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3): Ex.58: The Danger of a Safe Position"]
+[Date "2021.03.05"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3)"]
+[ChapterName "Ex.58: The Danger of a Safe Position"]
+[ChapterURL "https://lichess.org/study/CaZ01HLL/7E628djd"]
+[Annotator "https://lichess.org/@/frankv53"]
+[FEN "2R5/p4p1k/5p1p/6r1/5K2/4P2P/Pr4P1/7R w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.03.05"]
+[UTCTime "09:00:44"]
+
+1. g4 Rxa2 { The mistakes begin. This is the first. Black sees that he can take a Pawn without any danger, and does not stop to think whether there is anything better. 1...Rf2+ was the right move. If then 2 Kg3, Rxa2. If instead White played 2 Ke4, then ...Re5+ followed by Rxa2. } 2. Rd1 Ra4+ { Mistake number two, and this time such a serious one as to almost lose the game. The proper move was to play 2...f5 in order to break up White's Pawns and at the same time make room for the Black King, which is actually in danger, as will soon be seen. } 3. Rd4 Raa5 { Mistake number three and this time fatal. His best move was 3...Rga5. After the text move there is no defense. Black's game is lost. This shows that even an apparently simple ending has to be played with care. From a practically won position Black finds himself with a lost game, and it has only taken three moves. } 4. Rdd8 Rg7 { If: } (4... f5 5. Rh8+ Kg6 6. Rcg8+ Kf6 7. Rxh6+ Rg6 8. g5+ Ke7 9. Rhxg6 fxg6 10. Rg7+ Ke8 11. Rxg6 { and wins easily. }) 5. h4 h5 6. Rh8+ { Black resigns.
+The reason is evident. If } 6... Kg6 7. gxh5+ Rxh5 8. Rxh5 Kxh5 9. Rh8+ Kg6 10. h5# *
+
+
+[Event "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3): Ex.59: Endings with one Rook and Pawns"]
+[Date "2021.03.05"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3)"]
+[ChapterName "Ex.59: Endings with one Rook and Pawns"]
+[ChapterURL "https://lichess.org/study/CaZ01HLL/mtxdAo5R"]
+[Annotator "https://lichess.org/@/frankv53"]
+[FEN "8/7R/8/2k2P2/1p6/3r4/5PKP/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.03.05"]
+[UTCTime "09:00:44"]
+
+1. f6 Rd6! { Now White has two continuations, either (a) f7, or (b) Rc7+.
+We have therefore: } 2. f7 (2. f7 Rd8! (2... Rg6+ 3. Kf3 Rf6+ 4. Ke3 Re6+ { If 4...b3; Rh5+ wins, because if the King goes back , then Rh6, and if the King goes up, then Rh4+, followed by Rf4 wins. } 5. Kd3 Rf6 { If 5...Rd6+; 5 Ke4 wins. } 6. Rh5+ Kd6 7. Rh6 { wins. }) (2... Rf6 3. Rg7! Kc4 { If 3...b3; 4 Rg3, and White will either capture the Pawn or go to f3, and come out with a winning ending. } 4. h4 b3 5. Rg4+ Kd3 6. Rg3+ { and White will either capture the Pawn or play Rf3, according to the circumstances, and come out with a winning ending.
+OR-- }) 3. Rh5+ Kc4 { and White will finally have to sacrifice the Rook for Black's Pawn. }) (2. Rc7+ Kd4! (2... Kb6 3. f7 Rg6+ 4. Kf1 Rf6 5. Re7! Kc5 { White threatened to check with Rook at e6. } 6. Ke2 b3 { Best. If 4...Kc4; both 5 h4 and 5 Ke3 will win; the last-named move particularly would win with ease. } 7. Re3 b2 8. Rb3 Rxf7 9. Rxb2 Rh7 10. Rd2 Rxh2 11. Ke3 { This position we have arrived at is won by White, because there are two files between the opposing King and the Pawn from which the King is cut off by the Rook, and besides, the Pawn can advance to the fourth rank before the opponent's Rook can begin to check on the file. This last condition is very important, because if, instead of the position on the diagram, the Black Rook were at h8, and Black had the move, he could draw by preventing the advance of the Pawn, either through constant checks or by playing ...Rf8 at the proper time.
+Now that we have explained the reasons why this position is won, we leave it to the student to work out the correct solution.
+The fact that out of one apparently simple ending we have been able to work out several most unusual and difficult endings should be sufficient to impress upon the student's mind the necessity of becoming well acquainted with all kinds of endings, and especially with endings of Rook and Pawns. }) 3. f7 Rg6+! { a very important move, as against 3...Rf6, 4 Re7 wins. } 4. Kf1 Rf6 5. Rb7 Kc3 { and White will finally have to sacrifice the Rook for the Pawn, or draw by perpetual check. }) 2... Rd8! (2... Rg6+ 3. Kf3 Rf6+ 4. Ke3 Re6+ { If 4...b3; Rh5+ wins, because if the King goes back , then Rh6, and if the King goes up, then Rh4+, followed by Rf4 wins. } 5. Kd3 Rf6 { If 5...Rd6+; 5 Ke4 wins. } 6. Rh5+ Kd6 7. Rh6 { wins. }) (2... Rf6 3. Rg7! Kc4 { If 3...b3; 4 Rg3, and White will either capture the Pawn or go to f3, and come out with a winning ending. } 4. h4 b3 5. Rg4+ Kd3 6. Rg3+ { and White will either capture the Pawn or play Rf3, according to the circumstances, and come out with a winning ending.
+OR-- }) 3. Rh5+ Kc4 { and White will finally have to sacrifice the Rook for Black's Pawn. } *
+
+
+[Event "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3): Ex.60: A Difficult Ending: Two Rooks and Pawns"]
+[Date "2021.03.05"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3)"]
+[ChapterName "Ex.60: A Difficult Ending: Two Rooks and Pawns"]
+[ChapterURL "https://lichess.org/study/CaZ01HLL/yErDhIHG"]
+[Annotator "https://lichess.org/@/frankv53"]
+[FEN "r4rk1/p5pp/2p5/3p1p2/2p5/2P1PP2/PPK2P1P/3R1R2 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.03.05"]
+[UTCTime "09:00:44"]
+
+1... Rae8 { The first move is already wrong. There is nothing to gain by this move. Black should play ...a5; to be followed by ...a4; unless White plays b3. That would fix the Queen's side. After that he could decide what demonstration he could make with his Rooks to keep the opponent's Rooks at bay. } 2. Rd4 { This move not only prevents ...f4 which Black intended, but threatens b3, followed, after ...cxb3+, by the attack with one or both Rooks against Black's Q R P. } 2... Rf6 { probably with the idea of a demonstration on the King's side by ...Rg6 and ...Rg2. } 3. b3 cxb3+ 4. axb3 Kf7 5. Kd3 { Ra1 should have been played now, in order to force Black to defend with ...Re7. White, however, does not want to disclose his plan at once, and thus awaken Black to the danger of his position, hence this move, which seems to aim at the disruption of Black's Queen's side Pawns. } 5... Re7 6. Ra1 Ke6 { This is a mistake. Black is unaware of the danger of his position. He should have played ...g5; threatening ...Rh6, and, by making this demonstration against White's h-pawn, stop the attack against his Queen's side Pawns, which will now develop. } 7. Ra6 Rc7 { He could not play 7...Kd6, because 8 c4 would win at least a Pawn. This in itself condemns his last move ...Ke6, which has done nothing but make his situation practically hopeless. } 8. Rda4 g5 { Now forced, but it is a little too late. He could not play 8...Rff7, because 9 f4 would have left his game completely paralyzed. Black now finally awakens to the danger, and tries to save the day by the counter-demonstration on the King's side, which he should have started before. Of course, White cannot play Rxa7, because of ...Rxa7, followed by ...Rh6, recovering the Pawn with advantage. } 9. h4! g4 { Black is now in a very disagreeable position. If he played 9...gxh4; 10 Rxh4 would leave him in a very awkward situation, as he could not go back with the King, nor could he do much with either Rook. He practically would have to play 10...h6, when White would answer 11 b4, threatening to win a Pawn by b5, or, if that were not enough, he might play Kd4, to be followed finally by the entry of the King at c5 or e5. } 10. Ke2 gxf3+ { Again he cannot play ...h5, because f4 would leave him paralyzed. The advance of his h-pawn would make White's h-pawn safe, and consequently his King's Rook would have to retire to f7 to defend the a-pawn. That would make it impossible for his King to go to d7, because of the a-pawn, nor could he advance a single one of his Pawns. On the other hand, White would play b4, threatening to win a Pawn by b5, or he might first play Kd4, and then at the proper time b5, if there was nothing better. Black meanwhile could really do nothing but mark time with one of his Rooks. Compare this bottling-up system with the ending in Example 57, and it will be seen that it is very similar. } 11. Kxf3 Rff7 12. Ke2 { Probably wrong. 12 b4 at once was the right move. The text move gives Black good chances of drawing. } 12... Kd6 13. b4 Rb7 { This could never have happened had White played 12 b4, as he could have followed it up by b5 after Black's ...Kd6. } 14. h5 { Not good. 14 f4 offered the best chances of winning by force. If then 14...Rg7; 15 h5, Rg2+; 16 d3, Rh2; 17 Rxa7, Rxa7; 18 Rxa7, Rxh5; 19 Ra6, with winning chances. } 14... h6 { Black misses his last chance. 14...f4 would draw. If then 15 exf4, Rbe7+!; 16 Kf1, Rxf4; 17 Rxa7, Re3 ! } 15. f4 Rg7 16. Kd3 Rge7 17. Ra1 Rg7 18. Kd4 Rg2 19. R1a2 Rbg7 { 19...Rgg7 would have offered greater resistance, but the position is lost in any case. (I leave the student to work this out.) } 20. Kd3! Rxa2 21. Rxa2 Re7 { Nothing would avail. If 21...Rg1; 22 Ra6!, Rd1+; 23 Kc2, Rh1; 24 b5, Rxh5; 25 Rxc6+, Kd7; 26 Ra6, and White will win easily. } 22. Rg2 Re6 23. Rg7 Re7 24. Rg8 c5 { Black is desperate. He sees he can no longer defend his Pawns. } 25. Rg6+ Re6 26. bxc5+ Kd7 27. Rg7+ Kc6 28. Rxa7 Kxc5 29. Rf7 { Black resigns. } *
+
+
+[Event "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3): Ex.61: A Difficult Ending: Two Rooks and Pawns"]
+[Date "2021.03.05"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3)"]
+[ChapterName "Ex.61: A Difficult Ending: Two Rooks and Pawns"]
+[ChapterURL "https://lichess.org/study/CaZ01HLL/wSrleFpY"]
+[Annotator "https://lichess.org/@/frankv53"]
+[FEN "1k2r3/1ppr2pp/p1p2p2/5R2/4P3/1P1P3P/P1P3P1/5RK1 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.03.05"]
+[UTCTime "09:00:44"]
+
+1. g4 { already preparing to play g5 when the time comes. } 1... b6 { Black wants to play ...c5, but White, of course, prevents it. } 2. b4! Kb7 { This King should come to the King's side, where the danger lurks. } 3. Kf2 b5 { With the object of playing ...Kb6 and a5, followed by ...axb4, and thus have an open file for his Rook and be able to make a counter-demonstration on the Queen's side in order to stop White's advance on the right. White, however, also prevents this. } 4. a4! Rd4 { Of course if ...bxa4; Black will have all his Pawns on the Queen's side disrupted and isolated, and White can easily regain the lost Pawn by playing either Rook on the a-file. } 5. Rb1 Re5 { He still wants to play ...c5, but as it is easy to foresee that White will again prevent it, the text move is really a serious loss of time. Black should bring his King over to the other side immediately. } 6. Ke3 Rd7 7. a5 { The first part of White's strategic plan is now accomplished. Black's Pawns on the Queen's side are fixed for all practical purposes. } 7... Re6 { If 7...Rxf5; 8 gxf5would have given White a very powerful center. Yet it might have been the best chance for Black. } 8. Rbf1 Rde7 9. g5 fxg5 10. Rxg5 { The second part of White's strategical plan is now accomplished. It remains to find out if the advantage obtained is sufficient to win. White not only has a passed Pawn, but his King is in a commanding position in the center of the board ready to support the advance of White's Pawns, or, if necessary, to go to c5, or to move to the right wing in case of danger. Besides, White holds the open file with one of his Rooks. Altogether White's position is superior and his chances of winning are excellent. } 10... Rh6 11. Rg3 Rhe6 { to prevent d4. Also Black fears to keep his Rook in front of his two King's side Pawns which he may want to utilise later. } 12. h4 g6 13. Rg5 h6 { White threatens h5, which would finally force Black to take, and then White would double his Rooks against the isolated Pawn and win it, or tie up Black's Rooks completely. The text move, however, only helps White; therefore Black had nothing better than to hold tight and wait. 13...Re5 would not help much, as White would simply answer 14 Rf8, Re8; 15 Rxe5, and whichever Rook Black took, White would have an easy game. (The student should carefully study these variations.) } 14. Rg4 Rg7 15. d4 Kc8 16. Rf8+ Kb7 { 16...Kd7 would not help much, but since he made the previous move he should now be consistent and play it. } 17. e5 g5 18. Ke4 Ree7 19. hxg5 hxg5 20. Rf5 Kc8 21. Rgxg5 Rh7 22. Rh5 Kd7 23. Rxh7 Rxh7 24. Rf8 Rh4+ 25. Kd3 Rh3+ 26. Kd2 c5 27. bxc5 Ra3 28. d5 { Black resigns.
+The winning tactics in all these endings have merely consisted in keeping the opponent's Rooks tied to the defence of one or more Pawns, leaving my own Rooks free for action. This is a general principle which can be equally applied to any part of the game. It means in general terms—
+Keep freedom of manœuvre while hampering your opponent.
+There is one more thing of great importance, and that is that the winning side has always had a general strategical plan capable of being carried out with the means at his disposal, while often the losing side had no plan at all, but simply moved according to the needs of the moment. } *
+
+
+[Event "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3): Ex.62: Rook, Bishop and Pawns v. Rook, Knight and Pawns"]
+[Date "2021.03.05"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3)"]
+[ChapterName "Ex.62: Rook, Bishop and Pawns v. Rook, Knight and Pawns"]
+[ChapterURL "https://lichess.org/study/CaZ01HLL/MTmXH2jg"]
+[Annotator "https://lichess.org/@/frankv53"]
+[FEN "r1b3k1/p1p3pp/2p5/8/3pP3/6P1/PPP4P/RN3K2 b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.03.05"]
+[UTCTime "09:00:44"]
+
+1... Rb8 { This forces b3, which blocks that square for the White Knight. } 2. b3 Rb5 { bringing the Rook to attack the King's side Pawns so as to force the King to that side to defend them, and thus indirectly making more secure the position of Black's Queen's side Pawns. } 3. c4 Rh5 4. Kg1 c5 { Note that the White Knight's sphere of action is very limited, and that after Nd2 White's own Pawns are in his way. } 5. Nd2 Kf7 6. Rf1+ { This check accomplishes nothing. It merely drives Black's King where it wants to go. Consequently it is a very bad move. 6 a3 at once was the best move. } 6... Ke7 7. a3 Rh6 { Getting ready to shift the attack to the Queen's side, where he has the advantage in material and position. } 8. h4 Ra6 { Notice how similar are the manœuvres with this Rook to those seen in the previous endings. } 9. Ra1 Bg4 { Paralysing the action of the Knight and fixing the whole King's side. } 10. Kf2 Ke6 { White cannot answer Nf3, because Bxf3 followed by ...Ke5 will win a Pawn, on account of the check at f6 which cannot be stopped. } 11. a4 Ke5 12. Kg2 Rf6 13. Re1 d3 14. Rf1 Kd4 { Now the King attacks White's Pawns and all will soon be over. } 15. Rxf6 gxf6 16. Kf2 c6 { Merely to exhaust White's move, which will finally force him to move either the King or the Knight. } 17. a5 a6 18. Nf1 Kxe4 19. Ke1 Be2 20. Nd2+ Ke3 21. Nb1 f5 22. Nd2 h5 23. Nb1 Kf3 24. Nc3 Kxg3 25. Na4 f4 26. Nxc5 f3 27. Ne4+ Kf4 { The quickest way to win. White should resign. } 28. Nd6 c5 29. b4 cxb4 30. c5 b3 31. Nc4 Kg3 32. Ne3 b2 { White resigns.
+A very good example on Black's part of how to conduct such an ending. } *
+
+
+[Event "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3): Chapter 6 - Further Openings and Middle-Games"]
+[Date "2021.03.05"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3)"]
+[ChapterName "Chapter 6 - Further Openings and Middle-Games"]
+[ChapterURL "https://lichess.org/study/CaZ01HLL/pAN8X5K6"]
+[Annotator "https://lichess.org/@/frankv53"]
+[FEN "8/8/8/8/8/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.03.05"]
+[UTCTime "09:00:44"]
+
+ *
+
+
+[Event "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3): Ex.63: Some Salient Points about Pawns"]
+[Date "2021.03.05"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3)"]
+[ChapterName "Ex.63: Some Salient Points about Pawns"]
+[ChapterURL "https://lichess.org/study/CaZ01HLL/pIzRR5zr"]
+[Annotator "https://lichess.org/@/frankv53"]
+[FEN "8/2p2p1p/p3p1p1/1p1pP3/1P1P4/1P6/P4PPP/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.03.05"]
+[UTCTime "09:00:44"]
+
+ *
+
+
+[Event "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3): Ex.64: Some Salient Points about Pawns"]
+[Date "2021.03.05"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3)"]
+[ChapterName "Ex.64: Some Salient Points about Pawns"]
+[ChapterURL "https://lichess.org/study/CaZ01HLL/I2qPBHdc"]
+[Annotator "https://lichess.org/@/frankv53"]
+[FEN "8/ppp2ppp/4p3/3pP3/3P4/8/PPP2PPP/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.03.05"]
+[UTCTime "09:00:44"]
+
+ *
+
+
+[Event "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3): Ex.65a: Some Possible Developments from a Ruy Lopez"]
+[Date "2021.03.05"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "C83"]
+[Opening "Ruy Lopez: Open, Classical Defense, Main Line"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3)"]
+[ChapterName "Ex.65a: Some Possible Developments from a Ruy Lopez"]
+[ChapterURL "https://lichess.org/study/CaZ01HLL/BgJZBPZ5"]
+[Annotator "https://lichess.org/@/frankv53"]
+[UTCDate "2021.03.05"]
+[UTCTime "09:00:44"]
+
+1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 4. Ba4 Nf6 5. O-O Nxe4 6. d4 b5 7. Bb3 d5 8. dxe5 Be6 9. c3 Be7 10. Re1 Nc5 11. Bc2 Bg4 12. Nbd2 O-O 13. Nb3 Ne6 { So far a very well-known variation of the Ruy Lopez. In fact, they are the moves of the Janowski-Lasker game in Paris, 1912. } 14. Qd3 g6 { (continued in Ex.65b) } *
+
+
+[Event "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3): Ex.65b: Some Possible Developments from a Ruy Lopez"]
+[Date "2021.03.05"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3)"]
+[ChapterName "Ex.65b: Some Possible Developments from a Ruy Lopez"]
+[ChapterURL "https://lichess.org/study/CaZ01HLL/fKzKOQCk"]
+[Annotator "https://lichess.org/@/frankv53"]
+[FEN "r3r1k1/2pq1p1p/p5p1/1p1pP3/3P4/3Q4/PP3PPP/2R1R1K1 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.03.05"]
+[UTCTime "09:00:44"]
+
+ *
+
+
+[Event "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3): Ex.65c: Some Possible Developments from a Ruy Lopez"]
+[Date "2021.03.05"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3)"]
+[ChapterName "Ex.65c: Some Possible Developments from a Ruy Lopez"]
+[ChapterURL "https://lichess.org/study/CaZ01HLL/eMqo8QIf"]
+[Annotator "https://lichess.org/@/frankv53"]
+[FEN "2r3k1/1q3p1p/p1p1r1p1/1pRpP3/3P4/Q7/PP3PPP/2R3K1 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.03.05"]
+[UTCTime "09:00:44"]
+
+ *
+
+
+[Event "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3): Ex.66a: Some Possible Developments from a Ruy Lopez"]
+[Date "2021.03.05"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3)"]
+[ChapterName "Ex.66a: Some Possible Developments from a Ruy Lopez"]
+[ChapterURL "https://lichess.org/study/CaZ01HLL/QkD2xjNr"]
+[Annotator "https://lichess.org/@/frankv53"]
+[FEN "2r3k1/1q5p/p1p1r1p1/1pRpPp2/3P1PP1/Q6P/PP6/2R4K w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.03.05"]
+[UTCTime "09:00:44"]
+
+{ In this situation the game might go on as follows: }
+1. gxf5 gxf5 2. Qf3 Qd7 { White threatened to win a Pawn by Qxd5, and Black could not play 2...Rf8, because 3 Rxc6 would also win a Pawn at least. } 3. R5c2 Rg6 4. Rg2 Kh8 5. Rcg1 Rcg8 6. Qh5 Rxg2 7. Rxg2 Rxg2 8. Kxg2 Qg7+ 9. Kh2 Qg6 10. Qxg6 hxg6 11. b4 { and White wins. } *
+
+
+[Event "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3): Ex.66b: Some Possible Developments from a Ruy Lopez"]
+[Date "2021.03.05"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3)"]
+[ChapterName "Ex.66b: Some Possible Developments from a Ruy Lopez"]
+[ChapterURL "https://lichess.org/study/CaZ01HLL/8kN3MLeW"]
+[Annotator "https://lichess.org/@/frankv53"]
+[FEN "2r3k1/1q5p/p1p1r1p1/1pRpPp2/3P1PP1/Q6P/PP6/2R4K b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.03.05"]
+[UTCTime "09:00:44"]
+
+ *
+
+
+[Event "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3): Ex.67: The Influence of a Hole"]
+[Date "2021.03.05"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "D53"]
+[Opening "Queen's Gambit Declined"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 2 of 3)"]
+[ChapterName "Ex.67: The Influence of a Hole"]
+[ChapterURL "https://lichess.org/study/CaZ01HLL/jwIjYvaJ"]
+[Annotator "https://lichess.org/@/frankv53"]
+[UTCDate "2021.03.05"]
+[UTCTime "09:00:44"]
+
+1. d4 d5 2. c4 e6 3. Nc3 Nf6 4. Bg5 Be7 5. e3 Nbd7 6. Bd3 dxc4 7. Bxc4 Nb6 { Of course the idea is to post a Knight at d5, but as it is the other Knight which will be posted there this maneuver does not seem logical. The Knight at b6 does nothing except to prevent the development of his own Queen's Bishop. The normal course ...0-0, followed by ...c5, is more reasonable. For a beautiful illustration of how to play White in that variation, see the Janowski-Rubinstein game of the St. Petersburg Tournament of 1914. } 8. Bd3 { Bd3 has some points in its favor in this position, the most important being the possibility of advancing the King's Pawn immediately after 8...Nfd5; 9 Bxe7, Qxe7. } 8... Nfd5 9. Bxe7 Qxe7 10. Nf3 { Had White's Bishop been at b3 he could now play e4 as indicated in the previous note, a move which he cannot make in the present position, because of ...Nf4 threatening, not only the g-pawn, but also ...Nxd3+. As White's King's Bishop should never be exchanged in this opening without a very good reason White therefore cannot play e4. } 10... O-O 11. O-O Bd7 12. Rc1 { White is perfectly developed, and now threatens to win a Pawn as follows: 13 Nxd5, Nxd5; 14 e4, followed by Rxc7. } 12... c6 { The fact that Black is practically forced to make this move in order to avoid the loss of a Pawn is sufficient reason in itself to condemn the whole system of development on Black's part. In effect, he plays ...Bd7 and now he has to shut off the action of his own Bishop, which thereby becomes little more than a Pawn for a while. In fact, it is hard to see how this Bishop will ever be able to attack anything. Besides, it can be easily seen that White will soon post his two Knights at e5 and c5 respectively, and that Black will not be able to dislodge them without seriously weakening his game, if he can do it at all. From all these reasons it can be gathered that it would probably have been better for Black to play ...Nxc3 and thus get rid of one of the two White Knights before assuming such a defensive position. In such cases, the less the number of pieces on the board, the better chances there are to escape. } 13. Ne4 f5 { This practically amounts to committing suicide, since it creates a hole at e5 for White's Knight, from where it will be practically impossible to dislodge him. If Black intended to make such a move he should have done it before, when at least there would have been an object in preventing the White Knight from reaching c5. } 14. Nc5 Be8 15. Ne5 { The position of White's Knights, especially the one at e5, might be said to be ideal, and a single glance shows how they dominate the position. The question henceforth will be how is White going to derive the full benefit from such an advantageous situation, This we shall soon see. } 15... Rb8 { There is no object in this move, unless it is to be followed by ...Nd7. As that is not the case, he might have gone with the Rook to c8, as he does later. } 16. Re1 Rf6 17. Qf3 Rh6 18. Qg3 Rc8 { White threatened to win the exchange by playing either Nf7 or Ng4. } 19. f3 Rc7 20. a3 Kh8 21. h3 { Perhaps all these precautions are unnecessary, but White feels that he has more than enough time to prepare his attack, and wants to be secure in every way before he begins. } 21... g5 22. e4 f4 23. Qf2 Ne3 { He had better have played ...Nf6; and tried later on to get rid of White's Knights by means of ...Nd7. } 24. Rxe3 { with this sacrifice of the Rook for a Knight and Pawn White obtains an overwhelming position. } 24... fxe3 25. Qxe3 Nc8 { ...Nd7 was better in order to get rid of one of the two White Knights. There were, however, any number of good replies to it, among them the following: 26 Ncxd7, Bxd7; 27 Qxg5, Qxg5; 28 Nf7+, Kg7; 29 Nxg5, and with two Pawns for the exchange, and the position so much in his favour, White should have no trouble in winning. } 26. Ng4 Rg6 27. e5 Rg7 28. Bc4 Bf7 { All these moves are practically forced, and as it is easily seen they tie up Black's position more and more. White's manœuvres from move 24 onwards are highly instructive. } 29. Nf6 Nb6 { This wandering Knight has done nothing throughout the game. } 30. Nce4 h6 31. h4 Nd5 32. Qd2 Rg6 33. hxg5 Qf8 { If 33...hxg5; 34 Kf2, and Black would be helpless } 34. f4 Ne7 35. g4 hxg5 36. fxg5 { Black resigns.
+There is nothing to be done. If 36...Bg8; 37 Qh2+, Kg7; 38 Bxe6.
+The student should notice that, apart from other things, White throughout the game has had control of the Black squares, principally those at e5 and c5.
+From now on to the end of the book I shall give a collection of my games both lost and won, chosen so as to serve as illustrations of the general principles laid down in the foregoing pages. } *
+
+

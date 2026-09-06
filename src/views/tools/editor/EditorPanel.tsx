@@ -7,10 +7,12 @@ import Tab from "@mui/material/Tab";
 import Tabs from "@mui/material/Tabs";
 import Tooltip from "@mui/material/Tooltip";
 import GridOnRoundedIcon from "@mui/icons-material/GridOnRounded";
+import RestoreRoundedIcon from "@mui/icons-material/RestoreRounded";
 import DeleteSweepRoundedIcon from "@mui/icons-material/DeleteSweepRounded";
 import SwapVertRoundedIcon from "@mui/icons-material/SwapVertRounded";
 import InsightsRoundedIcon from "@mui/icons-material/InsightsRounded";
 import SportsEsportsRoundedIcon from "@mui/icons-material/SportsEsportsRounded";
+import TravelExploreRoundedIcon from "@mui/icons-material/TravelExploreRounded";
 import { useTranslation } from "react-i18next";
 import PositionFields from "./PositionFields";
 import type { BoardEditorState } from "./useBoardEditor";
@@ -32,6 +34,9 @@ import type { BoardEditorState } from "./useBoardEditor";
  * │ [start] [clear] [flip]  [play][analyse]│  controls — fixed
  * └────────────────────────────────────────┘
  * ```
+ *
+ * A fourth reset, "Reset", joins that row when — and only when — the screen
+ * arrived with a readable `?fen=`; see the note on `resets` below.
  *
  * The report sits *above* the tabs rather than inside one: what is wrong with
  * the position is true whichever form you happen to have open, and the controls
@@ -59,6 +64,8 @@ type EditorPanelProps = {
   onContinueToAnalysis: () => void;
   /** Start a game against the engine from this position, likewise. */
   onPlayFromHere: () => void;
+  /** Open the Openings explorer on this position, likewise. */
+  onOpenInOpenings: () => void;
 };
 
 function EditorPanel({
@@ -67,10 +74,19 @@ function EditorPanel({
   pgn,
   onContinueToAnalysis,
   onPlayFromHere,
+  onOpenInOpenings,
 }: EditorPanelProps) {
   const { t } = useTranslation();
   const [tab, setTab] = useState<TabId>("position");
 
+  /*
+    The resets, one of which is conditional: "Reset" — back to the position the
+    screen was opened on — is only there when it arrived with a readable
+    `?fen=`, because with no handed-over position it would have nothing to
+    return to. It sits next to "New board", the standard chess start: the same
+    gesture aimed at two different positions, and the arriving one does not
+    replace the start, which keeps its meaning.
+  */
   const resets = [
     {
       key: "start",
@@ -78,6 +94,16 @@ function EditorPanel({
       icon: <GridOnRoundedIcon fontSize="small" />,
       onClick: state.setStartingPosition,
     },
+    ...(state.arrivalFen === undefined
+      ? []
+      : [
+          {
+            key: "arrival",
+            label: t("editor.controls.arrivalPosition"),
+            icon: <RestoreRoundedIcon fontSize="small" />,
+            onClick: state.setArrivalPosition,
+          },
+        ]),
     {
       key: "clear",
       label: t("editor.controls.clearBoard"),
@@ -113,6 +139,14 @@ function EditorPanel({
       testId: "editor-continue-analysis",
       variant: "contained" as const,
       onClick: onContinueToAnalysis,
+    },
+    {
+      key: "openings",
+      label: t("editor.controls.openings"),
+      icon: <TravelExploreRoundedIcon fontSize="small" />,
+      testId: "editor-open-in-openings",
+      variant: "outlined" as const,
+      onClick: onOpenInOpenings,
     },
   ];
 

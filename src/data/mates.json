@@ -1,0 +1,87 @@
+{
+  "categories": [
+    { "id": "basic", "labelKey": "mates.categories.basic" },
+    { "id": "advanced", "labelKey": "mates.categories.advanced" },
+    { "id": "complex", "labelKey": "mates.categories.complex" }
+  ],
+  "positions": [
+    {
+      "id": "queen-vs-king",
+      "category": "basic",
+      "fen": "7k/8/8/8/8/8/4Q3/4K3 w - - 0 1",
+      "name": {
+        "en": "Queen and king vs king",
+        "he": "מלכה ומלך מול מלך"
+      },
+      "description": {
+        "en": "The first mate to learn. Shrink the defending king's box with the queen a knight's move away, then bring your own king up to deliver mate on the edge.",
+        "he": "המט הראשון שלומדים. מצמצמים את תיבת המלך היריב עם המלכה במרחק מהלך פרש, ואז מקרבים את המלך שלך כדי לתת מט על השוליים."
+      }
+    },
+    {
+      "id": "rook-vs-king",
+      "category": "basic",
+      "fen": "7k/8/8/8/8/8/4R3/4K3 w - - 0 1",
+      "name": {
+        "en": "Rook and king vs king",
+        "he": "צריח ומלך מול מלך"
+      },
+      "description": {
+        "en": "The staircase. The rook cuts the board in half and the two kings face each other; every waiting move takes one more rank away.",
+        "he": "שיטת המדרגות. הצריח חוצה את הלוח לשניים והמלכים עומדים זה מול זה; כל מהלך המתנה גוזל שורה נוספת."
+      }
+    },
+    {
+      "id": "two-bishops-vs-king",
+      "category": "advanced",
+      "fen": "7k/8/8/8/8/8/3BB3/4K3 w - - 0 1",
+      "name": {
+        "en": "Two bishops vs king",
+        "he": "שני רצים מול מלך"
+      },
+      "description": {
+        "en": "The bishops work as a wall on adjacent diagonals and the king drives the defender into a corner — any corner will do.",
+        "he": "הרצים פועלים כחומה על אלכסונים סמוכים והמלך דוחף את היריב לפינה — כל פינה מתאימה."
+      }
+    },
+    {
+      "id": "bishop-knight-vs-king",
+      "category": "advanced",
+      "fen": "7k/8/8/8/8/8/3BN3/4K3 w - - 0 1",
+      "name": {
+        "en": "Bishop and knight vs king",
+        "he": "רץ ופרש מול מלך"
+      },
+      "description": {
+        "en": "The hardest of the elementary mates. Mate is only possible in a corner of the bishop's colour, so the defending king has to be walked there along the edge.",
+        "he": "הקשה מבין המטים היסודיים. המט אפשרי רק בפינה בצבע הרץ, ולכן יש להוביל את המלך היריב לשם לאורך השוליים."
+      }
+    },
+    {
+      "id": "queen-vs-rook",
+      "category": "complex",
+      "fen": "k7/r7/2K5/3Q4/8/8/8/8 w - - 0 1",
+      "name": {
+        "en": "Queen vs rook",
+        "he": "מלכה מול צריח"
+      },
+      "description": {
+        "en": "The defender is not bare: the rook has to be won or the king mated. Zugzwang does the work — the rook cannot stay near its king forever.",
+        "he": "המגן אינו חשוף: יש לזכות בצריח או לתת מט למלך. הצוגצוואנג עושה את העבודה — הצריח אינו יכול להישאר לצד מלכו לנצח."
+      }
+    },
+    {
+      "id": "rook-bishop-vs-rook",
+      "category": "complex",
+      "fen": "6k1/5r2/6K1/8/2B5/8/8/4R3 w - - 0 1",
+      "name": {
+        "en": "Rook and bishop vs rook",
+        "he": "צריח ורץ מול צריח"
+      },
+      "description": {
+        "en": "A theoretical draw that is very hard to hold in practice. The attacker probes for the moment the defending rook runs out of safe squares.",
+        "he": "תיקו תיאורטי שקשה מאוד להחזיק בפועל. התוקף מחפש את הרגע שבו לצריח המגן נגמרים המשבצות הבטוחות."
+      }
+    }
+  ]
+}

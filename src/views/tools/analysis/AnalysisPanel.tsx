@@ -8,6 +8,7 @@ import { useTranslation } from "react-i18next";
 import { formatScore } from "../../../lib/engineAnalysis";
 import BestVariations from "../../shared/BestVariations";
 import BoardControls from "../../shared/BoardControls";
+import CurrentOpening from "../../shared/CurrentOpening";
 import AnalysisSettings from "./AnalysisSettings";
 import VariationTree from "./VariationTree";
 import type { AnalysisBoardState } from "./useAnalysisBoard";
@@ -20,6 +21,8 @@ import type { AnalysisBoardState } from "./useAnalysisBoard";
  *
  * ```
  * ┌──────────────────────────────────┐
+ * │ King's Pawn Game           B00   │  current opening — fixed
+ * ├──────────────────────────────────┤
  * │ Moves │ Engine │ Lines │ Position│  tab strip — fixed
  * ├──────────────────────────────────┤
  * │ the active tab                   │  scrolls
@@ -68,6 +71,12 @@ function AnalysisPanel({
         gap: 1,
       }}
     >
+      {/*
+        The opening at the node on screen — it follows the reader down side
+        lines, the way the evaluation line below it does.
+      */}
+      <CurrentOpening fen={state.fen} testId="analysis-current-opening" />
+
       <Tabs
         value={tab}
         onChange={(_event, next: TabId) => setTab(next)}

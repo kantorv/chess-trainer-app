@@ -1,11 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router";
 import i18n from "../../../i18n";
 import AppThemeWithLang from "../../../theme/AppThemeWithLang";
 import { parsePgnGames } from "../../../lib/pgn";
 import { finalFenOf } from "../../../lib/gameModel";
 import { RightPanelOutlet, RightPanelProvider } from "../../main/rightPanel";
+import { itemsInLibraryCategory } from "../../../lib/libraryCatalog";
+import { pgnCatalog } from "../../../lib/pgnCatalog";
+import { addUpload, clearUploads } from "../../../lib/pgnUploadStore";
+import { fenAtPly } from "../../../lib/gameNavigation";
 import LoadPgn from "./LoadPgn";
 
 /*
@@ -14,6 +19,19 @@ import LoadPgn from "./LoadPgn";
   screen is about — the stub records the position it is handed, so the tests can
   still assert that the loaded game reaches it.
 */
+
+/* The opening book stays stubbed — the panel's new opening line must not pull
+   the real ~3MB eco.json into a screen test. */
+vi.mock("../../../lib/openings", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../lib/openings")>();
+  return {
+    ...actual,
+    loadOpeningBook: () => Promise.resolve({}),
+    getPositionBook: () => ({}),
+    findOpening: () => undefined,
+  };
+});
+
 vi.mock("react-chessboard", () => ({
   Chessboard: ({ options }: { options: { id?: string; position?: string } }) => (
     <div
@@ -50,14 +68,16 @@ const twoGames = `${singleGame}\n\n${secondGame}\n`;
   portal to and none of the queries below would find them.
   `LoadPgnNavigation.test.tsx` is where the move list above them is exercised.
 */
-const renderScreen = () =>
+const renderScreen = (entry = "/games/load-pgn") =>
   render(
-    <AppThemeWithLang>
-      <RightPanelProvider>
-        <LoadPgn />
-        <RightPanelOutlet />
-      </RightPanelProvider>
-    </AppThemeWithLang>,
+    <MemoryRouter initialEntries={[entry]}>
+      <AppThemeWithLang>
+        <RightPanelProvider>
+          <LoadPgn />
+          <RightPanelOutlet />
+        </RightPanelProvider>
+      </AppThemeWithLang>
+    </MemoryRouter>,
   );
 
 /** Paste into the textarea and submit it with the Load button. */
@@ -241,5 +261,134 @@ describe("the Load PGN screen", () => {
     expect(
       screen.getByRole("button", { name: i18n.t("loadPgn.load") }),
     ).toBeInTheDocument();
+  });
+});
+
+describe("the Load PGN screen — arriving with a game", () => {
+  /*
+    The `?game=` hand-off from a User PGNs detail page. Nothing is pasted: the
+    reference is resolved through the catalog and taken as *initial* state,
+    because arriving at the URL is what mounts the screen.
+  */
+  const played = itemsInLibraryCategory(
+    "lichess-study-zwischenzug-best-games-part1-by-lalala732-2026-04-12",
+    pgnCatalog,
+  )[0];
+  if (played.kind !== "game") throw new Error("expected a game");
+
+  const reference = `pgn/${played.category}/${played.id}`;
+
+  beforeEach(async () => {
+    await i18n.changeLanguage("en");
+  });
+
+  it("opens on the game the reference names, at ply 0", () => {
+    renderScreen(`/games/load-pgn?game=${encodeURIComponent(reference)}`);
+
+    /*
+      Ply 0, where a *pasted* game opens at its final position. A paste opens at
+      the end because that is the proof it all parsed; a game the reader picked
+      out of a library is one they mean to replay, and a replay starts at the
+      start.
+    */
+    expect(screen.getByTestId("pgn-board")).toHaveAttribute(
+      "data-position",
+      fenAtPly(played.game, 0),
+    );
+  });
+
+  it("shows the arrived game's own moves and headers", async () => {
+    renderScreen(`/games/load-pgn?game=${encodeURIComponent(reference)}`);
+
+    await userEvent.click(screen.getByTestId("game-panel-tab-info"));
+    expect(screen.getByTestId("game-panel-content-info")).toHaveTextContent(
+      "Jose Raul Capablanca",
+    );
+  });
+
+  it("opens empty for a reference that names nothing", () => {
+    renderScreen("/games/load-pgn?game=pgn/no-such-folder/no-such-game");
+
+    expect(screen.getByTestId("game-panel-content-load")).toBeInTheDocument();
+  });
+
+  it("opens on the ply a ?move= beside the reference names", () => {
+    renderScreen(
+      `/games/load-pgn?game=${encodeURIComponent(reference)}&move=4`,
+    );
+
+    expect(screen.getByTestId("pgn-board")).toHaveAttribute(
+      "data-position",
+      fenAtPly(played.game, 4),
+    );
+  });
+
+  it.each(["abc", "-3", "2.5"])(
+    "opens at ply 0 for a ?move= that is not a ply (%s)",
+    (move) => {
+      renderScreen(
+        `/games/load-pgn?game=${encodeURIComponent(reference)}&move=${move}`,
+      );
+
+      expect(screen.getByTestId("pgn-board")).toHaveAttribute(
+        "data-position",
+        fenAtPly(played.game, 0),
+      );
+    },
+  );
+
+  it("clamps a ?move= past the end of the game rather than throwing", () => {
+    renderScreen(
+      `/games/load-pgn?game=${encodeURIComponent(reference)}&move=99999`,
+    );
+
+    expect(screen.getByTestId("pgn-board")).toHaveAttribute(
+      "data-position",
+      fenAtPly(played.game, played.game.moves.length),
+    );
+  });
+
+  describe("with a StartPly tag", () => {
+    /*
+      Seeded through an upload: the tag lives in the PGN text itself, so an
+      uploaded file declares it exactly as a shipped one would.
+    */
+    const START_PLY_PGN = `[Event "Uploaded: Chapter 1"]
+[Result "*"]
+[StudyName "Uploaded Study"]
+[ChapterName "Chapter 1"]
+[StartPly "3"]
+
+1. e4 e5 2. Nf3 Nc6 3. Bb5 *
+
+`;
+
+    const tagged = parsePgnGames(START_PLY_PGN)[0];
+    const taggedReference = "pgn/uploads/my-study/chapter-1";
+
+    beforeEach(() => {
+      clearUploads();
+      addUpload("my_study.pgn", START_PLY_PGN);
+    });
+
+    it("opens on the ply the game's StartPly tag declares", () => {
+      renderScreen(`/games/load-pgn?game=${encodeURIComponent(taggedReference)}`);
+
+      expect(screen.getByTestId("pgn-board")).toHaveAttribute(
+        "data-position",
+        fenAtPly(tagged, 3),
+      );
+    });
+
+    it("lets an explicit ?move= win over the tag", () => {
+      renderScreen(
+        `/games/load-pgn?game=${encodeURIComponent(taggedReference)}&move=1`,
+      );
+
+      expect(screen.getByTestId("pgn-board")).toHaveAttribute(
+        "data-position",
+        fenAtPly(tagged, 1),
+      );
+    });
   });
 });

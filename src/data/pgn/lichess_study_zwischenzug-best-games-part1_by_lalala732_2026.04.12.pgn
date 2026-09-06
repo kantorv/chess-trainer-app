@@ -1,0 +1,270 @@
+[Event "New York"]
+[Site "New York, NY USA"]
+[Date "1924.03.23"]
+[Round "6"]
+[White "Jose Raul Capablanca"]
+[Black "Savielly Tartakower"]
+[Result "1-0"]
+[Variant "Standard"]
+[ECO "A40"]
+[Opening "Horwitz Defense"]
+[StudyName "Zwischenzug best games [part1]"]
+[ChapterName "Jose Raul Capablanca - Savielly Tartakower"]
+[ChapterURL "https://lichess.org/study/Y0NNK3lg/NSoD634i"]
+[Annotator "https://lichess.org/@/lalala732"]
+
+{ https://www.chessgames.com/perl/chessgame?gid=1102104 }
+1. d4 { Notes by Alekhine and Reti. } 1... e6 2. Nf3 f5 3. c4 Nf6 4. Bg5 Be7 5. Nc3 O-O 6. e3 b6 7. Bd3 Bb7 8. O-O Qe8 9. Qe2 Ne4 10. Bxe7 Nxc3 11. bxc3 Qxe7 12. a4 Bxf3 13. Qxf3 Nc6 14. Rfb1 Rae8 15. Qh3 Rf6 16. f4 Na5 17. Qf3 d6 18. Re1 Qd7 19. e4 fxe4 20. Qxe4 g6 21. g3 Kf8 22. Kg2 Rf7 23. h4 d5 24. cxd5 exd5 25. Qxe8+ Qxe8 26. Rxe8+ Kxe8 27. h5 { ! This is
+the calamity--the Rook now enters the hostile camp. --
+Alekhine } 27... Rf6 28. hxg6 hxg6 29. Rh1 { White plays logically to
+utilize his advantage on the K-side and very properly does not
+concern himself with the weakness of the Q-side. Black, on the
+other hand, makes a defensive move which he could perhaps have
+omitted. -- Reti } 29... Kf8 30. Rh7 Rc6 31. g4 { Anxious nature might
+have moved the King towards the queenside, but Capablanca
+adheres to the principle of aggression that governs rook
+endings. -- Reti } 31... Nc4 32. g5 { He gives his opponent the
+opportunity of winning a pawn. But Capablanca has confidence
+in the passed pawn which he obtains. -- Reti } 32... Ne3+ 33. Kf3 Nf5 34. Bxf5 { Simple and compelling. -- Alekhine } 34... gxf5 35. Kg3 { Decisive! White sacrifices material in order to obtain the
+classical position with King on f6, pawn on g6, and Rook on
+h7, whereupon the black pawns tumble like ripe apples. --
+Alekhine } 35... Rxc3+ { It is extremely instructive to see how
+Capablanca is no longer in the least concerned about material
+equality, but thinks only of supporting his passed pawn. --
+Reti } 36. Kh4 Rf3 37. g6 Rxf4+ 38. Kg5 Re4 39. Kf6 { It is a
+frequently available finesse in such positions not to capture
+hostile pawns, but to pass them by in order to be protected in
+the rear against checks by the rook. -- Reti } 39... Kg8 40. Rg7+ Kh8 41. Rxc7 Re8 42. Kxf5 { Again the simplest. Kf7 would not yet
+have been disastrous because of Rd8, etc. -- Alekhine } 42... Re4 43. Kf6 Rf4+ 44. Ke5 Rg4 45. g7+ Kg8 { After exchanging rooks,
+White would win still more easily. -- Alekhine } 46. Rxa7 Rg1 47. Kxd5 Rc1 48. Kd6 Rc2 49. d5 Rc1 50. Rc7 Ra1 51. Kc6 Rxa4 52. d6 { Capablanca's management of the endgame gives the
+impression of being so natural that one easily forgets the
+difficulty of such precise play. The difficulty is chiefly
+psychological. In chess, as in life, one is so accustomed to
+place value on the material factors that it is not easy to
+conceive the idea of indulging in pawn sacrifices when there
+is so little available material. --Reti } 1-0
+
+
+[Event "Corus Group A"]
+[Site "Wijk aan Zee NED"]
+[Date "2005.01.21"]
+[Round "6"]
+[White "Viswanathan Anand"]
+[Black "Ruslan Ponomariov"]
+[Result "1-0"]
+[Variant "Standard"]
+[ECO "B90"]
+[Opening "Sicilian Defense: Najdorf Variation"]
+[StudyName "Zwischenzug best games [part1]"]
+[ChapterName "Viswanathan Anand - Ruslan Ponomariov"]
+[ChapterURL "https://lichess.org/study/Y0NNK3lg/3Rn4vrCI"]
+[Annotator "https://lichess.org/@/lalala732"]
+
+{ https://www.chessgames.com/perl/chessgame?gid=1102104 }
+1. e4 { Notes by Stockfish 9 v010218 (minimum 6s/ply) } 1... c5 2. Nf3 d6 3. d4 cxd4 4. Nxd4 Nf6 5. Nc3 a6 6. f3 Qb6 7. Nb3 e6 8. Bf4 Nbd7 { better is 8...e5 9.Bg5 Be6 10.Qd2 Nbd7 11.O-O-O Be7 12.h4 Qc7
+= +0.14 (26 ply) } 9. g4 { +/= +0.74 (23 ply) after 9.Qd2 Be7
+10.g4 Qc7 11.a4 Ne5 12.Be2 O-O 13.h4 Rd8 14.g5 } 9... Be7 10. Qe2 h6 11. h4 { better is 11.O-O-O Qc6 12.Kb1 b5 13.a3 e5 14.g5 exf4
+15.gxf6 Nxf6 +/= +0.79 (21 ply) } 11... Qc7 { = +0.27 (22 ply) } 12. O-O-O b5 13. a3 Rb8 { better is 13...e5 14.Be3 Nb6 15.Bh3 Na4
+16.Na2 Be6 17.Kb1 Nd7 = +0.16 (20 ply) } 14. Qg2 { ? 14.Kb1 Ne5
+15.Bc1 b4 16.axb4 Rxb4 17.Rg1 Nfd7 18.f4 Nc4 +/= +0.82 (23
+ply) } 14... Nc5 { ? 14...Ne5 15.g5 Nh5 16.Bd2 Nc4 17.Kb1 a5 18.Bxc4
+bxc4 = -0.08 (23 ply) } 15. g5 { ? 15.Nxc5 Qxc5 16.Qd2 b4 17.Na4
+Qc6 18.Bxd6 Bxd6 19.Qxd6 +/= +1.05 (26 ply) } 15... Nh5 { = +0.02 (25
+ply) } 16. Be3 Na4 17. Rd3 g6 { better is 17...Nc5 18.Nxc5 dxc5
+19.gxh6 gxh6 20.Qg4 Nf6 21.Qf4 = +0.03 (24 ply) } 18. Kb1 { +/=
++0.72 (21 ply) } 18... Bb7 19. Be2 e5 { better is 19...Nc5 20.Rd4 O-O
+21.f4 Nxb3 22.cxb3 Nxf4 23.Bxf4 e5 = +0.31 (22 ply) } 20. Qf2 { better is 20.gxh6 O-O 21.Rhd1 Rfc8 22.Bf1 Nb6 23.f4 Nc4
+24.fxe5 +/= +0.86 (23 ply) } 20... Bc6 { better is 20...O-O 21.gxh6
+Kh7 22.f4 exf4 23.Bxf4 Nxf4 24.Qxf4 Qc4 = +0.24 (20 ply) } 21. gxh6 { +/= +0.87 (22 ply) } 21... Nb6 { ? 21...Nf4 22.Bxf4 exf4
+23.Qd4 Rxh6 24.Qg7 Bf8 25.Qg8 Qe7 +/= +0.60 (23 ply) } 22. f4 { +- +2.72 (24 ply) } 22... Nf6 { ? 22...exf4 23.Bxf4 Nxf4 24.Qxf4 Nc4
+25.Nd4 b4 26.Rf1 +/- +2.42 (22 ply) } 23. fxe5 { +- +4.97 (23
+ply) } 23... dxe5 24. Rf1 O-O 25. Nc5 Bb7 26. Ne6 fxe6 27. Bxb6 Qc6 28. Qg1 Kh7 29. Rdf3 Qe8 30. Bc5 Bxc5 31. Qxc5 Nd7 32. Qe3 { better
+is 32.Qd6 Rxf3 33.Bxf3 Rc8 34.h5 g5 35.Rd1 Nf6 36.Qxe5 Qf7 +-
++4.50 (24 ply) } 32... Qe7 { +- +2.52 (24 ply) after 32...Rxf3 33.Qxf3
+Bc6 34.Nd1 Qe7 35.Qf7+ Qxf7 36.Rxf7+ } 33. Qg5 Qxg5 34. Rf7+ Rxf7 35. Rxf7+ Kh8 36. hxg5 Bc6 37. b4 Nf8 38. Rf6 Kg8 39. Bg4 Bd7 { ? 39...Re8 40.a4 Bd7 41.axb5 axb5 42.Kb2 Rc8 43.Kb3 Rb8 +-
++2.83 (25 ply) } 40. Kb2 { +- +4.47 (26 ply) } 40... Re8 41. Nd1 Re7 42. Nf2 Be8 43. Rf3 Rf7 { ? 43...Nh7 44.Nh3 Bc6 45.Re3 Kf7 46.Bf3
+Ke8 47.Bg2 Bb7 +- +3.00 (30 ply) } 44. Rxf7 { +- +4.95 (31 ply) } 44... Kxf7 45. Kc3 Nh7 46. Nh3 Bc6 47. Kd3 Ke7 48. Ke3 Kd6 49. Be2 Ke7 50. Bd3 Kd6 51. Kf3 Ke7 52. Kg4 Nf8 53. Ng1 Nh7 54. Nf3 Kd6 55. Kg3 Be8 56. Kf2 Bc6 57. Ke3 Bd7 58. c4 bxc4 59. Bxc4 Bc8 60. a4 Bb7 61. a5 Bc8 62. Bd3 { 62...Nf8 63.b5 axb5 64.Bxb5 Bb7 65.a6 Bc8
+66.Be2 Nh7 +- +8.17 (30 ply) } 1-0
+
+
+[Event "2nd London Chess Classic"]
+[Site "London ENG"]
+[Date "2010.12.11"]
+[Round "4"]
+[White "Carlsen, Magnus"]
+[Black "Nakamura, Hikaru"]
+[Result "1-0"]
+[WhiteElo "2802"]
+[BlackElo "2741"]
+[Variant "Standard"]
+[ECO "A10"]
+[Opening "English Opening: Anglo-Dutch Defense"]
+[StudyName "Zwischenzug best games [part1]"]
+[ChapterName "Carlsen, Magnus - Nakamura, Hikaru"]
+[ChapterURL "https://lichess.org/study/Y0NNK3lg/ZeL3CErC"]
+[Annotator "https://lichess.org/@/lalala732"]
+
+{ https://www.365chess.com/game.php?gid=3754471 }
+1. c4 f5 2. g3 Nf6 3. Bg2 d6 4. Nc3 g6 5. e3 Bg7 6. Nge2 O-O 7. O-O e5 8. b3 Nbd7 9. d3 c6 10. Ba3 Qc7 11. Qd2 Re8 12. Rae1 Nc5 13. h3 e4 14. dxe4 Nfxe4 15. Qc2 Nxc3 16. Nxc3 Be6 17. Rd1 Rad8 18. Bb2 Bf7 19. Rd2 a5 20. Rfd1 Be5 21. Ne2 a4 22. b4 Nd7 23. Bd4 Nb6 24. Bxb6 Qxb6 25. Rb1 Qc7 26. Nd4 Rc8 27. Rc1 Qe7 28. Rd3 c5 29. bxc5 Rxc5 30. Qxa4 Rec8 31. Rb1 Rxc4 32. Qd1 b6 33. Nb5 R4c5 34. Nxd6 Bxd6 35. Rxd6 Bxa2 36. Ra1 Rc1 37. Rxc1 Rxc1 38. Rxg6+ hxg6 39. Qxc1 Qd6 40. h4 Bf7 41. h5 Kh7 42. hxg6+ Kxg6 43. Qc2 b5 44. g4 Qe5 45. gxf5+ Kg7 46. Qe4 Qd6 47. Qh4 Bc4 48. Bf3 Qf6 49. Qxf6+ Kxf6 50. Be4 Ba2 51. f4 b4 52. Kf2 b3 53. Bd5 Kxf5 54. Kf3 Kf6 55. e4 Kg6 56. Ke3 Kh5 57. Kd4 Kg4 58. f5 Kg5 59. Ke5 { 1-0 White wins. } 1-0
+
+
+[Event "Milan"]
+[Site "Milan ITA"]
+[Date "1975.08.20"]
+[Round "1"]
+[White "Wolfgang Unzicker"]
+[Black "Mikhail Tal"]
+[Result "1-0"]
+[Variant "Standard"]
+[ECO "B43"]
+[Opening "Sicilian Defense: Kan Variation, Knight Variation"]
+[StudyName "Zwischenzug best games [part1]"]
+[ChapterName "Wolfgang Unzicker - Mikhail Tal"]
+[ChapterURL "https://lichess.org/study/Y0NNK3lg/BmI5UmLU"]
+[Annotator "https://lichess.org/@/lalala732"]
+
+{ https://www.chessgames.com/perl/chessgame?gid=1140266 }
+1. e4 { Notes by Stockfish 9 v010218 (minimum 6s/ply) } 1... c5 2. Nf3 e6 3. d4 cxd4 4. Nxd4 a6 5. Nc3 Qc7 6. g3 Bb4 7. Ne2 Nc6 { better is
+7...Be7 8.Bg2 Nc6 9.Be3 b5 10.Nc1 Nf6 11.O-O Bb7 = +0.01 (28
+ply) } 8. Bg2 { better is 8.Bf4 Ne5 9.Bxe5 Qxe5 10.Bg2 Nf6 11.Qd3
+Qc7 12.f4 d5 +/= +0.58 (28 ply) } 8... Nf6 { ? 8...d6 9.Be3 Nf6 10.a3
+Bc5 11.Bxc5 dxc5 12.f4 O-O = -0.17 (26 ply) } 9. O-O { ? 9.Bf4
+Qd8 10.a3 Be7 11.Nd4 d5 12.O-O O-O 13.Re1 Nxd4 +/= +0.73 (27
+ply) } 9... Be7 { = -0.25 (26 ply) } 10. Be3 Ng4 11. Bf4 d6 12. Nd4 Nce5 13. Bc1 Nf6 14. f4 Nc6 15. Nxc6 bxc6 16. e5 dxe5 17. fxe5 Nd7 18. Bf4 g5 { ? 18...O-O 19.Ne4 Nxe5 20.Qd4 f6 21.Bxe5 fxe5
+22.Rxf8+ = +0.08 (28 ply) } 19. Be3 { +/- +1.77 (28 ply) } 19... Nxe5 20. Ne4 h6 { ? 20...g4 21.Qd4 Nf3+ 22.Bxf3 e5 23.Qd1 gxf3
+24.Qxf3 Be6 +/- +1.88 (25 ply) } 21. Qh5 { +- +2.70 (26 ply) } 21... Ng6 { ? 21...Bd7 22.Bd4 O-O-O 23.Qe2 Kb8 24.Nf6 Ng6 25.Nxd7+ +-
++2.91 (26 ply) } 22. Rf2 { better is 22.Nf6+ Bxf6 23.Rxf6 Bd7
+24.Rd1 Rg8 25.Bc5 Qe5 26.Bd4 +- +4.63 (24 ply) } 22... Qe5 { ?
+22...Bb7 23.Bd4 O-O-O 24.Bxh8 Rxh8 25.Rxf7 Ne5 26.Rg7 +/-
++2.40 (28 ply) } 23. Raf1 { +- +5.98 (26 ply) after 23.Rd1 c5
+24.Bd2 Qg7 25.Bc3 e5 26.Nd6+ Bxd6 27.Rxd6 Ra7 } 23... Rh7 24. Rxf7 Rxf7 25. Qxg6 Qg7 26. Nd6+ Bxd6 27. Bxc6+ Ke7 { ? 27...Bd7
+28.Qxe6+ Kd8 29.Rxf7 Bxe6 30.Bb6+ Kc8 31.Bb7+ +- +2.62 (31
+ply) } 28. Rxf7+ { +- +4.55 (27 ply) } 28... Qxf7 29. Qxh6 Be5 30. Qxg5+ Kd6 31. Bxa8 Qc7 32. Qxe5+ { 32...Kxe5 33.Bf4+ Kf5 34.Bxc7 Kf6
+35.b3 Kf5 36.Bc6 Kf6 +- +8.31 (31 ply) } 1-0
+
+
+[Event "Bucharest"]
+[Site "Bucharest ROU"]
+[Date "1954.03.04"]
+[Round "5"]
+[White "Rashid Gibiatovich Nezhmetdinov"]
+[Black "Enrico Paoli"]
+[Result "1-0"]
+[Variant "Standard"]
+[ECO "B95"]
+[Opening "Sicilian Defense: Najdorf Variation"]
+[StudyName "Zwischenzug best games [part1]"]
+[ChapterName "Rashid Gibiatovich Nezhmetdinov - Enrico Paoli"]
+[ChapterURL "https://lichess.org/study/Y0NNK3lg/CkT4aTeX"]
+[Annotator "https://lichess.org/@/lalala732"]
+
+{ https://www.chessgames.com/perl/chessgame?gid=1102158 }
+1. e4 { Notes by Stockfish 9 v010218 (minimum 6s/ply) } 1... c5 2. Nf3 d6 3. d4 cxd4 4. Nxd4 Nf6 5. Nc3 a6 6. Bg5 e6 7. Qf3 Be7 { better is
+7...Nbd7 8.a3 Be7 9.h4 Qc7 10.O-O-O b5 11.Qg3 Bb7 = -0.22 (32
+ply) } 8. O-O-O { = +0.39 (22 ply) after 8.h4 } 8... Qc7 9. Rg1 { 9.Be2
+was played in I Nepomniachtchi vs M Grzegorzek, 2011 (1-0) } 9... Bd7 { ? 9...Nbd7 10.a3 b5 11.Qg3 O-O 12.Bh6 Ne8 13.Be3 Rb8 =
+-0.38 (24 ply) } 10. g4 { = +0.45 (24 ply) } 10... Nc6 11. Be3 h6 12. h4 Rc8 { better is 12...h5 13.gxh5 Nxh5 14.Nxc6 Bxc6 15.Bg5 Bxg5+
+16.hxg5 = +0.19 (20 ply) } 13. g5 { +/= +0.89 (24 ply) } 13... hxg5 14. hxg5 Ne5 15. Qg2 { better is 15.Qe2 Nh5 16.f4 Nc4 17.Qxc4
+Qxc4 18.Bxc4 Rxc4 19.f5 Bd8 +/= +0.83 (24 ply) } 15... Ng8 { ?
+15...Nfg4 16.Bf4 Qb6 17.Be2 Ng6 18.Qxg4 e5 19.Nd5 Qc5 = +0.14
+(24 ply) } 16. f4 { +- +3.04 (21 ply) } 16... Nc4 17. Bxc4 Qxc4 18. f5 b5 { ? 18...e5 19.Nb3 Qc6 20.Nd5 Bd8 21.Rh1 Rxh1 22.Rxh1 Bxf5 +-
++2.76 (20 ply) } 19. Kb1 { better is 19.g6 f6 20.fxe6 Bxe6 21.Kb1
+Bf8 22.Nd5 Bxd5 23.b3 Qc5 +- +4.93 (23 ply) } 19... b4 { ? 19...e5
+20.Nb3 b4 21.Nd5 Rh4 22.f6 Qxe4 23.fxe7 Qxg2 +/- +2.23 (25
+ply) } 20. g6 { +- +5.95 (23 ply) } 20... e5 21. b3 Qxc3 22. gxf7+ Kd8 23. Qxg7 exd4 24. Bxd4 Qxc2+ 25. Ka1 Rh2 26. Bb6+ Rc7 { +-
+mate-in-3 after 26...Qc7 27.Qxg8+ Bf8 28.Qxf8+ Be8 } 27. Qxg8+ { 27...Bf8 28.Qxf8+ Be8 29.fxe8=Q# +- mate-in-2 } 1-0
+
+
+[Event "URS-ch FL54"]
+[Site "Irkutsk URS"]
+[Date "1986.??.??"]
+[White "Oleg Romanishin"]
+[Black "Vassily Ivanchuk"]
+[Result "1-0"]
+[Variant "Standard"]
+[ECO "C02"]
+[Opening "French Defense: Advance Variation, Euwe Variation"]
+[StudyName "Zwischenzug best games [part1]"]
+[ChapterName "Oleg Romanishin - Vassily Ivanchuk"]
+[ChapterURL "https://lichess.org/study/Y0NNK3lg/Mq733wRp"]
+[Annotator "https://lichess.org/@/lalala732"]
+
+{ https://www.chessgames.com/perl/chessgame?gid=1059879 }
+1. e4 { Notes by Stockfish 9 v010218 (minimum 6s/ply) } 1... e6 2. d4 d5 3. e5 c5 4. c3 Nc6 5. Nf3 Bd7 6. Be2 f6 7. O-O fxe5 8. Nxe5 Nxe5 9. dxe5 Qc7 10. c4 Qxe5 { 10...d4 was played in J Smeets vs I
+Rogers, 2001 (0-1) } 11. Bh5+ { 11.Bf3 was played in Movsesian vs
+R Jedynak, 2001 (1-0) } 11... g6 12. Bf3 O-O-O { ? 12...d4 13.Re1 Qc7
+14.b4 Bg7 15.Na3 Ne7 16.bxc5 a6 17.Rb1 = 0.00 (36 ply) } 13. Re1 { +/= +1.01 (34 ply) } 13... Qd6 { ? 13...Qd4 14.Qxd4 cxd4 15.cxd5 Bb4
+16.Re4 exd5 17.Rxd4 +/= +0.67 (33 ply) } 14. Nc3 { +/- +1.73 (34
+ply) } 14... dxc4 15. Qe2 Nf6 { better is 15...h6 16.Qxc4 Qa6 17.Qxa6
+bxa6 18.Ne4 Rh7 19.Be3 Bc6 +/- +1.67 (19 ply) } 16. Qxc4 { ?
+16.Bg5 Be7 17.Rad1 Qc7 18.Bh4 Rde8 19.Bg3 e5 20.Bxe5 Bd8 +/-
++2.42 (24 ply) } 16... Be7 { +/= +1.33 (20 ply) } 17. Bf4 Qd4 { ?
+17...Qa6 18.Qxa6 bxa6 19.Rad1 Rhe8 20.h3 Rf8 21.Bd6 Ng8 +/=
++1.30 (24 ply) } 18. Nb5 { +- +13.87 (25 ply) } 18... Bxb5 19. Bxb7+ { 19...Kxb7 20.Qxb5+ Ka8 21.Qc6# +- mate-in-2 } 1-0
+
+
+[Event "Leningrad"]
+[Site "Leningrad"]
+[Date "1948.??.??"]
+[White "Viktor Korchnoi"]
+[Black "Boris Spassky"]
+[Result "1-0"]
+[Variant "Standard"]
+[ECO "B71"]
+[Opening "Sicilian Defense: Dragon Variation, Levenfish Variation"]
+[StudyName "Zwischenzug best games [part1]"]
+[ChapterName "Viktor Korchnoi - Boris Spassky"]
+[ChapterURL "https://lichess.org/study/Y0NNK3lg/MQiPbRuK"]
+[Annotator "https://lichess.org/@/lalala732"]
+
+{ https://www.chessgames.com/perl/chessgame?gid=1080843 }
+1. e4 { Notes by Stockfish 8 v270317 (minimum 30s/ply) } 1... c5 2. Nf3 d6 3. d4 cxd4 4. Nxd4 Nf6 5. Nc3 g6 6. f4 Bg4 { better is 6...Nc6
+7.Bb5 Qc7 8.Be3 Bg7 9.O-O O-O 10.Be2 Ng4 = 0.00 (27 ply) } 7. Bb5+ { +/= +0.58 (29 ply) after 7.Qd2 Bd7 8.e5 Nh5 9.Bc4 Nc6
+10.Nxc6 Bxc6 11.O-O e6 } 7... Nbd7 8. Bxd7+ { better is 8.Qd2 a6
+9.Ba4 e5 10.Nf3 b5 11.Bb3 Bxf3 12.gxf3 Rc8 = +0.33 (30 ply) } 8... Qxd7 { ? 8...Bxd7 9.O-O Bg7 10.h3 O-O 11.Qd3 b5 12.a3 a5 13.e5
+= -0.41 (30 ply) } 9. Qd3 { +/= +0.55 (34 ply) } 9... e5 10. Nf3 Bxf3 { better is 10...Bg7 11.fxe5 dxe5 12.Nxe5 Qxd3 13.Nxd3 O-O
+14.h3 Bd7 = +0.15 (33 ply) } 11. Qxf3 { +/= +0.76 (33 ply) after
+11.gxf3 Bh6 12.Be3 exf4 13.Bd4 Bg7 14.O-O-O O-O 15.h4 } 11... Qg4 { ?
+11...d5 12.exd5 e4 13.Qe3 Bg7 14.Nxe4 O-O-O 15.Qc3+ Qc7 +/=
++0.66 (32 ply) } 12. Nd5 { +- +3.85 (34 ply); 12...Kd8 13.Qxg4
+Nxg4 14.h3 Nh6 15.fxe5 dxe5 16.Bg5+ Kd7 +- +3.54 (33 ply) } 1-0
+
+
+[Event "Forli op"]
+[Site "Forli ITA"]
+[Date "1990.09.14"]
+[Round "7"]
+[White "Maia Chiburdanidze"]
+[Black "Gulnara Sachs"]
+[Result "1-0"]
+[Variant "Standard"]
+[ECO "B52"]
+[Opening "Sicilian Defense: Moscow Variation, Main Line"]
+[StudyName "Zwischenzug best games [part1]"]
+[ChapterName "Maia Chiburdanidze - Gulnara Sachs"]
+[ChapterURL "https://lichess.org/study/Y0NNK3lg/hNBxqcdQ"]
+[Annotator "https://lichess.org/@/lalala732"]
+
+{ https://www.chessgames.com/perl/chessgame?gid=1285659 }
+1. e4 c5 2. Nf3 d6 3. Bb5+ Bd7 4. Bxd7+ Nxd7 5. O-O Ngf6 6. Qe2 e6 7. b3 Be7 8. d4 cxd4 9. Nxd4 O-O 10. c4 a6 11. Bb2 Re8 12. Nc3 Rc8 13. Kh1 Bf8 14. Rad1 Qa5 15. f4 e5 16. Nf5 exf4 17. Rxf4 b5 18. Nd5 Nxd5 19. Nh6+ Kh8 20. Nxf7+ Kg8 21. cxd5 Ne5 22. Bxe5 dxe5 23. Rf5 Rc7 24. Rdf1 Qb4 25. Ng5 g6 26. Ne6 Rcc8 27. Rf7 Bh6 28. Qf3 Bf4 29. Rg7+ { 1-0 White wins. } 1-0
+
+
+[Event "Biel Interzonal"]
+[Site "Biel SUI"]
+[Date "1985.07.20"]
+[Round "14"]
+[White "Eugenio Torre"]
+[Black "Margeir Petursson"]
+[Result "1-0"]
+[Variant "Standard"]
+[ECO "E41"]
+[Opening "Nimzo-Indian Defense: Rubinstein System"]
+[StudyName "Zwischenzug best games [part1]"]
+[ChapterName "Eugenio Torre - Margeir Petursson"]
+[ChapterURL "https://lichess.org/study/Y0NNK3lg/oSgYTCcR"]
+[Annotator "https://lichess.org/@/lalala732"]
+
+{ https://www.chessgames.com/perl/chessgame?gid=1041601 }
+1. d4 Nf6 2. c4 e6 3. Nc3 Bb4 4. e3 c5 5. Bd3 Nc6 6. Ne2 cxd4 7. exd4 d5 8. O-O dxc4 9. Bxc4 O-O 10. Bg5 Be7 11. a3 b6 12. Qd3 Bb7 13. Rad1 Nd5 14. Bxd5 Bxg5 15. Be4 g6 16. d5 exd5 17. Bxd5 Qe7 18. Ng3 Rae8 19. Nge4 Kg7 20. Nxg5 Qxg5 21. Ne4 Qf4 22. Qc3+ Kh6 23. Bxc6 Bxc6 24. Nd6 Re6 25. Qxc6 Rd8 26. Nxf7+ { 1-0 White wins. } 1-0
+
+

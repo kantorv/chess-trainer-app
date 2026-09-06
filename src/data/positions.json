@@ -1,0 +1,162 @@
+{
+  "categories": [
+    {
+      "id": "queen-vs-rook",
+      "label": { "en": "Queen vs Rook", "he": "מלכה מול צריח" },
+      "children": [
+        {
+          "id": "rosettes",
+          "label": { "en": "Rosettes", "he": "רוזטות" }
+        }
+      ]
+    },
+    {
+      "id": "rook-and-pawn-vs-rook",
+      "label": { "en": "Rook and pawn vs Rook", "he": "צריח ורגלי מול צריח" }
+    },
+    {
+      "id": "pawn-endgames",
+      "label": { "en": "Pawn endgames", "he": "סופי משחק של רגלים" }
+    },
+    {
+      "id": "rook-vs-pawn",
+      "label": { "en": "Rook vs pawn", "he": "צריח מול רגלי" }
+    },
+    {
+      "id": "minor-piece-endgames",
+      "label": { "en": "Minor piece endgames", "he": "סופי משחק של כלים קלים" }
+    }
+  ],
+  "positions": [
+    {
+      "id": "philidor-position",
+      "category": "queen-vs-rook",
+      "fen": "1k6/1r6/2K5/8/7Q/8/8/8 b - - 0 1",
+      "name": { "en": "Philidor position", "he": "עמדת פילידור" },
+      "description": {
+        "en": "The defending rook stands beside its king on the edge — the formation that holds a queen off the longest. Black to move is already in zugzwang: every rook move either walks into a fork or lets the queen closer, which is how a queen wins the rook.",
+        "he": "הצריח המגן עומד לצד מלכו על השוליים — המבנה שמחזיק מעמד הכי הרבה זמן מול מלכה. השחור במסע כבר נמצא בצוגצוואנג: כל מהלך של הצריח מוביל לשיפוד או מקרב את המלכה, וכך המלכה זוכה בצריח."
+      }
+    },
+    {
+      "id": "lucena-position",
+      "category": "rook-and-pawn-vs-rook",
+      "fen": "1K6/1P1k4/8/8/8/8/r7/2R5 w - - 0 1",
+      "name": { "en": "Lucena position: building a bridge", "he": "עמדת לוסנה: בניית גשר" },
+      "description": {
+        "en": "The winning method in rook and pawn versus rook. The pawn is one square from queening and the king is stuck in front of it, so White lifts the rook to the fourth rank first: the king then walks out through the checks and the rook interposes on the fourth — the bridge.",
+        "he": "שיטת הניצחון בסוף משחק של צריח ורגלי מול צריח. הרגלי משבצת אחת מההכתרה והמלך תקוע לפניו, ולכן הלבן מרים תחילה את הצריח לשורה הרביעית: המלך יוצא מבין השחים והצריח חוסם בשורה הרביעית — הגשר."
+      }
+    },
+    {
+      "id": "philidor-defense",
+      "category": "rook-and-pawn-vs-rook",
+      "fen": "8/4k3/r7/3KP3/8/8/8/7R b - - 0 1",
+      "name": { "en": "Philidor: the third-rank defense", "he": "פילידור: הגנת השורה השלישית" },
+      "description": {
+        "en": "The drawing defense, and the one to know first. Black keeps the rook on the sixth rank so the white king can never cross it; the moment the pawn advances to that rank the rook drops to the back and checks from behind, where the king has no shelter.",
+        "he": "הגנת התיקו, והראשונה שכדאי להכיר. השחור מחזיק את הצריח בשורה השישית כך שהמלך הלבן לא יוכל לחצות אותה; ברגע שהרגלי מתקדם לשורה הזו הצריח יורד לשורה האחורית ונותן שחים מאחור, במקום שבו למלך אין מחסה."
+      }
+    },
+    {
+      "id": "vancura-position",
+      "category": "rook-and-pawn-vs-rook",
+      "fen": "R7/6k1/P4r2/8/8/8/4K3/8 w - - 0 1",
+      "name": { "en": "Vancura position", "he": "עמדת ואנצ'ורה" },
+      "description": {
+        "en": "The rook's-pawn draw. The defending rook attacks the pawn sideways along the sixth rank instead of sitting passively in front of it, so it keeps its freedom: when the white king approaches, the same rook switches to checking from the side.",
+        "he": "התיקו של רגלי הצריח. הצריח המגן תוקף את הרגלי לרוחב השורה השישית במקום לשבת לפניו בפסיביות, וכך שומר על חופש התנועה: כשהמלך הלבן מתקרב, אותו צריח עובר לתת שחים מהצד."
+      }
+    },
+    {
+      "id": "short-side-defense",
+      "category": "rook-and-pawn-vs-rook",
+      "fen": "5k2/8/4K3/4P3/8/8/r7/7R b - - 0 1",
+      "name": { "en": "Short-side defense", "he": "הגנת הצד הקצר" },
+      "description": {
+        "en": "When the defending king cannot stay in front of the pawn it belongs on the short side, leaving the long side to the rook. Three files are enough shelter for the king, and four give the rook the checking distance it needs.",
+        "he": "כשהמלך המגן אינו יכול להישאר לפני הרגלי, מקומו בצד הקצר, והצד הארוך נשאר לצריח. שלושה טורים מספיקים כמחסה למלך, וארבעה נותנים לצריח את מרחק השחים הדרוש לו."
+      }
+    },
+    {
+      "id": "reti-study",
+      "category": "pawn-endgames",
+      "fen": "7K/8/k1P5/7p/8/8/8/8 w - - 0 1",
+      "name": { "en": "Réti study (1921)", "he": "האטיוד של רטי (1921)" },
+      "description": {
+        "en": "The study that taught everyone how a king really moves. The black pawn looks unstoppable and the white king looks too far away, but a diagonal march chases the pawn and supports the c-pawn at the same time, and the race ends in a draw.",
+        "he": "האטיוד שלימד את כולם כיצד המלך באמת נע. נדמה שאי אפשר לעצור את הרגלי השחור ושהמלך הלבן רחוק מדי, אך צעידה באלכסון רודפת אחר הרגלי ותומכת ברגלי c בעת ובעונה אחת, והמרוץ מסתיים בתיקו."
+      }
+    },
+    {
+      "id": "trebuchet",
+      "category": "pawn-endgames",
+      "fen": "8/8/3pK3/2kP4/8/8/8/8 w - - 0 1",
+      "name": { "en": "The trebuchet", "he": "הטרבושה" },
+      "description": {
+        "en": "Mutual zugzwang in its purest form: each king guards its own pawn and attacks the other's, and whoever has to move first loses. Nothing is wrong with the position — the obligation to move is the whole of it.",
+        "he": "צוגצוואנג הדדי בצורתו הטהורה: כל מלך שומר על הרגלי שלו ותוקף את זה של היריב, ומי שחייב לנוע ראשון מפסיד. אין שום פגם בעמדה — החובה לנוע היא כל הסיפור."
+      }
+    },
+    {
+      "id": "direct-opposition",
+      "category": "pawn-endgames",
+      "fen": "8/4k3/8/4K3/4P3/8/8/8 b - - 0 1",
+      "name": { "en": "Direct opposition", "he": "אופוזיציה ישירה" },
+      "description": {
+        "en": "Kings facing each other one square apart, and the side to move has to give way. Here it is Black's turn, so the white king takes a file and escorts the pawn; with White to move the same position is a draw.",
+        "he": "המלכים עומדים זה מול זה במרחק משבצת אחת, והצד שבמסע נאלץ לפנות דרך. כאן תור השחור, ולכן המלך הלבן משתלט על טור ומלווה את הרגלי; אילו הלבן היה במסע, אותה עמדה הייתה תיקו."
+      }
+    },
+    {
+      "id": "distant-opposition",
+      "category": "pawn-endgames",
+      "fen": "4k3/8/8/p7/P7/8/8/4K3 w - - 0 1",
+      "name": { "en": "Distant opposition", "he": "אופוזיציה מרוחקת" },
+      "description": {
+        "en": "The pawns are locked, so the whole game is the kings. With an even number of squares between them the side to move takes the opposition and keeps it all the way up the board — and the opposition is what decides who reaches b5 first.",
+        "he": "הרגליים נעולים, ולכן כל המשחק הוא המלכים. כשמספר המשבצות ביניהם זוגי, הצד שבמסע לוקח את האופוזיציה ושומר עליה לאורך כל הדרך — והאופוזיציה היא שתקבע מי יגיע ראשון ל-b5."
+      }
+    },
+    {
+      "id": "saavedra-position",
+      "category": "rook-vs-pawn",
+      "fen": "8/8/1KP5/3r4/8/8/8/k7 w - - 0 1",
+      "name": { "en": "Saavedra position (1895)", "he": "עמדת סאאוודרה (1895)" },
+      "description": {
+        "en": "The most famous underpromotion in chess. The pawn queens into a skewer and a stalemate defense, so it promotes to a rook instead — threatening mate, refusing the stalemate, and winning on the spot.",
+        "he": "ההכתרה החלקית המפורסמת ביותר בשחמט. הכתרה למלכה נתקלת בשיפוד ובהגנת פט, ולכן הרגלי מוכתר לצריח — מאיים במט, מסרב לפט, ומנצח במקום."
+      }
+    },
+    {
+      "id": "two-knights-vs-pawn",
+      "category": "minor-piece-endgames",
+      "fen": "8/8/8/8/p1N5/N7/2K5/k7 w - - 0 1",
+      "name": { "en": "Two knights vs pawn: the Troitsky line", "he": "שני פרשים מול רגלי: קו טרויצקי" },
+      "description": {
+        "en": "Two knights alone cannot force mate — but with an enemy pawn on the board they can, because the pawn takes stalemate away. One knight blockades it behind the Troitsky line while the other two pieces drive the king into a corner.",
+        "he": "שני פרשים לבדם אינם יכולים לכפות מט — אך מול רגלי יריב הם כן יכולים, משום שהרגלי שולל את הפט. פרש אחד חוסם אותו מאחורי קו טרויצקי, ושני הכלים האחרים דוחפים את המלך לפינה."
+      }
+    },
+    {
+      "id": "centurini-position",
+      "category": "minor-piece-endgames",
+      "fen": "8/3P3k/2K2B2/b7/8/8/8/8 w - - 0 1",
+      "name": { "en": "Centurini: same-coloured bishops", "he": "צ'נטוריני: רצים מאותו צבע" },
+      "description": {
+        "en": "Bishop and pawn against a bishop of the same colour. The defender only has to control the queening square, so the attacker has to drive the bishop off its diagonal — which works when one of the two diagonals guarding that square is short enough to be taken away.",
+        "he": "רץ ורגלי מול רץ מאותו צבע. למגן די בשליטה על משבצת ההכתרה, ולכן על התוקף להדוף את הרץ מהאלכסון שלו — מה שמצליח כאשר אחד משני האלכסונים השומרים על אותה משבצת קצר מספיק כדי לחסום אותו."
+      }
+    },
+    {
+      "id": "cochrane-defense",
+      "category": "minor-piece-endgames",
+      "fen": "4k3/7R/4K3/4B3/8/8/8/4r3 b - - 0 1",
+      "name": { "en": "Cochrane defense: rook vs rook and bishop", "he": "הגנת קוקרן: צריח מול צריח ורץ" },
+      "description": {
+        "en": "Rook and bishop against rook is a draw with correct play, and this is the cleanest way to hold it: the defending rook pins the bishop against its own king from a distance, so the attacker cannot untangle without giving the pin up.",
+        "he": "צריח ורץ מול צריח הוא תיקו במשחק מדויק, וזו הדרך הנקייה ביותר להחזיק אותו: הצריח המגן מסמרר את הרץ אל מלכו ממרחק, כך שהתוקף אינו יכול להשתחרר מבלי לוותר על הסימרור."
+      }
+    }
+  ]
+}

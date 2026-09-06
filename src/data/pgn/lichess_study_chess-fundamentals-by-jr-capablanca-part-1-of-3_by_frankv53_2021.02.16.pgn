@@ -1,0 +1,922 @@
+[Event "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3): Preface"]
+[Date "2021.02.16"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3)"]
+[ChapterName "Preface"]
+[ChapterURL "https://lichess.org/study/gfZY383j/jJY76iP0"]
+[Annotator "https://lichess.org/@/frankv53"]
+[FEN "8/8/8/8/8/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.02.16"]
+[UTCTime "17:44:18"]
+
+ *
+
+
+[Event "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3): Chapter 1 - First Principles: Endings, Midgame and Openings (Ex. 1-21)"]
+[Date "2021.02.16"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3)"]
+[ChapterName "Chapter 1 - First Principles: Endings, Midgame and Openings (Ex. 1-21)"]
+[ChapterURL "https://lichess.org/study/gfZY383j/9kUBBfWX"]
+[Annotator "https://lichess.org/@/frankv53"]
+[FEN "8/8/8/8/8/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.02.16"]
+[UTCTime "17:44:18"]
+
+ *
+
+
+[Event "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3): Ex.1: Simple Mates: Rook vs King #1"]
+[Date "2021.02.16"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3)"]
+[ChapterName "Ex.1: Simple Mates: Rook vs King #1"]
+[ChapterURL "https://lichess.org/study/gfZY383j/jFtZQyVW"]
+[Annotator "https://lichess.org/@/frankv53"]
+[FEN "7k/8/8/8/8/8/8/R6K w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.02.16"]
+[UTCTime "17:44:18"]
+
+{ In this position the power of the Rook is demonstrated by the first move, }
+1. Ra7 { , which immediately confines the Black King to the last rank, and the mate is quickly accomplished by: } 1... Kg8 2. Kg2 { . The combined action of King and Rook is needed to arrive at a position in which mate can be forced. The general principal for a beginner to follow is to keep his King as much as possible on the same rank, or file, as the opposing King. } 2... Kf8 3. Kf3 Ke8 4. Ke4 Kd8 5. Kd5 Kc8 { When, in this case, the King has been brought to the sixth rank, it is better to place it, not on the same file, but on the one next to it towards the center. } 6. Kd6 (6. Kc6? { the Black King will go back to } 6... Kd8 { and it will take much longer to mate. }) 6... Kb8 { If now the King moves back to d8, Ra8 mates at once. } (6... Kd8 7. Ra8#) 7. Rc7 Ka8 8. Kc6 Kb8 9. Kb6 Ka8 10. Rc8# *
+
+
+[Event "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3): Ex.2: Simple Mates: Rook vs King #2"]
+[Date "2021.02.16"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3)"]
+[ChapterName "Ex.2: Simple Mates: Rook vs King #2"]
+[ChapterURL "https://lichess.org/study/gfZY383j/qRxZhHEH"]
+[Annotator "https://lichess.org/@/frankv53"]
+[FEN "8/8/8/4k3/8/8/8/4K2R w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.02.16"]
+[UTCTime "17:44:18"]
+
+{ Since the Black King is in the center of the board, the best way to proceed is to advance your own King thus: }
+1. Ke2 Kd5 2. Ke3 { .
+As the Rook has not yet come into play, it is better to advance the King straight into the center of the board, not in front, but to one side of the other King.
+If } 2... Ke5 { the Rook drives it back by } (2... Ke5 { the Rook drives it back by } 3. Rh5+ { .
+On the other hand, if: }) (2... Kc4 { instead, then also } 3. Rh5 { .
+If now: } 3... Kb4 { , there follows } (3... Kb4 { , there follows } 4. Kd3 { .
+But if instead: }) (3... Kc3 { then: } 4. Rh4 { keeping the King confined to as few squares as possible.
+Now the ending may continue: } 4... Kc2 5. Rc4+ Kb3 6. Kd3 Kb2 7. Rb4+ Ka3 8. Kc3 Ka2 { It should be noticed how often the White King has moved next to the Rook, not only to defend it, but also to reduce the mobility of the opposing King. Now White mates in three moves thus: } 9. Ra4+ Kb1 { Any safe square on the Rook's file, forcing the Black King in front of the White } 10. Ra6 Kc1 11. Ra1#) 4. Kd3 { .
+But if instead: }) 3. Rh5+ { .
+On the other hand, if: } *
+
+
+[Event "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3): Ex.3: Simple Mates: Bishop Pair vs King"]
+[Date "2021.02.16"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3)"]
+[ChapterName "Ex.3: Simple Mates: Bishop Pair vs King"]
+[ChapterURL "https://lichess.org/study/gfZY383j/j39fMXvp"]
+[Annotator "https://lichess.org/@/frankv53"]
+[FEN "7k/8/8/8/8/8/8/2B1KB2 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.02.16"]
+[UTCTime "17:44:18"]
+
+{ Since the Black King is in the corner, White can play: }
+1. Bd3 Kg8 2. Bg5 Kf7 3. Bf5 { and already the Black King is confined to a few squares.
+We might now continue: } 3... Kg7 4. Kf2 Kf7 5. Kg3 Kg7 6. Kh4 Kf7 7. Kh5 Kg7 8. Bg6 Kg8 9. Kh6 Kf8 { White must now move one of the Bishops, so as to force the Black King to go back: } 10. Bh5 Kg8 11. Be7 Kh8 { Now the White Bishop must take up a position from which it can give check next move along the White diagonal, when the Black King moves back to g8. } 12. Bg4 Kg8 13. Be6+ Kh8 14. Bf6# *
+
+
+[Event "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3): Ex.4: Simple Mates: Queen vs King"]
+[Date "2021.02.16"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3)"]
+[ChapterName "Ex.4: Simple Mates: Queen vs King"]
+[ChapterURL "https://lichess.org/study/gfZY383j/Fbd2bnVf"]
+[Annotator "https://lichess.org/@/frankv53"]
+[FEN "8/8/8/4k3/8/8/8/4K2Q w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.02.16"]
+[UTCTime "17:44:18"]
+
+1. Qc6 Kd4 2. Kd2 { Already the Black King has only one available square } 2... Ke5 3. Ke3 Kf5 4. Qd6 Kg5 5. Qe6 Kh4 6. Qg6 Kh3 7. Kf3 Kh2 8. Qg2# *
+
+
+[Event "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3): Ex.5: Pawn Promotion #1"]
+[Date "2021.02.16"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3)"]
+[ChapterName "Ex.5: Pawn Promotion #1"]
+[ChapterURL "https://lichess.org/study/gfZY383j/E2kT9V89"]
+[Annotator "https://lichess.org/@/frankv53"]
+[FEN "8/8/8/8/4k3/8/3KP3/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.02.16"]
+[UTCTime "17:44:18"]
+
+1. e3 Ke5 2. Kd3 Kd5 $7 { Any other move would lose. As the Black King cannot be kept close up to the Pawn, it must be brought as far forward as possible and in front of the White King. } 3. e4+ Ke5 4. Ke3 Ke6 5. Kf4 Kf6 6. e5+ Ke6 7. Ke4 Ke7 8. Kd5 Kd7 9. e6+ Ke7 10. Ke5 Ke8 11. Kd6 Kd8 { If now White advances the Pawn, the Black King gets in front of it and White must either give up the Pawn or play Ke6, stale mate. } 12. e7+ Ke8 13. Kc5 Kxe7 { The whole mode of procedure is very important and the student should become thoroughly conversant with its details; for it involves principles to be taken up later on, and because many a beginner has lost identical positions from lack of proper knowledge. At this stage of the book I cannot lay too much stress on its importance. } *
+
+
+[Event "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3): Ex.6: Pawn Promotion #2"]
+[Date "2021.02.16"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3)"]
+[ChapterName "Ex.6: Pawn Promotion #2"]
+[ChapterURL "https://lichess.org/study/gfZY383j/clPOQgEX"]
+[Annotator "https://lichess.org/@/frankv53"]
+[FEN "8/8/5k2/8/5K2/8/4P3/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.02.16"]
+[UTCTime "17:44:18"]
+
+1. Ke4 Ke6 { . Black does not allow the White King to advance, therefore White is now compelled to advance his Pawn so as to force Black to move away. He is then able to advance his own King. } 2. e3 Kf6 3. Kd5 Ke7 4. Ke5 Kd7 5. Kf6 Ke8 6. e4 Kd7 7. e5 Ke8 8. Ke6 Kf8 9. Kd7 { Black King moves and the White Pawn advances to e8, becomes a Queen, and its all over. } *
+
+
+[Event "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3): Ex.7: Pawn Endings"]
+[Date "2021.02.16"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3)"]
+[ChapterName "Ex.7: Pawn Endings"]
+[ChapterURL "https://lichess.org/study/gfZY383j/CDmbD1VR"]
+[Annotator "https://lichess.org/@/frankv53"]
+[FEN "5k2/6p1/4K1P1/5P2/8/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.02.16"]
+[UTCTime "17:44:18"]
+
+{ White can win this position by playing: }
+1. Kd7 (1. f6?? $10 { White can no longer win because Black plays } 1... Kg8 { which leads to a draw. } 2. fxg7 (2. f7+ Kf8 { and White will never be able to Queen his Pawn without losing it.
+If: }) (2. Ke7 gxf6 3. Kxf6 Kh8 { and draws. }) 2... Kxg7 { .
+If: }) 1... Kg8 2. Ke7 Kh8 3. f6 gxf6 4. Kf7 f5 5. g7+ Kh7 6. g8=Q+ Kh6 7. Qg6# *
+
+
+[Event "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3): Ex.8: Pawn Endings"]
+[Date "2021.02.16"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3)"]
+[ChapterName "Ex.8: Pawn Endings"]
+[ChapterURL "https://lichess.org/study/gfZY383j/HGCCjHdq"]
+[Annotator "https://lichess.org/@/frankv53"]
+[FEN "8/6p1/3k4/8/3K1PP1/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.02.16"]
+[UTCTime "17:44:18"]
+
+{ White can win by playing: }
+1. Ke4 (1. f5?? { Black's best answer would be } 1... g6 { draws. (The student should work this out.) }) (1. g5?? { can't win because } 1... g6 { , draws. (because of the principle of "opposition" which governs this ending as well as all the Pawn-endings already given, and which will be explained more fully later on.) }) 1... Ke6 { If: } (1... g6 { then Black loses the pawn } 2. Kd4 Ke6 3. Kc5 Kf6 4. Kd6 Kf7 5. g5 Kg7 6. Ke7 Kg8 7. Kf6 Kh7 8. Kf7) 2. f5+ Kf6 3. Kf4 g6 { If this Pawn is kept back we arrive at the ending in Example 7. } 4. g5+ Kf7 5. f6 Ke6 6. Ke4 Kf7 7. Ke5 Kf8 { White cannot force his Bishop's Pawn into Queen (find out why), but by giving his Pawn up he can win the other Pawn an the game.
+Thus: } 8. f7 Kxf7 9. Kd6 Kf8 10. Ke6 Kg7 11. Ke7 Kg8 12. Kf6 Kh7 13. Kf7 Kh8 14. Kxg6 Kg8 { There is still some resistance in Black's position. In fact, the only way to win is the one given here, as will easily be seen by experiment. } 15. Kh6 (15. Kf6 { then } 15... Kh7 { , and in order to win White must get back to the actual position, as against } 16. g6+ { , and } 16... Kh8 { draws. }) 15... Kh8 16. g6 Kg8 17. g7 Kf7 18. Kh7 { and White Queens the Pawn and wins. } 18... Kf6 *
+
+
+[Event "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3): Ex.9: Pawn Endings"]
+[Date "2021.02.16"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3)"]
+[ChapterName "Ex.9: Pawn Endings"]
+[ChapterURL "https://lichess.org/study/gfZY383j/rVO97fPI"]
+[Annotator "https://lichess.org/@/frankv53"]
+[FEN "8/6pp/3k4/8/3K1PPP/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.02.16"]
+[UTCTime "17:44:18"]
+
+1. f5 Ke7 { if: } (1... g6 { then } 2. f6 { and we have a similar ending to one of the previous examples. }) (1... h6 { then } 2. g5) 2. Ke5 Kf7 3. g5 Ke7 { if: } (3... g6 { then } 4. f6) (3... h6 { then } 4. g6+ { and in either case we have a similar ending to one of the previous examples. }) 4. h5 g6 5. hxg6 hxg6 6. f6+ *
+
+
+[Event "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3): Ex.10: Pawn Endings"]
+[Date "2021.02.16"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3)"]
+[ChapterName "Ex.10: Pawn Endings"]
+[ChapterURL "https://lichess.org/study/gfZY383j/urAKxrmc"]
+[Annotator "https://lichess.org/@/frankv53"]
+[FEN "8/p6p/4k3/8/4K3/8/P5PP/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.02.16"]
+[UTCTime "17:44:18"]
+
+1. g4 a5 { Black makes an advance on the other side, and now White considers whether or not he should stop the advance. } 2. a4 Kf6 3. h4 Ke6 { if: } (3... Kg6 { then simple counting will show that White goes to the other side with his King, wins the pawn at a5, and then Queens his single Pawn long before Black can do the same. }) 4. g5 Kf7 5. Kf5 Kg7 6. h5 Kf7 { if: } (6... h6 { then } 7. g6 { and the two Pawns defend themselves and White can go to the other side with his King, to win the other Pawn. }) 7. Ke5 *
+
+
+[Event "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3): Ex.11: Midgames"]
+[Date "2021.02.16"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3)"]
+[ChapterName "Ex.11: Midgames"]
+[ChapterURL "https://lichess.org/study/gfZY383j/HvxqeDJO"]
+[Annotator "https://lichess.org/@/frankv53"]
+[FEN "5rk1/1b3p1p/ppq3p1/2p5/8/1P1P1R1Q/PBP3PP/7K b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.02.16"]
+[UTCTime "17:44:18"]
+
+{ It is Black's move, and thinking that White merely threatens to play Qh6 and to mate at g7, Black plays }
+1... Re8 { White now uncovers his real and most effective threat, viz.: } (1... h5) 2. Qxh7+ Kxh7 3. Rh3+ Kg8 4. Rh8# *
+
+
+[Event "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3): Ex.12: Midgames"]
+[Date "2021.02.16"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3)"]
+[ChapterName "Ex.12: Midgames"]
+[ChapterURL "https://lichess.org/study/gfZY383j/BXGFQI4W"]
+[Annotator "https://lichess.org/@/frankv53"]
+[FEN "5rk1/1bq1bp1p/p1n3p1/1p6/3N4/1P1PR2Q/PBP3PP/7K w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.02.16"]
+[UTCTime "17:44:18"]
+
+1. Nxc6 Bg5 { Black cannot take the knight because White threatens mate by Qh7+ followed by Rh3+ } 2. Ne7+ Qxe7 3. Rxe7 Bxe7 4. Qd7 { and White wins one of the two Bishops, remains with a Queen and a Bishop against a Rook and Bishop, and should therefore win easily.
+These two examples show the danger of advancing the g-pawn one square, after having Castled on that side. } *
+
+
+[Event "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3): Ex.13: Midgames"]
+[Date "2021.02.16"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3)"]
+[ChapterName "Ex.13: Midgames"]
+[ChapterURL "https://lichess.org/study/gfZY383j/SCeV62IE"]
+[Annotator "https://lichess.org/@/frankv53"]
+[FEN "2q2rk1/1b3ppp/pp6/2p5/2P1N3/PP1Q4/1B3PPP/6K1 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.02.16"]
+[UTCTime "17:44:18"]
+
+{ White, in fact, mates in a few moves thus: }
+1. Nf6+ gxf6 { forced, otherwise Qxh7 mates } 2. Qg3+ Kh8 3. Bxf6# *
+
+
+[Event "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3): Ex.14: Midgames"]
+[Date "2021.02.16"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3)"]
+[ChapterName "Ex.14: Midgames"]
+[ChapterURL "https://lichess.org/study/gfZY383j/WTkEd9zi"]
+[Annotator "https://lichess.org/@/frankv53"]
+[FEN "2q1rrk1/1bpn1ppp/pp1p4/1B6/4N3/1P1QR3/PBP2PPP/6K1 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.02.16"]
+[UTCTime "17:44:18"]
+
+{ The same type of combination occurs (as in Ex.13) in a more complicated form. }
+1. Bxd7 Qxd7 { .
+If: } (1... Bxe4 2. Qc3 { threatens mate, and therefore wins the Queen }) 2. Nf6+ gxf6 3. Rg3+ Kh8 4. Bxf6# *
+
+
+[Event "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3): Ex.15: Midgames"]
+[Date "2021.02.16"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3)"]
+[ChapterName "Ex.15: Midgames"]
+[ChapterURL "https://lichess.org/study/gfZY383j/VnoUEUK6"]
+[Annotator "https://lichess.org/@/frankv53"]
+[FEN "r3qrk1/1pp2ppp/p1np4/3Q4/8/P2B1N2/1PP2PPP/3R2K1 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.02.16"]
+[UTCTime "17:44:18"]
+
+{ White is the exchange and a Pawn behind, but he can win quickly thus: }
+1. Bxh7+ Kxh7 { ; if } (1... Kh8 { then } 2. Qh5 g6 3. Qh6 { and wins. }) 2. Qh5+ Kg8 3. Ng5 Qe4 { Black cannot stop the mate on h7 except by sacrificing the Queen. } *
+
+
+[Event "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3): Ex.16: Midgames"]
+[Date "2021.02.16"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3)"]
+[ChapterName "Ex.16: Midgames"]
+[ChapterURL "https://lichess.org/study/gfZY383j/gmrD8njJ"]
+[Annotator "https://lichess.org/@/frankv53"]
+[FEN "2nb1rk1/1pqrnppp/p2p4/2pQ1N2/6P1/1P1B1N1P/P3RP2/3R2K1 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.02.16"]
+[UTCTime "17:44:18"]
+
+{ White proceeds as follows: }
+1. Nxe7+ { (this clears the line for the Bishop) } 1... Bxe7 { (to stop the Knight from moving to g5 after the sacrifice of the Bishop) } 2. Rxe7 Nxe7 3. Bxh7+ Kxh7 (3... Kh8 4. Qh5 g6 5. Bxg6+ Kg7 6. Qh7+ Kf6 7. g5+ Ke6 8. Bxf7+ Rxf7 9. Qe4#) 4. Qh5+ Kg8 5. Ng5 Rc8 6. Qh7+ Kf8 7. Qh8+ Ng8 8. Nh7+ Ke7 9. Re1+ Kd8 10. Qxg8# *
+
+
+[Event "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3): Relative Value of the Pieces"]
+[Date "2021.02.16"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3)"]
+[ChapterName "Relative Value of the Pieces"]
+[ChapterURL "https://lichess.org/study/gfZY383j/V4BwoTTO"]
+[Annotator "https://lichess.org/@/frankv53"]
+[UTCDate "2021.02.16"]
+[UTCTime "17:44:18"]
+
+ *
+
+
+[Event "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3): Ex.17: General Strategy of the Opening"]
+[Date "2021.02.16"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "C49"]
+[Opening "Four Knights Game: Spanish Variation, Symmetrical Variation"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3)"]
+[ChapterName "Ex.17: General Strategy of the Opening"]
+[ChapterURL "https://lichess.org/study/gfZY383j/kuSLvnS5"]
+[Annotator "https://lichess.org/@/frankv53"]
+[UTCDate "2021.02.16"]
+[UTCTime "17:44:18"]
+
+{ Suppose we begin: }
+1. e4 e5 2. Nf3 { This is both an attacking and a developing move. Black can now either reply with the identical move or play } 2... Nc6 { This developing move at the same time defends the King's Pawn. The moves } 3. Nc3 Nf6 { are of a purely developing nature. } 4. Bb5 { It is generally advisable not to bring this Bishop out until one Knight is out, preferably the King's Knight. The Bishop could also have been played to c4, but it is advisable whenever possible to combine development and attack. } 4... Bb4 { Black replies in the same manner, threatening a possible exchange of Bishop for Knight with Nxe4 to follow. } 5. O-O { an indirect way of preventing 5...Bxc3, which more experience or study will show to be bad. At the same time, the Rook is brought into action in the center, a very important point. } 5... O-O 6. d3 d6 { These moves have a two-fold objective: to protect the King's Pawn and to open the diagonal for the development of the Queen's Bishop. } 7. Bg5 { A very powerful move, which brings us to the middle-game stage, as there is already in view a combination to win quickly by Nd5. This threat makes it impossible for Black to continue the same course.
+He is now forced to play } 7... Bxc3 { as experience has shown, thus bringing up to notice three things.
+First, the complete development of the opening has taken only seven moves. (This varies up to ten or twelve moves in some very exceptional cases. As a rule, eight should be enough.)
+Second, Black has been compelled to exchange a Bishop for a Knight, but as compensation he has isolated White's a-pawn and doubled a pawn. (This, at such an early stage of the game, is rather an advantage for White, as the pawn is doubled toward the center of the board)
+Third, White by the exchange brings up a Pawn to control d4, and puts Black on the defensive, thus keeping the initiative, an unquestionable advantage. } *
+
+
+[Event "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3): Ex.18: Openings"]
+[Date "2021.02.16"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "C41"]
+[Opening "Philidor Defense: Hanham Variation"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3)"]
+[ChapterName "Ex.18: Openings"]
+[ChapterURL "https://lichess.org/study/gfZY383j/iHVsXsLl"]
+[Annotator "https://lichess.org/@/frankv53"]
+[UTCDate "2021.02.16"]
+[UTCTime "17:44:18"]
+
+1. e4 e5 2. Nf3 d6 { A timid move, Black assumes a defensive attitude at once. On principle the move is wrong. In the openings, whenever possible, pieces should be moved in preference to Pawns. } 3. d4 { White takes the offensive immediately and strives to control the center } 3... Nd7 { Black does not wish to relinquish the center and also prefers the move to Nc6, but on principle the move is wrong because it blocks the action of the Queen's Bishop, and instead of facilitating the action of Black's pieces, it tends to cramp them. } 4. Bc4 h6 { Black is forced to pay the penalty of his previous move. Such a move on Black's part condemns by itself any form of opening that makes it necessary. } 5. Nc3 Ndf6 6. Be3 Be7 7. Qe2 { It should be noticed that White does not Castle yet. The reason is that he wants to deploy his forces first, and through the last move force Black to play } 7... c6 { to make room for the Queen as White threatens } 8. Rd1 { to be followed by dxe5. Black's other alternatives would finally force him to play ...exd4, thus abandoning the center to White. } 8... Qc7 9. O-O *
+
+
+[Event "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3): Ex.19: Openings"]
+[Date "2021.02.16"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "C41"]
+[Opening "Philidor Defense"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3)"]
+[ChapterName "Ex.19: Openings"]
+[ChapterURL "https://lichess.org/study/gfZY383j/Xo26o17y"]
+[Annotator "https://lichess.org/@/frankv53"]
+[UTCDate "2021.02.16"]
+[UTCTime "17:44:18"]
+
+1. e4 e5 2. Nf3 d6 3. d4 Bg4 { A bad move, which violates one of the principles set down, according to which at least one Knight should be developed before the Bishops are brought out, and also because it exchanges a Bishop for a Knight, which in the opening is generally bad, unless there is some compensation. } 4. dxe5 Bxf3 (4... dxe5 { loses a Pawn }) 5. Qxf3 dxe5 6. Bc4 Qf6 { If } (6... Nf6 { then } 7. Qb3 { and White wins a Pawn }) 7. Qb3 b6 8. Nc3 c6 { to prevent } 9. Nd5 { .
+Black has no pieces out except his Queen, and White, with a Bishop and a Knight already developed, has a chance of obtaining an advantage quickly by playing Nd5 anyway.
+The student is left to work out the many variations arising from this position. } *
+
+
+[Event "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3): Ex.20: Opening Traps"]
+[Date "2021.02.16"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3)"]
+[ChapterName "Ex.20: Opening Traps"]
+[ChapterURL "https://lichess.org/study/gfZY383j/6zjhOduv"]
+[Annotator "https://lichess.org/@/frankv53"]
+[FEN "r2qkbnr/ppp2pp1/2np3p/4p3/2BPP1b1/2N2N2/PPP2PPP/R1BQK2R w KQkq - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.02.16"]
+[UTCTime "17:44:18"]
+
+1. dxe5 Nxe5 { Black should have recaptured with the Pawn. } 2. Nxe5 Bxd1 3. Bxf7+ Ke7 4. Nd5# *
+
+
+[Event "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3): Ex.21: Opening Traps"]
+[Date "2021.02.16"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3)"]
+[ChapterName "Ex.21: Opening Traps"]
+[ChapterURL "https://lichess.org/study/gfZY383j/IUqCxDEG"]
+[Annotator "https://lichess.org/@/frankv53"]
+[FEN "rn1qkbnr/ppp1pppp/8/8/2B3b1/2N2N2/PPPP1PPP/R1BQK2R b KQkq - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.02.16"]
+[UTCTime "17:44:18"]
+
+{ Black, having the move, should play }
+1... e6 { but suppose he plays } (1... Nf6 { , then comes } 2. Bxf7+ Kxf7 3. Ne5+ { King moves anywhere } 3... Ke8 4. Nxg4 { and White has won a Pawn besides having the better position. }) *
+
+
+[Event "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3): Chapter 2 - Further Principles in End-Game Play (Ex. 22-42)"]
+[Date "2021.02.16"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3)"]
+[ChapterName "Chapter 2 - Further Principles in End-Game Play (Ex. 22-42)"]
+[ChapterURL "https://lichess.org/study/gfZY383j/5eOoI9E1"]
+[Annotator "https://lichess.org/@/frankv53"]
+[FEN "8/8/8/8/8/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.02.16"]
+[UTCTime "17:44:18"]
+
+ *
+
+
+[Event "Chess Fundamentals: Chapter 2: Ex.22: A Cardinal Principle"]
+[Site "https://lichess.org/study/WB0Bwfa9/Pln9gzfU"]
+[Date "2021.02.16"]
+[Result "*"]
+[Annotator "https://lichess.org/@/frankv53"]
+[Variant "From Position"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3)"]
+[ChapterName "Ex.22: A Cardinal Principle"]
+[ChapterURL "https://lichess.org/study/gfZY383j/80MOUqKW"]
+[FEN "8/p5p1/7p/6k1/8/7K/PP5P/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.02.16"]
+[UTCTime "17:44:18"]
+
+{ The example given should be sufficient proof. We give a few moves of the main variation: }
+1. a4 a5 2. Kg2! { (Best; see why.) } 2... Kf4 3. b4! { (Best.) } 3... axb4 4. a5 b3 5. a6 b2 6. a7 b1=Q 7. a8=Q Qe4+ 8. Qxe4+ Kxe4 { This brings the game to a position which is won by Black, and which constitutes one of the classical endings of King and Pawns. I shall try to explain the guiding idea of it to those not familiar with it. } *
+
+
+[Event "Chess Fundamentals: Chapter 2: Ex.23: A Classical Ending"]
+[Site "https://lichess.org/study/WB0Bwfa9/bJIlfPnA"]
+[Date "2021.02.16"]
+[Result "*"]
+[Annotator "https://lichess.org/@/frankv53"]
+[Variant "From Position"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3)"]
+[ChapterName "Ex.23: A Classical Ending"]
+[ChapterURL "https://lichess.org/study/gfZY383j/a5zwV7Ot"]
+[FEN "8/6p1/7p/8/4k3/8/6KP/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.02.16"]
+[UTCTime "17:44:18"]
+
+{ The first part will be to get his King to h3, at the same time keeping intact the position of his Pawns. (This is all important, since, in order to win the game, it is essential at the end that Black may be able to advance his rearmost Pawn one or two squares according to the position of the White King.)
+: }
+1. Kg3 Ke3 2. Kg2 Kf4 3. Kf2 Kg4 4. Kg2 Kh4 5. Kg1 Kh3 { .
+The first part has been completed.
+The second part will be short and will consist in advancing the h-pawn up to the King. } 6. Kh1 h5 7. Kg1 h4 { .
+This ends the second part.
+The third part will consist in timing the advance of the g-pawn so as to play ...g6 when the White King is at h1. It now becomes evident how necessary it is to be able to move the g-pawn either one or two squares according to the position of the White King, as indicated previously. } 8. Kh1 { In this case, as White is in the corner, the Pawn will be advanced two squares. If the White King were at g1 the g-pawn should only be advanced one square. } 8... g5 9. Kg1 g4 10. Kh1 g3 11. hxg3 (11. Kg1 g2) 11... hxg3 12. Kg1 g2 13. Kf2 Kh2 { .
+It is in this analytical way that the student should try to learn. He will thus train his mind to follow a logical sequence in reasoning out any position. This example is excellent training, since it is easy to divide it into three stages and to explain the main point of each part. } *
+
+
+[Event "Chess Fundamentals: Chapter 2: Ex.24: Obtaining a Passed Pawn (White)"]
+[Site "https://lichess.org/study/WB0Bwfa9/fs4v7ril"]
+[Date "2021.02.16"]
+[Result "*"]
+[Annotator "https://lichess.org/@/frankv53"]
+[Variant "From Position"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3)"]
+[ChapterName "Ex.24a: Obtaining a Passed Pawn (White)"]
+[ChapterURL "https://lichess.org/study/gfZY383j/cyobJR5S"]
+[FEN "8/ppp4k/8/PPP5/8/8/8/7K w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.02.16"]
+[UTCTime "17:44:18"]
+
+1. b6 axb6 (1... cxb6 2. a6) 2. c6 bxc6 3. a6 { the White Pawn is nearer to Queen than any of the Black Pawns, White will win. } *
+
+
+[Event "Chess Fundamentals: Chapter 2: Ex.24: Obtaining a Passed Pawn (Black)"]
+[Site "https://lichess.org/study/WB0Bwfa9/iDPDHbnj"]
+[Date "2021.02.16"]
+[Result "*"]
+[Annotator "https://lichess.org/@/frankv53"]
+[Variant "From Position"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3)"]
+[ChapterName "Ex.24b: Obtaining a Passed Pawn (Black)"]
+[ChapterURL "https://lichess.org/study/gfZY383j/0eGCdD9R"]
+[FEN "8/ppp4k/8/PPP5/8/8/8/7K b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.02.16"]
+[UTCTime "17:44:18"]
+
+1... b6 2. cxb6 cxb6 { It would not be advisable to try to obtain a passed Pawn because the White Pawns would be nearer to Queen than the single Black Pawn. } 3. axb6 axb6 { and the game properly played would be a draw. The student should work this out for himself. } *
+
+
+[Event "Chess Fundamentals: Chapter 2: Ex.25: Which Pawn will be first to Queen?"]
+[Site "https://lichess.org/study/WB0Bwfa9/DAZwxblN"]
+[Date "2021.02.16"]
+[Result "*"]
+[Annotator "https://lichess.org/@/frankv53"]
+[Variant "From Position"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3)"]
+[ChapterName "Ex.25: Which Pawn will be first to Queen?"]
+[ChapterURL "https://lichess.org/study/gfZY383j/eFNvzvU3"]
+[FEN "8/p5kp/8/1P6/8/1K6/P7/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.02.16"]
+[UTCTime "17:44:18"]
+
+1. a4 h5 2. a5 h4 3. b6 axb6 { Now comes a little calculation. White can capture the Pawn, but if he does so, he will not, when Queening, command the square where Black will also Queen his Pawn. Therefore, instead of taking, he plays: } 4. a6 h3 5. a7 h2 6. a8=Q *
+
+
+[Event "Chess Fundamentals: Chapter 2: Ex.26: The Opposition"]
+[Site "https://lichess.org/study/WB0Bwfa9/vbR9CSeU"]
+[Date "2021.02.16"]
+[Result "*"]
+[Annotator "https://lichess.org/@/frankv53"]
+[Variant "From Position"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3)"]
+[ChapterName "Ex.26: The Opposition"]
+[ChapterURL "https://lichess.org/study/gfZY383j/qE8NXrl9"]
+[FEN "8/8/4k3/1p5p/1P2K2P/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.02.16"]
+[UTCTime "17:44:18"]
+
+{ Suppose in the starting position White plays }
+1. Kd4 { Now Black has the option of either opposing the passage of the White King by playing } (1. Kf3 Kd5 { this form is the close diagonal opposition }) (1. Kf4 Kd5 2. Kf5 { this form is the 'close lateral' opposition. }) 1... Kd6 { or, if he prefers, he can pass with his own King by replying: } (1... Kf5) *
+
+
+[Event "Chess Fundamentals: Chapter 2: Ex.27: Value of the Opposition"]
+[Site "https://lichess.org/study/WB0Bwfa9/Gp4dB9KD"]
+[Date "2021.02.16"]
+[Result "*"]
+[Annotator "https://lichess.org/@/frankv53"]
+[Variant "From Position"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3)"]
+[ChapterName "Ex.27: Value of the Opposition"]
+[ChapterURL "https://lichess.org/study/gfZY383j/wZM5t8Ps"]
+[FEN "4k3/8/8/1p5p/1P5P/8/8/4K3 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.02.16"]
+[UTCTime "17:44:18"]
+
+1. Ke2 Ke7 (1... Kd8 { Now in order to win, the White King must advance. There is only one other square where he can go, f3, and that is the right place. Therefore it is seen that in such cases when the opponent makes a so-called waiting move, you must advance, leaving a rank or file free between the Kings. Therefore we have } 2. Kf3 Ke7 { Now, it would be bad to advance, because then Black, by bringing up his King in front of your King, would obtain the opposition. It is White's turn to play a similar move to Black's first move, viz.: } 3. Ke3 { which brings the position back to the first variation shown. }) 2. Ke3 Ke6 3. Ke4 Kf6 { Now White can exercise the option of either playing 4 Kd5 and thus passing with his King, or of playing 4 Kf4 and prevent the Black King from passing, thereby keeping the opposition. Mere counting will show that the former course will only lead to a draw, therefore White takes the latter course and plays: } 4. Kf4 Kg6 5. Ke5 Kg7 { Now by counting it will be seen that White wins by capturing Black's b-Pawn. } *
+
+
+[Event "Chess Fundamentals: Chapter 2: Ex.28: Value of the Opposition"]
+[Site "https://lichess.org/study/WB0Bwfa9/e2MeAxQn"]
+[Date "2021.02.16"]
+[Result "*"]
+[Annotator "https://lichess.org/@/frankv53"]
+[Variant "From Position"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3)"]
+[ChapterName "Ex.28: Value of the Opposition"]
+[ChapterURL "https://lichess.org/study/gfZY383j/SiJys1p7"]
+[FEN "8/8/8/4p1p1/8/5P2/6K1/3k4 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.02.16"]
+[UTCTime "17:44:18"]
+
+{ On the other hand, if: }
+1. Kh1! (1. Kf1? Kd2 2. Kf2 Kd3) 1... Kd2 (1... g4 { White does not play 2 fxg4, because 2...e4 will win, but plays: } 2. Kg2 Kd2 (2... gxf3+ 3. Kxf3 { , followed by 4 Ke4 , will draw. }) 3. fxg4 e4 { and mere counting will show that both sides Queen, drawing the game. }) 2. Kh2 Kd3 3. Kh3! Ke2 4. Kg2 Ke3 5. Kg3 Kd4 6. Kg4 { attacking the Pawn and forcing Black to play 6...Ke3 when he can go back to g3 as already shown, and always keep the opposition. } *
+
+
+[Event "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3): Ex.29a: Relative Value of Knight & Bishop"]
+[Date "2021.02.16"]
+[Result "*"]
+[Variant "From Position"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3)"]
+[ChapterName "Ex.29a: Relative Value of Knight & Bishop"]
+[ChapterURL "https://lichess.org/study/gfZY383j/bWJC3U4E"]
+[Annotator "https://lichess.org/@/frankv53"]
+[FEN "k7/8/1K1NN3/8/8/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.02.16"]
+[UTCTime "17:44:18"]
+
+ *
+
+
+[Event "Chess Fundamentals: Chapter 2: Ex.29: Relative Value of Knight & Bishop"]
+[Site "https://lichess.org/study/WB0Bwfa9/0o8PXJgG"]
+[Date "2021.02.16"]
+[Result "*"]
+[Annotator "https://lichess.org/@/frankv53"]
+[Variant "From Position"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3)"]
+[ChapterName "Ex.29b: Relative Value of Knight & Bishop"]
+[ChapterURL "https://lichess.org/study/gfZY383j/vbt6TNut"]
+[FEN "k7/8/1K1N4/7p/7N/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.02.16"]
+[UTCTime "17:44:18"]
+
+1. Ng6 h4 { White cannot take the Pawn because the game will be drawn, as explained before. } 2. Ne5 h3 3. Nc6 h2 4. Nb5 h1=Q 5. Nc7# *
+
+
+[Event "Chess Fundamentals: Chapter 2: Ex.30: Relative Value of Knight & Bishop"]
+[Site "https://lichess.org/study/WB0Bwfa9/KEe1sJoa"]
+[Date "2021.02.16"]
+[Result "*"]
+[Annotator "https://lichess.org/@/frankv53"]
+[Variant "From Position"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3)"]
+[ChapterName "Ex.30: Relative Value of Knight & Bishop"]
+[ChapterURL "https://lichess.org/study/gfZY383j/vgqKH222"]
+[FEN "7k/8/8/6K1/8/3B4/7P/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.02.16"]
+[UTCTime "17:44:18"]
+
+ *
+
+
+[Event "Chess Fundamentals: Chapter 2: Ex.31: Relative Value of Knight & Bishop"]
+[Site "https://lichess.org/study/WB0Bwfa9/BNkeLA5Q"]
+[Date "2021.02.16"]
+[Result "*"]
+[Annotator "https://lichess.org/@/frankv53"]
+[Variant "From Position"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3)"]
+[ChapterName "Ex.31: Relative Value of Knight & Bishop"]
+[ChapterURL "https://lichess.org/study/gfZY383j/78DyB1N3"]
+[FEN "8/8/5Np1/8/8/7p/5K2/7k b - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.02.16"]
+[UTCTime "17:44:18"]
+
+{ Take the most difficult variation: }
+1... Kh2 2. Ng4+ Kh1 3. Kf1 g5 4. Kf2 h2 5. Ne3 g4 6. Nf1 g3+ 7. Nxg3# { 1-0 White wins by checkmate. } *
+
+
+[Event "Chess Fundamentals: Chapter 2: Ex.32: Relative Value of Knight & Bishop"]
+[Site "https://lichess.org/study/WB0Bwfa9/efMjoHBv"]
+[Date "2021.02.16"]
+[Result "*"]
+[Annotator "https://lichess.org/@/frankv53"]
+[Variant "From Position"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3)"]
+[ChapterName "Ex.32: Relative Value of Knight & Bishop"]
+[ChapterURL "https://lichess.org/study/gfZY383j/vPI0CMId"]
+[FEN "8/8/8/N2b4/8/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.02.16"]
+[UTCTime "17:44:18"]
+
+ *
+
+
+[Event "Chess Fundamentals: Chapter 2: Ex.33: Relative Value of Knight & Bishop"]
+[Site "https://lichess.org/study/WB0Bwfa9/pj7dgWJi"]
+[Date "2021.02.16"]
+[Result "*"]
+[Annotator "https://lichess.org/@/frankv53"]
+[Variant "From Position"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3)"]
+[ChapterName "Ex.33: Relative Value of Knight & Bishop"]
+[ChapterURL "https://lichess.org/study/gfZY383j/vdim39Xv"]
+[FEN "4k3/3n4/2p5/1pPp4/pP1P4/P7/8/2B1K3 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.02.16"]
+[UTCTime "17:44:18"]
+
+ *
+
+
+[Event "Chess Fundamentals: Chapter 2: Ex.34: Relative Value of Knight & Bishop"]
+[Site "https://lichess.org/study/WB0Bwfa9/x9s4qn33"]
+[Date "2021.02.16"]
+[Result "*"]
+[Annotator "https://lichess.org/@/frankv53"]
+[Variant "From Position"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3)"]
+[ChapterName "Ex.34: Relative Value of Knight & Bishop"]
+[ChapterURL "https://lichess.org/study/gfZY383j/cDiMeXMi"]
+[FEN "4k3/3n1ppp/8/8/8/8/5PPP/2B1K3 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.02.16"]
+[UTCTime "17:44:18"]
+
+ *
+
+
+[Event "Chess Fundamentals: Chapter 2: Ex.35: Relative Value of Knight & Bishop"]
+[Site "https://lichess.org/study/WB0Bwfa9/j3xd4nX5"]
+[Date "2021.02.16"]
+[Result "*"]
+[Annotator "https://lichess.org/@/frankv53"]
+[Variant "From Position"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3)"]
+[ChapterName "Ex.35: Relative Value of Knight & Bishop"]
+[ChapterURL "https://lichess.org/study/gfZY383j/SmmRsw5h"]
+[FEN "4k3/pppn1ppp/8/8/8/8/PPP2PPP/2B1K3 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.02.16"]
+[UTCTime "17:44:18"]
+
+ *
+
+
+[Event "Chess Fundamentals: Chapter 2: Ex.36: Relative Value of Knight & Bishop"]
+[Site "https://lichess.org/study/WB0Bwfa9/M9EBbntS"]
+[Date "2021.02.16"]
+[Result "*"]
+[Annotator "https://lichess.org/@/frankv53"]
+[Variant "From Position"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3)"]
+[ChapterName "Ex.36: Relative Value of Knight & Bishop"]
+[ChapterURL "https://lichess.org/study/gfZY383j/SXVaN0fS"]
+[FEN "4k3/pppn1pp1/8/8/8/8/1PP2PPP/2B1K3 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.02.16"]
+[UTCTime "17:44:18"]
+
+ *
+
+
+[Event "Chess Fundamentals: Chapter 2: Ex.37: Relative Value of Knight & Bishop"]
+[Site "https://lichess.org/study/WB0Bwfa9/lqwEVVWs"]
+[Date "2021.02.16"]
+[Result "*"]
+[Annotator "https://lichess.org/@/frankv53"]
+[Variant "From Position"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3)"]
+[ChapterName "Ex.37: Relative Value of Knight & Bishop"]
+[ChapterURL "https://lichess.org/study/gfZY383j/cQZVewPg"]
+[FEN "4k3/pppn1p2/8/8/8/8/2P2PPP/2B1K3 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.02.16"]
+[UTCTime "17:44:18"]
+
+ *
+
+
+[Event "Chess Fundamentals: Chapter 2: Ex.38: Relative Value of Knight & Bishop"]
+[Site "https://lichess.org/study/WB0Bwfa9/CmFmg9Li"]
+[Date "2021.02.16"]
+[Result "*"]
+[Annotator "https://lichess.org/@/frankv53"]
+[Variant "From Position"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3)"]
+[ChapterName "Ex.38: Relative Value of Knight & Bishop"]
+[ChapterURL "https://lichess.org/study/gfZY383j/KEfoMYdZ"]
+[FEN "4k3/p1pn1p2/8/8/8/8/2P2P1P/2B1K3 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.02.16"]
+[UTCTime "17:44:18"]
+
+ *
+
+
+[Event "Chess Fundamentals: Chapter 2: Ex.39: Mate with a Knight & Bishop"]
+[Site "https://lichess.org/study/WB0Bwfa9/SP7NNYWi"]
+[Date "2021.02.16"]
+[Result "*"]
+[Annotator "https://lichess.org/@/frankv53"]
+[Variant "From Position"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3)"]
+[ChapterName "Ex.39: Mate with a Knight & Bishop"]
+[ChapterURL "https://lichess.org/study/gfZY383j/XPrasKfU"]
+[FEN "4k3/8/8/8/8/8/8/2B1K1N1 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.02.16"]
+[UTCTime "17:44:18"]
+
+1. Ke2 Kd7 { Black, in order to make it more difficult, goes towards the white-squared corner: } 2. Kd3 Kc6 3. Bf4 Kd5 4. Ne2 Kc5 5. Nc3 Kb4 6. Kd4 Ka5 7. Kc5 Ka6 8. Kc6 Ka7 9. Nd5 Ka8 { The first part is now over; the Black King is in the white-squared corner.
+The second and last part will consist in driving the Black King now from a8 to a1 or h8 in order to mate him. a1 will be the quickest in this position. } 10. Nb6+ Ka7 11. Bc7 Ka6 12. Bb8 Ka5 13. Nd5 Ka4 { Black tries to make for h1 with his King. White has two ways to prevent that, one by 14 Be5, Kb3; 15 Ne3, and the other which I give as the text, and which I consider better for the student to learn, because it is more methodical and more in accord with the spirit of all these endings, by using the King as much as possible. } 14. Kc5 Kb3 15. Nb4 Kc3 16. Bf4 Kb3 17. Be5 Ka4 18. Kc4 Ka5 19. Bc7+ Ka4 20. Nd3 Ka3 21. Bb6 Ka4 22. Nb2+ Ka3 23. Kc3 Ka2 24. Kc2 Ka3 25. Bc5+ Ka2 26. Nd3 Ka1 27. Bb4 Ka2 28. Nc1+ Ka1 29. Bc3# { It will be seen that the ending is rather laborious. There are two outstanding features: the close following by the King, and the controlling of the squares of opposite color to the Bishop by the combined action of the Knight and King. The student would do well to exercise himself methodically in this ending, as it gives a very good idea of the actual power of the pieces, and it requires foresight in order to accomplish the mate within the fifty moves which are granted by the rules. } *
+
+
+[Event "Chess Fundamentals: Chapter 2: Ex.40: Queen against Rook"]
+[Site "https://lichess.org/study/WB0Bwfa9/poP3lRDs"]
+[Date "2021.02.16"]
+[Result "*"]
+[Annotator "https://lichess.org/@/frankv53"]
+[Variant "From Position"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3)"]
+[ChapterName "Ex.40: Queen against Rook"]
+[ChapterURL "https://lichess.org/study/gfZY383j/PqWWuU8I"]
+[FEN "1k6/1r6/2K5/Q7/8/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.02.16"]
+[UTCTime "17:44:18"]
+
+1. Qe5+ (1. Qa6 $10 Rc7+ 2. Kb6 Rc6+ 3. Kxc6 { stalemate. (The beginner will invariably fall into this trap.) }) 1... Ka7 2. Qa1+ Kb8 3. Qa5 { In a few moves we have accomplished our object. The first part is concluded. Now we come to the second part. The Rook can only go to a White square, otherwise the first check with the Queen will win it. Therefore: } 3... Rb3 (3... Rb1 4. Qe5+ Ka7 { (The student should figure out how to win from here.) }) 4. Qe5+ Ka8 5. Qh8+ Ka7 6. Qg7+ Ka8 7. Qg8+ Rb8 8. Qa2# { 1-0 White wins by checkmate. } *
+
+
+[Event "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3): Ex.41: Queen against Rook"]
+[Date "2021.03.05"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3)"]
+[ChapterName "Ex.41: Queen against Rook"]
+[ChapterURL "https://lichess.org/study/gfZY383j/yodG4EDf"]
+[Annotator "https://lichess.org/@/frankv53"]
+[FEN "8/k7/2K5/4Q3/8/8/8/1r6 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.03.05"]
+[UTCTime "23:01:32"]
+
+ *
+
+
+[Event "Chess Fundamentals: Chapter 2: Ex.42: Queen against Rook"]
+[Site "https://lichess.org/study/WB0Bwfa9/VN5tjoNm"]
+[Date "2021.02.16"]
+[Result "*"]
+[Annotator "https://lichess.org/@/frankv53"]
+[Variant "From Position"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Chess Fundamentals, by J.R. Capablanca (Part 1 of 3)"]
+[ChapterName "Ex.42: Queen against Rook"]
+[ChapterURL "https://lichess.org/study/gfZY383j/caFxANqX"]
+[FEN "8/5rk1/8/5Q1K/8/8/8/8 w - - 0 1"]
+[SetUp "1"]
+[UTCDate "2021.02.16"]
+[UTCTime "17:44:18"]
+
+{ The best move is: }
+1. Qg5+ (1. Qe5+? Kf8 2. Kg6 Rd7 { The only defense, but, unfortunately, a very effective one, which makes it very difficult for White, since he cannot play } 3. Qe6 { because of } 3... Rg7+ 4. Kf6 Rg6+ { draws. }) 1... Kh8 (1... Kh7 2. Qg6+ Kh8 3. Kh6!) (1... Kf8 2. Qd8+ Kg7 3. Kg5 Rf3 4. Qd4+ Kf8 5. Kg6 { 5 Qd6+ Kg7; 6 Qe5+, Kf8; 7 Kg6 would also win the Rook. The text move, however, is given to show the finesse of such endings. White now threatens mate at d8. }) 2. Qe5+ Kh7 3. Kg5 Ra7! 4. Qe4+ Kg8 5. Qc4+ Kh7 6. Kf6 Rg7 7. Qh4+ Kg8 8. Qh5 { and we have the position of Example 40 with Black to move. } *
+
+

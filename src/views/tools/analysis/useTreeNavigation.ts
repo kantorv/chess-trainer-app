@@ -5,6 +5,7 @@ import {
   fenAtNode,
   findNode,
   lineOf,
+  mainline,
   type GameTree,
   type VariationNode,
 } from "../../../lib/gameTree";
@@ -50,8 +51,22 @@ export type TreeNavigation = {
   goToPly: (ply: number) => void;
 };
 
-export const useTreeNavigation = (tree: GameTree): TreeNavigation => {
-  const [nodeId, setNodeId] = useState<string | null>(null);
+export const useTreeNavigation = (
+  tree: GameTree,
+  initialPly?: number,
+): TreeNavigation => {
+  /*
+    `initialPly` is a `?move=` arrival: the mainline ply the URL named, read
+    once as the seed. The state is a node id (see above), so the ply is walked
+    to its mainline node here; past the end of the mainline it clamps to the
+    last node, exactly as `goToPly` would clamp it.
+  */
+  const [nodeId, setNodeId] = useState<string | null>(() => {
+    if (initialPly === undefined || initialPly <= 0) return null;
+    const line = mainline(tree);
+    if (line.length === 0) return null;
+    return line[Math.min(Math.trunc(initialPly), line.length) - 1].id;
+  });
 
   /*
     Resolved against the tree on read, the way `useGameNavigation` clamps its ply

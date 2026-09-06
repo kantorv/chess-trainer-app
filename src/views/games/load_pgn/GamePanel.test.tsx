@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router";
 import i18n from "../../../i18n";
 import AppThemeWithLang from "../../../theme/AppThemeWithLang";
 import { parsePgnGames } from "../../../lib/pgn";
+import { initialFenOf } from "../../../lib/gameModel";
 import { RightPanelOutlet, RightPanelProvider } from "../../main/rightPanel";
 import GamePanel from "./GamePanel";
 import LoadPgn from "./LoadPgn";
@@ -14,6 +16,21 @@ import LoadPgn from "./LoadPgn";
   (`.claude/rules/chessboard.md` §8). This stub records the orientation, which
   is what the flip assertions read.
 */
+/*
+  The opening book stays stubbed here — this suite is about the panel, and the
+  real one is ~3MB of JSON behind a dynamic import (see CurrentOpening.test.tsx
+  for the component's own stubbed-book tests).
+*/
+vi.mock("../../../lib/openings", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../lib/openings")>();
+  return {
+    ...actual,
+    loadOpeningBook: () => Promise.resolve({}),
+    getPositionBook: () => ({}),
+    findOpening: () => undefined,
+  };
+});
+
 vi.mock("react-chessboard", () => ({
   Chessboard: ({
     options,
@@ -54,6 +71,7 @@ const renderPanel = (
         game={game}
         ply={6}
         lastPly={5}
+        fen={game.moves[0].fen}
         onSelectPly={onSelectPly}
         onFlip={onFlip}
         ingest={<div data-testid="ingest" />}
@@ -65,14 +83,16 @@ const renderPanel = (
 };
 
 /** The whole screen, so the flip actually reaches a board. */
-const renderScreen = () =>
+const renderScreen = (entry = "/games/load-pgn") =>
   render(
-    <AppThemeWithLang>
-      <RightPanelProvider>
-        <LoadPgn />
-        <RightPanelOutlet />
-      </RightPanelProvider>
-    </AppThemeWithLang>,
+    <MemoryRouter initialEntries={[entry]}>
+      <AppThemeWithLang>
+        <RightPanelProvider>
+          <LoadPgn />
+          <RightPanelOutlet />
+        </RightPanelProvider>
+      </AppThemeWithLang>
+    </MemoryRouter>,
   );
 
 beforeEach(async () => {
@@ -95,6 +115,7 @@ describe("the game panel's tabs", () => {
           game={undefined}
           ply={0}
           lastPly={0}
+          fen={initialFenOf(game)}
           onSelectPly={vi.fn()}
           onFlip={vi.fn()}
           ingest={<div data-testid="ingest" />}
@@ -109,6 +130,7 @@ describe("the game panel's tabs", () => {
           game={game}
           ply={5}
           lastPly={5}
+          fen={game.moves[4].fen}
           onSelectPly={vi.fn()}
           onFlip={vi.fn()}
           ingest={<div data-testid="ingest" />}

@@ -1,20 +1,18 @@
-
-
-import { useEffect, useMemo } from 'react';
 //import * as Sentry from "@sentry/react";
 import { createBrowserRouter, RouterProvider } from "react-router";
 
 import { DefaultLayout } from './views/main/Layout';
-import { default as BasicExampe } from './views/demos/basic/Main'
-import { default as MovingPieceExample } from './views/demos/move/Main2'
-import { default as EngineEvaluationExample  } from './views/demos/engine/Main3'
-
-import { default as EnginePlayer1  } from './views/player/engine_basic/Main'
+import { default as HomeScreen  } from './views/home/Main'
 import { default as LoadPgnScreen  } from './views/games/load_pgn/Main'
 import { default as PlayWithEngineScreen  } from './views/engine/play/Main'
 import { default as MaskedPlayScreen  } from './views/masked/play/Main'
 import { default as AnalysisBoardScreen  } from './views/tools/analysis/Main'
 import { default as BoardEditorScreen  } from './views/tools/editor/Main'
+import { default as OpeningsScreen  } from './views/tools/openings/Main'
+import { default as MatesListScreen  } from './views/mates/list/Main'
+import { default as MateDetailScreen  } from './views/mates/detail/Main'
+import { default as PositionsScreen  } from './views/positions/Main'
+import { default as UserPgnsScreen  } from './views/pgn/Main'
 
 
 
@@ -23,26 +21,14 @@ const routes = createBrowserRouter(
   [
     {
       path: "/",
-      //  errorElement: <NotFoundPage />,  
+      //  errorElement: <NotFoundPage />,
       element:
           <DefaultLayout />
       ,
       children: [
         {
-          index: true, element: <BasicExampe />
+          index: true, element: <HomeScreen />
 
-        },
-        {
-          path: "/move",
-          element: <MovingPieceExample />
-        },
-        {
-          path: "/analyze",
-          element: <EngineEvaluationExample />
-        },
-        {
-          path: "/player1",
-          element: <EnginePlayer1 />
         },
         {
           path: "/engine/play",
@@ -63,6 +49,44 @@ const routes = createBrowserRouter(
         {
           path: "/tools/editor",
           element: <BoardEditorScreen />
+        },
+        {
+          path: "/tools/openings",
+          element: <OpeningsScreen />
+        },
+        // The Mates library. Two patterns, however many categories and
+        // positions the data grows to: the category is a parameter, so
+        // `/mates/basic`, `/mates/advanced` and `/mates/complex` — and whatever
+        // comes next — are all the same screen. The sidebar's three entries
+        // point at these; folders never appear in a URL.
+        {
+          path: "/mates/:category",
+          element: <MatesListScreen />
+        },
+        {
+          path: "/mates/:category/:id",
+          element: <MateDetailScreen />
+        },
+        // The endgame Positions library. **One** route, however deep the data
+        // nests: the segments are resolved against the catalog
+        // (`resolveLibraryPath`), which takes the longest prefix that names a
+        // category and reads whatever is left as a position id. So
+        // `/positions/queen-vs-rook`, `/positions/queen-vs-rook/rosettes` and
+        // `/positions/pawn-endgames/reti-study` all land here, and adding a
+        // category at any depth is a `src/data/positions.json` edit that this
+        // file never sees.
+        {
+          path: "/positions/*",
+          element: <PositionsScreen />
+        },
+        // The User PGNs library. The same one splat route, over content that is
+        // not a JSON file at all: the folders are the `.pgn` files under
+        // `src/data/pgn/` and the items are the games inside them
+        // (`lib/pgnCatalog.ts`). Dropping a file in adds a folder and its games
+        // at `/pgn/<folder>` and `/pgn/<folder>/<game>` with no edit here.
+        {
+          path: "/pgn/*",
+          element: <UserPgnsScreen />
         }
 
       ]

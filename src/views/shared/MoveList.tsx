@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, type Ref } from "react";
 import Box from "@mui/material/Box";
 import ButtonBase from "@mui/material/ButtonBase";
 import Typography from "@mui/material/Typography";
+import ChatBubbleOutlineRoundedIcon from "@mui/icons-material/ChatBubbleOutlineRounded";
 import { useTranslation } from "react-i18next";
 import { moveRowsOf } from "../../lib/gameNavigation";
 import { initialFenOf, type Game, type GameMove } from "../../lib/gameModel";
@@ -31,6 +32,13 @@ type MoveListProps = {
    * screens that do not mask anything pass no prop.
    */
   mask?: PieceMask;
+  /**
+   * Plies that carry an annotation in the PGN, so the list can flag them with a
+   * small comment marker beside the move. Only the User PGNs game detail passes
+   * this — its Description tab is the list of those comments — and every other
+   * screen passes nothing and renders exactly as before.
+   */
+  annotatedPlies?: ReadonlySet<number>;
 };
 
 /**
@@ -76,6 +84,7 @@ function MoveCell({
   move,
   text,
   isCurrent,
+  hasComment,
   onSelect,
   activeRef,
 }: {
@@ -83,6 +92,8 @@ function MoveCell({
   /** What to print for it — its SAN, or the mask's rewrite of it. */
   text: string;
   isCurrent: boolean;
+  /** Whether the PGN carries an annotation for this move (see `annotatedPlies`). */
+  hasComment: boolean;
   onSelect: (ply: number) => void;
   activeRef: Ref<HTMLButtonElement>;
 }) {
@@ -96,16 +107,35 @@ function MoveCell({
       ref={isCurrent ? activeRef : undefined}
       dir="ltr"
       data-testid={`move-ply-${move.ply}`}
+      data-has-comment={hasComment ? "true" : undefined}
       aria-current={isCurrent ? "true" : undefined}
       onClick={() => onSelect(move.ply)}
-      sx={{ ...cellSx, ...sanTokenSx, ...(isCurrent ? selectedCellSx : {}) }}
+      sx={{
+        ...cellSx,
+        ...sanTokenSx,
+        gap: 0.25,
+        ...(isCurrent ? selectedCellSx : {}),
+      }}
     >
       {text}
+      {hasComment && (
+        <ChatBubbleOutlineRoundedIcon
+          aria-hidden
+          data-testid={`move-comment-icon-${move.ply}`}
+          sx={{ fontSize: "0.75rem", opacity: 0.7, flexShrink: 0 }}
+        />
+      )}
     </ButtonBase>
   );
 }
 
-function MoveList({ game, currentPly, onSelectPly, mask }: MoveListProps) {
+function MoveList({
+  game,
+  currentPly,
+  onSelectPly,
+  mask,
+  annotatedPlies,
+}: MoveListProps) {
   const { t } = useTranslation();
   const rows = moveRowsOf(game);
 
@@ -200,6 +230,10 @@ function MoveList({ game, currentPly, onSelectPly, mask }: MoveListProps) {
                 move={row.white}
                 text={row.white === null ? "" : textOf(row.white)}
                 isCurrent={row.white?.ply === currentPly}
+                hasComment={
+                  row.white != null &&
+                  (annotatedPlies?.has(row.white.ply) ?? false)
+                }
                 onSelect={onSelectPly}
                 activeRef={activeRef}
               />
@@ -207,6 +241,10 @@ function MoveList({ game, currentPly, onSelectPly, mask }: MoveListProps) {
                 move={row.black}
                 text={row.black === null ? "" : textOf(row.black)}
                 isCurrent={row.black?.ply === currentPly}
+                hasComment={
+                  row.black != null &&
+                  (annotatedPlies?.has(row.black.ply) ?? false)
+                }
                 onSelect={onSelectPly}
                 activeRef={activeRef}
               />

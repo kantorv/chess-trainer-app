@@ -5,12 +5,19 @@
     "useDefineForClassFields": true,
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "module": "ESNext",
-    "types": ["vite/client"],
+    // `mdx` is `@types/mdx`: the `declare module "*.mdx"` that lets a folder's
+    // authored notes be imported as a component. Vite compiles them through
+    // `@mdx-js/rollup`; this is the half that makes `tsc -b` accept the import.
+    "types": ["vite/client", "mdx"],
     "skipLibCheck": true,
 
     /* Bundler mode */
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
+    // `src/data/mates.json` is imported as a module — the mates library is data
+    // rather than code, and Vite inlines a JSON import at build time exactly as
+    // it does a TypeScript one.
+    "resolveJsonModule": true,
     "verbatimModuleSyntax": true,
     "moduleDetection": "force",
     "noEmit": true,

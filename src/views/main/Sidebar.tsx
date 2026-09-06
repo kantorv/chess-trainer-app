@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Box from "@mui/material/Box";
 import Collapse from "@mui/material/Collapse";
 import List from "@mui/material/List";
@@ -10,10 +10,17 @@ import ExpandLessRounded from "@mui/icons-material/ExpandLessRounded";
 import ExpandMoreRounded from "@mui/icons-material/ExpandMoreRounded";
 import { Link as RouterLink, useLocation } from "react-router";
 import { useTranslation } from "react-i18next";
-import { folderPath, navTree, type NavTreeNode } from "./navTree";
+import { asAppLanguage } from "../../i18n";
+import {
+  folderChain,
+  folderPath,
+  navLabel,
+  navTree,
+  type NavTreeNode,
+} from "./navTree";
+import { useUploads } from "../pgn/useUploads";
 
-/** The shipped tree, built once — a stable identity for the default prop. */
-const shippedTree = navTree();
+
 
 /** Nesting step, in theme spacing units, plus the row's own base padding. */
 const indentOf = (depth: number) => 2 + depth * 2;
@@ -21,7 +28,7 @@ const indentOf = (depth: number) => 2 + depth * 2;
 type RowProps = {
   node: NavTreeNode;
   depth: number;
-  /** Is this folder open? Absent from the reader's collapsed set means yes. */
+  /** Is this folder open? Only the one open chain is. */
   expanded: (id: string) => boolean;
   pathname: string;
   onToggle: (id: string) => void;
@@ -29,8 +36,15 @@ type RowProps = {
 
 /** One row, plus — for a folder — its collapsible body, recursively. */
 function TreeRow({ node, depth, expanded, pathname, onToggle }: RowProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const Icon = node.icon;
+  /*
+    Chrome comes out of the catalogs; a folder generated from a library's data
+    carries its own `{ en, he }` instead, because a category added to
+    `src/data/positions.json` must not need a locale edit. `navLabel` is the one
+    place that is decided — see `navTree.ts`.
+  */
+  const label = navLabel(node, (key) => t(key), asAppLanguage(i18n.language));
   /*
     A logical inset, so depth reads as "further from the start of the line" in
     both directions: under RTL the sidebar sits on the right and the tree has to
@@ -39,8 +53,8 @@ function TreeRow({ node, depth, expanded, pathname, onToggle }: RowProps) {
   const paddingInlineStart = indentOf(depth);
 
   if (node.kind === "screen") {
-    // Exact match rather than a prefix test: "/" is a prefix of every other
-    // route, so `startsWith` would light up the basic board everywhere.
+    // Exact match rather than a prefix test: a `startsWith` check would light up
+    // a screen on every route nested under its path (and "/" on all of them).
     const isActive = pathname === node.to;
 
     return (
@@ -61,7 +75,7 @@ function TreeRow({ node, depth, expanded, pathname, onToggle }: RowProps) {
             <Icon fontSize="small" />
           </ListItemIcon>
           <ListItemText
-            primary={t(node.labelKey)}
+            primary={label}
             slotProps={{
               primary: {
                 sx: {
@@ -94,7 +108,7 @@ function TreeRow({ node, depth, expanded, pathname, onToggle }: RowProps) {
           <Icon fontSize="small" />
         </ListItemIcon>
         <ListItemText
-          primary={t(node.labelKey)}
+          primary={label}
           slotProps={{
             primary: { sx: { fontWeight: 700, color: "text.primary" } },
           }}
@@ -127,47 +141,72 @@ function TreeRow({ node, depth, expanded, pathname, onToggle }: RowProps) {
 /**
  * The navigation as a folder tree: folder rows that expand to their sub-folders
  * and screens, screen rows that link to their route and mark themselves the
- * current page. Every folder starts open, so the screens are all visible on
- * first paint; collapsing one lasts for the session only and is deliberately
- * not persisted. Navigating re-opens the ancestor chain of the active screen,
- * so it can never sit hidden inside a folder the reader shut. `tree` is
- * injectable so tests can exercise deeper nesting than the shipped tree.
+ * current page. **One chain is open at a time** — the ancestors of the active
+ * screen — so the tree stays as short as the reader's place in it, and opening
+ * a folder under a different parent shuts the one that was open. Nothing is
+ * persisted: the open chain follows the route, and is re-derived on every
+ * mount. `tree` is injectable so tests can exercise deeper nesting than the
+ * shipped tree.
  */
-function SidebarLinks({ tree = shippedTree }: { tree?: NavTreeNode[] }) {
+function SidebarLinks({ tree: given }: { tree?: NavTreeNode[] }) {
   const { pathname } = useLocation();
   const { t } = useTranslation();
 
   /*
-    What the reader has shut, rather than what is open: absent means open, so
-    every folder starts expanded without seeding a map, whatever tree it is
-    handed. Nothing is persisted — collapsing lasts for the session only.
+    The tree is **derived, not fixed**: the User PGNs section grows a folder
+    when the reader uploads a `.pgn` (`lib/pgnUploads.ts`), so this subscribes
+    to that store and rebuilds when it changes. `navTree()` is a walk over a few
+    dozen nodes, and memoising it also keeps the identity stable — the open-chain
+    state below is seeded from it.
   */
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const uploads = useUploads();
+  /* eslint-disable-next-line react-hooks/exhaustive-deps --
+     `navTree()` takes no arguments and reads the uploads store through
+     `navFolders()`, so `uploads` is not a value this callback uses — it is the
+     key that says the store changed, which is exactly what has to invalidate
+     the memo. */
+  const tree = useMemo(() => given ?? navTree(), [given, uploads]);
+
+  /*
+    The single open chain, top down — the ancestors of one folder, never two
+    branches at once. A chain rather than a set because a sub-folder cannot be
+    open inside a shut parent, and a chain rather than a lone id because
+    "collapse the others" has to spare the folders this one lives in.
+  */
+  const [openPath, setOpenPath] = useState<string[]>(() =>
+    folderPath(pathname, tree),
+  );
   const [seenPathname, setSeenPathname] = useState(pathname);
 
   /*
-    Re-open the ancestor chain of the screen just navigated to, so the active
-    screen is never hidden inside a folder the reader shut. Adjusted during
-    render against the previous pathname — React's own answer to "reset state
-    when a value changes", and unlike an effect it renders once rather than
-    painting the collapsed tree and then correcting it.
+    Follow the route: the screen navigated to is what decides which chain is
+    open, so arriving under a different parent shuts the previous one. Adjusted
+    during render against the previous pathname — React's own answer to "reset
+    state when a value changes", and unlike an effect it renders once rather
+    than painting the old chain and then correcting it.
+
+    A path that is no screen in the tree (the landing page, a mate's detail
+    page) has no chain of its own and leaves the open one alone, rather than
+    shutting the sidebar under a reader who is still inside that section.
   */
   if (seenPathname !== pathname) {
     setSeenPathname(pathname);
     const ancestors = folderPath(pathname, tree);
-    if (ancestors.some((id) => collapsed[id])) {
-      setCollapsed(
-        Object.fromEntries(
-          Object.entries(collapsed).filter(([id]) => !ancestors.includes(id)),
-        ),
-      );
+    if (ancestors.length > 0 && ancestors.join("\n") !== openPath.join("\n")) {
+      setOpenPath(ancestors);
     }
   }
 
-  const expanded = (id: string) => !collapsed[id];
+  const expanded = (id: string) => openPath.includes(id);
 
+  /*
+    Opening a folder opens the chain down to it and nothing else; clicking the
+    open one shuts it and its descendants by truncating the chain above it.
+  */
   const toggle = (id: string) =>
-    setCollapsed((prev) => ({ ...prev, [id]: !prev[id] }));
+    setOpenPath((prev) =>
+      prev.includes(id) ? prev.slice(0, prev.indexOf(id)) : folderChain(id, tree),
+    );
 
   return (
     <List dense component="nav" aria-label={t("nav.ariaLabel")} sx={{ p: 0 }}>

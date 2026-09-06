@@ -35,6 +35,12 @@ type VariationTreeProps = {
   /** The selected node; `null` is the start position. */
   currentId: string | null;
   onSelectNode: (id: string | null) => void;
+  /**
+   * What an empty tree says. Defaults to the Analysis Board's own hint, which
+   * mentions its Position tab; a screen without one (the Openings explorer)
+   * passes its own.
+   */
+  emptyText?: string;
 };
 
 const sanTokenSx = {
@@ -174,7 +180,7 @@ function Line({
   );
 }
 
-function VariationTree({ tree, currentId, onSelectNode }: VariationTreeProps) {
+function VariationTree({ tree, currentId, onSelectNode, emptyText }: VariationTreeProps) {
   const { t } = useTranslation();
   const activeRef = useRef<HTMLButtonElement | null>(null);
 
@@ -209,7 +215,7 @@ function VariationTree({ tree, currentId, onSelectNode }: VariationTreeProps) {
 
       {tree.moves.length === 0 ? (
         <Typography variant="body2" sx={{ color: "text.secondary" }}>
-          {t("analysis.tree.empty")}
+          {emptyText ?? t("analysis.tree.empty")}
         </Typography>
       ) : (
         <Box

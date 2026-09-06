@@ -4,6 +4,11 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import i18n from "../../../i18n";
 import AppThemeWithLang from "../../../theme/AppThemeWithLang";
+import { initialFenOf } from "../../../lib/gameModel";
+import { pgnCatalog } from "../../../lib/pgnCatalog";
+import { parsePgnGames } from "../../../lib/pgn";
+import { fenAtPly } from "../../../lib/gameNavigation";
+import { addUpload, clearUploads } from "../../../lib/pgnUploadStore";
 import { MAX_VARIATIONS_OFFERED } from "../../../lib/engineAnalysis";
 import { RightPanelOutlet, RightPanelProvider } from "../../main/rightPanel";
 import AnalysisBoard from "./AnalysisBoard";
@@ -102,6 +107,19 @@ const harness = vi.hoisted(() => {
 });
 
 vi.mock("../../../lib/engine", () => ({ default: harness.FakeEngine }));
+
+
+/* The opening book stays stubbed — the panel's new opening line must not pull
+   the real ~3MB eco.json into a screen test. */
+vi.mock("../../../lib/openings", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../lib/openings")>();
+  return {
+    ...actual,
+    loadOpeningBook: () => Promise.resolve({}),
+    getPositionBook: () => ({}),
+    findOpening: () => undefined,
+  };
+});
 
 vi.mock("react-chessboard", () => ({
   Chessboard: ({ options }: { options: Record<string, never> }) => {
@@ -690,6 +708,131 @@ describe("Analysis Board — arriving from the Board Editor", () => {
     renderScreen("/tools/analysis?fen=not-a-position");
 
     expect(position()).toMatch(/^rnbqkbnr\/pppppppp/);
+  });
+});
+
+describe("Analysis Board — arriving with a whole game", () => {
+  /*
+    The `?game=` hand-off from a User PGNs detail page. What crosses is a
+    reference into the catalog rather than the PGN itself — a game does not fit
+    in a URL — and this screen is the one destination that re-reads the text with
+    the *variation-aware* parser, because side lines are what an analysis board
+    is for.
+  */
+  const withVariations = pgnCatalog.items.find(
+    (item) => item.kind === "game" && item.pgn.includes("("),
+  )!;
+
+  const referenceTo = (item: typeof withVariations) =>
+    `pgn/${item.category}/${item.id}`;
+
+  it("opens on the game the reference names, at its starting position", async () => {
+    if (withVariations.kind !== "game") throw new Error("expected a game");
+    const entry = `/tools/analysis?game=${encodeURIComponent(referenceTo(withVariations))}`;
+    renderScreen(entry);
+
+    expect(position()).toBe(initialFenOf(withVariations.game));
+
+    await openTab("moves");
+    // A game does not turn the board (see the root CLAUDE.md), so it opens on
+    // White whatever the position's side to move is.
+    expect(screen.getByTestId("board")).toHaveAttribute(
+      "data-orientation",
+      "white",
+    );
+    expect(moveTokens()).toContain(withVariations.game.moves[0].san);
+  });
+
+  it("keeps the game's side lines, which the catalog's mainline does not have", async () => {
+    if (withVariations.kind !== "game") throw new Error("expected a game");
+    renderScreen(
+      `/tools/analysis?game=${encodeURIComponent(referenceTo(withVariations))}`,
+    );
+
+    await openTab("moves");
+    /*
+      `chess.js` `loadPgn` discards `( … )`, so the `Game` the catalog holds is
+      the mainline alone. This screen parses the PGN text again with
+      `parsePgnTree`, so the tree it shows is strictly larger.
+    */
+    expect(moveTokens().length).toBeGreaterThan(
+      withVariations.game.moves.length,
+    );
+  });
+
+  it("ignores a reference that names nothing, rather than throwing on the link", () => {
+    renderScreen("/tools/analysis?game=pgn/no-such-folder/no-such-game");
+
+    expect(position()).toMatch(/^rnbqkbnr\/pppppppp/);
+  });
+
+  it("opens stepped to the mainline ply a ?move= names", () => {
+    if (withVariations.kind !== "game") throw new Error("expected a game");
+    renderScreen(
+      `/tools/analysis?game=${encodeURIComponent(referenceTo(withVariations))}&move=3`,
+    );
+
+    expect(position()).toBe(withVariations.game.moves[2].fen);
+  });
+
+  it.each(["abc", "-3"])(
+    "ignores a ?move= that is not a ply (%s), as if it were not there",
+    (move) => {
+      if (withVariations.kind !== "game") throw new Error("expected a game");
+      renderScreen(
+        `/tools/analysis?game=${encodeURIComponent(referenceTo(withVariations))}&move=${move}`,
+      );
+
+      expect(position()).toBe(initialFenOf(withVariations.game));
+    },
+  );
+
+  it("clamps a ?move= past the end of the mainline to its last move", () => {
+    if (withVariations.kind !== "game") throw new Error("expected a game");
+    renderScreen(
+      `/tools/analysis?game=${encodeURIComponent(referenceTo(withVariations))}&move=99999`,
+    );
+
+    expect(position()).toBe(withVariations.game.moves.at(-1)!.fen);
+  });
+
+  describe("with a StartPly tag", () => {
+    /*
+      Seeded through an upload: the tag lives in the PGN text itself, so an
+      uploaded file declares it exactly as a shipped one would. The ply is a
+      *mainline* walk, the same unit a `?move=` speaks.
+    */
+    const START_PLY_PGN = `[Event "Uploaded: Chapter 1"]
+[Result "*"]
+[StudyName "Uploaded Study"]
+[ChapterName "Chapter 1"]
+[StartPly "3"]
+
+1. e4 e5 2. Nf3 Nc6 3. Bb5 *
+
+`;
+
+    const tagged = parsePgnGames(START_PLY_PGN)[0];
+    const taggedReference = "pgn/uploads/my-study/chapter-1";
+
+    beforeEach(() => {
+      clearUploads();
+      addUpload("my_study.pgn", START_PLY_PGN);
+    });
+
+    it("opens on the mainline ply the game's StartPly tag declares", () => {
+      renderScreen(`/tools/analysis?game=${encodeURIComponent(taggedReference)}`);
+
+      expect(position()).toBe(fenAtPly(tagged, 3));
+    });
+
+    it("lets an explicit ?move= win over the tag", () => {
+      renderScreen(
+        `/tools/analysis?game=${encodeURIComponent(taggedReference)}&move=1`,
+      );
+
+      expect(position()).toBe(fenAtPly(tagged, 1));
+    });
   });
 });
 

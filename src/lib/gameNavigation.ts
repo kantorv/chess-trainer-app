@@ -1,5 +1,5 @@
 import type { Arrow } from "react-chessboard";
-import { initialFenOf, type Game, type GameMove } from "./gameModel";
+import { gameTag, initialFenOf, type Game, type GameMove } from "./gameModel";
 
 /**
  * Walking a game: which position a ply shows, which arrow marks it, and how its
@@ -30,6 +30,42 @@ export const lastPlyOf = (game: Game): number => game.moves.length;
 /** A ply pinned into `[0, lastPly]`. Out-of-range input is a clamp, not a throw. */
 export const clampPly = (game: Game, ply: number): number =>
   Math.min(Math.max(Math.trunc(ply), 0), lastPlyOf(game));
+
+/**
+ * The `?move=` query parameter, read. It carries a ply — the same unit this
+ * module speaks — so a study page's URL can name the move the reader is on and
+ * a `?game=` hand-off can open the destination on it.
+ *
+ * The same "validate and ignore what does not pass" rule as `parseFen` and
+ * `resolveGameReference`: an absent, non-numeric or negative value is
+ * `undefined` (ply 0, as if the parameter had not been there), never a throw.
+ * Too *large* a value is not rejected here — that depends on the game, so it is
+ * `clampPly`'s job on read, exactly like a ply from any other source.
+ */
+export const parseMoveParam = (value: string | null): number | undefined => {
+  if (value === null || !/^\d+$/.test(value)) return undefined;
+  return Number.parseInt(value, 10);
+};
+
+/**
+ * The ply a game declares it opens on: its `StartPly` tag pair
+ * (`[StartPly "27"]`). A puzzle collection uses it to open each chapter at the
+ * position that matters rather than at the game's start.
+ *
+ * The second source of an opening ply beside the `?move=` parameter, read with
+ * the same discipline: an absent or unreadable value is "no declared start" —
+ * `0`, never a throw. So is a value **past the end of the game**, and it is
+ * ignored whole rather than clamped — a tag that names a move the game does
+ * not have is a broken tag, not a request for the final position.
+ *
+ * Precedence is the caller's, and it is one line:
+ * `parseMoveParam(param) ?? initialPlyOf(game)` — an explicit `?move=` wins
+ * over the tag, the tag wins over ply 0.
+ */
+export const initialPlyOf = (game: Game): number => {
+  const declared = parseMoveParam(gameTag(game.headers, "StartPly") ?? null);
+  return declared !== undefined && declared <= lastPlyOf(game) ? declared : 0;
+};
 
 /**
  * The position at a ply: the starting position at ply 0, otherwise the FEN the

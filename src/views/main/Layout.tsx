@@ -10,14 +10,15 @@ import { default as SideBar } from './Sidebar';
 import { Footer } from './Footer';
 import { BoardWidgetContext } from './service';
 import { RightPanelOutlet, RightPanelProvider } from './rightPanel';
+import { LeftPanelOutlet, LeftPanelProvider } from './leftPanel';
 import { ForceLTR } from '../../theme/ForceLTR';
 import ColorModeIconDropdown from '../../theme/ColorModeIconDropdown';
 import LanguageSwitch from '../../theme/LanguageSwitch';
 
 /**
- * Board inset in pixels — the MUI `p: 2` (2 × the 8px spacing unit) that used
- * to live only on `views/player/engine_basic/Main.tsx`, now applied once here
- * in the shell so all four board screens get the same breathing room. Kept as
+ * Board inset in pixels — the MUI `p: 2` (2 × the 8px spacing unit), applied
+ * once here in the shell so every board screen gets the same breathing room.
+ * Kept as
  * a raw number, not `theme.spacing(2)`: `cssVariables` is on, so that returns a
  * `calc(var(--mui-spacing))` string the resize maths cannot subtract.
  */
@@ -31,7 +32,7 @@ const BOARD_INSET_PX = 16;
  * content is fixed-width (an icon, a label, one level of indent), so it takes a
  * fixed width and the board area keeps everything the rail does not need.
  */
-const SIDEBAR_WIDTH_PX = 240;
+const SIDEBAR_WIDTH_PX = 280;
 
 /**
  * The right-hand panel's width bounds, in pixels.
@@ -270,7 +271,16 @@ const DefaultLayoutViewport = () => {
                         flexDirection: "column"
                     }}
                 >
-                    <SideBar />
+                    {/*
+                        The per-route left-panel slot (`leftPanel.tsx`), mirroring
+                        the aside's `RightPanelOutlet` below. A library detail
+                        screen renders `<LeftPanel>` to replace the nav tree with a
+                        sibling-item list for as long as it is mounted; with none
+                        registered the outlet renders `<SideBar/>` and this box is
+                        exactly what it always was. Same fixed width either way —
+                        this slot swaps *content*, not the row's proportions.
+                    */}
+                    <LeftPanelOutlet fallback={<SideBar />} />
 
                 </Box>
 
@@ -409,11 +419,15 @@ const DefaultLayoutViewport = () => {
 const DefaultLayout = ()=>
             <BoardWidgetContext.Provider>
                 {/*
-                    Above the viewport, so the aside's outlet and every route
-                    behind the `<Outlet />` share one slot.
+                    Above the viewport, so both outlets and every route behind
+                    the `<Outlet />` share one slot each. Nesting order between
+                    the two providers does not matter — the contexts are
+                    independent.
                 */}
                 <RightPanelProvider>
-                    <DefaultLayoutViewport />
+                    <LeftPanelProvider>
+                        <DefaultLayoutViewport />
+                    </LeftPanelProvider>
                 </RightPanelProvider>
             </BoardWidgetContext.Provider>
 

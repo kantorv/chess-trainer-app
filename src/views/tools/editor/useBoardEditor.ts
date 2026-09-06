@@ -47,22 +47,41 @@ import {
  * nothing else — it keeps its own idea of the other fields as pieces move
  * around, and that idea is exactly what the reader is overriding. Reading only
  * field 1 off it is what makes those controls round-trip.
+ *
+ * ## A position can arrive from outside
+ *
+ * `/tools/editor?fen=<position>` opens on that position — the same arrival the
+ * other two board screens have, and the other direction of the hand-off this
+ * screen already makes. It is `initialFen`, read **once**: arriving at the URL
+ * mounts the screen, so there is no later change to follow and nothing is
+ * written from an effect. It seeds both the board and the fields, so all six
+ * fields round-trip, and it turns the board to the side to move — a position is
+ * something you are about to answer, which is the rule the two loads below
+ * already follow (root `CLAUDE.md`, "A position turns the board; a game does
+ * not"). Validating it is the caller's job; whatever arrives here is used as-is.
  */
 
-export const useBoardEditor = () => {
+export const useBoardEditor = (initialFen?: string) => {
+  // Both seeds come off one string: the handed-over position when there is one,
+  // the standard start otherwise.
+  const initial = initialFen ?? START_POSITION;
+
   /*
     The pieces. In a ref, not state: the drop handler must see the latest board
     without a stale closure, and mutating it is not by itself a render — the
     placement it produces is.
   */
-  const boardRef = useRef(
-    new Chess(START_POSITION, { skipValidation: true }),
-  );
+  const boardRef = useRef(new Chess(initial, { skipValidation: true }));
 
   const [fields, setFields] = useState<PositionFields>(() =>
-    fenFields(START_POSITION),
+    fenFields(initial),
   );
-  const [orientation, setOrientation] = useState<"white" | "black">("white");
+  // Seeded from the fields above rather than from the FEN again — only the first
+  // render's value is kept, and `START_POSITION` is White to move, so a screen
+  // opened with no parameter still starts out facing White.
+  const [orientation, setOrientation] = useState<"white" | "black">(
+    fields.turn === "b" ? "black" : "white",
+  );
 
   const fen = fenFromFields(fields);
   // Cheap, but it builds a `chess.js` instance for the check test — once per
@@ -215,6 +234,22 @@ export const useBoardEditor = () => {
 
   const clearBoard = useCallback(() => applyFen(EMPTY_POSITION), [applyFen]);
 
+  /**
+   * Back to the position the screen was opened with — the third reset, and the
+   * only one that is not always there: with no handed-over position it would
+   * have nothing to return to, so the panel renders it only when `arrivalFen`
+   * is set (a no-op here is the safety net, not the interface).
+   *
+   * Unlike the two resets above it *does* turn the board, because it is not
+   * rearranging the pieces — it is handing the reader the same position a
+   * second time, and that is the case the rule is about.
+   */
+  const setArrivalPosition = useCallback(() => {
+    if (initialFen !== undefined) {
+      applyFen(initialFen, { faceSideToMove: true });
+    }
+  }, [applyFen, initialFen]);
+
   const flipBoard = useCallback(
     () => setOrientation((side) => (side === "white" ? "black" : "white")),
     [],
@@ -243,6 +278,8 @@ export const useBoardEditor = () => {
     /** Whether the position could be played from — the two hand-offs' gate. */
     isValid: problems.length === 0,
     orientation,
+    /** The position this screen was opened on, or `undefined` if it was not. */
+    arrivalFen: initialFen,
     flipBoard,
     onPieceDrop,
     clearColor,
@@ -251,6 +288,7 @@ export const useBoardEditor = () => {
     setEnPassant,
     setStartingPosition,
     clearBoard,
+    setArrivalPosition,
     loadFen,
     loadPosition,
   };

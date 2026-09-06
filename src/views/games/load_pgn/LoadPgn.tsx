@@ -1,7 +1,17 @@
-import { useRef, useState, type ChangeEvent, type DragEvent, type FormEvent } from "react";
+import {
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type DragEvent,
+  type FormEvent,
+} from "react";
 import Box from "@mui/material/Box";
+import { useSearchParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import { Chessboard, type ChessboardOptions } from "react-chessboard";
+import { resolveGameReference } from "../../../lib/gameReference";
+import { initialPlyOf, parseMoveParam } from "../../../lib/gameNavigation";
 import { EmptyPgnError, PgnParseError, parsePgnGames } from "../../../lib/pgn";
 import type { Game } from "../../../lib/gameModel";
 import { RightPanel } from "../../main/rightPanel";
@@ -28,12 +38,55 @@ import { useGameNavigation } from "../../shared/useGameNavigation";
  *
  * This component owns the state and the parsing seam; the panel's pieces are
  * presentational and take props, so each renders against a fixture on its own.
+ *
+ * ### Arriving with a game
+ *
+ * `/games/load-pgn?game=<reference>` opens on a game out of a library, without
+ * anything having been pasted — the User PGNs hand-off. The reference is
+ * resolved through the catalog (`lib/gameReference.ts`) and taken as *initial*
+ * state, because arriving at the URL mounts the screen; a reference that names
+ * nothing opens the empty screen, exactly as a mistyped `?fen=` does elsewhere.
+ *
+ * It opens at **ply 0**, where a pasted game opens at its final position —
+ * unless the game declares otherwise with a `StartPly` tag (see
+ * `initialPlyOf`). The difference from a paste is not an inconsistency: a
+ * paste opens at the end because that is the proof it all parsed, while a game
+ * a reader picked out of a library and asked to open is one they mean to
+ * replay — and a replay starts where the game says it starts.
  */
 
 function LoadPgn() {
   const { t } = useTranslation();
+  const [searchParams] = useSearchParams();
 
-  const [games, setGames] = useState<readonly Game[]>([]);
+  /*
+    Resolved once. Only the first render's value is ever used, but looking the
+    reference up on every render would walk the catalog for nothing.
+  */
+  const requestedGame = searchParams.get("game");
+  const arrived = useMemo(
+    () => resolveGameReference(requestedGame),
+    [requestedGame],
+  );
+
+  /*
+    The `?move=` that rode beside the `?game=`, if this is that hand-off: the
+    ply the reader was on becomes the first render's ply (clamped on read, like
+    any ply). Absent or unreadable, the arrived game's own `StartPly` tag is the
+    next say — a puzzle chapter opens on the position it is about — and a game
+    without one opens at ply 0, the arrival's long-standing default.
+  */
+  const requestedMove = searchParams.get("move");
+  const initialPly = useMemo(
+    () =>
+      parseMoveParam(requestedMove) ??
+      (arrived === undefined ? 0 : initialPlyOf(arrived.game)),
+    [requestedMove, arrived],
+  );
+
+  const [games, setGames] = useState<readonly Game[]>(() =>
+    arrived === undefined ? [] : [arrived.game],
+  );
   const [selected, setSelected] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [pgnText, setPgnText] = useState("");
@@ -51,7 +104,10 @@ function LoadPgn() {
     instance here on purpose — every ply already carries the FEN of the position
     after it (`lib/pgn.ts`), so nothing needs re-simulating.
   */
-  const { ply, lastPly, fen, arrows, goToPly } = useGameNavigation(current);
+  const { ply, lastPly, fen, arrows, goToPly } = useGameNavigation(
+    current,
+    initialPly,
+  );
 
   /*
     A freshly loaded game opens on its final position — the most informative
@@ -210,6 +266,7 @@ function LoadPgn() {
             game={current}
             ply={ply}
             lastPly={lastPly}
+            fen={fen}
             onSelectPly={goToPly}
             onFlip={flipBoard}
             ingest={
