@@ -22,11 +22,15 @@ import LoadPgn from "./LoadPgn";
 
 /* The opening book stays stubbed — the panel's new opening line must not pull
    the real ~3MB eco.json into a screen test. */
-vi.mock("../../../lib/openings", () => ({
-  loadOpeningBook: () => Promise.resolve({}),
-  getPositionBook: () => ({}),
-  findOpening: () => undefined,
-}));
+vi.mock("../../../lib/openings", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../lib/openings")>();
+  return {
+    ...actual,
+    loadOpeningBook: () => Promise.resolve({}),
+    getPositionBook: () => ({}),
+    findOpening: () => undefined,
+  };
+});
 
 vi.mock("react-chessboard", () => ({
   Chessboard: ({ options }: { options: { id?: string; position?: string } }) => (

@@ -21,11 +21,15 @@ import LoadPgn from "./LoadPgn";
   real one is ~3MB of JSON behind a dynamic import (see CurrentOpening.test.tsx
   for the component's own stubbed-book tests).
 */
-vi.mock("../../../lib/openings", () => ({
-  loadOpeningBook: () => Promise.resolve({}),
-  getPositionBook: () => ({}),
-  findOpening: () => undefined,
-}));
+vi.mock("../../../lib/openings", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../lib/openings")>();
+  return {
+    ...actual,
+    loadOpeningBook: () => Promise.resolve({}),
+    getPositionBook: () => ({}),
+    findOpening: () => undefined,
+  };
+});
 
 vi.mock("react-chessboard", () => ({
   Chessboard: ({
