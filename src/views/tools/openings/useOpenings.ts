@@ -1,41 +1,62 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Chess, type Square } from "chess.js";
-import { gameFromChess, type Game } from "../../../lib/gameModel";
+import { Chess, type Move, type Square } from "chess.js";
+import type { Arrow } from "react-chessboard";
 import {
+  KNOWN_MOVE_ARROW_COLOR,
   getPositionBook,
+  knownMoveOpenings,
   loadOpeningBook,
-  nextMoveOpenings,
-  type NextMoveOpening,
+  type KnownMoveOpening,
   type OpeningBook,
   type PositionBook,
 } from "../../../lib/openings";
-import { useGameNavigation } from "../../shared/useGameNavigation";
+import { addMove, emptyTree, type GameTree } from "../../../lib/gameTree";
+import { useTreeNavigation } from "../analysis/useTreeNavigation";
 
 /**
- * Everything the Openings screen knows, in one hook — the `usePlayWithEngine`
- * pattern minus the engine: a live `chess.js` instance in a ref, the position
- * it produces mirrored into a `Game` for the shared move list and board
- * controls, and a promotion picker for the one move `onPieceDrop` cannot
- * finish by itself.
+ * Everything the Openings screen knows, in one hook — the `useAnalysisBoard`
+ * pattern minus the engine: a `chess.js` instance in a ref as the *rules
+ * oracle* for the position on screen, the game itself held as a
+ * {@link GameTree}, and a promotion picker for the one move `onPieceDrop`
+ * cannot finish by itself.
  *
- * There is no variation tree here (contrast `useAnalysisBoard`): this screen
- * is one line, growing at its tip, exactly like Play with Engine's game —
- * dragging is disabled off the live position for the same reason theirs is,
- * because a drag anywhere else would apply to a position nobody is looking at
- * and nothing here has a second continuation to keep.
+ * ## The game is a tree
  *
- * The opening book loads lazily (`lib/openings.ts`) and is looked up for
- * *the position on screen*, live or not — stepping back through a game already
- * played is exactly when a reader wants to see what it was called.
+ * Exploring an opening *is* branching: stepping back to move 4 and trying the
+ * other book reply has to keep both continuations, or the explorer cannot
+ * compare them. So this screen holds a tree and navigates it by node id
+ * (`useTreeNavigation`), exactly like the Analysis Board — a drop from an
+ * earlier ply is a variation, not an error, and dragging is on at every
+ * position (both colours; the reader is exploring, not playing a side). The
+ * shared `BoardControls` still speak ply, which the navigation derives.
+ *
+ * The opening book loads lazily (`lib/openings.ts`) and is looked up for *the
+ * position on screen*, live or not — stepping back through a line already
+ * played is exactly when a reader wants to see what it was called, and what
+ * else eco.json knows from there.
  */
 
-const NEW_GAME: Game = gameFromChess(new Chess());
+/** A tree with nothing in it, taken once — plain data that nothing mutates. */
+const NEW_TREE: GameTree = emptyTree();
 
 export const useOpenings = (initialFen?: string) => {
-  const chessGameRef = useRef(new Chess(initialFen));
+  /*
+    One `chess.js` instance, in a ref, moved to whichever position is being
+    asked about — the board's position comes from the tree, so this is a rules
+    oracle rather than the game itself: it answers "what are the legal moves
+    from this FEN" and "what does this drop mean". Reloading only when the FEN
+    actually differs keeps a drag from paying for a parse it does not need.
+  */
+  const chessRef = useRef(new Chess(initialFen));
+  const chessAt = useCallback((fen: string) => {
+    const chess = chessRef.current;
+    if (chess.fen() !== fen) chess.load(fen);
+    return chess;
+  }, []);
 
-  const [game, setGame] = useState<Game>(() =>
-    initialFen === undefined ? NEW_GAME : gameFromChess(new Chess(initialFen)),
+  // Read once, as initial state: arriving at `?fen=` is what mounts the screen.
+  const [tree, setTree] = useState<GameTree>(() =>
+    initialFen === undefined ? NEW_TREE : emptyTree(initialFen),
   );
   const [orientation, setOrientation] = useState<"white" | "black">(() =>
     initialFen !== undefined && initialFen.split(" ")[1] === "b" ? "black" : "white",
@@ -45,9 +66,8 @@ export const useOpenings = (initialFen?: string) => {
   const [book, setBook] = useState<OpeningBook | null>(null);
   const [positionBook, setPositionBook] = useState<PositionBook | undefined>(undefined);
 
-  const { ply, lastPly, fen, arrows, goToPly } = useGameNavigation(game);
-
-  const isLive = ply === lastPly;
+  const navigation = useTreeNavigation(tree);
+  const { fen, nodeId, goToNode } = navigation;
 
   // Loaded once per mount; `loadOpeningBook` itself caches across mounts, so a
   // second visit to this screen resolves immediately rather than re-fetching.
@@ -63,26 +83,76 @@ export const useOpenings = (initialFen?: string) => {
     };
   }, []);
 
-  const nextMoves: NextMoveOpening[] = useMemo(
-    () => (book === null ? [] : nextMoveOpenings(fen, book, positionBook)),
+  /**
+   * The known continuations from the position on screen — only the moves that
+   * resolve to an opening. Off-book moves stay playable (drag one and the tree
+   * keeps it); they simply are not book continuations, so the explorer does not
+   * list them.
+   */
+  const nextMoves: KnownMoveOpening[] = useMemo(
+    () => (book === null ? [] : knownMoveOpenings(fen, book, positionBook)),
     [book, fen, positionBook],
+  );
+
+  /*
+    The whole arrow set for the position on screen: the last-move arrow the
+    navigation already computes, plus one arrow per known next move. Arrows
+    passed through `options.arrows` are external — the board never clears or
+    adds to them itself (`.claude/rules/chessboard.md` §3.4) — so this is the
+    complete set, recomputed whenever the position or the book changes.
+  */
+  const arrows: Arrow[] = useMemo(
+    () => [
+      ...navigation.arrows,
+      ...nextMoves.map((move) => ({
+        startSquare: move.from,
+        endSquare: move.to,
+        color: KNOWN_MOVE_ARROW_COLOR,
+      })),
+    ],
+    [navigation.arrows, nextMoves],
+  );
+
+  /**
+   * Add an already-played move under the node on screen and select it. Replaying
+   * a move the tree already holds follows that line rather than duplicating it;
+   * anything else branches — both cases are `addMove`'s own rules.
+   */
+  const commitMove = useCallback(
+    (move: Move) => {
+      const added = addMove(tree, nodeId, {
+        san: move.san,
+        from: move.from,
+        to: move.to,
+        fen: move.after,
+      });
+      setTree(added.tree);
+      goToNode(added.nodeId);
+    },
+    [goToNode, nodeId, tree],
   );
 
   const applyMove = useCallback(
     (from: Square, to: Square, promotionPiece?: string) => {
-      const chessGame = chessGameRef.current;
+      let move: Move;
       try {
-        chessGame.move({ from, to, promotion: promotionPiece });
+        move = chessAt(fen).move({ from, to, promotion: promotionPiece });
       } catch {
         return false;
       }
-      setGame(gameFromChess(chessGame));
-      goToPly(chessGame.history().length);
+      commitMove(move);
       return true;
     },
-    [goToPly],
+    [chessAt, commitMove, fen],
   );
 
+  /**
+   * The drop handler. Both colours, at any ply: a drop from an earlier position
+   * is how a variation starts. Returns `true` for every move actually applied —
+   * and also for a promotion, which is applied a moment later once the picker is
+   * answered; returning `false` there would snap the pawn back and then jump it
+   * forward again when the choice lands.
+   */
   const onPieceDrop = useCallback(
     ({
       sourceSquare,
@@ -93,10 +163,10 @@ export const useOpenings = (initialFen?: string) => {
     }): boolean => {
       if (!targetSquare) return false;
 
-      const chessGame = chessGameRef.current;
-      if (!isLive || chessGame.isGameOver()) return false;
+      const chess = chessAt(fen);
+      if (chess.isGameOver()) return false;
 
-      const candidates = chessGame
+      const candidates = chess
         .moves({ square: sourceSquare as Square, verbose: true })
         .filter((move) => move.to === targetSquare);
 
@@ -109,7 +179,7 @@ export const useOpenings = (initialFen?: string) => {
 
       return applyMove(sourceSquare as Square, targetSquare as Square);
     },
-    [applyMove, isLive],
+    [applyMove, chessAt, fen],
   );
 
   const resolvePromotion = useCallback(
@@ -121,20 +191,22 @@ export const useOpenings = (initialFen?: string) => {
     [applyMove, promotion],
   );
 
-  /** Play a specific move out of {@link nextMoves} — the explorer list's own click handler. */
+  /**
+   * Play a specific move out of {@link nextMoves} — the explorer list's own
+   * click handler. Like a drop, it works at any ply: clicking a book move from
+   * an earlier position branches the tree there.
+   */
   const playMove = useCallback(
     (san: string) => {
-      if (!isLive) return;
-      const chessGame = chessGameRef.current;
+      let move: Move;
       try {
-        chessGame.move(san);
+        move = chessAt(fen).move(san);
       } catch {
         return;
       }
-      setGame(gameFromChess(chessGame));
-      goToPly(chessGame.history().length);
+      commitMove(move);
     },
-    [goToPly, isLive],
+    [chessAt, commitMove, fen],
   );
 
   /**
@@ -144,12 +216,11 @@ export const useOpenings = (initialFen?: string) => {
    * the reader came here to explore, with no way back to it.
    */
   const newGame = useCallback(() => {
-    const fresh = new Chess(initialFen);
-    chessGameRef.current = fresh;
-    setGame(gameFromChess(fresh));
+    chessRef.current = new Chess(initialFen);
+    setTree(initialFen === undefined ? NEW_TREE : emptyTree(initialFen));
     setPromotion(null);
-    goToPly(0);
-  }, [goToPly, initialFen]);
+    goToNode(null);
+  }, [goToNode, initialFen]);
 
   const flipBoard = useCallback(
     () => setOrientation((side) => (side === "white" ? "black" : "white")),
@@ -157,13 +228,9 @@ export const useOpenings = (initialFen?: string) => {
   );
 
   return {
-    game,
-    ply,
-    lastPly,
-    fen,
+    tree,
+    ...navigation,
     arrows,
-    goToPly,
-    isLive,
     orientation,
     flipBoard,
     promotion,

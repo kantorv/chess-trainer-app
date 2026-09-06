@@ -393,9 +393,12 @@ const en = {
       open: "Explore {{eco}} in the Openings explorer",
     },
     nextMoves: {
-      empty: "No legal moves from here.",
-      /** A legal move eco.json has no name for. */
-      unknown: "Not a named opening",
+      /** The explorer lists only moves the book names — this when it has none. */
+      empty: "No known continuations from here.",
+    },
+    moves: {
+      /** The variation tree before anything has been played. */
+      empty: "No moves yet — play one on the board, or pick a book move from the Next moves tab.",
     },
     controls: {
       newGame: "New game",

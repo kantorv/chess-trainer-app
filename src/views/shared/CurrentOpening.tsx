@@ -5,9 +5,10 @@ import Typography from "@mui/material/Typography";
 import { useTranslation } from "react-i18next";
 import { createSearchParams, Link as RouterLink } from "react-router";
 import {
-  findOpening,
   getPositionBook,
   loadOpeningBook,
+  stickyOpening,
+  type LastKnownOpening,
   type OpeningBook,
   type PositionBook,
 } from "../../lib/openings";
@@ -22,9 +23,17 @@ import {
  * The ECO chip is itself the link into the Openings explorer
  * (`/tools/openings?fen=<the position on screen>`) — the same `?fen=` carrier
  * every other position hand-off uses, so this component replaced the "Open in
- * Openings" buttons those screens used to pin to their panel foot. When the
- * book has no name for the position there is no chip and no link, just the
- * unknown label — an unrecognised position is a fact about chess, not an error.
+ * Openings" buttons those screens used to pin to their panel foot.
+ *
+ * The label is **sticky**: a position the book has no name for keeps showing
+ * the last opening the game passed through, rather than going blank the moment
+ * a move leaves the book — which is where most interesting positions live.
+ * Stepping *back* past that position (or resetting the game) clears it, so a
+ * name is only ever shown for the position it was earned at or one of its
+ * descendants. The rule and its memory live in `lib/openings.ts`
+ * (`stickyOpening`); a position that was never named and follows no named one
+ * still reads as unknown — an unrecognised position is a fact about chess, not
+ * an error.
  *
  * The book loads lazily and is shared: `loadOpeningBook` caches its promise, so
  * every screen mounting this component resolves the same ~3MB of JSON at most
@@ -66,10 +75,20 @@ function CurrentOpening({ fen, testId }: Props) {
     };
   }, []);
 
-  const opening =
-    loaded === null
-      ? undefined
-      : findOpening(loaded.book, fen, loaded.positionBook);
+  /*
+    The sticky memory, kept as state adjusted during render (the sanctioned
+    derived-state pattern — an effect would show one frame of "unknown" before
+    catching up). `stickyOpening` returns its `previous` argument by reference
+    when nothing changed, so the `!==` guard only ever sets state on a real
+    change: a new opening, or a step back past the remembered one.
+  */
+  const [sticky, setSticky] = useState<LastKnownOpening | null>(null);
+  if (loaded !== null) {
+    const next = stickyOpening(loaded.book, loaded.positionBook, fen, sticky);
+    if (next !== sticky) setSticky(next);
+  }
+
+  const opening = sticky?.opening;
 
   return (
     <Box

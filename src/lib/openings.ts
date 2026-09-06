@@ -1,4 +1,4 @@
-import { Chess } from "chess.js";
+import { Chess, type Square } from "chess.js";
 
 /**
  * Opening lookup over the vendored eco.json database
@@ -115,10 +115,16 @@ export const findOpening = (
 export type NextMoveOpening = {
   /** SAN, e.g. `"Nf3"`. */
   san: string;
+  /** The squares it runs between — what a board arrow for it needs. */
+  from: Square;
+  to: Square;
   /** The position after this move. */
   fen: string;
   opening: OpeningEntry | undefined;
 };
+
+/** A {@link NextMoveOpening} that is known to resolve to an opening. */
+export type KnownMoveOpening = NextMoveOpening & { opening: OpeningEntry };
 
 /**
  * Every legal move from a position, each paired with the opening it leads to
@@ -141,7 +147,90 @@ export const nextMoveOpenings = (
 
   return chess.moves({ verbose: true }).map((move) => ({
     san: move.san,
+    from: move.from,
+    to: move.to,
     fen: move.after,
     opening: findOpening(book, move.after, positionBook),
   }));
+};
+
+/**
+ * The known half of {@link nextMoveOpenings}: only the moves that resolve to an
+ * opening in this book. That is what the Openings screen's explorer lists and
+ * what its board arrows are drawn for — a move eco.json has no name for is
+ * still legal and still playable, but it is not a *book* continuation, so it
+ * has no place in either.
+ */
+export const knownMoveOpenings = (
+  fen: string,
+  book: OpeningBook,
+  positionBook?: PositionBook,
+): KnownMoveOpening[] =>
+  nextMoveOpenings(fen, book, positionBook).filter(
+    (move): move is KnownMoveOpening => move.opening !== undefined,
+  );
+
+/**
+ * The colour of a known-next-move arrow — green, where the last-move arrow is
+ * `MOVE_ARROW_COLOR`'s amber, so the two read as *what can follow* versus *what
+ * was played* when both are on the board.
+ */
+export const KNOWN_MOVE_ARROW_COLOR = "#4caf50";
+
+/**
+ * The most recent opening a stream of positions resolved to, and the half-move
+ * count of the position it was found at — the memory {@link stickyOpening}
+ * carries between one FEN and the next.
+ */
+export type LastKnownOpening = {
+  /** Half-moves played to reach the position this opening was found at. */
+  ply: number;
+  opening: OpeningEntry;
+};
+
+/**
+ * Half-moves played to reach a FEN, from its own counters: `(fullmove - 1) * 2`
+ * plus one when Black is to move. A FEN whose counters will not read is 0, the
+ * start of the game — which is also the answer a real move-1 FEN gives.
+ */
+const plyOfFen = (fen: string): number => {
+  const parts = fen.split(/\s+/);
+  const fullmove = Number.parseInt(parts[5] ?? "", 10);
+  if (!Number.isFinite(fullmove) || fullmove < 1) return 0;
+  return (fullmove - 1) * 2 + (parts[1] === "b" ? 1 : 0);
+};
+
+/**
+ * The opening to show for a position, with memory: the position's own opening
+ * when the book has one, otherwise the last one it had — the sticky rule that
+ * keeps the "current opening" label from going blank the moment a game steps
+ * off the book, which is where most interesting positions live.
+ *
+ * `previous` is the last value this function returned (`null` at first), and
+ * the return is the whole of what a caller shows *and* carries forward: a
+ * direct hit replaces the memory, an off-book position at or past it keeps it,
+ * and a position *before* it — stepping back to the start, a reset, a fresh
+ * game — clears it, because a name earned later in the game was never this
+ * position's. Whenever nothing changed — the same hit again, or a position the
+ * memory still covers — the return **is** `previous`, by reference, so a caller
+ * adjusting state during render settles instead of looping.
+ */
+export const stickyOpening = (
+  book: OpeningBook,
+  positionBook: PositionBook | undefined,
+  fen: string,
+  previous: LastKnownOpening | null,
+): LastKnownOpening | null => {
+  const opening = findOpening(book, fen, positionBook);
+  const ply = plyOfFen(fen);
+  if (opening !== undefined) {
+    // A hit the memory already holds comes back *as* the memory — same object,
+    // no change — so a caller adjusting state during render settles immediately.
+    if (previous !== null && previous.ply === ply && previous.opening === opening) {
+      return previous;
+    }
+    return { ply, opening };
+  }
+  if (previous !== null && ply >= previous.ply) return previous;
+  return null;
 };

@@ -10,8 +10,10 @@ import { useOpenings } from "./useOpenings";
 
 /**
  * Openings — a regular board the reader plays through, with the opening
- * eco.json recognises at the position on screen and what every legal move
- * from there is called, explorer-style.
+ * eco.json recognises at the position on screen, an arrow and a list entry
+ * for every *book* continuation from there, and a variation tree behind it
+ * all: stepping back and playing a different move keeps both continuations,
+ * exactly as the Analysis Board does.
  *
  * The screen fills two of the shell's regions and draws no columns of its own:
  *
@@ -59,10 +61,9 @@ function OpeningsBoard() {
     arrows: state.arrows,
     onPieceDrop: ({ sourceSquare, targetSquare }: PieceDropHandlerArgs) =>
       state.onPieceDrop({ sourceSquare, targetSquare }),
-    // Off the live position there is nothing to drag onto: this screen keeps
-    // one line, not a tree, so a move made from an earlier ply would have
-    // nowhere to go.
-    allowDragging: state.isLive && state.promotion === null,
+    // Dragging stays on at every ply: a drop from an earlier position branches
+    // the game tree (see `useOpenings`), which is what exploring an opening is.
+    allowDragging: state.promotion === null,
   };
 
   return (

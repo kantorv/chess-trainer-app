@@ -12,13 +12,13 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import BoardControls from "../../shared/BoardControls";
 import CurrentOpening from "../../shared/CurrentOpening";
-import MoveList from "../../shared/MoveList";
+import VariationTree from "../analysis/VariationTree";
 import type { OpeningsState } from "./useOpenings";
 
 /**
  * The Openings screen's whole right-hand panel: the opening on screen, the
- * explorer-style list of what each legal move here is called, a tab strip
- * over the move list, and the board controls pinned to the foot — the same
+ * explorer-style list of the book continuations from here, a tab strip over
+ * the variation tree, and the board controls pinned to the foot — the same
  * three-region column the other screens use (`Layout.tsx`).
  *
  * ```
@@ -33,13 +33,12 @@ import type { OpeningsState } from "./useOpenings";
  * └──────────────────────────────────┘
  * ```
  *
- * The explorer list looks up **every** legal move from the position on
- * screen, live or not: stepping back through a line already played is exactly
- * when a reader wants to see the branches eco.json knows about, not only the
- * one they took. A move is only clickable while the game is at its tip
- * (`state.isLive`) — the same restriction `onPieceDrop` observes, for the same
- * reason: a click on an earlier ply would apply to a position nobody is
- * looking at, and this screen keeps one line rather than a tree.
+ * The explorer lists only the moves eco.json can name — an off-book move is
+ * still playable (drag it), it simply is not a book continuation, so the list
+ * does not pretend it is one. The list is clickable at **any** ply, live tip
+ * or not: clicking a book move from an earlier position branches the tree
+ * there, which is what exploring an opening means. The branches themselves
+ * live in the Moves tab's variation tree.
  */
 
 const TAB_IDS = ["nextMoves", "moves"] as const;
@@ -131,28 +130,26 @@ function OpeningsPanel({ state }: { state: OpeningsState }) {
               {state.nextMoves.map((next) => (
                 <ListItemButton
                   key={next.san}
-                  disabled={!state.isLive}
                   onClick={() => state.playMove(next.san)}
                   data-testid={`openings-next-move-${next.san}`}
                   sx={{ borderRadius: 0.5 }}
                 >
                   <ListItemText
                     primary={<span dir="ltr">{next.san}</span>}
-                    secondary={
-                      <span dir="ltr">
-                        {next.opening?.name ?? t("openings.nextMoves.unknown")}
-                      </span>
-                    }
+                    secondary={<span dir="ltr">{next.opening.name}</span>}
                   />
-                  {next.opening && (
-                    <Chip size="small" dir="ltr" label={next.opening.eco} />
-                  )}
+                  <Chip size="small" dir="ltr" label={next.opening.eco} />
                 </ListItemButton>
               ))}
             </List>
           ))}
         {tab === "moves" && (
-          <MoveList game={state.game} currentPly={state.ply} onSelectPly={state.goToPly} />
+          <VariationTree
+            tree={state.tree}
+            currentId={state.nodeId}
+            onSelectNode={state.goToNode}
+            emptyText={t("openings.moves.empty")}
+          />
         )}
       </Box>
 
