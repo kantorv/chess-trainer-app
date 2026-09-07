@@ -298,6 +298,8 @@ const en = {
       lines: "Variations",
       position: "Position",
     },
+    /** Hand the position on screen to Play with Engine — the Board Editor's wording. */
+    playFromHere: "Play from here",
     /** The variation tree, where a move list has to say more than "Moves". */
     tree: {
       title: "Moves and variations",
@@ -455,6 +457,9 @@ const en = {
     },
     controls: {
       newGame: "New game",
+      reset: "Reset",
+      /** Hand this position off to Play with Engine — the Board Editor's wording. */
+      playFromHere: "Play from here",
     },
   },
   /**
