@@ -328,3 +328,17 @@ export const treeToPgn = (tree: GameTree): string => {
     movetext === "" ? result : `${movetext} ${result}`
   }`;
 };
+
+/**
+ * A **linear** {@link Game} as PGN — the writer the shared game model was
+ * missing, and the one a saved engine game is serialised through
+ * (`lib/savedGames.ts`).
+ *
+ * It is `treeToPgn` over the one-line tree, not a second writer: the move
+ * numbering of a game that starts from a FEN, the `SetUp`/`FEN` tags that make
+ * it reload as itself and the result terminator are all rules that already live
+ * up there, and a copy of them here would be a copy that drifts. A `Game` has no
+ * side lines to lose, so lifting it into a tree and writing that back out
+ * round-trips through `parsePgnGame` exactly.
+ */
+export const gameToPgn = (game: Game): string => treeToPgn(treeFromGame(game));
