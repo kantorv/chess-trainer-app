@@ -336,6 +336,7 @@ Consequences for a caller:
 | --- | --- | --- | --- |
 | `/` | [`views/home/Home.tsx`](../../src/views/home/Home.tsx) | — | Landing page, no board — a card per screen, built from `navTree()` |
 | `/engine/play` | [`views/engine/play/PlayWithEngine.tsx`](../../src/views/engine/play/PlayWithEngine.tsx) | (composed) | The full screen: eval bar, move list, MultiPV variations, live UCI settings, a real promotion picker. Takes a `?fen=` starting position |
+| `/engine/saved` | [`views/engine/saved/SavedGames.tsx`](../../src/views/engine/saved/SavedGames.tsx) | (composed) | The games played on the screen above, kept in `localStorage` and listed newest first — as rows, or as read-only preview boards at either of the library's two card sizes, each showing the position that game was **left at**. `?saved=<id>` resumes one there; `?game=engine/saved/<id>` hands it to the Analysis Board or Load PGN |
 | `/masked/play` | [`views/masked/play/MaskedPlay.tsx`](../../src/views/masked/play/MaskedPlay.tsx) | `Pieces` | The same screen with the pieces in disguise: `options.pieces` built from a `PieceMask` (`lib/pieceMask.ts`), and the notation masked to match. `usePlayWithEngine` reused verbatim |
 | `/games/load-pgn` | [`views/games/load_pgn/LoadPgn.tsx`](../../src/views/games/load_pgn/LoadPgn.tsx) | (composed) | A PGN pasted in, parsed to a `Game`, walked with the shared `MoveList` / `useGameNavigation` / `BoardControls` |
 | `/tools/analysis` | [`views/tools/analysis/AnalysisBoard.tsx`](../../src/views/tools/analysis/AnalysisBoard.tsx) | (composed) | Analysis: a **variation tree** (`lib/gameTree.ts`), PGN/FEN set-up and export, both colours movable, engine and eval bar switched independently |
@@ -365,6 +366,13 @@ you need the smallest version of one.
   only when the search that produced it was for the live position. Dragging is
   disabled off the live position, because a drag there would apply to a position
   nobody is looking at.
+- **The game is written down as it is played, and only here.** An effect in
+  `usePlayWithEngine` saves the `Game` plus the `EngineSettings` on every move
+  (`lib/savedGames.ts`), gated on a `persist` flag this screen passes and Masked
+  Pieces does not. Resuming is `?saved=<id>`, seeded as *initial* state exactly
+  as `?fen=` is — including the ply, which for a resumed game is the **last**
+  one, because that is the live position it can be played on from. See the root
+  `CLAUDE.md`.
 - **Anything sharing the board square with the board takes width out of it.** The
   shell hands the screen a square and knows nothing about an eval bar
   (`Layout.tsx` is not changed for one). Bar width + gap must come to exactly the
@@ -379,7 +387,9 @@ you need the smallest version of one.
 
 - **A read-only board is a board, and it still takes an `options.id` that is
   unique on the page.** A list screen renders one per card, so the id is the
-  item's id (`LibraryList`'s `previewOptions`), never a constant.
+  item's id (`LibraryList`'s `previewOptions`), never a constant. The Saved
+  games screen's board view is the same rule outside the library sections —
+  `saved-games-preview-<id>`.
 - **A screen that scrolls inside the board square divides that square up
   itself, and a grid of `auto` rows will not scroll.** The shell hands the
   screen a fixed-height box and scrolls nothing in it, so `LibraryList` is a

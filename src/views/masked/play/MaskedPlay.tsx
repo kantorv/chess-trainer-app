@@ -56,7 +56,13 @@ function MaskedPlay() {
     }
   }, [requested]);
 
-  const state = usePlayWithEngine(initialFen);
+  /*
+    No `persist`: the game underneath is ordinary chess and would save perfectly
+    well, but a saved game is resumed on `/engine/play`, where the mask does not
+    exist — so it would come back unmasked, which is the one thing this screen
+    is about. Saving stays with the screen that can restore what it saved.
+  */
+  const state = usePlayWithEngine({ fen: initialFen });
 
   /*
     The screen opens on the doc's canonical exercise (§4): every queen, rook,
