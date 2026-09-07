@@ -338,7 +338,7 @@ const he: typeof en = {
     },
     nextMoves: { empty: "אין המשכים מוכרים מכאן." },
     moves: { empty: "עדיין אין מהלכים — שחקו על הלוח, או בחרו מהלך מוכר מלשונית המהלכים האפשריים." },
-    controls: { newGame: "משחק חדש", playFromHere: "שחקו מכאן" },
+    controls: { newGame: "משחק חדש", playFromHere: "שחקו מכאן", reset:"איפוס" },
   },
   mates: {
     categories: {

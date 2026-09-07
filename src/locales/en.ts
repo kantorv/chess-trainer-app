@@ -457,6 +457,7 @@ const en = {
     },
     controls: {
       newGame: "New game",
+      reset: "Reset",
       /** Hand this position off to Play with Engine — the Board Editor's wording. */
       playFromHere: "Play from here",
     },

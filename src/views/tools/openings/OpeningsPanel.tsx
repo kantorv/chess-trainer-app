@@ -89,20 +89,12 @@ function OpeningsPanel({
           sx={{
             flexShrink: 0,
             display: "flex",
-            flexDirection: "column",
-            alignItems: "stretch",
+            flexDirection: "row",
+            //  alignItems: "stretch",
             gap: 0.5,
           }}
         >
-          <Button
-            size="small"
-            variant="outlined"
-            startIcon={<RestartAltRoundedIcon fontSize="small" />}
-            data-testid="openings-new-game"
-            onClick={state.newGame}
-          >
-            {t("openings.controls.newGame")}
-          </Button>
+
           <Button
             size="small"
             variant="outlined"
@@ -111,6 +103,15 @@ function OpeningsPanel({
             onClick={onPlayFromHere}
           >
             {t("openings.controls.playFromHere")}
+          </Button>
+          <Button
+            size="small"
+            variant="outlined"
+            startIcon={<RestartAltRoundedIcon fontSize="small" />}
+            data-testid="openings-new-game"
+            onClick={state.newGame}
+          >
+            {t("openings.controls.reset")}
           </Button>
         </Box>
       </Box>
