@@ -193,6 +193,12 @@ const he: typeof en = {
       draw: "תיקו",
       inProgress: "בעיצומו",
     },
+    view: {
+      label: "תצוגה",
+      list: "רשימה",
+      compact: "לוחות קטנים",
+      comfortable: "לוחות גדולים",
+    },
     level: "רמה {{level}}",
     moves_one: "מהלך אחד",
     moves_other: "{{count}} מהלכים",

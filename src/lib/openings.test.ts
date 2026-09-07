@@ -6,6 +6,7 @@ import {
   knownMoveOpenings,
   loadOpeningBook,
   nextMoveOpenings,
+  openingOfLine,
   stickyOpening,
   type LastKnownOpening,
   type OpeningBook,
@@ -109,6 +110,43 @@ describe("knownMoveOpenings", () => {
   it("is empty from a position the book knows nothing past", () => {
     // The fixture book stops at 1. e4 e5 — nothing is known from there.
     expect(knownMoveOpenings(AFTER_E4_E5_FEN, fixtureBook)).toEqual([]);
+  });
+});
+
+describe("openingOfLine", () => {
+  const positionBook = getPositionBook(fixtureBook);
+
+  /* An off-book position two half-moves past a named one — 1. e4 e5 2. a3. */
+  const past = new Chess();
+  past.move("e4");
+  past.move("e5");
+  past.move("a3");
+  const PAST_FEN = past.fen();
+
+  it("names the deepest position the line passed through, not the first", () => {
+    // Both plies are in the book; the second is the one that says which game
+    // this is, and "King's Pawn Opening" is true of every 1. e4 game there is.
+    expect(
+      openingOfLine(fixtureBook, positionBook, [AFTER_E4_FEN, AFTER_E4_E5_FEN])?.name,
+    ).toBe("King's Pawn Game");
+  });
+
+  it("keeps the last name a line earned after it leaves the book", () => {
+    expect(
+      openingOfLine(fixtureBook, positionBook, [
+        AFTER_E4_FEN,
+        AFTER_E4_E5_FEN,
+        PAST_FEN,
+      ])?.name,
+    ).toBe("King's Pawn Game");
+  });
+
+  it("answers nothing for a line the book never recognised, and for an empty one", () => {
+    const d4 = new Chess();
+    d4.move("d4");
+
+    expect(openingOfLine(fixtureBook, positionBook, [d4.fen()])).toBe(undefined);
+    expect(openingOfLine(fixtureBook, positionBook, [])).toBe(undefined);
   });
 });
 

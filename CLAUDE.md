@@ -49,7 +49,7 @@ change by whether it *adds* to that count, not by the exit code.
 | `src/views/home/` | The landing page at `/` — no board, just a card per screen built from `navTree()`. |
 | `src/views/shared/` | The panel pieces the game screens share: `MoveList.tsx`, `BoardControls.tsx`, `GameInfo.tsx` (a game's PGN tag pairs), `useGameNavigation.ts`, `EvalBar.tsx`, `BestVariations.tsx`, `PromotionPicker.tsx`, `OptionSlider.tsx`, `CopyableValue.tsx`, `CurrentOpening.tsx` (the live opening line every game screen's panel carries — the eco.json lookup at the position on screen, its ECO chip linking to `/tools/openings?fen=`; it replaced the per-screen "Open in Openings" buttons), and `EngineBoardSquare.tsx` (the eval bar + board + promotion picker the two engine-play screens both render). They take props and know nothing about which screen is rendering them, and their catalog keys are top-level (`moveList.*`, `variations.*`, `promotion.*`, `engineOption.*`, `board.*`, `copyable.*`, `masking.*`) rather than under any one screen's. |
 | `src/views/engine/play/` | The Play with Engine screen. `PlayWithEngine.tsx` is layout (the shared `EngineBoardSquare`) and the `?fen=` arrival; **all the behaviour is in `usePlayWithEngine.ts`**; `EnginePanel.tsx` is the Game / Engine / Variations tab strip over the shared board controls, with `EngineSettings.tsx` under it. |
-| `src/views/engine/saved/` | The Saved games screen — the games played on the screen above, listed newest first. `SavedGames.tsx` is the list and the three hand-offs, `useSavedGames.ts` the `useSyncExternalStore` binding (so `src/lib/` stays free of React). No board, no catalog to browse: these are this app's own output. |
+| `src/views/engine/saved/` | The Saved games screen — the games played on the screen above, newest first, as a list **or** as preview boards (the library list screen's own two card sizes, through `views/library/cardSize.ts`). `SavedGames.tsx` is both views and the three hand-offs, `useSavedGames.ts` the `useSyncExternalStore` binding (so `src/lib/` stays free of React). No catalog to browse: these are this app's own output. |
 | `src/views/masked/play/` | The Masked Pieces screen — Play with Engine with the piece graphics in disguise. `MaskedPlay.tsx` owns the mask and renders the same `EngineBoardSquare`; **the behaviour is `usePlayWithEngine`, reused verbatim**; `MaskedPanel.tsx` adds a fourth tab over the same three, with `MaskEditor.tsx` under it. |
 | `src/views/games/load_pgn/` | The Load PGN screen. `LoadPgn.tsx` owns the state and fills the board square; `GamePanel.tsx` is the whole of the shell panel — the Moves / Info / Load PGN tabs (`PgnIngest.tsx`, plus the shared `MoveList` and `GameInfo`) over the shared board controls. It also takes a `?game=` arrival. |
 | `src/views/tools/editor/` | The Board Editor. `BoardEditor.tsx` is layout (the two palettes and the board, inside a `ChessboardProvider`), board options, the `?fen=` arrival and the PGN/FEN ingestion state; **the behaviour is in `useBoardEditor.ts`**; `EditorPanel.tsx` is the Position / FEN / PGN tab strip over the reset controls and the hand-off, with `PositionFields.tsx`, `FenSetup.tsx`, `PgnSetup.tsx` and `PiecePalette.tsx` under it. |
@@ -556,6 +556,17 @@ Five decisions hold it together:
   option handshake lands; `saveGame` compares against what is stored and does
   nothing when the PGN and the settings both match, so opening a game does not
   re-order a list sorted by when each was last played.
+- **A saved game's card previews where it was left, not where it began.** This
+  is the one place the screen parts company with `LibraryList`, whose cards read
+  `libraryItemFen` — a game's *first* position, because that is where a replay
+  starts. A saved game is not a game to replay from move one; it is one to pick
+  back up, so the board shows what the reader will be looking at a click later
+  (`finalFenOf`). The card also names the opening the game reached — the
+  **deepest** position along it the eco.json book names (`openingOfLine` in
+  `lib/openings.ts`), because "King's Pawn Game" is true of every 1. e4 game and
+  says nothing about which of the reader's games this is. The list view is
+  unchanged and carries no opening: its one caption line is already four facts
+  wide.
 - **Masked Pieces does not save.** It runs `usePlayWithEngine` verbatim and the
   game underneath would serialise perfectly well — but a saved game is resumed on
   `/engine/play`, where the mask does not exist, so it would come back with its

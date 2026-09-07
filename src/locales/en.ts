@@ -264,6 +264,16 @@ const en = {
       draw: "Draw",
       inProgress: "In progress",
     },
+    /**
+     * The three-way view toggle in the top bar: the list the screen shipped
+     * with, and the library list screen's own two board sizes.
+     */
+    view: {
+      label: "View",
+      list: "List",
+      compact: "Small boards",
+      comfortable: "Big boards",
+    },
     /** The engine's `Skill Level` the game was played at. */
     level: "Level {{level}}",
     /** Plural forms, because a one-move game is a real row here. */
