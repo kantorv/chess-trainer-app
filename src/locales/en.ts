@@ -298,6 +298,8 @@ const en = {
       lines: "Variations",
       position: "Position",
     },
+    /** Hand the position on screen to Play with Engine — the Board Editor's wording. */
+    playFromHere: "Play from here",
     /** The variation tree, where a move list has to say more than "Moves". */
     tree: {
       title: "Moves and variations",
@@ -333,8 +335,6 @@ const en = {
       currentTitle: "This position",
       currentFen: "Current FEN",
       currentPgn: "Current PGN",
-      /** Hand this position off to Play with Engine — the Board Editor's wording. */
-      playFromHere: "Play from here",
       errors: {
         emptyPgn: "No PGN found in that input.",
         pgn: "Could not read this PGN. {{detail}}",

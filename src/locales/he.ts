@@ -215,6 +215,7 @@ const he: typeof en = {
       lines: "וריאציות",
       position: "עמדה",
     },
+    playFromHere: "שחקו מכאן",
     tree: {
       title: "מהלכים ווריאציות",
       empty: "שחקו מהלך, או הגדירו עמדה בלשונית העמדה.",
@@ -247,7 +248,6 @@ const he: typeof en = {
       currentTitle: "העמדה הנוכחית",
       currentFen: "ה-FEN הנוכחי",
       currentPgn: "ה-PGN הנוכחי",
-      playFromHere: "שחקו מכאן",
       errors: {
         emptyPgn: "לא נמצא PGN בקלט.",
         pgn: "לא ניתן לקרוא את ה-PGN הזה. {{detail}}",

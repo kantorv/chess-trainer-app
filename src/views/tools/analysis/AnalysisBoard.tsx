@@ -369,6 +369,7 @@ function AnalysisBoard() {
         >
           <AnalysisPanel
             state={state}
+            onPlayFromHere={onPlayFromHere}
             position={
               <PositionSetup
                 games={games}
@@ -384,7 +385,6 @@ function AnalysisBoard() {
                 onLoadFen={onLoadFen}
                 currentFen={state.fen}
                 currentPgn={state.pgn}
-                onPlayFromHere={onPlayFromHere}
               />
             }
           />

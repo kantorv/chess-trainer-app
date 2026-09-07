@@ -559,12 +559,13 @@ describe("Analysis Board — the Position tab", () => {
 });
 
 describe("Analysis Board — Play from here", () => {
-  it("hands the position on screen to Play with Engine as ?fen=", async () => {
+  it("hands the position on screen to Play with Engine as ?fen= from any tab", async () => {
     renderScreen();
     drag("e2", "e4");
     const fen = position();
-    await openTab("position");
 
+    // The control sits above the tab strip — no tab has been opened here, the
+    // Moves tab is simply the default.
     await userEvent.click(screen.getByTestId("analysis-play-from-here"));
 
     expect(screen.getByTestId("location")).toHaveAttribute(
@@ -582,7 +583,6 @@ describe("Analysis Board — Play from here", () => {
     // Step back to the start — the position on screen is now an earlier ply.
     await userEvent.click(screen.getByTestId("board-control-first"));
     const backFen = position();
-    await openTab("position");
 
     await userEvent.click(screen.getByTestId("analysis-play-from-here"));
 

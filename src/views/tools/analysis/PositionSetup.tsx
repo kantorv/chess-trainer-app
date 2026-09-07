@@ -9,7 +9,6 @@ import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
-import SportsEsportsRoundedIcon from "@mui/icons-material/SportsEsportsRounded";
 import { useTranslation } from "react-i18next";
 import { gameTag } from "../../../lib/gameModel";
 import type { GameTree } from "../../../lib/gameTree";
@@ -64,8 +63,6 @@ type PositionSetupProps = {
   currentFen: string;
   /** The whole game, side lines included — read-only. */
   currentPgn: string;
-  /** Hand the position on screen to Play with Engine. */
-  onPlayFromHere: () => void;
 };
 
 function PositionSetup({
@@ -82,7 +79,6 @@ function PositionSetup({
   onLoadFen,
   currentFen,
   currentPgn,
-  onPlayFromHere,
 }: PositionSetupProps) {
   const { t } = useTranslation();
 
@@ -226,16 +222,6 @@ function PositionSetup({
           value={currentPgn}
           testId="analysis-current-pgn"
         />
-        <Button
-          size="small"
-          variant="outlined"
-          startIcon={<SportsEsportsRoundedIcon fontSize="small" />}
-          data-testid="analysis-play-from-here"
-          onClick={onPlayFromHere}
-          sx={{ justifySelf: "start" }}
-        >
-          {t("analysis.position.playFromHere")}
-        </Button>
       </Box>
     </Box>
   );
