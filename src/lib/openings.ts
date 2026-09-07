@@ -205,6 +205,13 @@ export const knownMoveOpenings = (
 export const KNOWN_MOVE_ARROW_COLOR = "#4caf50";
 
 /**
+ * The colour a known-next-move arrow takes while its list row is hovered — a
+ * third distinct hue, neither the amber last-move arrow nor the green of the
+ * other known moves, so the reader sees exactly which move a click will play.
+ */
+export const HOVERED_MOVE_ARROW_COLOR = "#f44336";
+
+/**
  * The most recent opening a stream of positions resolved to, and the half-move
  * count of the position it was found at — the memory {@link stickyOpening}
  * carries between one FEN and the next.

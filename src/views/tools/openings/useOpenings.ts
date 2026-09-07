@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Chess, type Move, type Square } from "chess.js";
 import type { Arrow } from "react-chessboard";
 import {
+  HOVERED_MOVE_ARROW_COLOR,
   KNOWN_MOVE_ARROW_COLOR,
   getPositionBook,
   knownMoveOpenings,
@@ -62,6 +63,7 @@ export const useOpenings = (initialFen?: string) => {
     initialFen !== undefined && initialFen.split(" ")[1] === "b" ? "black" : "white",
   );
   const [promotion, setPromotion] = useState<{ from: Square; to: Square } | null>(null);
+  const [hoveredMove, setHoveredMove] = useState<KnownMoveOpening | null>(null);
 
   const [book, setBook] = useState<OpeningBook | null>(null);
   const [positionBook, setPositionBook] = useState<PositionBook | undefined>(undefined);
@@ -107,10 +109,13 @@ export const useOpenings = (initialFen?: string) => {
       ...nextMoves.map((move) => ({
         startSquare: move.from,
         endSquare: move.to,
-        color: KNOWN_MOVE_ARROW_COLOR,
+        color:
+          hoveredMove && hoveredMove.san === move.san
+            ? HOVERED_MOVE_ARROW_COLOR
+            : KNOWN_MOVE_ARROW_COLOR,
       })),
     ],
-    [navigation.arrows, nextMoves],
+    [navigation.arrows, nextMoves, hoveredMove],
   );
 
   /**
@@ -239,6 +244,7 @@ export const useOpenings = (initialFen?: string) => {
     newGame,
     nextMoves,
     playMove,
+    setHoveredMove,
   };
 };
 
