@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Chess, type Move, type Square } from "chess.js";
 import type { Arrow } from "react-chessboard";
 import {
+  HOVERED_MOVE_ARROW_COLOR,
   KNOWN_MOVE_ARROW_COLOR,
   getPositionBook,
   knownMoveOpenings,
@@ -108,17 +109,14 @@ export const useOpenings = (initialFen?: string) => {
       ...nextMoves.map((move) => ({
         startSquare: move.from,
         endSquare: move.to,
-        color: hoveredMove && hoveredMove.san === move.san ? "#f44336" : KNOWN_MOVE_ARROW_COLOR,
+        color:
+          hoveredMove && hoveredMove.san === move.san
+            ? HOVERED_MOVE_ARROW_COLOR
+            : KNOWN_MOVE_ARROW_COLOR,
       })),
     ],
     [navigation.arrows, nextMoves, hoveredMove],
   );
-
-  /**
-   * The hover color for next-move arrows. This is a distinct color from the
-   * last-move arrow (#ffaa00) and the known-move arrows (#4caf50).
-   */
-  const HOVER_ARROW_COLOR = "#f44336";
 
   /**
    * Add an already-played move under the node on screen and select it. Replaying
