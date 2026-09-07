@@ -131,6 +131,8 @@ function OpeningsPanel({ state }: { state: OpeningsState }) {
                 <ListItemButton
                   key={next.san}
                   onClick={() => state.playMove(next.san)}
+                  onMouseEnter={() => state.setHoveredMove(next)}
+                  onMouseLeave={() => state.setHoveredMove(null)}
                   data-testid={`openings-next-move-${next.san}`}
                   sx={{ borderRadius: 0.5 }}
                 >

@@ -62,6 +62,7 @@ export const useOpenings = (initialFen?: string) => {
     initialFen !== undefined && initialFen.split(" ")[1] === "b" ? "black" : "white",
   );
   const [promotion, setPromotion] = useState<{ from: Square; to: Square } | null>(null);
+  const [hoveredMove, setHoveredMove] = useState<KnownMoveOpening | null>(null);
 
   const [book, setBook] = useState<OpeningBook | null>(null);
   const [positionBook, setPositionBook] = useState<PositionBook | undefined>(undefined);
@@ -107,11 +108,17 @@ export const useOpenings = (initialFen?: string) => {
       ...nextMoves.map((move) => ({
         startSquare: move.from,
         endSquare: move.to,
-        color: KNOWN_MOVE_ARROW_COLOR,
+        color: hoveredMove && hoveredMove.san === move.san ? "#f44336" : KNOWN_MOVE_ARROW_COLOR,
       })),
     ],
-    [navigation.arrows, nextMoves],
+    [navigation.arrows, nextMoves, hoveredMove],
   );
+
+  /**
+   * The hover color for next-move arrows. This is a distinct color from the
+   * last-move arrow (#ffaa00) and the known-move arrows (#4caf50).
+   */
+  const HOVER_ARROW_COLOR = "#f44336";
 
   /**
    * Add an already-played move under the node on screen and select it. Replaying
@@ -239,6 +246,7 @@ export const useOpenings = (initialFen?: string) => {
     newGame,
     nextMoves,
     playMove,
+    setHoveredMove,
   };
 };
 
