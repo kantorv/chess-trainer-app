@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Chess } from "chess.js";
-import { MemoryRouter } from "react-router";
+import { MemoryRouter, useLocation } from "react-router";
 import i18n from "../../../i18n";
 import AppThemeWithLang from "../../../theme/AppThemeWithLang";
 import { MOVE_ARROW_COLOR } from "../../../lib/gameNavigation";
@@ -58,6 +58,27 @@ const offBookFen = () => {
 const boardArrows = (): BoardArrow[] =>
   JSON.parse(screen.getByTestId("board").getAttribute("data-arrows") ?? "[]");
 
+/*
+  Where "Play from here" lands. The screen navigates to `/engine/play?fen=…`;
+  the whole of that interface is the FEN in the URL, so this records it without
+  mounting the engine board.
+*/
+const LocationProbe = () => {
+  const location = useLocation();
+  return (
+    <div
+      data-testid="location"
+      data-pathname={location.pathname}
+      data-search={location.search}
+    />
+  );
+};
+
+const handOffFen = () =>
+  new URLSearchParams(
+    screen.getByTestId("location").getAttribute("data-search") ?? "",
+  ).get("fen");
+
 const renderScreen = (entry = "/tools/openings") =>
   render(
     <MemoryRouter initialEntries={[entry]}>
@@ -65,6 +86,7 @@ const renderScreen = (entry = "/tools/openings") =>
         <RightPanelProvider>
           <OpeningsBoard />
           <RightPanelOutlet />
+          <LocationProbe />
         </RightPanelProvider>
       </AppThemeWithLang>
     </MemoryRouter>,
@@ -304,6 +326,36 @@ describe("the Openings screen — hovering a next move", () => {
     ).toEqual([
       { startSquare: "e7", endSquare: "e5", color: HOVERED_MOVE_ARROW_COLOR },
     ]);
+  });
+});
+
+describe("the Openings screen — Play from here", () => {
+  it("hands the position on screen to Play with Engine as ?fen=", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    await bookSettled();
+
+    await user.click(screen.getByTestId("openings-next-move-e4"));
+    await user.click(screen.getByTestId("openings-play-from-here"));
+
+    expect(screen.getByTestId("location")).toHaveAttribute(
+      "data-pathname",
+      "/engine/play",
+    );
+    expect(handOffFen()).toBe(AFTER_E4);
+  });
+
+  it("carries an earlier ply's position after stepping back", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    await bookSettled();
+
+    await user.click(screen.getByTestId("openings-next-move-e4"));
+    await user.click(screen.getByTestId("openings-next-move-e5"));
+    await user.click(screen.getByTestId("board-control-first"));
+    await user.click(screen.getByTestId("openings-play-from-here"));
+
+    expect(handOffFen()).toBe(START_FEN);
   });
 });
 

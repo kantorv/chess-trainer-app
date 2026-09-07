@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router";
+import { MemoryRouter, useLocation } from "react-router";
 import i18n from "../../../i18n";
 import AppThemeWithLang from "../../../theme/AppThemeWithLang";
 import { initialFenOf } from "../../../lib/gameModel";
@@ -210,6 +210,22 @@ const engineReports = (info: {
   A router, because the screen reads its initial position off the URL — that is
   how the Board Editor hands one over. `entry` is what a test arrives at.
 */
+/*
+  Where a hand-off lands. The screen navigates to `/engine/play?fen=…` and the
+  whole of that interface is the FEN in the URL — this records it without
+  mounting the engine board.
+*/
+const LocationProbe = () => {
+  const location = useLocation();
+  return (
+    <div
+      data-testid="location"
+      data-pathname={location.pathname}
+      data-search={location.search}
+    />
+  );
+};
+
 const renderScreen = (entry = "/tools/analysis") =>
   render(
     <AppThemeWithLang>
@@ -217,10 +233,17 @@ const renderScreen = (entry = "/tools/analysis") =>
         <RightPanelProvider>
           <AnalysisBoard />
           <RightPanelOutlet />
+          <LocationProbe />
         </RightPanelProvider>
       </MemoryRouter>
     </AppThemeWithLang>,
   );
+
+/** The FEN a hand-off carried in its `?fen=` query parameter. */
+const handOffFen = () =>
+  new URLSearchParams(
+    screen.getByTestId("location").getAttribute("data-search") ?? "",
+  ).get("fen");
 
 const position = () => screen.getByTestId("board").getAttribute("data-position");
 
@@ -532,6 +555,38 @@ describe("Analysis Board — the Position tab", () => {
     expect(screen.getByTestId("analysis-current-pgn")).toHaveValue(
       "1. e4 e5 (1... c5) *",
     );
+  });
+});
+
+describe("Analysis Board — Play from here", () => {
+  it("hands the position on screen to Play with Engine as ?fen=", async () => {
+    renderScreen();
+    drag("e2", "e4");
+    const fen = position();
+    await openTab("position");
+
+    await userEvent.click(screen.getByTestId("analysis-play-from-here"));
+
+    expect(screen.getByTestId("location")).toHaveAttribute(
+      "data-pathname",
+      "/engine/play",
+    );
+    // The FEN crosses in the URL, spaces and slashes intact.
+    expect(handOffFen()).toBe(fen);
+  });
+
+  it("carries the FEN of the ply on screen, not the latest move", async () => {
+    renderScreen();
+    drag("e2", "e4");
+    drag("e7", "e5");
+    // Step back to the start — the position on screen is now an earlier ply.
+    await userEvent.click(screen.getByTestId("board-control-first"));
+    const backFen = position();
+    await openTab("position");
+
+    await userEvent.click(screen.getByTestId("analysis-play-from-here"));
+
+    expect(handOffFen()).toBe(backFen);
   });
 });
 

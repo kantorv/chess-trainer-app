@@ -247,6 +247,7 @@ const he: typeof en = {
       currentTitle: "העמדה הנוכחית",
       currentFen: "ה-FEN הנוכחי",
       currentPgn: "ה-PGN הנוכחי",
+      playFromHere: "שחקו מכאן",
       errors: {
         emptyPgn: "לא נמצא PGN בקלט.",
         pgn: "לא ניתן לקרוא את ה-PGN הזה. {{detail}}",
@@ -337,7 +338,7 @@ const he: typeof en = {
     },
     nextMoves: { empty: "אין המשכים מוכרים מכאן." },
     moves: { empty: "עדיין אין מהלכים — שחקו על הלוח, או בחרו מהלך מוכר מלשונית המהלכים האפשריים." },
-    controls: { newGame: "משחק חדש" },
+    controls: { newGame: "משחק חדש", playFromHere: "שחקו מכאן" },
   },
   mates: {
     categories: {

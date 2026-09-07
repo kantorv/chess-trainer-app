@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import Box from "@mui/material/Box";
-import { useSearchParams } from "react-router";
+import { createSearchParams, useNavigate, useSearchParams } from "react-router";
 import { Chessboard, type ChessboardOptions, type PieceDropHandlerArgs } from "react-chessboard";
 import { FenParseError, parseFen } from "../../../lib/fen";
 import { RightPanel } from "../../main/rightPanel";
@@ -39,6 +39,7 @@ import { useOpenings } from "./useOpenings";
  * starting position instead of throwing.
  */
 function OpeningsBoard() {
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
   const requested = searchParams.get("fen");
@@ -53,6 +54,19 @@ function OpeningsBoard() {
   }, [requested]);
 
   const state = useOpenings(initialFen);
+
+  /**
+   * "Play from here" — continue the position on screen against the engine. The
+   * FEN travels to `/engine/play` as a query parameter, the same `?fen=` carrier
+   * every other screen's hand-off uses: it survives a bookmark or a reload, and
+   * Play with Engine takes it as its initial position, deriving orientation and
+   * `playAs` from it. This screen never replays a line, so no `?move=` is sent.
+   */
+  const onPlayFromHere = () =>
+    navigate({
+      pathname: "/engine/play",
+      search: createSearchParams({ fen: state.fen }).toString(),
+    });
 
   const chessboardOptions: ChessboardOptions = {
     id: "openings-board",
@@ -88,7 +102,7 @@ function OpeningsBoard() {
       </Box>
 
       <RightPanel>
-        <OpeningsPanel state={state} />
+        <OpeningsPanel state={state} onPlayFromHere={onPlayFromHere} />
       </RightPanel>
     </>
   );

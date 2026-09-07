@@ -8,6 +8,7 @@ import Tab from "@mui/material/Tab";
 import Tabs from "@mui/material/Tabs";
 import Typography from "@mui/material/Typography";
 import RestartAltRoundedIcon from "@mui/icons-material/RestartAltRounded";
+import SportsEsportsRoundedIcon from "@mui/icons-material/SportsEsportsRounded";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import BoardControls from "../../shared/BoardControls";
@@ -44,7 +45,14 @@ import type { OpeningsState } from "./useOpenings";
 const TAB_IDS = ["nextMoves", "moves"] as const;
 type TabId = (typeof TAB_IDS)[number];
 
-function OpeningsPanel({ state }: { state: OpeningsState }) {
+function OpeningsPanel({
+  state,
+  onPlayFromHere,
+}: {
+  state: OpeningsState;
+  /** Hand the position on screen to Play with Engine. */
+  onPlayFromHere: () => void;
+}) {
   const { t } = useTranslation();
   const [tab, setTab] = useState<TabId>("nextMoves");
 
@@ -77,16 +85,34 @@ function OpeningsPanel({ state }: { state: OpeningsState }) {
           <CurrentOpening fen={state.fen} testId="openings-current" />
         </Box>
 
-        <Button
-          size="small"
-          variant="outlined"
-          startIcon={<RestartAltRoundedIcon fontSize="small" />}
-          data-testid="openings-new-game"
-          onClick={state.newGame}
-          sx={{ flexShrink: 0 }}
+        <Box
+          sx={{
+            flexShrink: 0,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "stretch",
+            gap: 0.5,
+          }}
         >
-          {t("openings.controls.newGame")}
-        </Button>
+          <Button
+            size="small"
+            variant="outlined"
+            startIcon={<RestartAltRoundedIcon fontSize="small" />}
+            data-testid="openings-new-game"
+            onClick={state.newGame}
+          >
+            {t("openings.controls.newGame")}
+          </Button>
+          <Button
+            size="small"
+            variant="outlined"
+            startIcon={<SportsEsportsRoundedIcon fontSize="small" />}
+            data-testid="openings-play-from-here"
+            onClick={onPlayFromHere}
+          >
+            {t("openings.controls.playFromHere")}
+          </Button>
+        </Box>
       </Box>
 
       <Tabs

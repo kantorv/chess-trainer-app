@@ -333,6 +333,8 @@ const en = {
       currentTitle: "This position",
       currentFen: "Current FEN",
       currentPgn: "Current PGN",
+      /** Hand this position off to Play with Engine — the Board Editor's wording. */
+      playFromHere: "Play from here",
       errors: {
         emptyPgn: "No PGN found in that input.",
         pgn: "Could not read this PGN. {{detail}}",
@@ -455,6 +457,8 @@ const en = {
     },
     controls: {
       newGame: "New game",
+      /** Hand this position off to Play with Engine — the Board Editor's wording. */
+      playFromHere: "Play from here",
     },
   },
   /**
