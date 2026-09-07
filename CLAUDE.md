@@ -49,14 +49,16 @@ change by whether it *adds* to that count, not by the exit code.
 | `src/views/home/` | The landing page at `/` — no board, just a card per screen built from `navTree()`. |
 | `src/views/shared/` | The panel pieces the game screens share: `MoveList.tsx`, `BoardControls.tsx`, `GameInfo.tsx` (a game's PGN tag pairs), `useGameNavigation.ts`, `EvalBar.tsx`, `BestVariations.tsx`, `PromotionPicker.tsx`, `OptionSlider.tsx`, `CopyableValue.tsx`, `CurrentOpening.tsx` (the live opening line every game screen's panel carries — the eco.json lookup at the position on screen, its ECO chip linking to `/tools/openings?fen=`; it replaced the per-screen "Open in Openings" buttons), and `EngineBoardSquare.tsx` (the eval bar + board + promotion picker the two engine-play screens both render). They take props and know nothing about which screen is rendering them, and their catalog keys are top-level (`moveList.*`, `variations.*`, `promotion.*`, `engineOption.*`, `board.*`, `copyable.*`, `masking.*`) rather than under any one screen's. |
 | `src/views/engine/play/` | The Play with Engine screen. `PlayWithEngine.tsx` is layout (the shared `EngineBoardSquare`) and the `?fen=` arrival; **all the behaviour is in `usePlayWithEngine.ts`**; `EnginePanel.tsx` is the Game / Engine / Variations tab strip over the shared board controls, with `EngineSettings.tsx` under it. |
+| `src/views/engine/saved/` | The Saved games screen — the games played on the screen above, newest first, as a list **or** as preview boards (the library list screen's own two card sizes, through `views/library/cardSize.ts`). `SavedGames.tsx` is both views and the three hand-offs, `useSavedGames.ts` the `useSyncExternalStore` binding (so `src/lib/` stays free of React). No catalog to browse: these are this app's own output. |
 | `src/views/masked/play/` | The Masked Pieces screen — Play with Engine with the piece graphics in disguise. `MaskedPlay.tsx` owns the mask and renders the same `EngineBoardSquare`; **the behaviour is `usePlayWithEngine`, reused verbatim**; `MaskedPanel.tsx` adds a fourth tab over the same three, with `MaskEditor.tsx` under it. |
 | `src/views/games/load_pgn/` | The Load PGN screen. `LoadPgn.tsx` owns the state and fills the board square; `GamePanel.tsx` is the whole of the shell panel — the Moves / Info / Load PGN tabs (`PgnIngest.tsx`, plus the shared `MoveList` and `GameInfo`) over the shared board controls. It also takes a `?game=` arrival. |
 | `src/views/tools/editor/` | The Board Editor. `BoardEditor.tsx` is layout (the two palettes and the board, inside a `ChessboardProvider`), board options, the `?fen=` arrival and the PGN/FEN ingestion state; **the behaviour is in `useBoardEditor.ts`**; `EditorPanel.tsx` is the Position / FEN / PGN tab strip over the reset controls and the hand-off, with `PositionFields.tsx`, `FenSetup.tsx`, `PgnSetup.tsx` and `PiecePalette.tsx` under it. |
 | `src/views/tools/analysis/` | The Analysis Board. `AnalysisBoard.tsx` is layout (eval bar + board), board options and the PGN/FEN ingestion state; **the behaviour is in `useAnalysisBoard.ts`**, the navigation in `useTreeNavigation.ts`; `AnalysisPanel.tsx` is the Moves / Engine / Variations / Position tab strip, with `VariationTree.tsx`, `AnalysisSettings.tsx` and `PositionSetup.tsx` under it. |
+| `src/lib/engineSettings.ts` | **The engine knobs a game is played under** — `EngineSettings`, its defaults, the `SETTING_UCI_OPTION` table and `approximateElo`, plus the non-throwing `engineSettingsFrom` a stored record is read back through. In `src/lib/` because a saved game records them; `usePlayWithEngine.ts` re-exports the lot, so that hook stays the one import a reader of the screen needs. |
 | `src/lib/engine.ts` | The Stockfish worker wrapper: search, UCI option discovery, and the protocol discipline that keeps the engine alive (see the chessboard rules §4). |
 | `src/lib/engineAnalysis.ts` | Reading the engine's numbers: `scoreFromUci` (the one place a score is normalised to White's perspective), `formatScore`, `evalBarFraction`, `pvToSan`, `numberedVariation`, plus the `Analysis` / `EngineLine` shape both engine screens collect into and the `withEngineLine` fold. Pure. |
 | `src/lib/gameModel.ts` | **The shared game model** — `Game` / `GameMove` / `GameHeaders`, plus `gameTag` / `initialFenOf` / `finalFenOf` and the `gameFromChess` snapshot. One *line* of play; all three game screens speak it. |
-| `src/lib/gameTree.ts` | **The variation tree** — `GameTree` / `VariationNode`, `addMove` (the branch), `mainline` / `lineOf` / `pathTo` / `fenAtNode`, `treeToPgn`, and the `treeFromGame` ⇄ `mainlineGame` bridge that makes a `Game` a walk over a tree. Read the next section before touching it. |
+| `src/lib/gameTree.ts` | **The variation tree** — `GameTree` / `VariationNode`, `addMove` (the branch), `mainline` / `lineOf` / `pathTo` / `fenAtNode`, `treeToPgn`, and the `treeFromGame` ⇄ `mainlineGame` bridge that makes a `Game` a walk over a tree. Also `gameToPgn`, the **linear** game's writer, which is `treeToPgn` over the one-line tree rather than a second copy of the numbering and `SetUp`/`FEN` rules. Read the next section before touching it. |
 | `src/lib/pgn.ts` | PGN ingestion only: text in, a `Game` (`parsePgnGames`, mainline only — what `chess.js` gives) or a `GameTree` (`parsePgnTrees`, side lines kept) out. |
 | `src/lib/fen.ts` | FEN ingestion: `parseFen` validates and normalises a pasted position, or throws `FenParseError`. |
 | `src/lib/positionEditor.ts` | A position *being edited*: `fenFields` / `fenFromFields` (the six fields apart and back together, which is what makes the editor's side-to-move, castling and en passant controls round-trip), `enPassantOptions`, and `positionProblems` — **non-throwing** legality reporting, because a half-edited board is illegal by definition. Pure. |
@@ -72,6 +74,7 @@ change by whether it *adds* to that count, not by the exit code.
 | `src/lib/pgnLibrary.ts` | **The second producer of a `LibraryCatalog`** — `loadPgnLibrary` turns `path -> PGN text` plus that manifest into categories and `LibraryGame` items, naming each from the file's `StudyName` / a game's `ChapterName` / its players. A file carrying **more than one `StudyName`** splits into a folder of study sub-folders (`studyGroupsOf`); one with a single one, or none, is untouched. Non-throwing: a broken game, an empty file, a manifest naming a file that is not there all land in `problems`. Pure — it takes its files as a parameter. |
 | `src/lib/pgnCatalog.ts` | That loader over the shipped files, once: an eager `import.meta.glob('../data/pgn/*.pgn', { query: '?raw' })`, so Vite inlines the text at build time and the sidebar can be built from the result at module scope. Exports the shipped catalog and its `pgnKinds`, plus **`userPgnsLibrary()`** — that catalog with the reader's uploads folded in, memoised on them, which is what every screen in the section actually reads. |
 | `src/lib/pgnKind.ts` | **The PGN taxonomy** — `study`, `collection`, `shelf`, `games`, `uploads`, what each is recognised by, what screen each gets, and how to add the next one (`repertoire`, `variations`). Types and a lookup only; the recognition is in `pgnLibrary.ts` and the dispatch in `views/pgn/UserPgnsSection.tsx`. |
+| `src/lib/savedGames.ts` + `savedGameStore.ts` | **The reader's games against the engine** — what a saved game is (a PGN plus the `EngineSettings` it was played under), how it is written and read back, and `savedGameCatalogOf`, which presents the lot as a `LibraryCatalog` so `?game=` resolves against it; and the `localStorage` half, revision-stamped like the uploads store, with an idempotent `saveGame` because the writer is an effect. Non-throwing throughout. |
 | `src/lib/pgnUploads.ts` + `pgnUploadStore.ts` | **The reader's own `.pgn` files** — what an upload is, how it becomes a library under the `uploads` folder (through the same loader), whether a picked file is worth keeping; and the `localStorage` half, whose snapshot is checked against a revision stamp so a megabyte of PGN is not re-read per render. Non-throwing throughout. |
 | `src/lib/gameReference.ts` | **The `?game=` carrier** — `pgn/<category path>/<id>`, formatted by `gameReferenceOf` and resolved by `resolveGameReference` through the same `resolveLibraryPath`. A game does not fit in a URL, so what travels is a reference into the catalog. |
 | `src/views/library/` | The section-agnostic screens all three libraries render: `LibraryList.tsx` (a fixed top bar — the category's name and counts, the name search, the card-size toggle — over the only thing on the screen that scrolls, the card grid: this category's **sub-folders** first, as `LibraryFolderCard.tsx`, then its items as preview boards; its pure `librarySearch.ts` and `cardSize.ts` under it, and the folder's notes — or the hint, when it has none — in the right-hand panel), `LibraryDetail.tsx` (which resolves the URL, renders the miss, and dispatches on the item's kind), `LibraryPositionDetail.tsx` (one position, read-only, facing the side to move, with the three `?fen=` hand-offs), `LibraryGameDetail.tsx` (the game replayed over the shared `MoveList` / `BoardControls` / `useGameNavigation`, with the `?game=` and `?fen=` hand-offs), `LibraryCardFooter.tsx` and its pure `gameSummary.ts` (a card's footer, and the one branch the list screen makes on the item's kind), `BackToCategory.tsx`, `folderNotes.ts` / `pgnFolderNotes.ts` / `LibraryNotes.tsx` (a folder's authored MDX notes — the pure path lookup, the shipped `.mdx` glob, and the panel that styles and scrolls them), and `section.ts`, which is what tells one section from another — route base, catalog, chrome keys, test ids, `?game=` key, folder notes. |
@@ -387,6 +390,14 @@ taking the catalog's parsed `Game`: the catalog holds a **mainline** (`chess.js`
 `loadPgn` discards `( … )`), and side lines are the one thing an analysis board
 is for.
 
+**A reference resolves against a catalog, so anything that can be one gets the
+hand-off free.** `catalogsByKey` in `lib/gameReference.ts` is the whole of that
+mapping and it has two entries: `pgn` (the User PGNs library) and `engine` (the
+reader's **saved games**, presented as a catalog by `savedGameCatalogOf` for
+exactly this reason). Neither destination learns that a game can come from the
+engine screen, and nothing in `views/library/` learns that saved games exist —
+see *Saving a game against the engine* below.
+
 **`?move=` rides beside `?game=`, and the study page's own URL too.** A
 reference names the game but not where the reader was in it, so the detail page
 reflects every step into its own URL with history **replace** (`?move=<ply>`,
@@ -496,6 +507,78 @@ and taken as *initial* state. No new transport was built for it: the third
 destination is a third call to the same `handOffTo` helper on the detail page,
 and the list cards still link only to the detail page. `?game=` sits beside it
 for the one thing a FEN cannot carry — see *Handing a game on* above.
+
+## Saving a game against the engine
+
+A game played on `/engine/play` is written to `localStorage` **as it is played**,
+and `/engine/saved` lists what has been written. There is nothing to click:
+a game is worth keeping by the fact of having been played, and a reader who has
+to remember to save is a reader who loses a game.
+
+```
+usePlayWithEngine ──game + settings──▶ savedGameOf() ──▶ saveGame() ──▶ localStorage
+   (an effect, on every move)          (lib/savedGames)   (…GameStore)        │
+        ▲                                                                     │
+        │                                                        useSavedGames()
+   ?saved=<id> ◀── SavedGames.tsx ◀──────────────────────────────────┘
+   (resume: moves + side + settings)      │
+                                          └── ?game=engine/saved/<id> ─▶ Analysis Board / Load PGN
+```
+
+Five decisions hold it together:
+
+- **A saved game is a PGN and the settings it was played under.** Not a
+  serialised `Game`: a `Game` is a *walk*, carrying a FEN per half-move, so
+  writing the object out would store a position per move for no gain. PGN is the
+  format this app already parses in two directions, so a record round-trips
+  through `parsePgnGame` exactly as a pasted game does and survives the next
+  version of the app. `gameToPgn` (`lib/gameTree.ts`) is the writer that was
+  missing, and it is `treeToPgn` over the one-line tree rather than a second copy
+  of the numbering rules. The **settings ride beside** the PGN because resuming
+  has to put the *engine* back: a game played at Skill Level 3 from the Black
+  side is not the same game once it continues at level 20 on White. A tag pair
+  says what the game was; these say how the next move gets made.
+- **A saved game is a `LibraryCatalog`, so `?game=` already worked.** Handing one
+  to the Analysis Board or Load PGN is the reference hand-off those screens take
+  (`?game=engine/saved/<id>`), and the only cost was one entry in
+  `catalogsByKey`. Resuming is `?saved=<id>` instead, for the one thing a
+  `LibraryGame` cannot carry — it is moves, and playing on needs the settings
+  too. Nothing browses that catalog: `/engine/saved` is its own screen under the
+  Engine folder, because these are the app's own output rather than a shipped
+  library.
+- **The id is the game, and "New game" mints a new one.** Saving on every move is
+  one growing row because the id is stable for the life of a game, resume
+  included — `saveGame` replaces in place. Starting a new game clears the id, so
+  the one just abandoned stays in the list rather than being overwritten, which
+  is the whole difference between a saved game and an autosave slot.
+- **The write is idempotent, because the writer is an effect.** Mounting a
+  resumed game re-saves it, and the settings clamp fires again once the engine's
+  option handshake lands; `saveGame` compares against what is stored and does
+  nothing when the PGN and the settings both match, so opening a game does not
+  re-order a list sorted by when each was last played.
+- **A saved game's card previews where it was left, not where it began.** This
+  is the one place the screen parts company with `LibraryList`, whose cards read
+  `libraryItemFen` — a game's *first* position, because that is where a replay
+  starts. A saved game is not a game to replay from move one; it is one to pick
+  back up, so the board shows what the reader will be looking at a click later
+  (`finalFenOf`). The card also names the opening the game reached — the
+  **deepest** position along it the eco.json book names (`openingOfLine` in
+  `lib/openings.ts`), because "King's Pawn Game" is true of every 1. e4 game and
+  says nothing about which of the reader's games this is. The list view is
+  unchanged and carries no opening: its one caption line is already four facts
+  wide.
+- **Masked Pieces does not save.** It runs `usePlayWithEngine` verbatim and the
+  game underneath would serialise perfectly well — but a saved game is resumed on
+  `/engine/play`, where the mask does not exist, so it would come back with its
+  costume gone. `persist` is therefore a `PlayWithEngineStart` field passed by
+  one screen, rather than the store learning what a mask is.
+
+The storage layer is the uploads store's, deliberately: a versioned key, a
+revision stamp so a snapshot is cheap, non-throwing reads and writes, and a
+`useSyncExternalStore` binding in the view layer — see `lib/pgnUploadStore.ts`
+for the reasoning, which is not repeated in `lib/savedGameStore.ts`. It caps the
+list at `MAX_SAVED_GAMES`, because a game is written on every move and an
+unbounded list would fill the origin's quota over a few evenings.
 
 ## A mask is a costume, never a rule
 

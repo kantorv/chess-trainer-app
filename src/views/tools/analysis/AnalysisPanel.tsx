@@ -1,9 +1,11 @@
 import { useState, type ReactNode } from "react";
 import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
 import Tab from "@mui/material/Tab";
 import Tabs from "@mui/material/Tabs";
 import Typography from "@mui/material/Typography";
+import SportsEsportsRoundedIcon from "@mui/icons-material/SportsEsportsRounded";
 import { useTranslation } from "react-i18next";
 import { formatScore } from "../../../lib/engineAnalysis";
 import BestVariations from "../../shared/BestVariations";
@@ -50,10 +52,17 @@ type TabId = (typeof TAB_IDS)[number];
 function AnalysisPanel({
   state,
   position,
+  onPlayFromHere,
 }: {
   state: AnalysisBoardState;
   /** The Position tab's content — see the note above on why it comes in. */
   position: ReactNode;
+  /**
+   * Hand the position at the node on screen to Play with Engine. It sits above
+   * the tab strip rather than inside the Position tab: continuing a position
+   * against the engine is a thing the reader may want from any tab.
+   */
+  onPlayFromHere: () => void;
 }) {
   const { t } = useTranslation();
   const [tab, setTab] = useState<TabId>("moves");
@@ -73,9 +82,31 @@ function AnalysisPanel({
     >
       {/*
         The opening at the node on screen — it follows the reader down side
-        lines, the way the evaluation line below it does.
+        lines, the way the evaluation line below it does — and, pinned to the
+        right of it, the hand-off to Play with Engine for that same position.
       */}
-      <CurrentOpening fen={state.fen} testId="analysis-current-opening" />
+      <Box
+        sx={{
+          flexShrink: 0,
+          display: "flex",
+          alignItems: "center",
+          gap: 1,
+        }}
+      >
+        <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+          <CurrentOpening fen={state.fen} testId="analysis-current-opening" />
+        </Box>
+        <Button
+          size="small"
+          variant="outlined"
+          startIcon={<SportsEsportsRoundedIcon fontSize="small" />}
+          data-testid="analysis-play-from-here"
+          onClick={onPlayFromHere}
+          sx={{ flexShrink: 0 }}
+        >
+          {t("analysis.playFromHere")}
+        </Button>
+      </Box>
 
       <Tabs
         value={tab}

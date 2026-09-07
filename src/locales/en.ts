@@ -13,6 +13,8 @@ const en = {
     toggleColorMode: "Toggle light and dark mode",
     switchLanguage: "Switch language",
     playWithEngine: "Play with Engine",
+    /** The games played on that screen, kept in this browser. */
+    savedGames: "Saved games",
     /**
      * The same screen as `playWithEngine`, with the pieces in disguise. The
      * qualifier is not decoration: two sidebar entries with one accessible name
@@ -235,6 +237,57 @@ const en = {
     },
   },
   /**
+   * The **Saved games** screen — the games the reader has played against the
+   * engine (`views/engine/saved/`). Chrome, all of it: a saved game's own
+   * notation is its PGN, and the tag pairs in it are written in PGN's own
+   * vocabulary rather than in a language.
+   */
+  savedGames: {
+    title: "Saved games",
+    count: "Games: {{count}}",
+    empty: "No saved games yet. Play a game against the engine and it appears here on its own.",
+    hint: "Every game you play against the engine is written down as you play it. Pick one up where you left it, or open it for study.",
+    /** Said plainly: this is a browser, not a backup — as the Uploads screen does. */
+    storage: "Saved games are kept in this browser only. Clearing site data removes them, and they do not follow you to another device.",
+    /** The line that identifies a game: which side the reader had. */
+    playingAs: {
+      white: "You played White",
+      black: "You played Black",
+    },
+    /**
+     * How it stands. `inProgress` is the `"*"` result — a game still being
+     * played, which is most of this list.
+     */
+    result: {
+      white: "White won",
+      black: "Black won",
+      draw: "Draw",
+      inProgress: "In progress",
+    },
+    /**
+     * The three-way view toggle in the top bar: the list the screen shipped
+     * with, and the library list screen's own two board sizes.
+     */
+    view: {
+      label: "View",
+      list: "List",
+      compact: "Small boards",
+      comfortable: "Big boards",
+    },
+    /** The engine's `Skill Level` the game was played at. */
+    level: "Level {{level}}",
+    /** Plural forms, because a one-move game is a real row here. */
+    moves_one: "{{count}} move",
+    moves_other: "{{count}} moves",
+    /** A stored record whose PGN no longer parses: it can only be deleted. */
+    unreadable: "This game could not be read.",
+    /** The three destinations — see `SavedGames.tsx` for why these three. */
+    continue: "Continue",
+    analyse: "Analysis",
+    openInLoadPgn: "PGN viewer",
+    remove: "Delete this game",
+  },
+  /**
    * The Analysis Board. Chrome only: SAN, the FEN and the scores are notation
    * and stay language-independent.
    */
@@ -245,6 +298,8 @@ const en = {
       lines: "Variations",
       position: "Position",
     },
+    /** Hand the position on screen to Play with Engine — the Board Editor's wording. */
+    playFromHere: "Play from here",
     /** The variation tree, where a move list has to say more than "Moves". */
     tree: {
       title: "Moves and variations",
@@ -402,6 +457,9 @@ const en = {
     },
     controls: {
       newGame: "New game",
+      reset: "Reset",
+      /** Hand this position off to Play with Engine — the Board Editor's wording. */
+      playFromHere: "Play from here",
     },
   },
   /**

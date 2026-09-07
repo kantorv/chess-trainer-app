@@ -1,4 +1,5 @@
 import type { SvgIconComponent } from "@mui/icons-material";
+import HistoryRoundedIcon from "@mui/icons-material/HistoryRounded";
 import SportsEsportsRoundedIcon from "@mui/icons-material/SportsEsportsRounded";
 import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
 import AccountTreeRoundedIcon from "@mui/icons-material/AccountTreeRounded";
@@ -44,6 +45,12 @@ export const navItems = (): readonly NavItem[] => [
     to: "/engine/play",
     labelKey: "nav.playWithEngine",
     icon: SportsEsportsRoundedIcon,
+    folder: "engine",
+  },
+  {
+    to: "/engine/saved",
+    labelKey: "nav.savedGames",
+    icon: HistoryRoundedIcon,
     folder: "engine",
   },
   {

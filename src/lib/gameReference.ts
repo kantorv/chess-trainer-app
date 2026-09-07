@@ -4,6 +4,7 @@ import {
   type LibraryGame,
 } from "./libraryCatalog";
 import { userPgnsLibrary } from "./pgnCatalog";
+import { savedGamesCatalog } from "./savedGameStore";
 
 /**
  * How a **whole game** crosses between screens: `?game=pgn/<category path>/<id>`.
@@ -24,13 +25,19 @@ import { userPgnsLibrary } from "./pgnCatalog";
  * - it is **additive**. `?fen=` is untouched and still works from a game's
  *   detail page, which hands over the position at the ply on screen.
  *
- * A reference names a *game*, so it resolves only against a section that has
- * some. There is one — User PGNs — and the registry below is the single place
- * that mapping lives; a second such section is one more entry in it.
+ * A reference names a *game*, so it resolves only against a catalog that has
+ * some, and the registry below is the single place that mapping lives. There
+ * are two: the User PGNs library, and the reader's own saved engine games
+ * (`lib/savedGames.ts`), which are presented as a catalog for exactly this
+ * reason — a saved game reaches the Analysis Board and Load PGN through the
+ * hand-off those screens already have, and neither learns that it exists.
  */
 
 /** The section key the User PGNs library's references carry. */
 export const PGN_REFERENCE_KEY = "pgn";
+
+/** The section key the reader's saved engine games carry. */
+export const ENGINE_REFERENCE_KEY = "engine";
 
 /**
  * Which catalog a reference's first segment names. Read at call time rather
@@ -41,6 +48,7 @@ export const PGN_REFERENCE_KEY = "pgn";
  */
 const catalogsByKey: Record<string, () => LibraryCatalog> = {
   [PGN_REFERENCE_KEY]: userPgnsLibrary,
+  [ENGINE_REFERENCE_KEY]: savedGamesCatalog,
 };
 
 /** The reference for one game — what a detail page puts in the link. */

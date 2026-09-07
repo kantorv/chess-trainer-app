@@ -6,7 +6,7 @@ import {
   type FormEvent,
 } from "react";
 import Box from "@mui/material/Box";
-import { useSearchParams } from "react-router";
+import { createSearchParams, useNavigate, useSearchParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import {
   Chessboard,
@@ -81,6 +81,7 @@ import { useAnalysisBoard } from "./useAnalysisBoard";
  */
 function AnalysisBoard() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
   /*
@@ -221,6 +222,20 @@ function AnalysisBoard() {
     state.loadTree(games[index]);
   };
 
+  /**
+   * "Play from here" — continue the position at the node on screen against the
+   * engine. The FEN crosses to `/engine/play` as a query parameter, the same
+   * carrier the Board Editor's hand-off uses: it is in the URL, so it survives
+   * a bookmark or a reload, and Play with Engine reads it once as its initial
+   * position, deriving `playAs` and the orientation from it. No `?move=` — that
+   * screen replays nothing, it only takes the position.
+   */
+  const onPlayFromHere = () =>
+    navigate({
+      pathname: "/engine/play",
+      search: createSearchParams({ fen: state.fen }).toString(),
+    });
+
   // Both handlers must preventDefault, or the browser leaves the app and opens
   // the dropped file itself.
   const onDragOver = (event: DragEvent<HTMLDivElement>) => {
@@ -354,6 +369,7 @@ function AnalysisBoard() {
         >
           <AnalysisPanel
             state={state}
+            onPlayFromHere={onPlayFromHere}
             position={
               <PositionSetup
                 games={games}

@@ -111,6 +111,33 @@ export const findOpening = (
   return candidates && candidates.length > 0 ? book[candidates[0]] : undefined;
 };
 
+/**
+ * The opening a whole **line of play** ended up in: the deepest position along
+ * it that the book names, or `undefined` for a line it never recognised.
+ *
+ * The same rule `stickyOpening` applies as a reader steps through a game, but
+ * answered in one call for a game nobody is stepping through — a saved game on
+ * a card, where there is no "position on screen" to be sticky about. Walking
+ * *backwards* is what makes it the deepest rather than the first: every game
+ * that starts 1. e4 passes through "King's Pawn Game", and naming it that would
+ * tell the reader nothing about which of their games this is.
+ *
+ * `fens` is the positions in order, as `GameMove.fen` already records them, so
+ * nothing here re-simulates a game and this module still knows nothing about
+ * the game model.
+ */
+export const openingOfLine = (
+  book: OpeningBook,
+  positionBook: PositionBook,
+  fens: readonly string[],
+): OpeningEntry | undefined => {
+  for (let index = fens.length - 1; index >= 0; index -= 1) {
+    const found = findOpening(book, fens[index], positionBook);
+    if (found !== undefined) return found;
+  }
+  return undefined;
+};
+
 /** One legal move out of a position, and the opening it leads to (if any). */
 export type NextMoveOpening = {
   /** SAN, e.g. `"Nf3"`. */
@@ -176,6 +203,13 @@ export const knownMoveOpenings = (
  * was played* when both are on the board.
  */
 export const KNOWN_MOVE_ARROW_COLOR = "#4caf50";
+
+/**
+ * The colour a known-next-move arrow takes while its list row is hovered — a
+ * third distinct hue, neither the amber last-move arrow nor the green of the
+ * other known moves, so the reader sees exactly which move a click will play.
+ */
+export const HOVERED_MOVE_ARROW_COLOR = "#f44336";
 
 /**
  * The most recent opening a stream of positions resolved to, and the half-move

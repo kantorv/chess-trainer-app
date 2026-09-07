@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useSearchParams } from "react-router";
 import { parseFen } from "../../../lib/fen";
+import { findSavedGame } from "../../../lib/savedGameStore";
 import { RightPanel } from "../../main/rightPanel";
 import EngineBoardSquare from "../../shared/EngineBoardSquare";
 import EnginePanel from "./EnginePanel";
@@ -28,6 +29,18 @@ import { usePlayWithEngine } from "./usePlayWithEngine";
  * someone else's mistyped link. The hook takes it as its *initial* state, so
  * nothing is written from an effect.
  *
+ * ### Resuming a saved game
+ *
+ * `/engine/play?saved=<id>` picks a game the reader was playing back up: the
+ * moves, the side they were on and the engine settings all come out of the
+ * store (`lib/savedGameStore.ts`) and are handed to the hook as initial state,
+ * exactly as the `?fen=` arrival is. An id that names nothing opens an ordinary
+ * new game, the way an unreadable `?fen=` does.
+ *
+ * This is also **the screen that saves**. `persist` is passed here and nowhere
+ * else: Masked Pieces runs the same hook verbatim, and a masked game resumed
+ * here would come back with its costume gone — see the hook.
+ *
  * All the behaviour lives in `usePlayWithEngine`; this component is the layout.
  * `<RightPanel>` portals the panel out of this tree, so it still shares this
  * screen's state by closure and nothing is threaded through the shell.
@@ -52,7 +65,18 @@ function PlayWithEngine() {
     }
   }, [requested]);
 
-  const state = usePlayWithEngine(initialFen);
+  /*
+    The saved game being resumed, if this is that arrival. Looked up once: the
+    hook reads it on the first render only, and walking the store on every
+    render would parse every stored PGN for nothing.
+  */
+  const requestedSaved = searchParams.get("saved");
+  const resume = useMemo(
+    () => findSavedGame(requestedSaved),
+    [requestedSaved],
+  );
+
+  const state = usePlayWithEngine({ fen: initialFen, resume, persist: true });
 
   const topLine = state.analysis.lines.find((line) => line !== undefined);
 

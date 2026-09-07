@@ -2,11 +2,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Chess } from "chess.js";
-import { MemoryRouter } from "react-router";
+import { MemoryRouter, useLocation } from "react-router";
 import i18n from "../../../i18n";
 import AppThemeWithLang from "../../../theme/AppThemeWithLang";
 import { MOVE_ARROW_COLOR } from "../../../lib/gameNavigation";
-import { KNOWN_MOVE_ARROW_COLOR } from "../../../lib/openings";
+import {
+  HOVERED_MOVE_ARROW_COLOR,
+  KNOWN_MOVE_ARROW_COLOR,
+} from "../../../lib/openings";
 import { RightPanelOutlet, RightPanelProvider } from "../../main/rightPanel";
 import OpeningsBoard from "./OpeningsBoard";
 
@@ -55,6 +58,27 @@ const offBookFen = () => {
 const boardArrows = (): BoardArrow[] =>
   JSON.parse(screen.getByTestId("board").getAttribute("data-arrows") ?? "[]");
 
+/*
+  Where "Play from here" lands. The screen navigates to `/engine/play?fen=…`;
+  the whole of that interface is the FEN in the URL, so this records it without
+  mounting the engine board.
+*/
+const LocationProbe = () => {
+  const location = useLocation();
+  return (
+    <div
+      data-testid="location"
+      data-pathname={location.pathname}
+      data-search={location.search}
+    />
+  );
+};
+
+const handOffFen = () =>
+  new URLSearchParams(
+    screen.getByTestId("location").getAttribute("data-search") ?? "",
+  ).get("fen");
+
 const renderScreen = (entry = "/tools/openings") =>
   render(
     <MemoryRouter initialEntries={[entry]}>
@@ -62,6 +86,7 @@ const renderScreen = (entry = "/tools/openings") =>
         <RightPanelProvider>
           <OpeningsBoard />
           <RightPanelOutlet />
+          <LocationProbe />
         </RightPanelProvider>
       </AppThemeWithLang>
     </MemoryRouter>,
@@ -223,6 +248,114 @@ describe("the Openings screen", () => {
       "data-position",
       START_FEN,
     );
+  });
+});
+
+describe("the Openings screen — hovering a next move", () => {
+  it("recolors exactly the hovered move's arrow, leaving the rest green", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    await bookSettled();
+
+    await user.hover(screen.getByTestId("openings-next-move-e4"));
+
+    const arrows = boardArrows();
+    expect(arrows).toHaveLength(20);
+    // The e2->e4 arrow, matched by its squares, is the highlight colour...
+    expect(
+      arrows.filter((arrow) => arrow.color === HOVERED_MOVE_ARROW_COLOR),
+    ).toEqual([
+      { startSquare: "e2", endSquare: "e4", color: HOVERED_MOVE_ARROW_COLOR },
+    ]);
+    // ...and every other known move keeps green.
+    expect(
+      arrows.filter((arrow) => arrow.color === KNOWN_MOVE_ARROW_COLOR),
+    ).toHaveLength(19);
+  });
+
+  it("restores the arrow to green when the pointer leaves the row", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    await bookSettled();
+
+    const row = screen.getByTestId("openings-next-move-e4");
+    await user.hover(row);
+    await user.unhover(row);
+
+    const arrows = boardArrows();
+    expect(
+      arrows.some((arrow) => arrow.color === HOVERED_MOVE_ARROW_COLOR),
+    ).toBe(false);
+    expect(
+      arrows.filter((arrow) => arrow.color === KNOWN_MOVE_ARROW_COLOR),
+    ).toHaveLength(20);
+  });
+
+  it("matches the arrow by move identity, not list position", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    await bookSettled();
+
+    // d4 is not the first row; its arrow, not the first one, must recolor.
+    await user.hover(screen.getByTestId("openings-next-move-d4"));
+
+    const highlighted = boardArrows().filter(
+      (arrow) => arrow.color === HOVERED_MOVE_ARROW_COLOR,
+    );
+    expect(highlighted).toEqual([
+      { startSquare: "d2", endSquare: "d4", color: HOVERED_MOVE_ARROW_COLOR },
+    ]);
+  });
+
+  it("highlights on hover at a deeper ply, without disturbing the last-move arrow", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    await bookSettled();
+
+    await user.click(screen.getByTestId("openings-next-move-e4"));
+    await user.hover(screen.getByTestId("openings-next-move-e5"));
+
+    const arrows = boardArrows();
+    // amber last-move arrow untouched
+    expect(
+      arrows.filter((arrow) => arrow.color === MOVE_ARROW_COLOR),
+    ).toEqual([{ startSquare: "e2", endSquare: "e4", color: MOVE_ARROW_COLOR }]);
+    // exactly the hovered continuation is red
+    expect(
+      arrows.filter((arrow) => arrow.color === HOVERED_MOVE_ARROW_COLOR),
+    ).toEqual([
+      { startSquare: "e7", endSquare: "e5", color: HOVERED_MOVE_ARROW_COLOR },
+    ]);
+  });
+});
+
+describe("the Openings screen — Play from here", () => {
+  it("hands the position on screen to Play with Engine as ?fen=", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    await bookSettled();
+
+    await user.click(screen.getByTestId("openings-next-move-e4"));
+    await user.click(screen.getByTestId("openings-play-from-here"));
+
+    expect(screen.getByTestId("location")).toHaveAttribute(
+      "data-pathname",
+      "/engine/play",
+    );
+    expect(handOffFen()).toBe(AFTER_E4);
+  });
+
+  it("carries an earlier ply's position after stepping back", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    await bookSettled();
+
+    await user.click(screen.getByTestId("openings-next-move-e4"));
+    await user.click(screen.getByTestId("openings-next-move-e5"));
+    await user.click(screen.getByTestId("board-control-first"));
+    await user.click(screen.getByTestId("openings-play-from-here"));
+
+    expect(handOffFen()).toBe(START_FEN);
   });
 });
 

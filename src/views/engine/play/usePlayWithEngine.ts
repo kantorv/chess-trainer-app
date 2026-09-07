@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Chess, type Square } from "chess.js";
 import Engine, { type EngineOption } from "../../../lib/engine";
 import {
@@ -9,7 +9,19 @@ import {
   type Analysis,
   type Turn,
 } from "../../../lib/engineAnalysis";
-import { gameFromChess, type Game } from "../../../lib/gameModel";
+import {
+  DEFAULT_ENGINE_SETTINGS,
+  SETTING_UCI_OPTION,
+  type EngineSettings,
+} from "../../../lib/engineSettings";
+import { gameFromChess, initialFenOf, type Game } from "../../../lib/gameModel";
+import {
+  chessFromSavedGame,
+  newSavedGameId,
+  savedGameOf,
+  type SavedGame,
+} from "../../../lib/savedGames";
+import { saveGame } from "../../../lib/savedGameStore";
 import { useGameNavigation } from "../../shared/useGameNavigation";
 
 /**
@@ -46,58 +58,42 @@ import { useGameNavigation } from "../../shared/useGameNavigation";
  * with the returned unsubscribe, terminate on unmount — `.claude/rules/chessboard.md`
  * §4. The subscribe effect is declared first so a StrictMode remount rebuilds the
  * worker before anything asks it to search.
- */
-
-/** The engine knobs the settings tab drives. */
-export type EngineSettings = {
-  /** UCI `Skill Level`, 0–20. The only strength control this build has. */
-  skillLevel: number;
-  /** Plies per search. */
-  depth: number;
-  /** UCI `MultiPV` — how many lines the Variations tab shows. */
-  multiPv: number;
-  /** Milliseconds per search; `0` means "depth alone decides". */
-  moveTimeMs: number;
-  /** UCI `Threads`. */
-  threads: number;
-  /** UCI `Hash`, in MB. */
-  hashMb: number;
-  /** The colour the human plays; the engine takes the other one. */
-  playAs: "white" | "black";
-};
-
-export const DEFAULT_ENGINE_SETTINGS: EngineSettings = {
-  skillLevel: 10,
-  depth: 14,
-  multiPv: 3,
-  moveTimeMs: 1000,
-  threads: 1,
-  hashMb: 16,
-  playAs: "white",
-};
-
-/**
- * Which UCI option each numeric setting drives. The names are the engine's, and
- * whether the running build *has* them is answered by `Engine.options` rather
- * than by this table — see `engineOptions` below.
- */
-export const SETTING_UCI_OPTION = {
-  skillLevel: "Skill Level",
-  multiPv: "MultiPV",
-  threads: "Threads",
-  hashMb: "Hash",
-} as const satisfies Partial<Record<keyof EngineSettings, string>>;
-
-/**
- * A rough Elo for a `Skill Level`, for the label beside the strength slider.
  *
- * Stockfish's skill-level scale runs from about 1350 at 0 to full strength at 20;
- * this is the linear reading of that range. An **estimate**: this build declares
- * no `UCI_Elo`, so no Elo is ever sent to the engine and the figure must never be
- * presented as a setting.
+ * **4. Saving is the same arrival mechanism, in the other direction.** A game
+ * against the engine is written to `localStorage` as it is played and can be
+ * picked up again from the Saved games screen — {@link PlayWithEngineStart}'s
+ * `resume` is that arrival, seeding the instance, the settings and the board's
+ * orientation exactly as `fen` does, and once again *only* as initial state. The
+ * writing is one effect, and it is `persist` that turns it on: Masked Pieces
+ * runs this hook verbatim and must not fill the list with games whose costume
+ * cannot be restored.
  */
-export const approximateElo = (skillLevel: number): number =>
-  Math.round(1350 + (skillLevel / 20) * (2850 - 1350));
+
+/** The engine knobs the settings tab drives. Defined in `lib/engineSettings.ts` */
+export {
+  DEFAULT_ENGINE_SETTINGS,
+  SETTING_UCI_OPTION,
+  approximateElo,
+} from "../../../lib/engineSettings";
+export type { EngineSettings } from "../../../lib/engineSettings";
+
+/**
+ * How the screen opens: on a position, on a game being resumed, or on neither.
+ *
+ * All three fields are read **once**, as this hook's initial state — arriving at
+ * `/engine/play?fen=…` or `?saved=…` is what mounts the screen, so there is no
+ * later change to follow, and reading them in an effect would mean writing state
+ * from one. A `fen` that will not parse and a `resume` that names nothing are
+ * the caller's to reject; both simply arrive as `undefined`.
+ */
+export type PlayWithEngineStart = {
+  /** The position the game starts from — the Board Editor's `?fen=` hand-off. */
+  fen?: string;
+  /** A saved game to play on from — the Saved games screen's `?saved=` hand-off. */
+  resume?: SavedGame;
+  /** Whether the game is written to the saved-games store as it is played. */
+  persist?: boolean;
+};
 
 /**
  * What the engine is saying, and one line of it. Defined in
@@ -127,35 +123,83 @@ const isTerminal = (fen: string): boolean => {
   }
 };
 
-export const usePlayWithEngine = (initialFen?: string) => {
+export const usePlayWithEngine = ({
+  fen: initialFen,
+  resume,
+  persist = false,
+}: PlayWithEngineStart = {}) => {
   const engineRef = useRef<Engine | null>(null);
   // Resolved at call time, never during render: StrictMode's mount → unmount →
   // remount terminates the worker and re-runs the effects with no render in
   // between, so an engine captured during render would be dead from then on.
   const getEngine = useCallback(() => (engineRef.current ??= new Engine()), []);
 
-  const chessGameRef = useRef(new Chess(initialFen));
+  /*
+    A game being resumed is replayed into a live instance once — the PGN is the
+    only record there is, so playing on means loading it — and the position it
+    *started* from becomes this screen's `initialFen`, so "New game" goes back to
+    where that game began rather than to the standard start, exactly as it does
+    for a position handed over by the Board Editor. A record that will not parse
+    resumes as nothing at all, which is the same answer an unreadable `?fen=`
+    gets.
+
+    Memoised on the record: only the first render's value is ever kept, but
+    parsing a PGN on every render would be a real cost for nothing. The `Game` is
+    read off the same instance rather than parsed a second time — which is all
+    `parsePgnGame` does with it either way.
+  */
+  const arrival = useMemo(() => {
+    if (resume === undefined) return undefined;
+    const chess = chessFromSavedGame(resume);
+    return chess === undefined
+      ? undefined
+      : { chess, game: gameFromChess(chess, chess.getHeaders()) };
+  }, [resume]);
+
+  const startFen =
+    arrival === undefined ? initialFen : initialFenOf(arrival.game);
+
+  const chessGameRef = useRef(arrival?.chess ?? new Chess(initialFen));
 
   /*
-    All three of these are seeded from `initialFen` on the first render and never
-    again. The snapshot is taken from a *separate* `new Chess` rather than from
-    the ref above: the ref must not be read during render (`react-hooks/refs`),
-    and a `Game` is plain data, so building one twice costs nothing.
+    All of these are seeded on the first render and never again. The snapshot is
+    taken from a *separate* `new Chess` rather than from the ref above: the ref
+    must not be read during render (`react-hooks/refs`), and a `Game` is plain
+    data, so building one twice costs nothing.
   */
-  const [game, setGame] = useState<Game>(() =>
-    initialFen === undefined ? NEW_GAME : gameFromChess(new Chess(initialFen)),
-  );
-  const [settings, setSettings] = useState<EngineSettings>(() =>
-    initialFen === undefined || turnOf(initialFen) === "w"
+  const [game, setGame] = useState<Game>(() => {
+    if (arrival !== undefined) return arrival.game;
+    return startFen === undefined ? NEW_GAME : gameFromChess(new Chess(startFen));
+  });
+  const [settings, setSettings] = useState<EngineSettings>(() => {
+    // A resumed game brings its own: the engine has to go on playing at the
+    // strength, and on the side, the game was played at.
+    if (resume !== undefined) return resume.settings;
+    return initialFen === undefined || turnOf(initialFen) === "w"
       ? DEFAULT_ENGINE_SETTINGS
-      : { ...DEFAULT_ENGINE_SETTINGS, playAs: "black" },
-  );
+      : { ...DEFAULT_ENGINE_SETTINGS, playAs: "black" };
+  });
   const [analysis, setAnalysis] = useState<Analysis>(EMPTY_ANALYSIS);
   const [showEvalBar, setShowEvalBar] = useState(true);
   // Facing the side the human is playing — otherwise a game handed over with
   // Black to move opens from behind the opponent's pieces.
-  const [orientation, setOrientation] = useState<"white" | "black">(() =>
-    initialFen !== undefined && turnOf(initialFen) === "b" ? "black" : "white",
+  const [orientation, setOrientation] = useState<"white" | "black">(() => {
+    if (resume !== undefined) return resume.settings.playAs;
+    return initialFen !== undefined && turnOf(initialFen) === "b"
+      ? "black"
+      : "white";
+  });
+  /*
+    The row this game is written to. Minted at call time rather than during
+    render — the same rule the engine ref follows — and seeded from the resumed
+    game, so playing on updates that row instead of starting a second one beside
+    it. "New game" mints a fresh one, which is what leaves the game just
+    abandoned in the list rather than overwriting it.
+  */
+  const savedIdRef = useRef<string | null>(resume?.id ?? null);
+  const getSavedId = useCallback(
+    () => (savedIdRef.current ??= newSavedGameId()),
+    [],
   );
   const [promotion, setPromotion] = useState<{
     from: Square;
@@ -170,7 +214,17 @@ export const usePlayWithEngine = (initialFen?: string) => {
     ReadonlyMap<string, EngineOption>
   >(() => new Map());
 
-  const { ply, lastPly, fen, arrows, goToPly } = useGameNavigation(game);
+  /*
+    A resumed game opens at its **last** ply, not at ply 0. Every other arrival
+    on this screen is a position, where ply 0 is all there is; a resumed game is
+    one the reader is in the middle of, so the live position is the one they left
+    — and it is the live position that this screen lets them move on from. Read
+    once, as the navigation's seed.
+  */
+  const { ply, lastPly, fen, arrows, goToPly } = useGameNavigation(
+    game,
+    arrival?.game.moves.length ?? 0,
+  );
 
   const humanColor: Turn = settings.playAs === "white" ? "w" : "b";
 
@@ -347,6 +401,33 @@ export const usePlayWithEngine = (initialFen?: string) => {
     settings.playAs,
   ]);
 
+  /*
+    Write the game down, on every move and on every settings change.
+
+    Nothing to click: a game against the engine is worth keeping by the fact of
+    having been played, and a reader who has to remember to save is a reader who
+    loses a game. It is an effect on the *game snapshot* rather than a call
+    inside the two move handlers, because the engine's reply and the human's
+    move both produce one and only one of them would otherwise be covered.
+
+    Three things keep it cheap and unsurprising:
+
+    - a game with no moves is not a game yet, so an untouched board writes
+      nothing and the list is not filled with empty rows by merely visiting;
+    - `saveGame` is a no-op when the record would be identical, so mounting a
+      resumed game, or the clamp that pulls the settings into the running
+      build's bounds, does not re-order a list sorted by when a game was last
+      played;
+    - `persist` is off unless the caller asks. Masked Pieces runs this hook
+      verbatim (`views/masked/play/`), and a masked game resumed on
+      `/engine/play` would come back with its costume gone — so that screen
+      does not write, rather than the store learning what a mask is.
+  */
+  useEffect(() => {
+    if (!persist || game.moves.length === 0) return;
+    saveGame(savedGameOf(getSavedId(), game, settings));
+  }, [persist, game, settings, getSavedId]);
+
   /** Apply a human move that has already been checked for legality. */
   const applyHumanMove = useCallback(
     (from: Square, to: Square, promotionPiece?: string) => {
@@ -427,13 +508,20 @@ export const usePlayWithEngine = (initialFen?: string) => {
     the position the reader came here to play, and there is no way back to it.
   */
   const newGame = useCallback(() => {
-    const fresh = new Chess(initialFen);
+    const fresh = new Chess(startFen);
     chessGameRef.current = fresh;
     setGame(gameFromChess(fresh));
     setPromotion(null);
     setAnalysis(EMPTY_ANALYSIS);
     goToPly(0);
-  }, [goToPly, initialFen]);
+    /*
+      A new row for the new game. The one just abandoned keeps the id it was
+      saved under, so it stays in the list rather than being overwritten by
+      whatever is played next — which is the whole difference between a saved
+      game and an autosave slot.
+    */
+    savedIdRef.current = null;
+  }, [goToPly, startFen]);
 
   const flipBoard = useCallback(
     () => setOrientation((side) => (side === "white" ? "black" : "white")),

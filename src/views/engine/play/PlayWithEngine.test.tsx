@@ -2,8 +2,16 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
+import { Chess } from "chess.js";
 import i18n from "../../../i18n";
 import AppThemeWithLang from "../../../theme/AppThemeWithLang";
+import {
+  DEFAULT_ENGINE_SETTINGS,
+  type EngineSettings,
+} from "../../../lib/engineSettings";
+import { gameFromChess } from "../../../lib/gameModel";
+import { savedGameOf } from "../../../lib/savedGames";
+import { saveGame, savedGamesSnapshot } from "../../../lib/savedGameStore";
 import { RightPanelOutlet, RightPanelProvider } from "../../main/rightPanel";
 import PlayWithEngine from "./PlayWithEngine";
 
@@ -207,6 +215,9 @@ const renderScreen = (entry = "/engine/play") =>
   );
 
 const position = () => screen.getByTestId("board").getAttribute("data-position");
+
+/** A position the Board Editor could hand over: Black to move, mate in one. */
+const handedOverFen = "6k1/5ppp/8/8/8/8/8/R5K1 b - - 0 1";
 
 beforeEach(async () => {
   harness.FakeEngine.instances = [];
@@ -571,8 +582,7 @@ describe("Play with Engine — the panel", () => {
 });
 
 describe("Play with Engine — arriving from the Board Editor", () => {
-  // Black to move, and a mate in one for whoever plays it.
-  const handedOver = "6k1/5ppp/8/8/8/8/8/R5K1 b - - 0 1";
+  const handedOver = handedOverFen;
 
   it("starts the game from the position handed over in the URL", () => {
     renderScreen(`/engine/play?fen=${encodeURIComponent(handedOver)}`);
@@ -616,5 +626,150 @@ describe("Play with Engine — arriving from the Board Editor", () => {
     renderScreen("/engine/play?fen=not-a-position");
 
     expect(position()).toMatch(/^rnbqkbnr\/pppppppp/);
+  });
+});
+
+describe("Play with Engine — saving the game", () => {
+  /** What the store holds, read the way the Saved games screen reads it. */
+  const saved = () => savedGamesSnapshot();
+
+  it("writes nothing for a board nobody has played on", () => {
+    renderScreen();
+
+    // Visiting the screen is not playing a game, and an empty row in the list
+    // would be worse than nothing.
+    expect(saved()).toEqual([]);
+  });
+
+  it("saves the game on every move, with nothing to click", () => {
+    renderScreen();
+
+    drag("e2", "e4");
+    expect(saved()).toHaveLength(1);
+    expect(saved()[0].pgn).toContain("1. e4");
+
+    engineReplies("e7e5");
+    // The engine's reply is saved too — one row, grown, not a second one.
+    expect(saved()).toHaveLength(1);
+    expect(saved()[0].pgn).toContain("e5");
+  });
+
+  it("records the settings the game was played under", async () => {
+    renderScreen();
+
+    await userEvent.click(screen.getByTestId("engine-panel-tab-engine"));
+    await userEvent.click(screen.getByTestId("engine-setting-playas-black"));
+    engineReplies("d2d4");
+
+    expect(saved()[0].settings.playAs).toBe("black");
+  });
+
+  it("leaves the abandoned game in the list when a new one is started", async () => {
+    renderScreen();
+    drag("e2", "e4");
+    const first = saved()[0].id;
+
+    await userEvent.click(screen.getByTestId("engine-panel-tab-engine"));
+    await userEvent.click(screen.getByTestId("engine-new-game"));
+    await userEvent.click(screen.getByTestId("engine-panel-tab-game"));
+    drag("d2", "d4");
+
+    const ids = saved().map((row) => row.id);
+    expect(ids).toHaveLength(2);
+    // Newest first, and the game that was abandoned is still there.
+    expect(ids[1]).toBe(first);
+    expect(saved()[0].pgn).toContain("1. d4");
+  });
+
+  it("keeps the position a handed-over game started from", () => {
+    renderScreen(`/engine/play?fen=${encodeURIComponent(handedOverFen)}`);
+    drag("g8", "h8");
+
+    expect(saved()[0].pgn).toContain(`[FEN "${handedOverFen}"]`);
+  });
+});
+
+describe("Play with Engine — resuming a saved game", () => {
+  /** A game already in the store, as the Saved games screen would link to it. */
+  const storeGame = (
+    id: string,
+    moves: readonly string[],
+    settings: Partial<EngineSettings> = {},
+  ) => {
+    const chess = new Chess();
+    for (const san of moves) chess.move(san);
+    saveGame(
+      savedGameOf(id, gameFromChess(chess), {
+        ...DEFAULT_ENGINE_SETTINGS,
+        ...settings,
+      }),
+    );
+  };
+
+  it("opens on the position the game was left at, with its moves behind it", () => {
+    storeGame("g1", ["e4", "e5", "Nf3"]);
+
+    renderScreen("/engine/play?saved=g1");
+
+    expect(screen.getByTestId("move-ply-1")).toHaveTextContent("e4");
+    expect(screen.getByTestId("move-ply-3")).toHaveTextContent("Nf3");
+    expect(position()).toContain("5N2");
+    // And it is a live game, not a diagram: the engine is asked about it.
+    expect(engine().lastSearch).toBe(position());
+  });
+
+  it("restores the side the reader was playing, and faces the board that way", () => {
+    storeGame("g1", ["e4"], { playAs: "black" });
+
+    renderScreen("/engine/play?saved=g1");
+
+    expect(screen.getByTestId("board")).toHaveAttribute(
+      "data-orientation",
+      "black",
+    );
+    // Black to move and Black is the reader's, so the board is theirs to drag.
+    expect(boardOptions().allowDragging).toBe(true);
+    expect(drag("e7", "e5")).toBe(true);
+  });
+
+  it("restores the engine settings, so it plays on at the same strength", async () => {
+    storeGame("g1", ["e4", "e5"], { skillLevel: 3 });
+
+    renderScreen("/engine/play?saved=g1");
+
+    expect(engine().setOptions).toContainEqual(["Skill Level", 3]);
+    await userEvent.click(screen.getByTestId("engine-panel-tab-engine"));
+    expect(
+      screen.getByTestId("engine-setting-skill-level-value"),
+    ).toHaveTextContent("Level 3");
+  });
+
+  it("plays on into the same row rather than starting a second one", () => {
+    storeGame("g1", ["e4", "e5"]);
+    renderScreen("/engine/play?saved=g1");
+
+    drag("g1", "f3");
+
+    expect(savedGamesSnapshot()).toHaveLength(1);
+    expect(savedGamesSnapshot()[0].id).toBe("g1");
+    expect(savedGamesSnapshot()[0].pgn).toContain("Nf3");
+  });
+
+  it("does not re-order the list merely by being opened", () => {
+    storeGame("g1", ["e4"]);
+    storeGame("g2", ["d4"]);
+    expect(savedGamesSnapshot().map((row) => row.id)).toEqual(["g2", "g1"]);
+
+    renderScreen("/engine/play?saved=g1");
+
+    // The save effect ran and found the record unchanged, so nothing moved.
+    expect(savedGamesSnapshot().map((row) => row.id)).toEqual(["g2", "g1"]);
+  });
+
+  it("opens an ordinary new game for an id that names nothing", () => {
+    renderScreen("/engine/play?saved=nope");
+
+    expect(position()).toMatch(/^rnbqkbnr\/pppppppp/);
+    expect(screen.queryByTestId("move-ply-1")).not.toBeInTheDocument();
   });
 });

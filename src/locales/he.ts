@@ -14,6 +14,7 @@ const he: typeof en = {
     toggleColorMode: "מעבר בין מצב בהיר לכהה",
     switchLanguage: "החלפת שפה",
     playWithEngine: "משחק מול המנוע",
+    savedGames: "משחקים שמורים",
     maskedPlay: "משחק מול המנוע (מוסווה)",
     loadPgn: "טעינת PGN",
     analysisBoard: "לוח ניתוח",
@@ -176,6 +177,37 @@ const he: typeof en = {
       newGame: "משחק חדש",
     },
   },
+  savedGames: {
+    title: "משחקים שמורים",
+    count: "משחקים: {{count}}",
+    empty: "אין עדיין משחקים שמורים. שחקו מול המנוע והמשחק יופיע כאן מעצמו.",
+    hint: "כל משחק מול המנוע נשמר תוך כדי המשחק. אפשר להמשיך אותו מהמקום שבו הופסק, או לפתוח אותו לניתוח.",
+    storage: "המשחקים השמורים נשמרים בדפדפן הזה בלבד. מחיקת נתוני האתר תמחק אותם, והם אינם עוברים למכשיר אחר.",
+    playingAs: {
+      white: "שיחקתם בלבן",
+      black: "שיחקתם בשחור",
+    },
+    result: {
+      white: "ניצחון הלבן",
+      black: "ניצחון השחור",
+      draw: "תיקו",
+      inProgress: "בעיצומו",
+    },
+    view: {
+      label: "תצוגה",
+      list: "רשימה",
+      compact: "לוחות קטנים",
+      comfortable: "לוחות גדולים",
+    },
+    level: "רמה {{level}}",
+    moves_one: "מהלך אחד",
+    moves_other: "{{count}} מהלכים",
+    unreadable: "לא ניתן לקרוא את המשחק הזה.",
+    continue: "המשך",
+    analyse: "ניתוח",
+    openInLoadPgn: "מציג PGN",
+    remove: "מחיקת המשחק",
+  },
   analysis: {
     tabs: {
       moves: "מהלכים",
@@ -183,6 +215,7 @@ const he: typeof en = {
       lines: "וריאציות",
       position: "עמדה",
     },
+    playFromHere: "שחקו מכאן",
     tree: {
       title: "מהלכים ווריאציות",
       empty: "שחקו מהלך, או הגדירו עמדה בלשונית העמדה.",
@@ -305,7 +338,7 @@ const he: typeof en = {
     },
     nextMoves: { empty: "אין המשכים מוכרים מכאן." },
     moves: { empty: "עדיין אין מהלכים — שחקו על הלוח, או בחרו מהלך מוכר מלשונית המהלכים האפשריים." },
-    controls: { newGame: "משחק חדש" },
+    controls: { newGame: "משחק חדש", playFromHere: "שחקו מכאן", reset:"איפוס" },
   },
   mates: {
     categories: {
