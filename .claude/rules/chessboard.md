@@ -339,7 +339,8 @@ Consequences for a caller:
 | `/engine/saved` | [`views/engine/saved/SavedGames.tsx`](../../src/views/engine/saved/SavedGames.tsx) | (composed) | The games played on the screen above, kept in `localStorage` and listed newest first — as rows, or as read-only preview boards at either of the library's two card sizes, each showing the position that game was **left at**. `?saved=<id>` resumes one there; `?game=engine/saved/<id>` hands it to the Analysis Board or Load PGN |
 | `/masked/play` | [`views/masked/play/MaskedPlay.tsx`](../../src/views/masked/play/MaskedPlay.tsx) | `Pieces` | The same screen with the pieces in disguise: `options.pieces` built from a `PieceMask` (`lib/pieceMask.ts`), and the notation masked to match. `usePlayWithEngine` reused verbatim |
 | `/games/load-pgn` | [`views/games/load_pgn/LoadPgn.tsx`](../../src/views/games/load_pgn/LoadPgn.tsx) | (composed) | A PGN pasted in, parsed to a `Game`, walked with the shared `MoveList` / `useGameNavigation` / `BoardControls` |
-| `/tools/analysis` | [`views/tools/analysis/AnalysisBoard.tsx`](../../src/views/tools/analysis/AnalysisBoard.tsx) | (composed) | Analysis: a **variation tree** (`lib/gameTree.ts`), PGN/FEN set-up and export, both colours movable, engine and eval bar switched independently |
+| `/tools/analysis` | [`views/tools/analysis/AnalysisBoard.tsx`](../../src/views/tools/analysis/AnalysisBoard.tsx) | (composed) | Analysis: a **variation tree** (`lib/gameTree.ts`), PGN/FEN set-up and export, both colours movable, engine and eval bar switched independently. Written to `localStorage` as it is worked on; takes `?fen=`, `?game=` and `?analysis=` |
+| `/tools/analysis/saved` | [`views/tools/analysis/saved/SavedAnalyses.tsx`](../../src/views/tools/analysis/saved/SavedAnalyses.tsx) | (composed) | The boards worked on above, kept in `localStorage` and listed newest first — as rows, or as read-only preview boards at either card size, each showing the position and the side the reader **was standing on**. `?analysis=<id>` reopens one; `?game=analysis/saved/<id>` hands it to Load PGN and `?fen=` to Play with Engine. The Saved games screen with two changes — see the root `CLAUDE.md` |
 | `/mates/:category` | [`views/library/LibraryList.tsx`](../../src/views/library/LibraryList.tsx) | (composed) | A read-only preview board per card, several on one page — so `options.id` is the position's id, not a constant. A fixed top bar (name + count, search, card-size toggle) over the one region that scrolls. `views/mates/list/MatesList.tsx` is the binding that reads the route parameter |
 | `/mates/:category/:id` | [`views/library/LibraryPositionDetail.tsx`](../../src/views/library/LibraryPositionDetail.tsx) | (composed) | One catalog position, read-only, facing the side to move, with the `?fen=` hand-off to the three screens that read one. `LibraryDetail.tsx` resolves the URL and dispatches on the item's kind; `views/mates/detail/MateDetail.tsx` is the binding |
 | `/positions/*` | [`views/positions/PositionsSection.tsx`](../../src/views/positions/PositionsSection.tsx) | (composed) | The same two screens over the endgame library, behind one splat route: the segments are resolved against a catalog nested to any depth. Some positions have the **defending** side to move, and the board faces it |
@@ -388,8 +389,9 @@ you need the smallest version of one.
 - **A read-only board is a board, and it still takes an `options.id` that is
   unique on the page.** A list screen renders one per card, so the id is the
   item's id (`LibraryList`'s `previewOptions`), never a constant. The Saved
-  games screen's board view is the same rule outside the library sections —
-  `saved-games-preview-<id>`.
+  games and Saved analyses screens' board views are the same rule outside the
+  library sections — `saved-games-preview-<id>`,
+  `saved-analyses-preview-<id>`.
 - **A screen that scrolls inside the board square divides that square up
   itself, and a grid of `auto` rows will not scroll.** The shell hands the
   screen a fixed-height box and scrolls nothing in it, so `LibraryList` is a
@@ -432,6 +434,12 @@ you need the smallest version of one.
 - **A screen that can branch navigates by node, not by ply.** See the root
   `CLAUDE.md` on the tree; the shared `BoardControls` still take a ply, and
   `useTreeNavigation` derives one from the line the reader is standing on.
+- **The board is written down as it is worked on, and so is where you are
+  standing.** An effect in `useAnalysisBoard` saves the tree, the settings, the
+  orientation and the SAN path to the current node (`lib/savedAnalyses.ts`),
+  gated on `persist` and on the reader having actually changed something —
+  merely opening a library game here writes nothing. Reopening is `?analysis=`.
+  See the root `CLAUDE.md`.
 
 **And two the Board Editor adds:**
 

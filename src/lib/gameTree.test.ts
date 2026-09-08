@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Chess, DEFAULT_POSITION } from "chess.js";
-import { parsePgnGames } from "./pgn";
+import { parsePgnGames, parsePgnTree } from "./pgn";
 import { moveRowsOf } from "./gameNavigation";
 import {
   addMove,
@@ -11,8 +11,10 @@ import {
   lineOf,
   mainline,
   mainlineGame,
+  nodeAtSanPath,
   pathTo,
   plyLabel,
+  sanPathTo,
   treeFromGame,
   treeToPgn,
   type GameTree,
@@ -269,5 +271,56 @@ describe("treeToPgn", () => {
 
   it("writes an empty tree as its result alone", () => {
     expect(treeToPgn(emptyTree())).toBe("*");
+  });
+});
+
+describe("sanPathTo / nodeAtSanPath — a portable place in a tree", () => {
+  /*
+    A node id is minted per tree (`nextId`), so it means nothing once the same
+    game has been round-tripped through PGN and re-parsed — which is exactly what
+    a saved analysis does (`lib/savedAnalyses.ts`). SAN identifies a move
+    uniquely within its position, which is the property `addMove` already rests
+    on, so a path of it is what travels.
+  */
+  const branched = () => {
+    const first = play(emptyTree(), null, "e4", "e5", "Nf3");
+    const e4 = first.tree.moves[0].id;
+    return play(first.tree, e4, "c5", "Nf3").tree;
+  };
+
+  it("names a node inside a side line, and finds it again", () => {
+    const tree = branched();
+    const sicilian = nodeAtSanPath(tree, ["e4", "c5", "Nf3"]);
+
+    expect(sicilian).not.toBeNull();
+    expect(sanPathTo(tree, sicilian)).toEqual(["e4", "c5", "Nf3"]);
+    // Not the mainline's `Nf3`, which is a different node with the same SAN.
+    expect(sicilian).not.toBe(mainline(tree)[2].id);
+  });
+
+  it("is the start position for an empty or absent path", () => {
+    const tree = branched();
+
+    expect(nodeAtSanPath(tree, [])).toBeNull();
+    expect(nodeAtSanPath(tree, undefined)).toBeNull();
+    expect(sanPathTo(tree, null)).toEqual([]);
+  });
+
+  it("survives the PGN round trip, where a node id would not", () => {
+    const tree = branched();
+    const path = ["e4", "c5", "Nf3"];
+    const reparsed = parsePgnTree(treeToPgn(tree));
+
+    expect(fenAtNode(reparsed, nodeAtSanPath(reparsed, path))).toBe(
+      fenAtNode(tree, nodeAtSanPath(tree, path)),
+    );
+  });
+
+  it("stops at the last move it recognises rather than giving up", () => {
+    // A path written against a tree that has since lost its continuation.
+    const tree = branched();
+    const found = nodeAtSanPath(tree, ["e4", "c5", "Nc3", "d6"]);
+
+    expect(sanPathTo(tree, found)).toEqual(["e4", "c5"]);
   });
 });

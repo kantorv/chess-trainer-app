@@ -8,6 +8,7 @@ import { default as PlayWithEngineScreen  } from './views/engine/play/Main'
 import { default as SavedGamesScreen  } from './views/engine/saved/Main'
 import { default as MaskedPlayScreen  } from './views/masked/play/Main'
 import { default as AnalysisBoardScreen  } from './views/tools/analysis/Main'
+import { default as SavedAnalysesScreen  } from './views/tools/analysis/saved/Main'
 import { default as BoardEditorScreen  } from './views/tools/editor/Main'
 import { default as OpeningsScreen  } from './views/tools/openings/Main'
 import { default as MatesListScreen  } from './views/mates/list/Main'
@@ -54,6 +55,14 @@ const routes = createBrowserRouter(
         {
           path: "/tools/analysis",
           element: <AnalysisBoardScreen />
+        },
+        // The reader's own analysis boards, kept in `localStorage`
+        // (`lib/savedAnalysisStore.ts`). The Saved games screen's counterpart,
+        // and a screen rather than a library section for the same reason: these
+        // are this app's own output, so there is no catalog to nest.
+        {
+          path: "/tools/analysis/saved",
+          element: <SavedAnalysesScreen />
         },
         {
           path: "/tools/editor",

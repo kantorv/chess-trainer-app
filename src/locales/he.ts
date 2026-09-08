@@ -18,6 +18,7 @@ const he: typeof en = {
     maskedPlay: "משחק מול המנוע (מוסווה)",
     loadPgn: "טעינת PGN",
     analysisBoard: "לוח ניתוח",
+    savedAnalyses: "ניתוחים שמורים",
     boardEditor: "עורך העמדות",
     openings: "פתיחות",
     matesBasic: "מטים בסיסיים",
@@ -207,6 +208,32 @@ const he: typeof en = {
     analyse: "ניתוח",
     openInLoadPgn: "מציג PGN",
     remove: "מחיקת המשחק",
+  },
+  savedAnalyses: {
+    title: "ניתוחים שמורים",
+    count: "ניתוחים: {{count}}",
+    empty:
+      "אין עדיין ניתוחים שמורים. בצעו מהלך בלוח הניתוח, או טענו אליו משחק, והלוח יופיע כאן מעצמו.",
+    hint: "כל לוח שאתם עובדים עליו בלוח הניתוח נשמר תוך כדי העבודה, על כל הווריאציות. אפשר להמשיך אותו מהמקום שבו הופסק, או לקחת את העמדה למקום אחר.",
+    storage:
+      "הניתוחים השמורים נשמרים בדפדפן הזה בלבד. מחיקת נתוני האתר תמחק אותם, והם אינם עוברים למכשיר אחר.",
+    untitled: "לוח ניתוח",
+    moves_one: "מהלך אחד",
+    moves_other: "{{count}} מהלכים",
+    variations_one: "וריאציה אחת",
+    variations_other: "{{count}} וריאציות",
+    atPly: "במהלך {{ply}}",
+    unreadable: "לא ניתן לקרוא את הניתוח הזה.",
+    view: {
+      label: "תצוגה",
+      list: "רשימה",
+      compact: "לוחות קטנים",
+      comfortable: "לוחות גדולים",
+    },
+    continue: "המשך",
+    openInLoadPgn: "מציג PGN",
+    play: "שחקו מכאן",
+    remove: "מחיקת הניתוח",
   },
   analysis: {
     tabs: {
