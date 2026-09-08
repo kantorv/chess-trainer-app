@@ -3,6 +3,8 @@ import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
 import CardActionArea from "@mui/material/CardActionArea";
+import Checkbox from "@mui/material/Checkbox";
+import Chip from "@mui/material/Chip";
 import IconButton from "@mui/material/IconButton";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
@@ -13,6 +15,7 @@ import Typography from "@mui/material/Typography";
 import AccountTreeRounded from "@mui/icons-material/AccountTreeRounded";
 import ArticleRounded from "@mui/icons-material/ArticleRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
+import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
 import ViewComfyRounded from "@mui/icons-material/ViewComfyRounded";
 import ViewListRounded from "@mui/icons-material/ViewListRounded";
 import ViewModuleRounded from "@mui/icons-material/ViewModuleRounded";
@@ -34,6 +37,7 @@ import {
   type OpeningEntry,
   type PositionBook,
 } from "../../../lib/openings";
+import { downloadPgn } from "../../../lib/pgnExport";
 import { savedGameSummary, type SavedGame } from "../../../lib/savedGames";
 import {
   removeSavedGame,
@@ -90,6 +94,29 @@ import { useSavedGames } from "./useSavedGames";
  * buttons beside it in the list and icon buttons in the card's footer, because a
  * 160px card has no room for three words — and they sit *outside* the card's
  * action area, since a button inside a button is neither valid nor clickable.
+ *
+ * ### Taking games out again
+ *
+ * The list view carries a checkbox per row and, in the top bar, a select-all and
+ * a download — pick some games, get one `.pgn` holding them
+ * (`lib/pgnExport.ts`). It is the one thing this screen has that the library
+ * sections do not, and it is here because these are the only games in the app
+ * that exist **nowhere else**: a shipped study is already a file in the repo and
+ * an uploaded one is already a file the reader has, but a game played against
+ * the engine lives in this browser's `localStorage` and nothing but this button
+ * gets it out.
+ *
+ * Two decisions worth knowing:
+ *
+ * - **Only the list view.** A checkbox on a card would sit beside the two icon
+ *   buttons and the delete, in a footer that is already full at 160px — and the
+ *   board views exist for *recognising* a game, where the list exists for
+ *   working through one. Switching view therefore drops the selection, because
+ *   a selection nothing on screen shows is a trap.
+ * - **The export is a join, not a re-write.** A saved game is stored as PGN
+ *   already, so the file is those records with a blank line between them:
+ *   nothing is re-parsed, and a record this build cannot read still exports
+ *   intact. Which is also why a row that will not parse is still selectable.
  *
  * ### A row the store has and the catalog does not
  *
@@ -211,7 +238,13 @@ function RemoveButton({ id }: { id: string }) {
   );
 }
 
-function SavedGameRow({ saved, item }: EntryProps) {
+type RowProps = EntryProps & {
+  /** Whether this row is picked for export. */
+  checked: boolean;
+  onToggle: () => void;
+};
+
+function SavedGameRow({ saved, item, checked, onToggle }: RowProps) {
   const { t } = useTranslation();
   const { primary, secondary } = useCaption({ saved, item });
   const to = destinationsOf(saved, item);
@@ -281,6 +314,16 @@ function SavedGameRow({ saved, item }: EntryProps) {
           </>
         )}
         <RemoveButton id={saved.id} />
+        {/* Last in the row, as it is on the sites a reader will have exported
+            a game from — and selectable even for a record that will not parse,
+            since the export copies the stored PGN rather than re-writing it. */}
+        <Checkbox
+          size="small"
+          checked={checked}
+          onChange={onToggle}
+          slotProps={{ input: { "aria-label": t("savedGames.select") } }}
+          data-testid={`saved-games-select-${saved.id}`}
+        />
       </Box>
     </ListItem>
   );
@@ -442,6 +485,36 @@ function SavedGames() {
   }));
 
   /*
+    Which games are picked for export. Held as a set of ids rather than a flag
+    per row, so a game deleted — here or in another tab — simply falls out of the
+    list without leaving a phantom in the count: everything below reads the
+    selection *through* `games`, never on its own.
+  */
+  const [picked, setPicked] = useState<ReadonlySet<string>>(new Set());
+  const selected = games.filter((saved) => picked.has(saved.id));
+
+  const togglePicked = (id: string) =>
+    setPicked((current) => {
+      const next = new Set(current);
+      if (!next.delete(id)) next.add(id);
+      return next;
+    });
+
+  // The header box: all when some or none are picked, none when all are.
+  const toggleAll = () =>
+    setPicked(
+      selected.length === games.length
+        ? new Set()
+        : new Set(games.map((saved) => saved.id)),
+    );
+
+  const downloadSelected = () =>
+    downloadPgn(
+      "chess-trainer-games",
+      selected.map((saved) => saved.pgn),
+    );
+
+  /*
     The opening book, for the line under each card. Loaded lazily and shared:
     `loadOpeningBook` caches its promise, so a reader who has already opened a
     game screen pays nothing here, and one who never opens this screen never
@@ -525,15 +598,73 @@ function SavedGames() {
             </Typography>
           </Box>
 
+          {/*
+            The export controls, and only beside the view that has the
+            checkboxes they drive — see the header comment. `visibility` is not
+            used to hide them: they are genuinely not there in the board views,
+            and the selection is dropped with them.
+          */}
+          {view === "list" && games.length > 0 && (
+            <Box
+              data-testid="saved-games-export"
+              sx={{ display: "flex", alignItems: "center", gap: 0.5, flexShrink: 0 }}
+            >
+              <Tooltip title={t("savedGames.selectAll")}>
+                <Checkbox
+                  size="small"
+                  checked={selected.length === games.length}
+                  indeterminate={
+                    selected.length > 0 && selected.length < games.length
+                  }
+                  onChange={toggleAll}
+                  slotProps={{ input: { "aria-label": t("savedGames.selectAll") } }}
+                  data-testid="saved-games-select-all"
+                />
+              </Tooltip>
+              {selected.length > 0 && (
+                <Chip
+                  size="small"
+                  label={t("savedGames.selected", { count: selected.length })}
+                  onDelete={() => setPicked(new Set())}
+                  data-testid="saved-games-selected-count"
+                />
+              )}
+              <Tooltip title={t("savedGames.download")}>
+                {/* A disabled button takes no pointer events, so the tooltip
+                    needs a wrapper that still does — the same wrapper the board
+                    controls use. */}
+                <Box component="span" sx={{ display: "inline-flex" }}>
+                  <IconButton
+                    size="small"
+                    disabled={selected.length === 0}
+                    onClick={downloadSelected}
+                    aria-label={t("savedGames.download")}
+                    data-testid="saved-games-download"
+                  >
+                    <DownloadRoundedIcon fontSize="small" />
+                  </IconButton>
+                </Box>
+              </Tooltip>
+            </Box>
+          )}
+
           <ToggleButtonGroup
             exclusive
             size="small"
             value={view}
-            // `null` when the pressed button is the one already selected: the
-            // screen has to be showing *something*, so that is a no-op.
-            onChange={(_event, next: SavedGamesView | null) =>
-              next !== null && setView(next)
-            }
+            /*
+              `null` when the pressed button is the one already selected: the
+              screen has to be showing *something*, so that is a no-op.
+
+              A real change drops the selection, because the checkboxes only
+              exist in the list view — a count for rows nobody can see is a
+              trap.
+            */
+            onChange={(_event, next: SavedGamesView | null) => {
+              if (next === null) return;
+              setView(next);
+              setPicked(new Set());
+            }}
             aria-label={t("savedGames.view.label")}
             sx={{ flexShrink: 0 }}
           >
@@ -593,7 +724,12 @@ function SavedGames() {
           >
             <List disablePadding>
               {entries.map((entry) => (
-                <SavedGameRow key={entry.saved.id} {...entry} />
+                <SavedGameRow
+                  key={entry.saved.id}
+                  {...entry}
+                  checked={picked.has(entry.saved.id)}
+                  onToggle={() => togglePicked(entry.saved.id)}
+                />
               ))}
             </List>
           </Box>

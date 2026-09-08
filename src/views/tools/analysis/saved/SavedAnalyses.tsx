@@ -3,6 +3,8 @@ import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
 import CardActionArea from "@mui/material/CardActionArea";
+import Checkbox from "@mui/material/Checkbox";
+import Chip from "@mui/material/Chip";
 import IconButton from "@mui/material/IconButton";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
@@ -12,6 +14,7 @@ import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import ArticleRounded from "@mui/icons-material/ArticleRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
+import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
 import SportsEsportsRounded from "@mui/icons-material/SportsEsportsRounded";
 import ViewComfyRounded from "@mui/icons-material/ViewComfyRounded";
 import ViewListRounded from "@mui/icons-material/ViewListRounded";
@@ -35,6 +38,7 @@ import {
   type OpeningEntry,
   type PositionBook,
 } from "../../../../lib/openings";
+import { downloadPgn } from "../../../../lib/pgnExport";
 import {
   SAVED_ANALYSIS_PLAYER,
   savedAnalysisFen,
@@ -78,6 +82,16 @@ import { useSavedAnalyses } from "./useSavedAnalyses";
  * have been three moves deep inside a variation — so the record carries that
  * place as SAN from the root (`lib/savedAnalyses.ts`) and both the preview and
  * the reopened screen use it.
+ *
+ * ### 3. Taking them out again
+ *
+ * The list view carries a checkbox per row and, in the top bar, a select-all and
+ * a download — the Saved games screen's export (`lib/pgnExport.ts`), and here
+ * for the same reason and with the same two rules: only in the list view, so
+ * switching view drops the selection; and a join of the stored PGN rather than a
+ * re-write, so a record this build cannot read still exports intact. What a
+ * reader gets out of here is one file holding the side lines too, which is the
+ * one thing an analysis has to export.
  *
  * ### Where a row can go, and why those three
  *
@@ -226,7 +240,13 @@ function RemoveButton({ id }: { id: string }) {
   );
 }
 
-function SavedAnalysisRow({ saved, tree, item }: EntryProps) {
+type RowProps = EntryProps & {
+  /** Whether this row is picked for export. */
+  checked: boolean;
+  onToggle: () => void;
+};
+
+function SavedAnalysisRow({ saved, tree, item, checked, onToggle }: RowProps) {
   const { t } = useTranslation();
   const { primary, secondary } = useCaption({ saved, tree, item });
   const to = destinationsOf(saved, tree, item);
@@ -296,6 +316,16 @@ function SavedAnalysisRow({ saved, tree, item }: EntryProps) {
           </>
         )}
         <RemoveButton id={saved.id} />
+        {/* Last in the row, as it is on the sites a reader will have exported a
+            game from — and selectable even for a record that will not parse,
+            since the export copies the stored PGN rather than re-writing it. */}
+        <Checkbox
+          size="small"
+          checked={checked}
+          onChange={onToggle}
+          slotProps={{ input: { "aria-label": t("savedAnalyses.select") } }}
+          data-testid={`saved-analyses-select-${saved.id}`}
+        />
       </Box>
     </ListItem>
   );
@@ -473,6 +503,36 @@ function SavedAnalyses() {
   }));
 
   /*
+    Which analyses are picked for export. Held as a set of ids rather than a
+    flag per row, so one deleted — here or in another tab — simply falls out of
+    the list without leaving a phantom in the count: everything below reads the
+    selection *through* `analyses`, never on its own.
+  */
+  const [picked, setPicked] = useState<ReadonlySet<string>>(new Set());
+  const selected = analyses.filter((saved) => picked.has(saved.id));
+
+  const togglePicked = (id: string) =>
+    setPicked((current) => {
+      const next = new Set(current);
+      if (!next.delete(id)) next.add(id);
+      return next;
+    });
+
+  // The header box: all when some or none are picked, none when all are.
+  const toggleAll = () =>
+    setPicked(
+      selected.length === analyses.length
+        ? new Set()
+        : new Set(analyses.map((saved) => saved.id)),
+    );
+
+  const downloadSelected = () =>
+    downloadPgn(
+      "chess-trainer-analyses",
+      selected.map((saved) => saved.pgn),
+    );
+
+  /*
     The opening book, for the line under each card. Loaded lazily and shared:
     `loadOpeningBook` caches its promise, so a reader who has already opened a
     game screen pays nothing here, and one who never opens this screen never
@@ -552,15 +612,70 @@ function SavedAnalyses() {
             </Typography>
           </Box>
 
+          {/*
+            The export controls, and only beside the view that has the
+            checkboxes they drive — see the header comment.
+          */}
+          {view === "list" && analyses.length > 0 && (
+            <Box
+              data-testid="saved-analyses-export"
+              sx={{ display: "flex", alignItems: "center", gap: 0.5, flexShrink: 0 }}
+            >
+              <Tooltip title={t("savedAnalyses.selectAll")}>
+                <Checkbox
+                  size="small"
+                  checked={selected.length === analyses.length}
+                  indeterminate={
+                    selected.length > 0 && selected.length < analyses.length
+                  }
+                  onChange={toggleAll}
+                  slotProps={{ input: { "aria-label": t("savedAnalyses.selectAll") } }}
+                  data-testid="saved-analyses-select-all"
+                />
+              </Tooltip>
+              {selected.length > 0 && (
+                <Chip
+                  size="small"
+                  label={t("savedAnalyses.selected", { count: selected.length })}
+                  onDelete={() => setPicked(new Set())}
+                  data-testid="saved-analyses-selected-count"
+                />
+              )}
+              <Tooltip title={t("savedAnalyses.download")}>
+                {/* A disabled button takes no pointer events, so the tooltip
+                    needs a wrapper that still does. */}
+                <Box component="span" sx={{ display: "inline-flex" }}>
+                  <IconButton
+                    size="small"
+                    disabled={selected.length === 0}
+                    onClick={downloadSelected}
+                    aria-label={t("savedAnalyses.download")}
+                    data-testid="saved-analyses-download"
+                  >
+                    <DownloadRoundedIcon fontSize="small" />
+                  </IconButton>
+                </Box>
+              </Tooltip>
+            </Box>
+          )}
+
           <ToggleButtonGroup
             exclusive
             size="small"
             value={view}
-            // `null` when the pressed button is the one already selected: the
-            // screen has to be showing *something*, so that is a no-op.
-            onChange={(_event, next: SavedAnalysesView | null) =>
-              next !== null && setView(next)
-            }
+            /*
+              `null` when the pressed button is the one already selected: the
+              screen has to be showing *something*, so that is a no-op.
+
+              A real change drops the selection, because the checkboxes only
+              exist in the list view — a count for rows nobody can see is a
+              trap.
+            */
+            onChange={(_event, next: SavedAnalysesView | null) => {
+              if (next === null) return;
+              setView(next);
+              setPicked(new Set());
+            }}
             aria-label={t("savedAnalyses.view.label")}
             sx={{ flexShrink: 0 }}
           >
@@ -620,7 +735,12 @@ function SavedAnalyses() {
           >
             <List disablePadding>
               {entries.map((entry) => (
-                <SavedAnalysisRow key={entry.saved.id} {...entry} />
+                <SavedAnalysisRow
+                  key={entry.saved.id}
+                  {...entry}
+                  checked={picked.has(entry.saved.id)}
+                  onToggle={() => togglePicked(entry.saved.id)}
+                />
               ))}
             </List>
           </Box>

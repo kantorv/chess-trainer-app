@@ -287,6 +287,15 @@ const en = {
     analyse: "Analysis",
     openInLoadPgn: "PGN viewer",
     remove: "Delete this game",
+    /**
+     * Picking games and taking them out as one `.pgn` — the list view only, see
+     * `SavedGames.tsx`. These are the only games in the app that exist nowhere
+     * else, so this is the one way out of the browser.
+     */
+    select: "Select this game",
+    selectAll: "Select all games",
+    selected: "{{count}} selected",
+    download: "Download selected as PGN",
   },
   /**
    * The **Saved analyses** screen — the boards the reader has worked on at the
@@ -334,6 +343,11 @@ const en = {
     openInLoadPgn: "PGN viewer",
     play: "Play from here",
     remove: "Delete this analysis",
+    /** Picking analyses and taking them out as one `.pgn`, side lines and all. */
+    select: "Select this analysis",
+    selectAll: "Select all analyses",
+    selected: "{{count}} selected",
+    download: "Download selected as PGN",
   },
   /**
    * The Analysis Board. Chrome only: SAN, the FEN and the scores are notation

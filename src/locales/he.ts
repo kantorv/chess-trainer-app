@@ -208,6 +208,10 @@ const he: typeof en = {
     analyse: "ניתוח",
     openInLoadPgn: "מציג PGN",
     remove: "מחיקת המשחק",
+    select: "בחירת המשחק",
+    selectAll: "בחירת כל המשחקים",
+    selected: "{{count}} נבחרו",
+    download: "הורדת הנבחרים כקובץ PGN",
   },
   savedAnalyses: {
     title: "ניתוחים שמורים",
@@ -234,6 +238,10 @@ const he: typeof en = {
     openInLoadPgn: "מציג PGN",
     play: "שחקו מכאן",
     remove: "מחיקת הניתוח",
+    select: "בחירת הניתוח",
+    selectAll: "בחירת כל הניתוחים",
+    selected: "{{count}} נבחרו",
+    download: "הורדת הנבחרים כקובץ PGN",
   },
   analysis: {
     tabs: {
