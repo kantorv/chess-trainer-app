@@ -12,10 +12,10 @@ import ToggleButton from "@mui/material/ToggleButton";
 import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
-import AccountTreeRounded from "@mui/icons-material/AccountTreeRounded";
 import ArticleRounded from "@mui/icons-material/ArticleRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
+import SportsEsportsRounded from "@mui/icons-material/SportsEsportsRounded";
 import ViewComfyRounded from "@mui/icons-material/ViewComfyRounded";
 import ViewListRounded from "@mui/icons-material/ViewListRounded";
 import ViewModuleRounded from "@mui/icons-material/ViewModuleRounded";
@@ -24,11 +24,12 @@ import { useTranslation } from "react-i18next";
 import { Chessboard, type ChessboardOptions } from "react-chessboard";
 
 import {
-  ENGINE_REFERENCE_KEY,
+  ANALYSIS_REFERENCE_KEY,
   gameReferenceOf,
-} from "../../../lib/gameReference";
-import { finalFenOf, type Game } from "../../../lib/gameModel";
-import type { LibraryGame } from "../../../lib/libraryCatalog";
+} from "../../../../lib/gameReference";
+import { gameTag } from "../../../../lib/gameModel";
+import { mainlineGame, type GameTree } from "../../../../lib/gameTree";
+import type { LibraryGame } from "../../../../lib/libraryCatalog";
 import {
   getPositionBook,
   loadOpeningBook,
@@ -36,160 +37,139 @@ import {
   type OpeningBook,
   type OpeningEntry,
   type PositionBook,
-} from "../../../lib/openings";
-import { downloadPgn } from "../../../lib/pgnExport";
-import { savedGameSummary, type SavedGame } from "../../../lib/savedGames";
+} from "../../../../lib/openings";
+import { downloadPgn } from "../../../../lib/pgnExport";
 import {
-  removeSavedGame,
-  savedGamesCatalog,
-} from "../../../lib/savedGameStore";
-import { RightPanel } from "../../main/rightPanel";
-import { cardSizeTrack, type CardSize } from "../../library/cardSize";
-import { useSavedGames } from "./useSavedGames";
+  SAVED_ANALYSIS_PLAYER,
+  savedAnalysisFen,
+  savedAnalysisSummary,
+  savedAnalysisToTree,
+  type SavedAnalysis,
+} from "../../../../lib/savedAnalyses";
+import {
+  removeSavedAnalysis,
+  savedAnalysesCatalog,
+} from "../../../../lib/savedAnalysisStore";
+import { RightPanel } from "../../../main/rightPanel";
+import { cardSizeTrack, type CardSize } from "../../../library/cardSize";
+import { useSavedAnalyses } from "./useSavedAnalyses";
 
 /**
- * **Saved games** — every game the reader has played against the engine, newest
- * first, each with somewhere to take it.
+ * **Saved analyses** — every board the reader has worked on at the Analysis
+ * Board, newest first, each with somewhere to take it.
  *
- * It sits in the Engine folder beside Play with Engine, because these are that
- * screen's games: nothing was uploaded, imported or shipped, and there is no
- * catalog to browse. Play with Engine writes a row on every move
- * (`usePlayWithEngine`), so this screen has nothing to save and no form — it is
- * a list of games and three destinations.
+ * It is [`views/engine/saved/SavedGames.tsx`](../../../engine/saved/SavedGames.tsx)
+ * again, in the Tools folder beside the screen whose output it lists: the same
+ * three-way view toggle over the same two card sizes
+ * ([`cardSize.ts`](../../../library/cardSize.ts)), the same delete control, the
+ * same rule that a record the store has and the catalog cannot parse is still
+ * listed so it can still be removed. What that screen's header comment says
+ * about all of it holds here and is not repeated; only the two places an
+ * analysis is **not** a game are written out below.
  *
- * ### Two ways to look at the same list
+ * ### 1. There is no result, and no side the reader was on
  *
- * A row says what a game *is*; a board says what it *looks like*, and for a game
- * you are coming back to that is often the faster way to recognise it. So the
- * top bar carries a three-way toggle — the list, small boards, big boards — and
- * the two board settings are the library list screen's own two, through
- * [`cardSize.ts`](../../library/cardSize.ts) rather than a second copy of the
- * grid track. The list stays the default: it is what the screen shipped with, so
- * a reader is left with exactly what they had and the boards are something
- * offered.
+ * A game against the engine is identified by which colour you had and how it
+ * stands. An analysis has neither — both colours are yours and it never ends. So
+ * a row is identified by *what is being analysed*: the players, when the board
+ * was opened from a library game, and otherwise the generic name; and then how
+ * far the mainline runs, how many side lines were tried, and where you stopped.
  *
- * **A saved game's card previews the position it was left at**, not the one it
- * started from — which is where it deliberately parts company with
- * `LibraryList`, whose cards preview a game's *first* position because that is
- * where a replay begins. A saved game is not a game to replay from move one; it
- * is one to pick back up, so the board shows what the reader will be looking at
- * a click later. `libraryItemFen` is therefore not what this screen reads.
+ * ### 2. A card previews where you were standing, not where the line ends
+ *
+ * The saved-games screen previews a game's **final** position, because that is
+ * where it would be picked up. A tree has no final position — the reader may
+ * have been three moves deep inside a variation — so the record carries that
+ * place as SAN from the root (`lib/savedAnalyses.ts`) and both the preview and
+ * the reopened screen use it.
+ *
+ * ### 3. Taking them out again
+ *
+ * The list view carries a checkbox per row and, in the top bar, a select-all and
+ * a download — the Saved games screen's export (`lib/pgnExport.ts`), and here
+ * for the same reason and with the same two rules: only in the list view, so
+ * switching view drops the selection; and a join of the stored PGN rather than a
+ * re-write, so a record this build cannot read still exports intact. What a
+ * reader gets out of here is one file holding the side lines too, which is the
+ * one thing an analysis has to export.
  *
  * ### Where a row can go, and why those three
  *
  * | Destination | Carries | Because |
  * | --- | --- | --- |
- * | Play with Engine | `?saved=<id>` | it is the only screen that can *play on*, and the id is what restores the side and the settings as well as the moves |
- * | Analysis Board, Load PGN | `?game=engine/saved/<id>` | they replay a game, so the game has to cross — and it crosses as the reference the two of them already take |
+ * | Analysis Board | `?analysis=<id>` | it is the only screen that can go on *working*, and the id is what restores the side lines, the place in them, the orientation and the engine settings |
+ * | Load PGN | `?game=analysis/saved/<id>` | it replays the mainline, so the game has to cross — as the reference it already takes |
+ * | Play with Engine | `?fen=` at the position it was left on | it replays nothing; what it wants is the position being looked at |
  *
- * The second is the section-agnostic hand-off (`lib/gameReference.ts`) and not a
- * transport of this screen's own: the saved games are presented to it as a
- * catalog, so neither destination learns that a game can come from here. The
- * first is `?saved=` rather than `?game=` for the one thing that reference
- * cannot carry — a `LibraryGame` is moves, and resuming needs the engine
- * settings too.
- *
- * Continuing is the **primary** action in both views: in the list it is the one
- * filled button, and on a card it is the board itself. The other two are text
- * buttons beside it in the list and icon buttons in the card's footer, because a
- * 160px card has no room for three words — and they sit *outside* the card's
- * action area, since a button inside a button is neither valid nor clickable.
- *
- * ### Taking games out again
- *
- * The list view carries a checkbox per row and, in the top bar, a select-all and
- * a download — pick some games, get one `.pgn` holding them
- * (`lib/pgnExport.ts`). It is the one thing this screen has that the library
- * sections do not, and it is here because these are the only games in the app
- * that exist **nowhere else**: a shipped study is already a file in the repo and
- * an uploaded one is already a file the reader has, but a game played against
- * the engine lives in this browser's `localStorage` and nothing but this button
- * gets it out.
- *
- * Two decisions worth knowing:
- *
- * - **Only the list view.** A checkbox on a card would sit beside the two icon
- *   buttons and the delete, in a footer that is already full at 160px — and the
- *   board views exist for *recognising* a game, where the list exists for
- *   working through one. Switching view therefore drops the selection, because
- *   a selection nothing on screen shows is a trap.
- * - **The export is a join, not a re-write.** A saved game is stored as PGN
- *   already, so the file is those records with a blank line between them:
- *   nothing is re-parsed, and a record this build cannot read still exports
- *   intact. Which is also why a row that will not parse is still selectable.
- *
- * ### A row the store has and the catalog does not
- *
- * The list is built from the **store**, not from the catalog: a record whose PGN
- * will not parse is absent from the catalog, and building the list from that
- * would leave the reader with a row they can neither open nor delete because it
- * is not rendered at all. So such a row is listed, says so, and offers the one
- * action that still means something. It has no board either — there is no
- * position to draw — so in the board view it is a card with the message in it.
+ * The middle one is the section-agnostic hand-off (`lib/gameReference.ts`) and
+ * not a transport of this screen's own: the saved analyses are presented to it
+ * as a catalog, so Load PGN never learns that this screen exists.
  */
 
 /** The list, or one of the two board sizes. */
-type SavedGamesView = "list" | CardSize;
+type SavedAnalysesView = "list" | CardSize;
 
-/** What the screen opens on — what it shipped with, so nothing is taken away. */
-const DEFAULT_VIEW: SavedGamesView = "list";
-
-/** How a game stands, as a locale key under `savedGames.result`. */
-const resultKey = (result: string | undefined): string => {
-  if (result === "1-0") return "white";
-  if (result === "0-1") return "black";
-  if (result === "1/2-1/2") return "draw";
-  return "inProgress";
-};
+/** What the screen opens on — the list, as its sibling screen does. */
+const DEFAULT_VIEW: SavedAnalysesView = "list";
 
 /**
- * A card's preview board. Read-only, and showing the position the game was left
- * at — see the note above on why that is not `libraryItemFen`. Each board takes
- * the game's own id, since `options.id` has to be unique across the page and
- * this screen shows many at once.
+ * A card's preview board. Read-only, and showing the position the reader was
+ * standing on. Each board takes the analysis' own id, since `options.id` has to
+ * be unique across the page and this screen shows many at once.
  */
-const previewOptions = (id: string, game: Game): ChessboardOptions => ({
-  id: `saved-games-preview-${id}`,
-  position: finalFenOf(game),
+const previewOptions = (
+  saved: SavedAnalysis,
+  tree: GameTree,
+): ChessboardOptions => ({
+  id: `saved-analyses-preview-${saved.id}`,
+  position: savedAnalysisFen(saved, tree),
+  boardOrientation: saved.orientation,
   allowDragging: false,
   allowDrawingArrows: false,
   showNotation: false,
 });
 
-/** The three links a readable game offers, or `undefined` when it is not one. */
-const destinationsOf = (saved: SavedGame, item: LibraryGame | undefined) => {
-  if (item === undefined) return undefined;
-  const reference = encodeURIComponent(gameReferenceOf(ENGINE_REFERENCE_KEY, item));
+/** The three links a readable analysis offers, or `undefined` when it is not one. */
+const destinationsOf = (
+  saved: SavedAnalysis,
+  tree: GameTree | undefined,
+  item: LibraryGame | undefined,
+) => {
+  if (tree === undefined || item === undefined) return undefined;
+  const reference = encodeURIComponent(
+    gameReferenceOf(ANALYSIS_REFERENCE_KEY, item),
+  );
   return {
-    resume: `/engine/play?saved=${encodeURIComponent(saved.id)}`,
-    analysis: `/tools/analysis?game=${reference}`,
+    resume: `/tools/analysis?analysis=${encodeURIComponent(saved.id)}`,
     loadPgn: `/games/load-pgn?game=${reference}`,
+    play: `/engine/play?fen=${encodeURIComponent(savedAnalysisFen(saved, tree))}`,
   };
 };
 
 type EntryProps = {
-  saved: SavedGame;
-  /** The catalog's parse of it, or `undefined` for a record that will not read. */
+  saved: SavedAnalysis;
+  /** The record's PGN as a tree, or `undefined` for one that will not read. */
+  tree: GameTree | undefined;
+  /** The catalog's parse of it, or `undefined` for the same reason. */
   item: LibraryGame | undefined;
 };
 
 type CardProps = EntryProps & {
-  /** What the game opened with, once the book has loaded and if it names one. */
+  /** What the mainline opened with, once the book has loaded and if it names one. */
   opening: OpeningEntry | undefined;
 };
 
 /**
- * The two lines that identify a game in either view: which side the reader had,
- * and then how long it is, how it stands, at what strength and when.
+ * The two lines that identify an analysis in either view: what is being looked
+ * at, and then how big it is, how far in the reader got, and when.
  *
  * A hook rather than a pure helper because every part of it is translated, and
  * not exported because both callers are in this file — a non-component export
- * from a `.tsx` costs fast refresh, which is why `cardSize.ts` is its own module
- * and this is not.
+ * from a `.tsx` costs fast refresh.
  */
-const useCaption = ({ saved, item }: EntryProps) => {
+const useCaption = ({ saved, tree, item }: EntryProps) => {
   const { t, i18n } = useTranslation();
-  const summary = savedGameSummary(saved, item?.game);
+  const summary = savedAnalysisSummary(saved, tree);
 
   /*
     The reader's own clock and their own language: `updatedAt` is stored as ISO
@@ -197,24 +177,46 @@ const useCaption = ({ saved, item }: EntryProps) => {
     is the one thing here formatted for the reader rather than written the way
     PGN writes it.
   */
-  const played = new Date(saved.updatedAt);
-  const when = Number.isNaN(played.valueOf())
+  const worked = new Date(saved.updatedAt);
+  const when = Number.isNaN(worked.valueOf())
     ? ""
-    : played.toLocaleDateString(i18n.language, {
+    : worked.toLocaleDateString(i18n.language, {
         year: "numeric",
         month: "short",
         day: "numeric",
       });
 
+  /*
+    An analysis begun from a library game keeps that game's tag pairs, so it is
+    named by its players. One begun from a position or from an empty board
+    carries this screen's own placeholder tags (`savedAnalysisHeaders`), and
+    those are not a name — a row saying "Analysis – Analysis" tells the reader
+    nothing — so it falls back to the translated generic.
+  */
+  const headers = item?.game.headers ?? {};
+  const white = gameTag(headers, "White");
+  const black = gameTag(headers, "Black");
+  const named =
+    white !== undefined &&
+    black !== undefined &&
+    white !== SAVED_ANALYSIS_PLAYER &&
+    black !== SAVED_ANALYSIS_PLAYER;
+
   return {
-    primary: t(`savedGames.playingAs.${summary.playAs}`),
+    primary: named ? `${white} – ${black}` : t("savedAnalyses.untitled"),
     secondary:
-      item === undefined
-        ? t("savedGames.unreadable")
+      tree === undefined || item === undefined
+        ? t("savedAnalyses.unreadable")
         : [
-            t("savedGames.moves", { count: summary.moves }),
-            t(`savedGames.result.${resultKey(summary.result)}`),
-            t("savedGames.level", { level: summary.skillLevel }),
+            t("savedAnalyses.moves", { count: summary.moves }),
+            // Every node past the mainline is a move the reader tried and kept.
+            // Zero of them is not a fact worth a slot on a two-line card.
+            summary.nodes > summary.moves
+              ? t("savedAnalyses.variations", {
+                  count: summary.nodes - summary.moves,
+                })
+              : "",
+            summary.ply > 0 ? t("savedAnalyses.atPly", { ply: summary.ply }) : "",
             when,
           ]
             .filter((part) => part !== "")
@@ -229,9 +231,9 @@ function RemoveButton({ id }: { id: string }) {
   return (
     <IconButton
       size="small"
-      aria-label={t("savedGames.remove")}
-      data-testid={`saved-games-remove-${id}`}
-      onClick={() => removeSavedGame(id)}
+      aria-label={t("savedAnalyses.remove")}
+      data-testid={`saved-analyses-remove-${id}`}
+      onClick={() => removeSavedAnalysis(id)}
     >
       <DeleteOutlineRoundedIcon fontSize="small" />
     </IconButton>
@@ -244,15 +246,15 @@ type RowProps = EntryProps & {
   onToggle: () => void;
 };
 
-function SavedGameRow({ saved, item, checked, onToggle }: RowProps) {
+function SavedAnalysisRow({ saved, tree, item, checked, onToggle }: RowProps) {
   const { t } = useTranslation();
-  const { primary, secondary } = useCaption({ saved, item });
-  const to = destinationsOf(saved, item);
+  const { primary, secondary } = useCaption({ saved, tree, item });
+  const to = destinationsOf(saved, tree, item);
 
   return (
     <ListItem
       disableGutters
-      data-testid={`saved-games-item-${saved.id}`}
+      data-testid={`saved-analyses-item-${saved.id}`}
       sx={{
         display: "flex",
         flexWrap: "wrap",
@@ -289,58 +291,58 @@ function SavedGameRow({ saved, item, checked, onToggle }: RowProps) {
               to={to.resume}
               size="small"
               variant="contained"
-              data-testid={`saved-games-continue-${saved.id}`}
+              data-testid={`saved-analyses-continue-${saved.id}`}
             >
-              {t("savedGames.continue")}
-            </Button>
-            <Button
-              component={RouterLink}
-              to={to.analysis}
-              size="small"
-              variant="outlined"
-              data-testid={`saved-games-analysis-${saved.id}`}
-            >
-              {t("savedGames.analyse")}
+              {t("savedAnalyses.continue")}
             </Button>
             <Button
               component={RouterLink}
               to={to.loadPgn}
               size="small"
               variant="outlined"
-              data-testid={`saved-games-loadpgn-${saved.id}`}
+              data-testid={`saved-analyses-loadpgn-${saved.id}`}
             >
-              {t("savedGames.openInLoadPgn")}
+              {t("savedAnalyses.openInLoadPgn")}
+            </Button>
+            <Button
+              component={RouterLink}
+              to={to.play}
+              size="small"
+              variant="outlined"
+              data-testid={`saved-analyses-play-${saved.id}`}
+            >
+              {t("savedAnalyses.play")}
             </Button>
           </>
         )}
         <RemoveButton id={saved.id} />
-        {/* Last in the row, as it is on the sites a reader will have exported
-            a game from — and selectable even for a record that will not parse,
+        {/* Last in the row, as it is on the sites a reader will have exported a
+            game from — and selectable even for a record that will not parse,
             since the export copies the stored PGN rather than re-writing it. */}
         <Checkbox
           size="small"
           checked={checked}
           onChange={onToggle}
-          slotProps={{ input: { "aria-label": t("savedGames.select") } }}
-          data-testid={`saved-games-select-${saved.id}`}
+          slotProps={{ input: { "aria-label": t("savedAnalyses.select") } }}
+          data-testid={`saved-analyses-select-${saved.id}`}
         />
       </Box>
     </ListItem>
   );
 }
 
-function SavedGameCard({ saved, item, opening }: CardProps) {
+function SavedAnalysisCard({ saved, tree, item, opening }: CardProps) {
   const { t } = useTranslation();
-  const { primary, secondary } = useCaption({ saved, item });
-  const to = destinationsOf(saved, item);
+  const { primary, secondary } = useCaption({ saved, tree, item });
+  const to = destinationsOf(saved, tree, item);
 
   return (
-    <Card variant="outlined" data-testid={`saved-games-item-${saved.id}`}>
+    <Card variant="outlined" data-testid={`saved-analyses-item-${saved.id}`}>
       {/* The board *is* the continue button — the primary action, and the one
           thing on the card big enough to be worth clicking. A record with no
-          readable game has no position to draw, so it gets the message in the
+          readable tree has no position to draw, so it gets the message in the
           same square instead. */}
-      {to === undefined || item === undefined ? (
+      {to === undefined || tree === undefined ? (
         <Box
           sx={{
             m: 1,
@@ -356,19 +358,19 @@ function SavedGameCard({ saved, item, opening }: CardProps) {
             variant="caption"
             sx={{ color: "text.secondary", textAlign: "center" }}
           >
-            {t("savedGames.unreadable")}
+            {t("savedAnalyses.unreadable")}
           </Typography>
         </Box>
       ) : (
         <CardActionArea
           component={RouterLink}
           to={to.resume}
-          data-testid={`saved-games-continue-${saved.id}`}
-          aria-label={t("savedGames.continue")}
+          data-testid={`saved-analyses-continue-${saved.id}`}
+          aria-label={t("savedAnalyses.continue")}
         >
           <Box sx={{ p: 1 }}>
             <Box sx={{ width: "100%", aspectRatio: "1 / 1" }}>
-              <Chessboard options={previewOptions(saved.id, item.game)} />
+              <Chessboard options={previewOptions(saved, tree)} />
             </Box>
           </Box>
         </CardActionArea>
@@ -402,16 +404,15 @@ function SavedGameCard({ saved, item, opening }: CardProps) {
         >
           {secondary}
         </Typography>
-        {/* The opening gets its own line, as it does on a User PGNs card: the
-            line above is already four facts wide, and this is the one a reader
-            recognises a game by. Absent until the book has loaded, and for a
-            line it does not name — an unrecognised position is a fact about
-            chess, not an empty row to render. */}
+        {/* The opening gets its own line, as it does on a saved game's card:
+            the line above is already three facts wide, and this is the one a
+            reader recognises a line by. Absent until the book has loaded, and
+            for a line it does not name. */}
         {opening !== undefined && (
           <Typography
             variant="caption"
             dir="ltr"
-            data-testid={`saved-games-opening-${saved.id}`}
+            data-testid={`saved-analyses-opening-${saved.id}`}
             sx={{
               display: "block",
               color: "text.secondary",
@@ -427,26 +428,26 @@ function SavedGameCard({ saved, item, opening }: CardProps) {
         <Box sx={{ display: "flex", alignItems: "center", mt: 0.5, ml: -0.5 }}>
           {to !== undefined && (
             <>
-              <Tooltip title={t("savedGames.analyse")}>
-                <IconButton
-                  component={RouterLink}
-                  to={to.analysis}
-                  size="small"
-                  aria-label={t("savedGames.analyse")}
-                  data-testid={`saved-games-analysis-${saved.id}`}
-                >
-                  <AccountTreeRounded fontSize="small" />
-                </IconButton>
-              </Tooltip>
-              <Tooltip title={t("savedGames.openInLoadPgn")}>
+              <Tooltip title={t("savedAnalyses.openInLoadPgn")}>
                 <IconButton
                   component={RouterLink}
                   to={to.loadPgn}
                   size="small"
-                  aria-label={t("savedGames.openInLoadPgn")}
-                  data-testid={`saved-games-loadpgn-${saved.id}`}
+                  aria-label={t("savedAnalyses.openInLoadPgn")}
+                  data-testid={`saved-analyses-loadpgn-${saved.id}`}
                 >
                   <ArticleRounded fontSize="small" />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title={t("savedAnalyses.play")}>
+                <IconButton
+                  component={RouterLink}
+                  to={to.play}
+                  size="small"
+                  aria-label={t("savedAnalyses.play")}
+                  data-testid={`saved-analyses-play-${saved.id}`}
+                >
+                  <SportsEsportsRounded fontSize="small" />
                 </IconButton>
               </Tooltip>
             </>
@@ -460,38 +461,55 @@ function SavedGameCard({ saved, item, opening }: CardProps) {
   );
 }
 
-function SavedGames() {
+function SavedAnalyses() {
   const { t } = useTranslation();
 
-  const [view, setView] = useState<SavedGamesView>(DEFAULT_VIEW);
+  const [view, setView] = useState<SavedAnalysesView>(DEFAULT_VIEW);
 
-  const games = useSavedGames();
+  const analyses = useSavedAnalyses();
   /*
     Read after the subscription above, and memoised on the same snapshot the
-    hook returned — so the parsed games are rebuilt when a game is saved or
-    removed and at no other time. The list itself is the *store's* order, which
-    is newest first.
+    hook returned — so the parsed catalog is rebuilt when an analysis is saved
+    or removed and at no other time. The list itself is the *store's* order,
+    which is newest first.
   */
-  const catalog = savedGamesCatalog();
+  const catalog = savedAnalysesCatalog();
   const itemById = new Map(
     catalog.items
       .filter((item): item is LibraryGame => item.kind === "game")
       .map((item) => [item.id, item]),
   );
 
-  const entries = games.map((saved) => ({
+  /*
+    The trees, parsed once per snapshot. The catalog above holds each record's
+    **mainline** — that is what a `LibraryGame` is — and this screen needs the
+    side lines: to count them, and to find the node the reader was standing on.
+    So the PGN is read a second way, and memoised for the same reason the
+    catalog is.
+  */
+  const treeById = useMemo(() => {
+    const found = new Map<string, GameTree>();
+    for (const saved of analyses) {
+      const tree = savedAnalysisToTree(saved);
+      if (tree !== undefined) found.set(saved.id, tree);
+    }
+    return found;
+  }, [analyses]);
+
+  const entries = analyses.map((saved) => ({
     saved,
+    tree: treeById.get(saved.id),
     item: itemById.get(saved.id),
   }));
 
   /*
-    Which games are picked for export. Held as a set of ids rather than a flag
-    per row, so a game deleted — here or in another tab — simply falls out of the
-    list without leaving a phantom in the count: everything below reads the
-    selection *through* `games`, never on its own.
+    Which analyses are picked for export. Held as a set of ids rather than a
+    flag per row, so one deleted — here or in another tab — simply falls out of
+    the list without leaving a phantom in the count: everything below reads the
+    selection *through* `analyses`, never on its own.
   */
   const [picked, setPicked] = useState<ReadonlySet<string>>(new Set());
-  const selected = games.filter((saved) => picked.has(saved.id));
+  const selected = analyses.filter((saved) => picked.has(saved.id));
 
   const togglePicked = (id: string) =>
     setPicked((current) => {
@@ -503,14 +521,14 @@ function SavedGames() {
   // The header box: all when some or none are picked, none when all are.
   const toggleAll = () =>
     setPicked(
-      selected.length === games.length
+      selected.length === analyses.length
         ? new Set()
-        : new Set(games.map((saved) => saved.id)),
+        : new Set(analyses.map((saved) => saved.id)),
     );
 
   const downloadSelected = () =>
     downloadPgn(
-      "chess-trainer-games",
+      "chess-trainer-analyses",
       selected.map((saved) => saved.pgn),
     );
 
@@ -518,9 +536,7 @@ function SavedGames() {
     The opening book, for the line under each card. Loaded lazily and shared:
     `loadOpeningBook` caches its promise, so a reader who has already opened a
     game screen pays nothing here, and one who never opens this screen never
-    downloads it. Until it resolves the cards simply carry no opening line —
-    where `CurrentOpening` says "loading", because there it is the whole point
-    of the line and here it is a fourth fact on a card.
+    downloads it.
   */
   const [book, setBook] = useState<{
     book: OpeningBook;
@@ -538,32 +554,30 @@ function SavedGames() {
   }, []);
 
   /*
-    One walk per game, memoised on the snapshot and the book — both stable
-    between changes, so fifty games are looked up once rather than on every
-    render, every toggle of the view and every keystroke anywhere in the shell.
+    One walk per analysis, memoised on the trees and the book — both stable
+    between changes, so thirty records are looked up once rather than on every
+    render and every toggle of the view. The **mainline** is what is named: it
+    is what the analysis is of, where a side line is one thing tried inside it.
   */
   const openings = useMemo(() => {
     const found = new Map<string, OpeningEntry>();
     if (book === null) return found;
 
-    for (const { saved, item } of entries) {
-      if (item === undefined) continue;
+    for (const [id, tree] of treeById) {
       const opening = openingOfLine(
         book.book,
         book.positions,
-        item.game.moves.map((move) => move.fen),
+        mainlineGame(tree).moves.map((move) => move.fen),
       );
-      if (opening !== undefined) found.set(saved.id, opening);
+      if (opening !== undefined) found.set(id, opening);
     }
     return found;
-    // `entries` is derived from `games`, which is the store's stable snapshot.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [games, catalog, book]);
+  }, [treeById, book]);
 
   return (
     <>
       <Box
-        data-testid="saved-games-screen"
+        data-testid="saved-analyses-screen"
         sx={{
           height: "100%",
           display: "flex",
@@ -572,7 +586,7 @@ function SavedGames() {
         }}
       >
         <Box
-          data-testid="saved-games-top-bar"
+          data-testid="saved-analyses-top-bar"
           sx={{
             flexShrink: 0,
             display: "flex",
@@ -587,59 +601,56 @@ function SavedGames() {
         >
           <Box sx={{ minWidth: 0, marginInlineEnd: "auto" }}>
             <Typography variant="subtitle1" sx={{ fontWeight: 700, lineHeight: 1.3 }}>
-              {t("savedGames.title")}
+              {t("savedAnalyses.title")}
             </Typography>
             <Typography
-              data-testid="saved-games-count"
+              data-testid="saved-analyses-count"
               variant="caption"
               sx={{ display: "block", color: "text.secondary" }}
             >
-              {t("savedGames.count", { count: games.length })}
+              {t("savedAnalyses.count", { count: analyses.length })}
             </Typography>
           </Box>
 
           {/*
             The export controls, and only beside the view that has the
-            checkboxes they drive — see the header comment. `visibility` is not
-            used to hide them: they are genuinely not there in the board views,
-            and the selection is dropped with them.
+            checkboxes they drive — see the header comment.
           */}
-          {view === "list" && games.length > 0 && (
+          {view === "list" && analyses.length > 0 && (
             <Box
-              data-testid="saved-games-export"
+              data-testid="saved-analyses-export"
               sx={{ display: "flex", alignItems: "center", gap: 0.5, flexShrink: 0 }}
             >
-              <Tooltip title={t("savedGames.selectAll")}>
+              <Tooltip title={t("savedAnalyses.selectAll")}>
                 <Checkbox
                   size="small"
-                  checked={selected.length === games.length}
+                  checked={selected.length === analyses.length}
                   indeterminate={
-                    selected.length > 0 && selected.length < games.length
+                    selected.length > 0 && selected.length < analyses.length
                   }
                   onChange={toggleAll}
-                  slotProps={{ input: { "aria-label": t("savedGames.selectAll") } }}
-                  data-testid="saved-games-select-all"
+                  slotProps={{ input: { "aria-label": t("savedAnalyses.selectAll") } }}
+                  data-testid="saved-analyses-select-all"
                 />
               </Tooltip>
               {selected.length > 0 && (
                 <Chip
                   size="small"
-                  label={t("savedGames.selected", { count: selected.length })}
+                  label={t("savedAnalyses.selected", { count: selected.length })}
                   onDelete={() => setPicked(new Set())}
-                  data-testid="saved-games-selected-count"
+                  data-testid="saved-analyses-selected-count"
                 />
               )}
-              <Tooltip title={t("savedGames.download")}>
+              <Tooltip title={t("savedAnalyses.download")}>
                 {/* A disabled button takes no pointer events, so the tooltip
-                    needs a wrapper that still does — the same wrapper the board
-                    controls use. */}
+                    needs a wrapper that still does. */}
                 <Box component="span" sx={{ display: "inline-flex" }}>
                   <IconButton
                     size="small"
                     disabled={selected.length === 0}
                     onClick={downloadSelected}
-                    aria-label={t("savedGames.download")}
-                    data-testid="saved-games-download"
+                    aria-label={t("savedAnalyses.download")}
+                    data-testid="saved-analyses-download"
                   >
                     <DownloadRoundedIcon fontSize="small" />
                   </IconButton>
@@ -660,38 +671,38 @@ function SavedGames() {
               exist in the list view — a count for rows nobody can see is a
               trap.
             */
-            onChange={(_event, next: SavedGamesView | null) => {
+            onChange={(_event, next: SavedAnalysesView | null) => {
               if (next === null) return;
               setView(next);
               setPicked(new Set());
             }}
-            aria-label={t("savedGames.view.label")}
+            aria-label={t("savedAnalyses.view.label")}
             sx={{ flexShrink: 0 }}
           >
             <ToggleButton
               value="list"
-              data-testid="saved-games-view-list"
-              aria-label={t("savedGames.view.list")}
+              data-testid="saved-analyses-view-list"
+              aria-label={t("savedAnalyses.view.list")}
             >
-              <Tooltip title={t("savedGames.view.list")}>
+              <Tooltip title={t("savedAnalyses.view.list")}>
                 <ViewListRounded fontSize="small" />
               </Tooltip>
             </ToggleButton>
             <ToggleButton
               value="compact"
-              data-testid="saved-games-view-compact"
-              aria-label={t("savedGames.view.compact")}
+              data-testid="saved-analyses-view-compact"
+              aria-label={t("savedAnalyses.view.compact")}
             >
-              <Tooltip title={t("savedGames.view.compact")}>
+              <Tooltip title={t("savedAnalyses.view.compact")}>
                 <ViewComfyRounded fontSize="small" />
               </Tooltip>
             </ToggleButton>
             <ToggleButton
               value="comfortable"
-              data-testid="saved-games-view-comfortable"
-              aria-label={t("savedGames.view.comfortable")}
+              data-testid="saved-analyses-view-comfortable"
+              aria-label={t("savedAnalyses.view.comfortable")}
             >
-              <Tooltip title={t("savedGames.view.comfortable")}>
+              <Tooltip title={t("savedAnalyses.view.comfortable")}>
                 <ViewModuleRounded fontSize="small" />
               </Tooltip>
             </ToggleButton>
@@ -704,27 +715,27 @@ function SavedGames() {
           do it itself — the same flex column every screen filling the board
           square uses.
         */}
-        {games.length === 0 ? (
+        {analyses.length === 0 ? (
           <Box
-            data-testid="saved-games-body"
+            data-testid="saved-analyses-body"
             sx={{ flex: 1, minHeight: 0, overflowY: "auto" }}
           >
             <Typography
-              data-testid="saved-games-empty"
+              data-testid="saved-analyses-empty"
               variant="body2"
               sx={{ color: "text.secondary", textAlign: "center", py: 4 }}
             >
-              {t("savedGames.empty")}
+              {t("savedAnalyses.empty")}
             </Typography>
           </Box>
         ) : view === "list" ? (
           <Box
-            data-testid="saved-games-body"
+            data-testid="saved-analyses-body"
             sx={{ flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden" }}
           >
             <List disablePadding>
               {entries.map((entry) => (
-                <SavedGameRow
+                <SavedAnalysisRow
                   key={entry.saved.id}
                   {...entry}
                   checked={picked.has(entry.saved.id)}
@@ -735,7 +746,7 @@ function SavedGames() {
           </Box>
         ) : (
           <Box
-            data-testid="saved-games-grid"
+            data-testid="saved-analyses-grid"
             sx={{
               flex: 1,
               minHeight: 0,
@@ -757,7 +768,7 @@ function SavedGames() {
             }}
           >
             {entries.map((entry) => (
-              <SavedGameCard
+              <SavedAnalysisCard
                 key={entry.saved.id}
                 {...entry}
                 opening={openings.get(entry.saved.id)}
@@ -770,10 +781,10 @@ function SavedGames() {
       <RightPanel>
         <Box sx={{ color: "text.secondary" }}>
           <Typography variant="body2" sx={{ mb: 1 }}>
-            {t("savedGames.hint")}
+            {t("savedAnalyses.hint")}
           </Typography>
-          <Typography variant="body2" data-testid="saved-games-storage-note">
-            {t("savedGames.storage")}
+          <Typography variant="body2" data-testid="saved-analyses-storage-note">
+            {t("savedAnalyses.storage")}
           </Typography>
         </Box>
       </RightPanel>
@@ -781,4 +792,4 @@ function SavedGames() {
   );
 }
 
-export default SavedGames;
+export default SavedAnalyses;

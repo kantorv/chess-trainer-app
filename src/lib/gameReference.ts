@@ -4,6 +4,7 @@ import {
   type LibraryGame,
 } from "./libraryCatalog";
 import { userPgnsLibrary } from "./pgnCatalog";
+import { savedAnalysesCatalog } from "./savedAnalysisStore";
 import { savedGamesCatalog } from "./savedGameStore";
 
 /**
@@ -27,10 +28,12 @@ import { savedGamesCatalog } from "./savedGameStore";
  *
  * A reference names a *game*, so it resolves only against a catalog that has
  * some, and the registry below is the single place that mapping lives. There
- * are two: the User PGNs library, and the reader's own saved engine games
- * (`lib/savedGames.ts`), which are presented as a catalog for exactly this
- * reason — a saved game reaches the Analysis Board and Load PGN through the
- * hand-off those screens already have, and neither learns that it exists.
+ * are three: the User PGNs library, the reader's own saved engine games
+ * (`lib/savedGames.ts`) and their saved analysis boards
+ * (`lib/savedAnalyses.ts`) — the last two presented as catalogs for exactly this
+ * reason. A saved game or analysis reaches the Analysis Board and Load PGN
+ * through the hand-off those screens already have, and neither learns that
+ * either exists. **This registry is the whole cost of a new producer of games.**
  */
 
 /** The section key the User PGNs library's references carry. */
@@ -38,6 +41,9 @@ export const PGN_REFERENCE_KEY = "pgn";
 
 /** The section key the reader's saved engine games carry. */
 export const ENGINE_REFERENCE_KEY = "engine";
+
+/** The section key the reader's saved analysis boards carry. */
+export const ANALYSIS_REFERENCE_KEY = "analysis";
 
 /**
  * Which catalog a reference's first segment names. Read at call time rather
@@ -49,6 +55,7 @@ export const ENGINE_REFERENCE_KEY = "engine";
 const catalogsByKey: Record<string, () => LibraryCatalog> = {
   [PGN_REFERENCE_KEY]: userPgnsLibrary,
   [ENGINE_REFERENCE_KEY]: savedGamesCatalog,
+  [ANALYSIS_REFERENCE_KEY]: savedAnalysesCatalog,
 };
 
 /** The reference for one game — what a detail page puts in the link. */

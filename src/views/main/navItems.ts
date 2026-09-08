@@ -98,6 +98,12 @@ export const navItems = (): readonly NavItem[] => [
     folder: "tools",
   },
   {
+    to: "/tools/analysis/saved",
+    labelKey: "nav.savedAnalyses",
+    icon: HistoryRoundedIcon,
+    folder: "tools",
+  },
+  {
     to: "/tools/editor",
     labelKey: "nav.boardEditor",
     icon: DashboardCustomizeRoundedIcon,

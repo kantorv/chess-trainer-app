@@ -54,14 +54,25 @@ export type TreeNavigation = {
 export const useTreeNavigation = (
   tree: GameTree,
   initialPly?: number,
+  initialNodeId?: string | null,
 ): TreeNavigation => {
   /*
-    `initialPly` is a `?move=` arrival: the mainline ply the URL named, read
-    once as the seed. The state is a node id (see above), so the ply is walked
-    to its mainline node here; past the end of the mainline it clamps to the
-    last node, exactly as `goToPly` would clamp it.
+    Two ways to seed the selection, both read once and never again.
+
+    `initialNodeId` is a **reopened analysis**: the node the reader was standing
+    on, already resolved against this tree by `useAnalysisBoard` (a stored path
+    of SAN, not an id — see `lib/savedAnalyses.ts`). It wins, because it can name
+    a place inside a side line, which is the one thing a ply cannot say.
+
+    `initialPly` is a `?move=` arrival: the mainline ply the URL named. The state
+    is a node id (see above), so the ply is walked to its mainline node here;
+    past the end of the mainline it clamps to the last node, exactly as
+    `goToPly` would clamp it.
   */
   const [nodeId, setNodeId] = useState<string | null>(() => {
+    if (initialNodeId !== undefined && initialNodeId !== null) {
+      return initialNodeId;
+    }
     if (initialPly === undefined || initialPly <= 0) return null;
     const line = mainline(tree);
     if (line.length === 0) return null;

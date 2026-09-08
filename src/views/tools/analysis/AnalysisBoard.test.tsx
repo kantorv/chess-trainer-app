@@ -2,14 +2,27 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, useLocation } from "react-router";
+import { Chess, DEFAULT_POSITION as START_FEN } from "chess.js";
 import i18n from "../../../i18n";
 import AppThemeWithLang from "../../../theme/AppThemeWithLang";
+import { DEFAULT_ANALYSIS_SETTINGS } from "../../../lib/analysisSettings";
 import { initialFenOf } from "../../../lib/gameModel";
+import {
+  addMove,
+  emptyTree,
+  fenAtNode,
+  nodeAtSanPath,
+} from "../../../lib/gameTree";
 import { pgnCatalog } from "../../../lib/pgnCatalog";
 import { parsePgnGames } from "../../../lib/pgn";
 import { fenAtPly } from "../../../lib/gameNavigation";
 import { addUpload, clearUploads } from "../../../lib/pgnUploadStore";
 import { MAX_VARIATIONS_OFFERED } from "../../../lib/engineAnalysis";
+import { savedAnalysisOf, type SavedAnalysis } from "../../../lib/savedAnalyses";
+import {
+  saveAnalysis,
+  savedAnalysesSnapshot,
+} from "../../../lib/savedAnalysisStore";
 import { RightPanelOutlet, RightPanelProvider } from "../../main/rightPanel";
 import AnalysisBoard from "./AnalysisBoard";
 
@@ -923,5 +936,220 @@ describe("Analysis Board — the shell around it", () => {
 
     unmount();
     expect(instance.terminated).toBe(true);
+  });
+});
+
+describe("Analysis Board — writing the board down", () => {
+  /*
+    The screen saves as the reader works (`lib/savedAnalyses.ts`), so these read
+    the real store — jsdom's `localStorage`, cleared between tests by
+    `src/test/setup.ts`, which is the behaviour under test rather than something
+    to mock away.
+  */
+  const stored = () => savedAnalysesSnapshot();
+
+  it("writes nothing for a board nobody has touched", () => {
+    renderScreen();
+
+    expect(stored()).toEqual([]);
+  });
+
+  it("writes the board once a move is played, and goes on writing to that row", () => {
+    renderScreen();
+
+    drag("e2", "e4");
+    expect(stored()).toHaveLength(1);
+    expect(stored()[0].pgn).toContain("1. e4");
+
+    drag("e7", "e5");
+    expect(stored()).toHaveLength(1);
+    expect(stored()[0].pgn).toContain("e5");
+  });
+
+  it("keeps the side lines, which is the whole reason the record is a tree", async () => {
+    renderScreen();
+    drag("e2", "e4");
+    drag("e7", "e5");
+
+    // Back to after 1. e4 and play a different reply: a variation, not a
+    // replacement.
+    await userEvent.click(screen.getByTestId("board-control-previous"));
+    drag("c7", "c5");
+
+    expect(stored()[0].pgn).toContain("(");
+    expect(stored()[0].pgn).toContain("c5");
+  });
+
+  it("records where the reader is standing, so the row reopens there", async () => {
+    renderScreen();
+    drag("e2", "e4");
+    drag("e7", "e5");
+
+    await userEvent.click(screen.getByTestId("board-control-previous"));
+
+    expect(stored()[0].path).toEqual(["e4"]);
+  });
+
+  it("records which way the board is facing", async () => {
+    renderScreen();
+    drag("e2", "e4");
+
+    await userEvent.click(screen.getByTestId("board-control-flip"));
+
+    expect(stored()[0].orientation).toBe("black");
+  });
+
+  it("starts a new row when the board is cleared, keeping the one left behind", async () => {
+    renderScreen();
+    drag("e2", "e4");
+    const first = stored()[0].id;
+
+    await openTab("engine");
+    await userEvent.click(screen.getByTestId("analysis-clear"));
+    // An empty board is not an analysis yet — nothing is written until a move.
+    expect(stored().map((row) => row.id)).toEqual([first]);
+
+    drag("d2", "d4");
+    const ids = stored().map((row) => row.id);
+    expect(ids).toHaveLength(2);
+    expect(ids).toContain(first);
+  });
+
+  /* A shipped game that begins at the standard start, so a test can play a
+     move of its own into it from the position the screen opens on. */
+  const shippedGame = pgnCatalog.items.find(
+    (item) =>
+      item.kind === "game" &&
+      item.game.moves.length > 2 &&
+      initialFenOf(item.game) === START_FEN,
+  )!;
+  const arriveAtShippedGame = () =>
+    renderScreen(
+      `/tools/analysis?game=${encodeURIComponent(
+        `pgn/${shippedGame.category}/${shippedGame.id}`,
+      )}`,
+    );
+
+  it("does not write a game merely opened here and stepped through", async () => {
+    arriveAtShippedGame();
+
+    await userEvent.click(screen.getByTestId("board-control-next"));
+    await userEvent.click(screen.getByTestId("board-control-next"));
+
+    // Replaying the line that arrived is not analysing it, and a list filled
+    // with every library game anyone opened here would be useless.
+    expect(stored()).toEqual([]);
+  });
+
+  it("does write once the reader plays a move of their own into it", () => {
+    if (shippedGame.kind !== "game") throw new Error("expected a game");
+    arriveAtShippedGame();
+
+    // A first move the game itself did not play — so the tree really grows.
+    const first = shippedGame.game.moves[0].san;
+    const [from, to] = first === "e4" ? ["d2", "d4"] : ["e2", "e4"];
+    drag(from, to);
+
+    expect(stored()).toHaveLength(1);
+  });
+});
+
+describe("Analysis Board — reopening a saved analysis", () => {
+  /** Put one in the store and arrive at its `?analysis=` link. */
+  const reopen = (saved: SavedAnalysis) => {
+    saveAnalysis(saved);
+    return renderScreen(`/tools/analysis?analysis=${saved.id}`);
+  };
+
+  /** A tree grown by playing SAN, branching from an earlier point on request. */
+  const grow = (
+    lines: readonly (readonly [readonly string[], readonly string[]])[],
+  ) => {
+    let tree = emptyTree();
+    for (const [from, moves] of lines) {
+      let nodeId = nodeAtSanPath(tree, from);
+      for (const san of moves) {
+        const move = new Chess(fenAtNode(tree, nodeId)).move(san);
+        const added = addMove(tree, nodeId, {
+          san: move.san,
+          from: move.from,
+          to: move.to,
+          fen: move.after,
+        });
+        tree = added.tree;
+        nodeId = added.nodeId;
+      }
+    }
+    return tree;
+  };
+
+  const savedAt = new Date("2026-09-07T10:00:00.000Z");
+
+  it("comes back with its side lines, standing where it was left", async () => {
+    const tree = grow([
+      [[], ["e4", "e5", "Nf3"]],
+      [["e4"], ["c5"]],
+    ]);
+    reopen(
+      savedAnalysisOf(
+        "a1",
+        tree,
+        ["e4", "c5"],
+        DEFAULT_ANALYSIS_SETTINGS,
+        "white",
+        savedAt,
+      ),
+    );
+
+    expect(position()).toBe(fenAtNode(tree, nodeAtSanPath(tree, ["e4", "c5"])));
+
+    await openTab("moves");
+    expect(moveTokens()).toEqual(
+      expect.arrayContaining(["e4", "e5", "Nf3", "c5"]),
+    );
+  });
+
+  it("comes back facing the way it was left, and at its own settings", () => {
+    reopen(
+      savedAnalysisOf(
+        "a1",
+        grow([[[], ["e4"]]]),
+        [],
+        { depth: 22, multiPv: 5, moveTimeMs: 0 },
+        "black",
+        savedAt,
+      ),
+    );
+
+    expect(screen.getByTestId("board")).toHaveAttribute(
+      "data-orientation",
+      "black",
+    );
+    expect(engine().setOptions).toContainEqual(["MultiPV", 5]);
+  });
+
+  it("goes on writing to the same row rather than starting a second", () => {
+    reopen(
+      savedAnalysisOf(
+        "a1",
+        grow([[[], ["e4", "e5"]]]),
+        ["e4", "e5"],
+        DEFAULT_ANALYSIS_SETTINGS,
+        "white",
+        savedAt,
+      ),
+    );
+
+    drag("g1", "f3");
+
+    const stored = savedAnalysesSnapshot();
+    expect(stored.map((row) => row.id)).toEqual(["a1"]);
+    expect(stored[0].pgn).toContain("Nf3");
+  });
+
+  it("opens an empty board for an id that names nothing", () => {
+    renderScreen("/tools/analysis?analysis=nope");
+
+    expect(position()).toMatch(/^rnbqkbnr\/pppppppp/);
   });
 });

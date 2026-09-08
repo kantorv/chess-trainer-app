@@ -23,6 +23,7 @@ const en = {
     maskedPlay: "Play with Engine (masked)",
     loadPgn: "Load PGN",
     analysisBoard: "Analysis Board",
+    savedAnalyses: "Saved analyses",
     boardEditor: "Board Editor",
     openings: "Openings",
     /**
@@ -286,6 +287,67 @@ const en = {
     analyse: "Analysis",
     openInLoadPgn: "PGN viewer",
     remove: "Delete this game",
+    /**
+     * Picking games and taking them out as one `.pgn` — the list view only, see
+     * `SavedGames.tsx`. These are the only games in the app that exist nowhere
+     * else, so this is the one way out of the browser.
+     */
+    select: "Select this game",
+    selectAll: "Select all games",
+    selected: "{{count}} selected",
+    download: "Download selected as PGN",
+  },
+  /**
+   * The **Saved analyses** screen — the boards the reader has worked on at the
+   * Analysis Board (`views/tools/analysis/saved/`). The same block shape as
+   * `savedGames` above, minus the two things an analysis does not have (a result
+   * and a side the reader was on) and plus the two it does: how many side lines
+   * were tried, and how far in the reader had got.
+   */
+  savedAnalyses: {
+    title: "Saved analyses",
+    count: "Analyses: {{count}}",
+    empty:
+      "No saved analyses yet. Play a move on the Analysis Board, or load a game into it, and the board appears here on its own.",
+    hint: "Every board you work on at the Analysis Board is written down as you go — side lines and all. Pick one up where you left it, or take the position somewhere else.",
+    /** Said plainly: this is a browser, not a backup — as the Uploads screen does. */
+    storage:
+      "Saved analyses are kept in this browser only. Clearing site data removes them, and they do not follow you to another device.",
+    /**
+     * A board that is not a game: one begun from an empty board or from a
+     * position carries no players to name it by, so it is named for what it is.
+     */
+    untitled: "Analysis board",
+    /** Plural forms, because a one-move analysis is a real row here. */
+    moves_one: "{{count}} move",
+    moves_other: "{{count}} moves",
+    /** Every move past the mainline — the side lines the reader tried and kept. */
+    variations_one: "{{count}} variation",
+    variations_other: "{{count}} variations",
+    /** Where the reader stopped, as a half-move count from the start position. */
+    atPly: "at ply {{ply}}",
+    /** A stored record whose PGN no longer parses: it can only be deleted. */
+    unreadable: "This analysis could not be read.",
+    /**
+     * The three-way view toggle in the top bar: the list the screen shipped
+     * with, and the library list screen's own two board sizes.
+     */
+    view: {
+      label: "View",
+      list: "List",
+      compact: "Small boards",
+      comfortable: "Big boards",
+    },
+    /** The three destinations — see `SavedAnalyses.tsx` for why these three. */
+    continue: "Continue",
+    openInLoadPgn: "PGN viewer",
+    play: "Play from here",
+    remove: "Delete this analysis",
+    /** Picking analyses and taking them out as one `.pgn`, side lines and all. */
+    select: "Select this analysis",
+    selectAll: "Select all analyses",
+    selected: "{{count}} selected",
+    download: "Download selected as PGN",
   },
   /**
    * The Analysis Board. Chrome only: SAN, the FEN and the scores are notation
