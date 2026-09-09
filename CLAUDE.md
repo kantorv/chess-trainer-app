@@ -66,11 +66,7 @@ change by whether it *adds* to that count, not by the exit code.
 | `src/lib/positionEditor.ts` | A position *being edited*: `fenFields` / `fenFromFields` (the six fields apart and back together, which is what makes the editor's side-to-move, castling and en passant controls round-trip), `enPassantOptions`, and `positionProblems` — **non-throwing** legality reporting, because a half-edited board is illegal by definition. Pure. |
 | `src/lib/gameNavigation.ts` | Walking a `Game`: `clampPly` / `fenAtPly` / `arrowsAtPly` / `moveRowsOf`. A ply is a half-move index, 0 being the starting position; each ply's FEN is read off the move that already carries it, so nothing re-simulates a game. |
 | `src/lib/pieceMask.ts` | **Piece masking** — the `PieceMask` (true type → the type drawn in its place, all twelve), the presets, `maskedPieces` (the board's `options.pieces`) and `maskSan` / `maskSanLine` (the notation). Pure, and the only place the mask exists. |
-| `src/lib/libraryCatalog.ts` | **The shared library layer** — the types (`LibraryCategory` with its `path` and `children`, the `LibraryItem` union of `LibraryPosition` and `LibraryGame`, `LocalizedText`), `libraryCatalogOf` (the one constructor, which derives the `positions` projection from `items`), the non-throwing `loadLibraryCatalog` (every FEN through `parseFen`, ids unique, category paths known, bad rows dropped into `problems`), the lookups, `categoryLabel` (data label or catalog key), `resolveLibraryPath` (the longest-category-prefix match a splat route needs), `libraryItemFen` and `sideToMoveOf`. Pure, and the only place that knows what a library's data looks like. |
-| `src/data/mates.json` | **The mates library** — the category list and a flat list of positions, each naming its category. The only file adding a mate touches. |
-| `src/lib/matesCatalog.ts` | A thin binding over the shared layer in the Mates section's own vocabulary (`findMateCategory`, `positionsInCategory`, `findMatePosition`), plus the shipped catalog. |
-| `src/data/positions.json` | **The endgame Positions library** — categories nested to any depth, each with its own `{ en, he }` name, and the positions inside them. The only file adding a category *or* a position touches. |
-| `src/lib/positionsCatalog.ts` | That file loaded, once, through the same shared loader. |
+| `src/lib/libraryCatalog.ts` | **The shared library layer** — the types (`LibraryCategory` with its `path` and `children`, the `LibraryItem` union of `LibraryPosition` and `LibraryGame`, `LocalizedText`), `libraryCatalogOf` (the one constructor, which derives the `positions` projection from `items`), the non-throwing `loadLibraryCatalog` (a JSON-of-FEN-rows producer kept for a future section of positions — every FEN through `parseFen`, ids unique, category paths known, bad rows dropped into `problems`), the lookups, `categoryLabel` (data label or catalog key), `resolveLibraryPath` (the longest-category-prefix match a splat route needs), `libraryItemFen` and `sideToMoveOf`. Pure, section-agnostic, and the only place that knows what a library's data looks like. |
 | `src/data/pgn/` | **The Library section's data** (was "User PGNs"; dir name kept) — the project's `.pgn` files themselves: three lichess study exports (queen-vs-rook rosettes, a custom puzzle set, and nine annotated master games), the three-part Capablanca study, one **multi-study** export of an author's twenty-eight queen-vs-rook studies, and one **repertoire** (the Alapin, 310 lines). One file is one folder — or, when it carries several `StudyName`s or is a repertoire, a folder of sub-folders — and each game/line inside it is one item. A folder's optional **notes** are a sibling `.mdx` of the same stem. The only thing adding content touches. |
 | `src/data/pgn.json` | That section's *optional* manifest: renames, translates, nests and orders a folder. Every field is an override — a file it says nothing about still appears, and one it nests but does not label is still named from its own `StudyName` tag, which the shipped entry for the master-games study relies on. |
 | `src/lib/pgnLibrary.ts` | **The second producer of a `LibraryCatalog`** — `loadPgnLibrary` turns `path -> PGN text` plus that manifest into categories and `LibraryGame` items, naming each from the file's `StudyName` / a game's `ChapterName` / its players. A file carrying **more than one `StudyName`** splits into a folder of study sub-folders (`studyGroupsOf`); one with a single one, or none, is untouched. Non-throwing: a broken game, an empty file, a manifest naming a file that is not there all land in `problems`. Pure — it takes its files as a parameter. |
@@ -81,11 +77,9 @@ change by whether it *adds* to that count, not by the exit code.
 | `src/lib/savedAnalyses.ts` + `savedAnalysisStore.ts` | **The reader's analysis boards** — what a saved analysis is (the whole tree as PGN, the `AnalysisSettings` it was worked under, where the reader was standing as SAN from the root, and which way the board faced), how it is written and read back, and `savedAnalysisCatalogOf` so `?game=` resolves against it; and the `localStorage` half. The pair above, deliberately, with two differences: `treeToPgn` / `parsePgnTree` rather than the linear writer, because side lines are the point, and a **place in the tree** as part of the record. Non-throwing throughout. |
 | `src/lib/pgnExport.ts` | **Taking games out of the app** — `pgnFileOf` (several stored PGN records joined with a blank line, which is what `splitPgnGames` reads back) and `downloadTextFile` / `downloadPgn`, the blob-URL save. A join rather than a re-write: a saved game *is* PGN already, so nothing is re-parsed and a record this build cannot read still exports intact. |
 | `src/lib/gameReference.ts` | **The `?game=` carrier** — `library/<category path>/<id>` (the key was `pgn` before CTA-38; still resolves), formatted by `gameReferenceOf` and resolved by `resolveGameReference` through the same `resolveLibraryPath`. A game does not fit in a URL, so what travels is a reference into the catalog. |
-| `src/views/library/` | The section-agnostic screens all three libraries render: `LibraryList.tsx` (a fixed top bar — the category's name and counts, the name search, the card-size toggle — over the only thing on the screen that scrolls, the card grid: this category's **sub-folders** first, as `LibraryFolderCard.tsx`, then its items as preview boards; its pure `librarySearch.ts` and `cardSize.ts` under it, and the folder's notes — or the hint, when it has none — in the right-hand panel), `LibraryDetail.tsx` (which resolves the URL, renders the miss, and dispatches on the item's kind), `LibraryPositionDetail.tsx` (one position, read-only, facing the side to move, with the three `?fen=` hand-offs), `LibraryGameDetail.tsx` (the game replayed over the shared `MoveList` / `BoardControls` / `useGameNavigation`, with the `?game=` and `?fen=` hand-offs), `LibraryCardFooter.tsx` and its pure `gameSummary.ts` (a card's footer, and the one branch the list screen makes on the item's kind), `BackToCategory.tsx`, `folderNotes.ts` / `pgnFolderNotes.ts` / `LibraryNotes.tsx` (a folder's authored MDX notes — the pure path lookup, the shipped `.mdx` glob, and the panel that styles and scrolls them), and `section.ts`, which is what tells one section from another — route base, catalog, chrome keys, test ids, `?game=` key, folder notes. |
-| `src/views/mates/` | The Mates section, as a **binding**: `list/MatesList.tsx` and `detail/MateDetail.tsx` read `/mates/:category(/:id)` and hand it to the two shared screens. Neither knows anything about JSON. |
-| `src/views/positions/` | The Positions section: `PositionsSection.tsx` is **one component behind every `/positions/*` URL**, resolving the splat through the catalog and rendering whichever shared screen the answer calls for. |
-| `src/views/pgn/` | The User PGNs section: `UserPgnsSection.tsx` is the same one component behind every `/library/*` URL, over a catalog whose items are games — and **the one place a PGN kind becomes a screen** (see *What kind of thing a PGN file is* below). Under it, the screens the section's own kinds need: `PgnCollection.tsx` (a multi-study file's index), `PgnCollectionNav.tsx` (its studies in the shell's left rail, while one of them is open), `PgnUploads.tsx` (the reader's own files — the button and the list), the shared two-line `PgnIndexRow.tsx`, the pure `collectionSummary.ts`, and `useUploads.ts` (the `useSyncExternalStore` binding, so `src/lib/` stays free of React). |
-| `src/views/main/navFromLibrary.ts` | Building a sidebar subtree — a folder plus a list screen per category, at any depth — out of a library catalog, and merging it into the authored registries. Pure; `positionsNavFolder()` / `positionsNavItems()` and `userPgnsNavFolder()` / `userPgnsNavItems()` are the two shipped uses — the second over a catalog built from `.pgn` files, which is what shows this is a generator rather than a Positions-shaped special case. |
+| `src/views/library/` | The section-agnostic screens a library section renders: `LibraryList.tsx` (a fixed top bar — the category's name and counts, the name search, the card-size toggle — over the only thing on the screen that scrolls, the card grid: this category's **sub-folders** first, as `LibraryFolderCard.tsx`, then its items as preview boards; its pure `librarySearch.ts` and `cardSize.ts` under it, and the folder's notes — or the hint, when it has none — in the right-hand panel), `LibraryDetail.tsx` (which resolves the URL, renders the miss, and dispatches on the item's kind — and on the `variationMode` flag the section passes for a repertoire line), `LibraryPositionDetail.tsx` (one position, read-only, facing the side to move, with the three `?fen=` hand-offs), `LibraryGameDetail.tsx` (the game replayed over the shared `MoveList` / `BoardControls` / `useGameNavigation`, with the `?game=` and `?fen=` hand-offs), `LibraryVariationDetail.tsx` (a repertoire line replayed with its **variation tree** — `parsePgnTree` + the shared `VariationTree` / `useTreeNavigation`), `LibraryCardFooter.tsx` and its pure `gameSummary.ts` (a card's footer, and the one branch the list screen makes on the item's kind), `BackToCategory.tsx`, `folderNotes.ts` / `pgnFolderNotes.ts` / `LibraryNotes.tsx` (a folder's authored MDX notes — the pure path lookup, the shipped `.mdx` glob, and the panel that styles and scrolls them), and `section.ts`, which is what tells one section from another — route base, catalog, chrome keys, test ids, `?game=` key, folder notes. |
+| `src/views/pgn/` | The Library section: `UserPgnsSection.tsx` is **one component behind every `/library/*` URL** (was "User PGNs" at `/pgn/*`; file path kept), resolving the splat through the catalog, over a catalog whose items are games — and **the one place a PGN kind becomes a screen** (see *What kind of thing a PGN file is* below). Under it, the screens the section's own kinds need: `PgnCollection.tsx` (a multi-study file's index), `PgnCollectionNav.tsx` (its studies in the shell's left rail, while one of them is open), `PgnUploads.tsx` (the reader's own files — the button and the list), the shared two-line `PgnIndexRow.tsx`, the pure `collectionSummary.ts`, and `useUploads.ts` (the `useSyncExternalStore` binding, so `src/lib/` stays free of React). |
+| `src/views/main/navFromLibrary.ts` | Building a sidebar subtree — a folder plus a list screen per category, at any depth — out of a library catalog, and merging it into the authored registries. Pure; `userPgnsNavFolder()` / `userPgnsNavItems()` are the shipped use, over a catalog built from `.pgn` files. It is a generator over any `LibraryCatalog`, not a Library-section special case. |
 | `src/lib/treeManager.ts` | Read-only tree walks (`traverse` / `toArray` / `collectIds` / `findBy` / `getPath`). The seam for anything tree-shaped: `navTree.ts` and `libraryCatalog.ts` are its consumers. |
 
 ## One game model, two producers
@@ -220,37 +214,36 @@ position is not being handed one, and a viewpoint the reader chose is theirs.
 
 ## A library is data; only its chrome is code
 
-There are three browsable libraries — **Mates** (`/mates/basic`,
-`/mates/advanced`, `/mates/complex`, and `/mates/<category>/<id>` for one
-position), **Positions** (`/positions/<path>` and `/positions/<path>/<id>`,
-endgame theory: Lucena, Philidor, Vancura, Réti, Saavedra, the trebuchet) and
-the **Library** (`/library/<path>` and `/library/<path>/<id>`, the games in the
-project's own `.pgn` files — was "User PGNs" at `/pgn/*` before CTA-38; old URLs
-redirect) — and **one implementation between them**. Adding content, or
-a category *at any depth*, is an edit to that section's data and nothing else:
-no TypeScript, no locale key, no component edit, no route. For the first two
-that edit is a JSON entry; for the third it is **dropping a `.pgn` file into
-`src/data/pgn/`**.
+There is one browsable library — the **Library** (`/library/<path>` and
+`/library/<path>/<id>`, the games in the project's own `.pgn` files — was "User
+PGNs" at `/pgn/*` before CTA-38; old URLs redirect and the old `?game=pgn/…`
+key still resolves) — over a **section-agnostic implementation**
+(`src/views/library/` over `src/lib/libraryCatalog.ts`) built to carry more than
+one. Adding content, or a category *at any depth*, is an edit to the section's
+data and nothing else: no TypeScript, no locale key, no component edit, no
+route. For the Library that edit is **dropping a `.pgn` file into
+`src/data/pgn/`**. The layer also keeps a JSON-of-FEN-rows producer
+(`loadLibraryCatalog`) for a future section of positions; nothing ships one
+today.
 
 ```
-mates.json  ───┐
-               ├─loadLibraryCatalog()──┐                ┌──▶ LibraryList ────────────────?fen=──▶ Analysis Board
-positions.json ┘  (lib/libraryCatalog) │                │                                        / Play with Engine
-                                       ├─▶ LibraryCatalog│                                       / Board Editor
-src/data/pgn/*.pgn ──loadPgnLibrary()──┘                └──▶ LibraryDetail ─┬─▶ …PositionDetail ─?fen=──▶ (the same three)
-  + pgn.json      (lib/pgnLibrary.ts)                       (views/library/)└─▶ …GameDetail ────?game=─▶ Analysis Board
-      │                                                            ▲                                     / Load PGN
-      └──navFromLibrary.ts──▶ navFolders / navItems       views/mates/  (the /mates/:category routes)
-             (the sidebar subtree, generated)             views/positions/  (the /positions/* splat)
-                                                          views/pgn/  (the /library/* splat)
+(a JSON file of FEN rows) ──loadLibraryCatalog()──┐                ┌──▶ LibraryList ────────────────?fen=──▶ Analysis Board
+                             (lib/libraryCatalog)  │               │                                        / Play with Engine
+                                                   ├─▶ LibraryCatalog│                                     / Board Editor
+src/data/pgn/*.pgn ──────────loadPgnLibrary()──────┘               └──▶ LibraryDetail ─┬─▶ …PositionDetail ─?fen=──▶ (the same three)
+  + pgn.json                 (lib/pgnLibrary.ts)                       (views/library/)├─▶ …GameDetail ────?game=─▶ Analysis Board
+      │                                                                       ▲        └─▶ …VariationDetail (repertoire line)  / Load PGN
+      └──navFromLibrary.ts──▶ navFolders / navItems                   views/pgn/  (the /library/* splat)
+             (the sidebar subtree, generated)
 ```
 
 ## An item is a position, or a whole game
 
-The first two sections list **positions**: one FEN, to be looked at and handed
-on. The third lists **games**, and a game is not a FEN — it is headers, a
-starting position and a line of moves. So `LibraryItem` is a union discriminated
-by `kind`, and the two shared screens branch on it **exactly once each**:
+A library can list **positions** — one FEN, to be looked at and handed on — or
+**games**, and a game is not a FEN: it is headers, a starting position and a
+line of moves. So `LibraryItem` is a union discriminated by `kind`, and the two
+shared screens branch on it **exactly once each**. The shipped User PGNs section
+holds games; the position path stays supported for a future section.
 
 | Screen | The one branch |
 | --- | --- |
@@ -261,9 +254,8 @@ Two things follow that are worth knowing before touching the layer:
 
 - **`positions` is a projection of `items`, not a second list.** Every producer
   builds its result through `libraryCatalogOf`, which derives it — so "every
-  position in `positions` is an item in `items`" is true by construction. The
-  Mates binding and its tests go on speaking in positions; the shared screens
-  read `items`.
+  position in `positions` is an item in `items`" is true by construction. A
+  position-shaped section speaks in positions; the shared screens read `items`.
 - **A game-shaped screen writes no move list.** A game out of a `.pgn` is the
   same `Game` `parsePgnGames` produces, so `LibraryGameDetail` hands it to
   `useGameNavigation`, `MoveList` and `BoardControls` and gets the numbered
@@ -287,8 +279,8 @@ and — next — a single position's branches. Those want different screens, so
 **`loadPgnLibrary` labels every folder it makes with a kind**
 ([`src/lib/pgnKind.ts`](src/lib/pgnKind.ts)) and the section binding dispatches
 on it. The kinds ride *beside* the catalog, in a lookup keyed by category path,
-for the same reason the folder notes do: a `LibraryCategory` serves three
-sections and only this one has files.
+for the same reason the folder notes do: a `LibraryCategory` is
+section-agnostic and only this section has files.
 
 | Kind | What it is | Recognised by | Screen |
 | --- | --- | --- | --- |
@@ -355,7 +347,7 @@ Three decisions hold it together:
   a **second lookup keyed by the same category path**, resolved in the view
   layer and reaching the screens through the `LibrarySection` descriptor —
   which is what keeps `LibraryList` from learning what `.mdx` is, and what would
-  let Mates or Positions carry notes by filling one field.
+  let another section carry notes by filling one field.
 - **The key is the path `loadPgnLibrary` derived**, built with the same
   `slugify` and the same manifest `under` prefix — not a second copy of the
   rule. Get it wrong and nothing breaks loudly: the note sits in the bundle
@@ -445,23 +437,21 @@ The rules the libraries rest on:
   both are done — right for chrome the app *ships*, wrong for content it
   *lists*. Names and descriptions are `{ en, he }` fields on the entry with an
   `en` fallback; only the screen chrome — the section title, the count, the
-  buttons — is in the locale catalogs, and every section carries the same key
-  shape under its own block so `t(`${section.chromeKey}.…`)` serves all three.
-  That shape is a **floor, not a ceiling**: a section adds the keys its own item
-  kinds need, which is why only `userPgns` has `list.moves` and
-  `detail.openInLoadPgn`. A User PGNs folder is named from its file's
-  `StudyName` tag or from `src/data/pgn.json`, and a game from its `ChapterName`
-  or its players — never from `src/locales`.
-- **So does a category's name, unless it already had a key.** A category carries
-  *either* a `labelKey` (Mates, whose three labels shipped before the shared
-  layer existed and stay untouched) *or* an inline `label: { en, he }`
-  (Positions, the case that must not need a locale edit). `categoryLabel` is the
-  one place the two are told apart.
+  buttons — is in the locale catalogs, under the section's own block so
+  `t(`${section.chromeKey}.…`)` reaches it. That shape is a **floor, not a
+  ceiling**: a section adds the keys its own item kinds need, which is why
+  `userPgns` has `list.moves` and `detail.openInLoadPgn`. A User PGNs folder is
+  named from its file's `StudyName` tag or from `src/data/pgn.json`, and a game
+  from its `ChapterName` or its players — never from `src/locales`.
+- **So does a category's name, unless it needs a key.** A category carries
+  *either* a `labelKey` (for a section whose category names are chrome the app
+  ships) *or* an inline `label: { en, he }` (for a section whose categories are
+  content the data owns — the case that must not need a locale edit).
+  `categoryLabel` is the one place the two are told apart.
 - **A category id is data, not a type**, and a category is addressed by its full
   **path** — `queen-vs-rook/rosettes`. Narrowing either to the shipped values
   would make a new category a code edit, and the segments arrive from the URL
-  anyway. A flat section is simply the case where every path is one segment,
-  which is why `mates.json` did not change when the layer generalised.
+  anyway. A flat section is simply the case where every path is one segment.
 - **A malformed entry is reported, never thrown.** A bad FEN, a missing name, a
   category with no label: the row drops into `problems` and the rest of the
   catalog still loads — a library that cannot render one card must not take the
@@ -470,9 +460,8 @@ The rules the libraries rest on:
 - **One splat route serves any depth.** `resolveLibraryPath` matches the
   **longest prefix** of the URL segments that names a category and reads
   whatever is left (at most one segment) as an item id, so `App.tsx` never
-  learns how deep `positions.json` nests or how `src/data/pgn/` is organised.
-  `/positions/*` and `/library/*` are the same route twice. Mates keeps its two
-  shipped `:category` routes, because those URLs are bookmarked.
+  learns how `src/data/pgn/` is organised. `/library/*` is that one route
+  (`/pgn/*` redirects to it — CTA-38).
 - **A folder is a card, so a section that nests is browsable without the
   sidebar.** `LibraryList` renders `found.children` ahead of the items in the
   same grid (`LibraryFolderCard.tsx`), each counting everything under it
@@ -492,27 +481,22 @@ The rules the libraries rest on:
   builds a folder plus one list screen per category, at any depth, and splices
   the subtree into `navFolders` / `navItems`; `buildNavTree`, `folderPath`,
   `folderChain` and `Sidebar.tsx` all recursed already and did not change for
-  it. It runs twice — over `positions.json` and over the PGN catalog — and
-  nothing in it knows that one section's folders are files, which is what makes
-  it a generator rather than a Positions-shaped special case. Mates' three
-  categories stay written out by hand: three is all that section will have. An
-  *item* is a route, not a nav entry, in every section.
+  it. It runs over the PGN catalog, and nothing in it knows that the section's
+  folders are files, which is what makes it a generator over any `LibraryCatalog`
+  rather than a User-PGNs special case. An *item* is a route, not a nav entry.
 - **A generated node has no catalog key, and `navLabelKeys` must not invent
   one.** `locales.test.ts` asserts every key that walk returns resolves in both
   languages; a folder named from the data has nothing to assert, so
   `NavTreeNode` carries `labelKey` *or* `label` and the walk reports only the
   first kind. Weakening the assertion instead would have given up the check that
   catches a real missing translation.
-- **The mating side is to move in every shipped *mate*** — asserted in
-  `matesCatalog.test.ts`, and **that rule stops at that section.** It is
-  load-bearing there: `/engine/play` derives `playAs` and the board orientation
-  from the incoming FEN, so a mate with the defender to move would open backwards
-  and have the engine move the instant the screen loaded. But Philidor's rook
-  defense, Vancura, the short-side defense, the Cochrane defense and the
-  trebuchet are *defensive or mutual-zugzwang* positions in which the side to
-  move is the defender, and half the endgame library would be unshippable under
-  an attacker-to-move rule. The board still faces the side to move, which for a
-  drawing defense correctly opens the reader on the defending side.
+- **The library layer holds no rule about which side is to move.** Whether the
+  attacker or the defender is to play is a property of the content: a section
+  that cares (a library of forced wins, say — `/engine/play` derives `playAs`
+  and the board orientation from the incoming FEN, so a position with the
+  defender to move would open backwards) asserts it in its own tests, not in
+  `src/lib/libraryCatalog.ts`, where a drawing-defense position with the
+  defender to move is ordinary and correct.
 
 The position hand-off is the Board Editor's mechanism verbatim — `?fen=` on
 `/tools/analysis`, `/engine/play` and `/tools/editor`, validated with `parseFen`
@@ -731,8 +715,8 @@ one. Four layers, each consumed by the next:
 | Layer | File | What it owns |
 | --- | --- | --- |
 | Walks | `src/lib/treeManager.ts` | Depth-first reads over any tree. The only place tree traversal is written. |
-| Data | `navFolders()` + `navItems()` | The folder tree (`{ id, labelKey?, label?, icon, children? }`) and the screens, each naming its `folder`. Mostly authored; the Positions and User PGNs subtrees are spliced in from the generator below. **Functions**, because the second of those grows a folder when the reader uploads a `.pgn`. |
-| Generator | `navFromLibrary.ts` | A folder plus one list screen per category of a library catalog, at any depth, named from the data. Run over `src/data/positions.json` and over the `.pgn` files under `src/data/pgn/`. Ids are namespaced (`positions:queen-vs-rook/rosettes`, `user-pgns:studies`) so a generated one cannot collide with an authored one, or with the other section's. |
+| Data | `navFolders()` + `navItems()` | The folder tree (`{ id, labelKey?, label?, icon, children? }`) and the screens, each naming its `folder`. Mostly authored; the User PGNs subtree is spliced in from the generator below. **Functions**, because that subtree grows a folder when the reader uploads a `.pgn`. |
+| Generator | `navFromLibrary.ts` | A folder plus one list screen per category of a library catalog, at any depth, named from the data. Run over the `.pgn` files under `src/data/pgn/`. Ids are namespaced (`user-pgns:studies`) so a generated one cannot collide with an authored one. |
 | Builder | `navTree.ts` | Pure `buildNavTree` — sub-folders before that folder's own screens at every level — plus `folderPath` (a screen's breadcrumb, and the chain the sidebar opens), `folderChain` (the same for a folder id, itself included), `navLabel` (catalog key *or* data label) and `navLabelKeys` (only the keys). |
 | Renderer | `Sidebar.tsx` | A recursive `TreeRow`. Folders are `aria-expanded` toggles, screens are links. |
 
@@ -742,8 +726,8 @@ Consequences worth knowing:
   give it a `labelKey` present in both catalogs, and point screens at it. The
   renderer already recurses — `navTree.test.ts` and `Sidebar.test.tsx` both
   carry fixtures nested deeper than anything shipped.
-- **A folder does not have to be written out at all.** The Positions and User
-  PGNs sections' are built from their catalogs and carry a `label` rather than a
+- **A folder does not have to be written out at all.** The User PGNs section's
+  folders are built from its catalog and carry a `label` rather than a
   `labelKey`; only `navLabel` and `navLabelKeys` know the difference, and
   `NavFolderId` is a plain `string` because a generated id cannot be a union
   member. See the library section above for why the label lives in the data.
@@ -754,7 +738,7 @@ Consequences worth knowing:
   `folderPath(pathname)` and follows the route, adjusted during render against
   the previous pathname rather than in an effect, which
   `react-hooks/set-state-in-effect` rejects. A path that is no screen in the
-  tree (the landing page, `/mates/<category>/<id>`) has no chain of its own and
+  tree (the landing page, `/pgn/<folder>/<id>`) has no chain of its own and
   leaves the open one alone. Nothing is persisted: the state is re-derived on
   every mount.
 - **The active state is an exact path match.** `"/"` is a prefix of every other

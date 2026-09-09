@@ -15,8 +15,8 @@ import { navFolders } from "./navFolders";
  * key, which is what an authored screen or folder carries — the app ships those
  * strings and `locales.test.ts` asserts both catalogs have them. `label` is a
  * per-language `{ en, he }` carried by the data, which is what a folder
- * *generated* from a library catalog carries (`navFromLibrary.ts`): a category
- * added to `src/data/positions.json` must not need a locale edit, and it has no
+ * *generated* from a library catalog carries (`navFromLibrary.ts`): a `.pgn`
+ * file dropped into `src/data/pgn/` must not need a locale edit, and it has no
  * catalog key to assert. Exactly one of the two; `navLabel` reads whichever is
  * there and `navLabelKeys` reports only the first kind.
  */
@@ -89,11 +89,10 @@ export const buildNavTree = <Id extends string>(
 /**
  * Fold a redundant category folder into its list screen.
  *
- * The three library sections — Mates, Positions, User PGNs — each model a
- * category as a folder holding one same-named list screen. For a **leaf**
- * category that folder is pure overhead: a second click, a second copy of the
- * name, and nothing inside it but the one screen. So the sidebar renders it as
- * just that screen.
+ * A library section (User PGNs) models a category as a folder holding one
+ * same-named list screen. For a **leaf** category that folder is pure overhead:
+ * a second click, a second copy of the name, and nothing inside it but the one
+ * screen. So the sidebar renders it as just that screen.
  *
  * The rule is exactly "one child, and it is a screen":
  *

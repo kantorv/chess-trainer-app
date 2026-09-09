@@ -34,11 +34,11 @@ import type { PgnKinds } from "./pgnKind";
  * export today — is untouched, and so is one with none.
  *
  * That is deliberately *not* a fourth kind of screen. A category holding
- * sub-categories is what the library layer has always been (`positions.json`
- * nests, and the manifest's `under` already builds a group here), so the splat
- * route, the sidebar generator, the list screen and the `?game=` reference all
- * serve the deeper paths with no edit: `/pgn/<file>/<study>/<chapter>` is
- * `resolveLibraryPath` doing what it does for `/positions/queen-vs-rook/…`.
+ * sub-categories is what the library layer has always supported (the manifest's
+ * `under` already builds a group here), so the splat route, the sidebar
+ * generator, the list screen and the `?game=` reference all serve the deeper
+ * paths with no edit: `/pgn/<file>/<study>/<chapter>` is `resolveLibraryPath`
+ * doing what it does for `/pgn/chess-fundamentals-capablanca/part-1`.
  * The one thing that did change is that a group's list screen now shows its
  * sub-folders (`views/library/LibraryList.tsx`), because a study you cannot
  * click is a folder that only the sidebar can reach.

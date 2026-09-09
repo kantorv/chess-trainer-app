@@ -21,18 +21,18 @@ import PgnUploads from "./PgnUploads";
  * and `App.tsx` keeps the file path `views/pgn/` for the same internal reason
  * `src/data/pgn/` keeps its name.)
  *
- * Structurally identical to `views/positions/PositionsSection.tsx` in how it
- * reads the URL: a splat resolved through the catalog by `resolveLibraryPath`,
- * which takes the longest prefix of the segments that names a category and
- * reads whatever is left over as an item id. `App.tsx` therefore never learns
- * how the `.pgn` files are organised — `/library/chess-com-games-2026-08-30`,
+ * It reads the URL as a splat resolved through the catalog by
+ * `resolveLibraryPath`, which takes the longest prefix of the segments that
+ * names a category and reads whatever is left over as an item id. `App.tsx`
+ * therefore never learns how the `.pgn` files are organised —
+ * `/library/chess-com-games-2026-08-30`,
  * `/library/queen-vs-rook-rosettes/chapter-1` and
  * `/library/methurst-public-studies/queen-vs-rook-lightning/chapter-3` are all
  * this one route, and dropping a file in changes none of it.
  *
- * Where it goes further than the Positions section is the last step. A `.pgn`
- * file is a container, not a genre, so the loader labels every folder with a
- * {@link PgnKind} and this component dispatches on it:
+ * The last step is this section's own. A `.pgn` file is a container, not a
+ * genre, so the loader labels every folder with a {@link PgnKind} and this
+ * component dispatches on it:
  *
  * | Kind | Screen | Sidebar |
  * | --- | --- | --- |
@@ -47,7 +47,7 @@ import PgnUploads from "./PgnUploads";
  * `lib/pgnLibrary.ts` — see `lib/pgnKind.ts`, which is where the taxonomy and
  * the one kind still expected (`variations`) are written down. Nothing in
  * `views/library/` or `lib/libraryCatalog.ts` learns about any of it: those
- * serve three sections, and only this one has files.
+ * are section-agnostic, and only this section has files.
  */
 
 /**

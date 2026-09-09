@@ -12,7 +12,6 @@ import {
 import i18n from "../../i18n";
 import AppThemeWithLang from "../../theme/AppThemeWithLang";
 import { itemsInLibraryCategory } from "../../lib/libraryCatalog";
-import { matesSection } from "../library/section";
 import { pgnCatalog } from "../../lib/pgnCatalog";
 import { initialFenOf } from "../../lib/gameModel";
 import { fenAtPly } from "../../lib/gameNavigation";
@@ -161,14 +160,6 @@ describe("the User PGNs section", () => {
     expect(footer).toHaveTextContent("1 move");
     expect(footer).not.toHaveTextContent("Queen vs Rook, Rosettes:");
     expect(footer).not.toHaveTextContent("?");
-  });
-
-  it("captions a position card by whose move it is, unchanged", () => {
-    // The other side of the same branch, asserted here because this is the file
-    // that owns it: the two position sections are untouched by any of the above.
-    expect(matesSection.catalog.items.every((item) => item.kind === "position")).toBe(
-      true,
-    );
   });
 
   it("serves a folder the manifest nested, from the same one splat route", () => {

@@ -9,12 +9,9 @@ import {
 import { loadPgnLibrary } from "../../lib/pgnLibrary";
 import { userPgnsLibrary } from "../../lib/pgnCatalog";
 import { pgnKindOf } from "../../lib/pgnKind";
-import { positionsCatalog } from "../../lib/positionsCatalog";
 import {
   libraryNavFolder,
   libraryNavItems,
-  positionsNavFolder,
-  positionsNavItems,
   userPgnsNavFolder,
   userPgnsNavItems,
   type LibraryNavOptions,
@@ -203,55 +200,11 @@ describe("libraryNavItems", () => {
   });
 });
 
-describe("the generated Positions subtree, as shipped", () => {
-  it("holds a folder and a list screen for every category in the JSON", () => {
-    const folders = idsOf(positionsNavFolder().children ?? []);
-    const items = positionsNavItems();
-
-    expect(folders.length).toBe(items.length);
-    expect(new Set(items.map((item) => item.folder))).toEqual(new Set(folders));
-    // Nested at least once — the thing the Mates section cannot do.
-    expect(folders.some((id) => id.split("/").length > 1)).toBe(true);
-  });
-
-  it("puts every one of them into the shipped nav tree, under Positions", () => {
-    for (const item of positionsNavItems()) {
-      // In the tree the sidebar renders, a redundant leaf-category folder is
-      // folded away — so the screen hangs one level up, but under the same
-      // section and never on a different branch.
-      expectFiledUnder(item.to, item.folder, "positions");
-      expect(navItemsInFolder(item.folder)).toEqual([item]);
-    }
-  });
-
-  it("contributes no catalog key beyond the section's own", () => {
-    // `locales.test.ts` asserts every key here resolves in both languages; a
-    // generated category must therefore contribute none.
-    const keys = navLabelKeys();
-
-    expect(keys).toContain("nav.folders.positions");
-    expect(keys.filter((key) => key.startsWith("nav.folders.positions."))).toEqual([]);
-    expect(keys.length).toBeLessThan(
-      new TreeManager(navTree()).toArray().length,
-    );
-  });
-
-  it("reaches the same categories the catalog declares, and no others", () => {
-    // A category added to `src/data/positions.json` is a route the sidebar
-    // offers, with nothing else edited. This is that promise, asserted.
-    expect(positionsNavItems().map((item) => item.to).sort()).toEqual(
-      allCategories(positionsCatalog)
-        .map((category) => `/positions/${category.path}`)
-        .sort(),
-    );
-  });
-});
-
 /*
-  The second shipped use of the generator, and the one that shows it is a
-  generator rather than a Positions-shaped special case: the same functions over
-  a catalog whose categories came out of `.pgn` files instead of out of JSON.
-  Nothing in `navFromLibrary.ts` knows the difference, and nothing had to.
+  The one shipped use of the generator: the same functions over a catalog whose
+  categories came out of `.pgn` files. Nothing in `navFromLibrary.ts` knows that
+  a folder is a file, which is what keeps it a generator rather than a
+  User-PGNs-shaped special case.
 */
 describe("the generated User PGNs subtree", () => {
   it("makes a folder per PGN file, named from the data", () => {
@@ -378,11 +331,11 @@ describe("the generated User PGNs subtree", () => {
     expect(routes).not.toContain("/library/chess-fundamentals-capablanca");
   });
 
-  it("cannot collide with the other generated section's ids", () => {
-    const positions = new Set(positionsNavItems().map((item) => item.folder));
-
+  it("namespaces every id under the section root", () => {
     for (const item of userPgnsNavItems()) {
-      expect(positions.has(item.folder)).toBe(false);
+      expect(item.folder === "library" || item.folder.startsWith("library:")).toBe(
+        true,
+      );
     }
   });
 });

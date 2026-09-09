@@ -19,9 +19,9 @@ import type { LibrarySection } from "./section";
  * items are in — the one thing the list screen needed to serve a library that
  * nests, and the reason a multi-study `.pgn` did not need a screen of its own.
  *
- * A category has always been allowed sub-categories (`positions.json` nests, the
- * User PGNs manifest groups files under one folder, and a lichess export of
- * every study its author wrote is one file holding twenty-eight of them), but
+ * A category has always been allowed sub-categories (the User PGNs manifest
+ * groups files under one folder, and a lichess export of every study its
+ * author wrote is one file holding twenty-eight of them), but
  * only the sidebar could reach them: the list screen showed that folder's own
  * items and, for a folder with none, the word "empty". So the folders are cards
  * too, ahead of the items, and the shared screen stays one grid of one kind of

@@ -1,12 +1,10 @@
 import type { SvgIconComponent } from "@mui/icons-material";
 import FolderRoundedIcon from "@mui/icons-material/FolderRounded";
-import LibraryBooksRoundedIcon from "@mui/icons-material/LibraryBooksRounded";
 import SnippetFolderRoundedIcon from "@mui/icons-material/SnippetFolderRounded";
 import ViewListRoundedIcon from "@mui/icons-material/ViewListRounded";
 
 import { userPgnsLibrary } from "../../lib/pgnCatalog";
 import { pgnKindOf } from "../../lib/pgnKind";
-import { positionsCatalog } from "../../lib/positionsCatalog";
 import {
   itemsInLibraryCategory,
   type LibraryCatalog,
@@ -18,13 +16,12 @@ import type { NavItem } from "./navItems";
 /**
  * The sidebar subtree of a **library section**, generated from its catalog.
  *
- * The Mates section registers its three categories by hand, because three is
- * all it will ever have. A library that grows cannot: the whole point of
- * `src/data/positions.json` is that a category at any depth is a data edit, and
- * a hand-written folder plus a hand-written screen entry per category would
- * make it three edits in three files. So the folder tree and the list screens
- * are *built* from the catalog and merged into the authored registries, and
- * everything downstream — `buildNavTree`, `folderPath`, `folderChain`,
+ * The User PGNs library grows whenever a `.pgn` file is dropped into
+ * `src/data/pgn/` or the reader uploads one, so a hand-written folder plus a
+ * hand-written screen entry per category is not an option — it would be several
+ * edits in several files per file added. So the folder tree and the list
+ * screens are *built* from the catalog and merged into the authored registries,
+ * and everything downstream — `buildNavTree`, `folderPath`, `folderChain`,
  * `Sidebar.tsx`'s `TreeRow`, the landing page — recursed already and did not
  * change for it.
  *
@@ -35,9 +32,8 @@ import type { NavItem } from "./navItems";
  *   them alongside its own list rather than instead of it. For a *leaf*
  *   category that folder is redundant, so `collapseLeafCategories` in
  *   `navTree.ts` folds it back down to just the screen before the sidebar
- *   renders it (the same fold the hand-written Mates sub-folders now get). A
- *   *position* stays a route rather than a nav entry, or the sidebar would grow
- *   without bound.
+ *   renders it. A *game* stays a route rather than a nav entry, or the sidebar
+ *   would grow without bound.
  * - **A category that only groups sub-categories — no items of its own — gets
  *   no list screen**, just the folder. A manifest group like
  *   `chess-fundamentals-capablanca` holds its three parts and nothing else, so
@@ -47,9 +43,9 @@ import type { NavItem } from "./navItems";
  *   than a `labelKey` — see `navTree.ts`. There is no locale key to write, and
  *   `locales.test.ts` keeps asserting exactly what it asserted before.
  *
- * Folder ids are namespaced (`positions:queen-vs-rook/rosettes`) so a generated
- * id can never collide with an authored one, and so the id says at a glance
- * which section and which category a row belongs to.
+ * Folder ids are namespaced (`user-pgns:studies`) so a generated id can never
+ * collide with an authored one, and so the id says at a glance which section
+ * and which category a row belongs to.
  */
 
 export type LibraryNavOptions = {
@@ -150,28 +146,10 @@ export const libraryNavItems = (
   return items;
 };
 
-/** How the Positions section is generated. */
-export const positionsNavOptions: LibraryNavOptions = {
-  rootId: "positions",
-  rootLabelKey: "nav.folders.positions",
-  rootIcon: LibraryBooksRoundedIcon,
-  routeBase: "/positions",
-  categoryIcon: FolderRoundedIcon,
-  screenIcon: ViewListRoundedIcon,
-};
-
-/** The Positions folder subtree, built from the shipped catalog. */
-export const positionsNavFolder = (): NavFolder =>
-  libraryNavFolder(positionsCatalog, positionsNavOptions);
-
-/** The Positions list screens, built from the shipped catalog. */
-export const positionsNavItems = (): NavItem[] =>
-  libraryNavItems(positionsCatalog, positionsNavOptions);
-
 /**
  * How the User PGNs section is generated.
  *
- * The same generator over a catalog whose categories came out of `.pgn` files
+ * The generator takes a catalog whose categories came out of `.pgn` files
  * rather than out of JSON — which is the whole point of building the subtree
  * from a catalog rather than from the data file behind one. Nothing here knows
  * that a folder is a file, and nothing had to change for it: **dropping a

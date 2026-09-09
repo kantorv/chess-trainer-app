@@ -1,7 +1,5 @@
 import { LIBRARY_REFERENCE_KEY } from "../../lib/gameReference";
-import { matesCatalog } from "../../lib/matesCatalog";
 import { userPgnsLibrary } from "../../lib/pgnCatalog";
-import { positionsCatalog } from "../../lib/positionsCatalog";
 import type { LibraryCatalog } from "../../lib/libraryCatalog";
 import type { FolderNotes } from "./folderNotes";
 import { pgnFolderNotes } from "./pgnFolderNotes";
@@ -12,14 +10,12 @@ import { pgnFolderNotes } from "./pgnFolderNotes";
  * `LibraryList` and `LibraryDetail` render any library; a section descriptor is
  * everything that tells one from another — where its routes live, which catalog
  * it reads, which locale block its chrome comes out of, and what its test ids
- * are called. Mates and Positions are each one of these and nothing more, which
- * is what makes a third section a data file plus a descriptor rather than a
- * third pair of screens.
+ * are called. The Library is one of these and nothing more, which is what would
+ * make another section a data file plus a descriptor rather than a second pair
+ * of screens.
  *
- * The test ids are part of the descriptor rather than derived, because the
- * Mates section's were written before the shared layer existed and its tests
- * name them: `mates-list`, `mate-card-<id>`, `mate-open-analysis`. Keeping them
- * verbatim is what let the refactor leave the shipped section's tests alone.
+ * The test ids are part of the descriptor rather than derived, so a section can
+ * name them whatever its tests already expect rather than having them imposed.
  *
  * **Two ids, not two per widget.** A screen that grows a control derives its id
  * from the base it already has — the list screen's top bar, search box, card-size
@@ -31,13 +27,13 @@ import { pgnFolderNotes } from "./pgnFolderNotes";
  * something no section actually differs on.
  */
 export type LibrarySection = {
-  /** Route base, no trailing slash — `"/mates"`, `"/positions"`. */
+  /** Route base, no trailing slash — `"/library"`. */
   routeBase: string;
   /** The catalog behind it. */
   catalog: LibraryCatalog;
   /**
    * The locale block holding this section's chrome — `t(`${chromeKey}.list.empty`)`.
-   * Both sections carry the same key shape; only the strings differ.
+   * Every section carries the same key shape; only the strings differ.
    */
   chromeKey: string;
   /** `data-testid` base for the list screen. */
@@ -46,9 +42,9 @@ export type LibrarySection = {
   itemTestId: string;
   /**
    * The key this section's games are addressed by in a `?game=` reference
-   * (`lib/gameReference.ts`). Only a section that holds games has one — the two
-   * position libraries leave it unset, and their detail pages therefore offer
-   * the `?fen=` hand-offs alone.
+   * (`lib/gameReference.ts`). Only a section that holds games has one — a
+   * section of positions would leave it unset, and its detail pages would then
+   * offer the `?fen=` hand-offs alone.
    */
   gameReferenceKey?: string;
   /**
@@ -59,9 +55,9 @@ export type LibrarySection = {
    * hint exactly as before.
    *
    * It is a field rather than something `LibraryList` looks up, because the
-   * lookup is what tells the sections apart: User PGNs resolves it from `.mdx`
-   * files beside its `.pgn` files, and Mates and Positions could carry notes
-   * later — from anywhere — by filling this in and nothing else.
+   * lookup is what would tell two sections apart: the Library resolves it from
+   * `.mdx` files beside its `.pgn` files, and a section of positions could
+   * carry notes — from anywhere — by filling this in and nothing else.
    */
   folderNotes?: FolderNotes;
 };
@@ -69,36 +65,17 @@ export type LibrarySection = {
 /**
  * Where "back to the library" goes: the first root category's route. Read off
  * the catalog rather than configured, so it cannot come to name a category the
- * data no longer has — and it is `/mates/basic` for Mates, which is what that
- * section's `notFound.back` string has always said.
+ * data no longer has.
  */
 export const sectionHome = (section: LibrarySection): string => {
   const first = section.catalog.categories[0];
   return first === undefined ? section.routeBase : `${section.routeBase}/${first.path}`;
 };
 
-/** The Mates section: three categories, labelled from `src/locales`. */
-export const matesSection: LibrarySection = {
-  routeBase: "/mates",
-  catalog: matesCatalog,
-  chromeKey: "mates",
-  listTestId: "mates-list",
-  itemTestId: "mate",
-};
-
-/** The endgame Positions section: categories nested to any depth, labelled from the data. */
-export const positionsSection: LibrarySection = {
-  routeBase: "/positions",
-  catalog: positionsCatalog,
-  chromeKey: "positions",
-  listTestId: "positions-list",
-  itemTestId: "position",
-};
-
 /**
  * The **Library** section: one folder per `.pgn` file the project ships (plus
- * the reader's uploads), one item per game inside it. The first section whose
- * items are **games**, which is why it is also the first with a
+ * the reader's uploads), one item per game inside it. The one section whose
+ * items are **games**, which is why it is also the one with a
  * `gameReferenceKey`.
  *
  * Called `userPgnsSection` for historical reasons (it was "User PGNs" before
@@ -109,12 +86,12 @@ export const positionsSection: LibrarySection = {
 export const userPgnsSection: LibrarySection = {
   routeBase: "/library",
   /*
-    A getter, uniquely among the three sections: this library is the shipped
-    `.pgn` files **plus whatever the reader has uploaded**, and an upload
-    happens while the app is running. `userPgnsLibrary()` is memoised on the
-    stored uploads, so reading it per render costs a string comparison; what
-    re-*renders* on a change is whoever subscribed (`views/pgn/useUploads.ts`).
-    The other two sections' catalogs are build-time constants and stay fields.
+    A getter: this library is the shipped `.pgn` files **plus whatever the
+    reader has uploaded**, and an upload happens while the app is running.
+    `userPgnsLibrary()` is memoised on the stored uploads, so reading it per
+    render costs a string comparison; what re-*renders* on a change is whoever
+    subscribed (`views/pgn/useUploads.ts`). A section over build-time constant
+    data could keep its catalog a plain field.
   */
   get catalog() {
     return userPgnsLibrary();

@@ -32,14 +32,13 @@ import { sectionHome, type LibrarySection } from "./section";
 
 /**
  * One category's items, as cards — **the list screen of every library
- * section**: Mates, Positions and User PGNs alike.
+ * section**, section-agnostic so another one would render through it unchanged.
  *
- * The category arrives as a path (`"basic"`, `"queen-vs-rook/rosettes"`)
- * rather than being read off the router here, because the sections address it
- * differently: Mates has a `:category` route parameter, Positions and User PGNs
- * a splat resolved through the catalog. Everything below that is identical, and
- * this screen knows nothing about JSON or PGN — it reads through
- * `lib/libraryCatalog.ts`.
+ * The category arrives as a path (`"queen-vs-rook/rosettes"`) rather than being
+ * read off the router here, so a section is free to address it however it likes
+ * — User PGNs uses a splat resolved through the catalog. Everything below that
+ * is identical, and this screen knows nothing about JSON or PGN — it reads
+ * through `lib/libraryCatalog.ts`.
  *
  * **The item kind is one branch, and only one**: the card's footer, which lives
  * in `LibraryCardFooter`. A position is captioned by whose move it is, because
@@ -51,10 +50,10 @@ import { sectionHome, type LibrarySection } from "./section";
  *
  * ### A category's sub-folders are cards in the same grid
  *
- * A library nests — `positions.json` does, the User PGNs manifest groups files
- * under one folder, and a lichess export of every study its author wrote is one
- * file holding twenty-eight of them (`lib/pgnLibrary.ts`). Until the folders
- * were cards only the sidebar could reach them: this screen showed the
+ * A library nests — the User PGNs manifest groups files under one folder, and a
+ * lichess export of every study its author wrote is one file holding
+ * twenty-eight of them (`lib/pgnLibrary.ts`). Until the folders were cards only
+ * the sidebar could reach them: this screen showed the
  * category's own items and, for a folder that groups and holds nothing itself,
  * the word "empty".
  *
