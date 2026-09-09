@@ -26,7 +26,7 @@ const he: typeof en = {
       maskedPieces: "כלים מוסווים",
       games: "משחקים",
       tools: "כלים",
-      userPgns: "קבצי PGN שלי",
+      library: "ספרייה",
     },
   },
   home: {
@@ -367,7 +367,7 @@ const he: typeof en = {
     moves: { empty: "עדיין אין מהלכים — שחקו על הלוח, או בחרו מהלך מוכר מלשונית המהלכים האפשריים." },
     controls: { newGame: "משחק חדש", playFromHere: "שחקו מכאן", reset:"איפוס" },
   },
-  userPgns: {
+  library: {
     list: {
       count: "משחקים: {{count}}",
       folders: "מחקרים: {{count}}",
@@ -430,9 +430,9 @@ const he: typeof en = {
       b: "השחור במסע",
     },
     notFound: {
-      category: "אין תיקיית PGN כזו.",
+      category: "אין תיקיית ספרייה כזו.",
       position: "אין משחק כזה בתיקייה הזו.",
-      back: "חזרה אל קובצי ה-PGN שלי",
+      back: "חזרה אל הספרייה",
     },
     leftPanel: {
       ariaLabel: "פריטים נוספים ב{{category}}",

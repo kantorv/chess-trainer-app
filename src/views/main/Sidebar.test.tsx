@@ -180,7 +180,7 @@ describe("the folder tree", () => {
     const user = userEvent.setup();
 
     await user.click(
-      screen.getByRole("button", { name: i18n.t("nav.folders.userPgns") }),
+      screen.getByRole("button", { name: i18n.t("nav.folders.library") }),
     );
 
     /*
@@ -191,7 +191,7 @@ describe("the folder tree", () => {
       mounted.
     */
     const collection = screen.getByRole("button", {
-      name: folderNameOf("user-pgns:methurst-public-studies"),
+      name: folderNameOf("library:methurst-public-studies"),
     });
     expect(collection).toHaveAttribute("aria-expanded", "false");
 
@@ -324,7 +324,7 @@ describe("the folder tree", () => {
   });
 
   it("leaves the open folder alone on a route that is no screen", async () => {
-    const LIST = "/pgn/lichess-study-puzzles-custom-set-1-by-lalala732-2026-05-03";
+    const LIST = "/library/lichess-study-puzzles-custom-set-1-by-lalala732-2026-05-03";
     render(
       <AppThemeWithLang>
         <MemoryRouter initialEntries={[LIST]}>
@@ -342,7 +342,7 @@ describe("the folder tree", () => {
     // away — so the section that holds it is User PGNs, and it opens with the
     // route.
     const userPgns = () =>
-      screen.getByRole("button", { name: i18n.t("nav.folders.userPgns") });
+      screen.getByRole("button", { name: i18n.t("nav.folders.library") });
     const listName = "Puzzles, custom set #1";
     expect(userPgns()).toHaveAttribute("aria-expanded", "true");
     expect(

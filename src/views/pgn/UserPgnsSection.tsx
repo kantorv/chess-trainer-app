@@ -15,15 +15,19 @@ import PgnCollectionNav from "./PgnCollectionNav";
 import PgnUploads from "./PgnUploads";
 
 /**
- * The User PGNs section — **one component behind every `/pgn/*` URL**, at every
- * depth, and **the one place a PGN kind is turned into a screen**.
+ * The Library section — **one component behind every `/library/*` URL**, at
+ * every depth, and **the one place a PGN kind is turned into a screen**.
+ * (Called "User PGNs" and served at `/pgn/*` before CTA-38; old URLs redirect,
+ * and `App.tsx` keeps the file path `views/pgn/` for the same internal reason
+ * `src/data/pgn/` keeps its name.)
  *
  * It reads the URL as a splat resolved through the catalog by
  * `resolveLibraryPath`, which takes the longest prefix of the segments that
  * names a category and reads whatever is left over as an item id. `App.tsx`
  * therefore never learns how the `.pgn` files are organised —
- * `/pgn/chess-com-games-2026-08-30`, `/pgn/queen-vs-rook-rosettes/chapter-1`
- * and `/pgn/methurst-public-studies/queen-vs-rook-lightning/chapter-3` are all
+ * `/library/chess-com-games-2026-08-30`,
+ * `/library/queen-vs-rook-rosettes/chapter-1` and
+ * `/library/methurst-public-studies/queen-vs-rook-lightning/chapter-3` are all
  * this one route, and dropping a file in changes none of it.
  *
  * The last step is this section's own. A `.pgn` file is a container, not a
@@ -34,15 +38,16 @@ import PgnUploads from "./PgnUploads";
  * | --- | --- | --- |
  * | `uploads` — the folder the reader's own files land in | `PgnUploads` — the upload button, and what has been uploaded | the app's own |
  * | `collection` — one file, several studies | `PgnCollection` — an index of the studies, with the file's authored notes | the app's own |
+ * | `repertoire` — one file, an opening repertoire | `LibraryList` — chapter folder-cards, then a card per line | the app's own |
  * | `study` **inside** a collection | `LibraryList` — a card per chapter | `PgnCollectionNav` — the collection's other studies |
  * | `study`, `games`, `shelf` | `LibraryList` | the app's own |
- * | an item, whatever its folder | `LibraryDetail` | `LibrarySiblingNav` (its own doing) |
+ * | an item, whatever its folder | `LibraryDetail` (`variationMode` for a repertoire line) | `LibrarySiblingNav` (its own doing) |
  *
  * **Adding a kind is a row in that table** plus a recognition rule in
  * `lib/pgnLibrary.ts` — see `lib/pgnKind.ts`, which is where the taxonomy and
- * the two kinds this project expects next (`repertoire`, `variations`) are
- * written down. Nothing in `views/library/` or `lib/libraryCatalog.ts` learns
- * about any of it: those are section-agnostic, and only this section has files.
+ * the one kind still expected (`variations`) are written down. Nothing in
+ * `views/library/` or `lib/libraryCatalog.ts` learns about any of it: those
+ * are section-agnostic, and only this section has files.
  */
 
 /**
@@ -69,11 +74,20 @@ function UserPgnsSection() {
   const location = resolveLibraryPath(segments, userPgnsSection.catalog);
 
   if (location.kind === "item") {
+    /*
+      A repertoire line opens with its variation tree beside the board rather
+      than as a linear replay. The flag is computed here — in the section, which
+      is the only place that knows a `PgnKind` — and handed to the shared detail
+      screen as a prop, so `views/library/` stays kind-blind.
+    */
+    const variationMode =
+      pgnKindOf(location.category.path, userPgnsLibrary().kinds) === "repertoire";
     return (
       <LibraryDetail
         section={userPgnsSection}
         categoryPath={location.category.path}
         positionId={location.item.id}
+        variationMode={variationMode}
       />
     );
   }
@@ -107,6 +121,18 @@ function UserPgnsSection() {
 
   if (kind === "collection") {
     return <PgnCollection section={userPgnsSection} category={category} />;
+  }
+
+  /*
+    A `repertoire` folder is collection-shaped — the root holds chapter
+    sub-folders, a chapter holds line items — and `LibraryList` already renders
+    child folders as cards ahead of items, so one list screen serves both
+    levels: chapter folder-cards at the root, a card per line inside a chapter.
+    No collection nav: a repertoire chapter's parent is the repertoire, not a
+    `collection`.
+  */
+  if (kind === "repertoire") {
+    return <LibraryList section={userPgnsSection} categoryPath={category.path} />;
   }
 
   /*

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  LEGACY_PGN_REFERENCE_KEY,
+  LIBRARY_REFERENCE_KEY,
   PGN_REFERENCE_KEY,
   gameReferenceOf,
   resolveGameReference,
@@ -32,12 +34,24 @@ describe("gameReferenceOf and resolveGameReference round-trip", () => {
 
     const reference = gameReferenceOf(PGN_REFERENCE_KEY, item);
 
-    expect(reference).toBe(`pgn/${item.category}/${item.id}`);
+    expect(reference).toBe(`library/${item.category}/${item.id}`);
     expect(resolveGameReference(reference)).toBe(item);
   });
 
   it("tolerates the empty segments a stray slash leaves", () => {
-    expect(resolveGameReference(`/pgn/${first.category}/${first.id}/`)).toBe(first);
+    expect(resolveGameReference(`/library/${first.category}/${first.id}/`)).toBe(
+      first,
+    );
+  });
+
+  it("still resolves the pre-CTA-38 `pgn/` section key", () => {
+    // `PGN_REFERENCE_KEY` now equals `LIBRARY_REFERENCE_KEY`; the *string*
+    // "pgn" a bookmarked link carries is kept resolvable via the legacy alias.
+    expect(PGN_REFERENCE_KEY).toBe(LIBRARY_REFERENCE_KEY);
+    expect(LEGACY_PGN_REFERENCE_KEY).toBe("pgn");
+    expect(
+      resolveGameReference(`pgn/${first.category}/${first.id}`),
+    ).toBe(first);
   });
 });
 

@@ -31,14 +31,14 @@ vi.mock("react-chessboard", () => ({
  * bar, the search, the card-size toggle and the two-region layout branch on
  * nothing but props.
  *
- * The local sections read their chrome out of the `userPgns` locale block —
+ * The local sections read their chrome out of the `library` locale block —
  * the one a shipped section carries — so a count reads "Games:" and an empty
  * category "No games in this file yet." here.
  */
 const sectionOver = (
   catalog: LibraryCatalog,
   ids: Pick<LibrarySection, "routeBase" | "listTestId" | "itemTestId">,
-): LibrarySection => ({ ...ids, catalog, chromeKey: "userPgns" });
+): LibrarySection => ({ ...ids, catalog, chromeKey: "library" });
 
 const KQK = "7k/8/8/8/8/8/4Q3/4K3 w - - 0 1";
 
@@ -181,7 +181,7 @@ describe("LibraryList", () => {
       */
       renderList(userPgnsSection, STUDY);
 
-      const notes = screen.getByTestId("user-pgns-list-notes");
+      const notes = screen.getByTestId("library-list-notes");
       expect(notes).toBeInTheDocument();
       expect(
         within(notes).getByRole("heading", { name: "Queen vs Rook, Rosettes" }),
@@ -199,7 +199,7 @@ describe("LibraryList", () => {
       // of it and notes longer than the panel have to scroll here.
       renderList(userPgnsSection, STUDY);
 
-      expect(screen.getByTestId("user-pgns-list-notes")).toHaveStyle({
+      expect(screen.getByTestId("library-list-notes")).toHaveStyle({
         flex: "1",
         minHeight: "0px",
         overflowY: "auto",
@@ -209,7 +209,7 @@ describe("LibraryList", () => {
     it("keeps the hint for a folder with none", () => {
       renderList(userPgnsSection, UNANNOTATED);
 
-      expect(screen.queryByTestId("user-pgns-list-notes")).toBeNull();
+      expect(screen.queryByTestId("library-list-notes")).toBeNull();
       expect(screen.getByTestId("layout-right-panel")).toHaveTextContent(
         "Pick a game to replay it",
       );
@@ -309,10 +309,10 @@ describe("LibraryList", () => {
       const games = itemsInLibraryCategory(STUDY, userPgnsSection.catalog);
       expect(games.length).toBeGreaterThan(0);
 
-      await user.type(screen.getByTestId("user-pgns-list-search"), "chapter 1");
+      await user.type(screen.getByTestId("library-list-search"), "chapter 1");
 
-      expect(screen.getByTestId("user-pgn-card-chapter-1")).toBeInTheDocument();
-      expect(screen.getByTestId("user-pgns-list-search")).toHaveValue("chapter 1");
+      expect(screen.getByTestId("library-item-card-chapter-1")).toBeInTheDocument();
+      expect(screen.getByTestId("library-list-search")).toHaveValue("chapter 1");
     });
   });
 
@@ -388,7 +388,7 @@ describe("LibraryList", () => {
       // one part's forty-odd.
       renderList(userPgnsSection, GROUP);
 
-      const [card] = screen.getAllByTestId(/^user-pgns-list-folder-lichess/);
+      const [card] = screen.getAllByTestId(/^library-list-folder-lichess/);
       expect(card).toHaveTextContent(/Games: \d+/);
       expect(card).not.toHaveTextContent("Games: 0");
     });
@@ -396,22 +396,22 @@ describe("LibraryList", () => {
     it("counts the folders in the top bar, in the section's own words", () => {
       renderList(userPgnsSection, GROUP);
 
-      expect(screen.getByTestId("user-pgns-list-folder-count")).toHaveTextContent(
+      expect(screen.getByTestId("library-list-folder-count")).toHaveTextContent(
         "Studies: 3",
       );
       // No games of its own, so no game count beside it.
-      expect(screen.queryByTestId("user-pgns-list-count")).toBeNull();
-      expect(screen.queryByTestId("user-pgns-list-empty")).toBeNull();
+      expect(screen.queryByTestId("library-list-count")).toBeNull();
+      expect(screen.queryByTestId("library-list-empty")).toBeNull();
     });
 
     it("searches the folders as well as the cards", async () => {
       const user = userEvent.setup();
       renderList(userPgnsSection, GROUP);
 
-      await user.type(screen.getByTestId("user-pgns-list-search"), "part 2");
+      await user.type(screen.getByTestId("library-list-search"), "part 2");
 
-      expect(screen.getAllByTestId(/^user-pgns-list-folder-lichess/)).toHaveLength(1);
-      expect(screen.getByTestId("user-pgns-list-folder-count")).toHaveTextContent(
+      expect(screen.getAllByTestId(/^library-list-folder-lichess/)).toHaveLength(1);
+      expect(screen.getByTestId("library-list-folder-count")).toHaveTextContent(
         "Studies: 1",
       );
     });
@@ -420,10 +420,10 @@ describe("LibraryList", () => {
       const user = userEvent.setup();
       renderList(userPgnsSection, GROUP);
 
-      await user.type(screen.getByTestId("user-pgns-list-search"), "zugzwang");
+      await user.type(screen.getByTestId("library-list-search"), "zugzwang");
 
-      expect(screen.getByTestId("user-pgns-list-no-matches")).toBeInTheDocument();
-      expect(screen.queryByTestId("user-pgns-list-grid")).toBeNull();
+      expect(screen.getByTestId("library-list-no-matches")).toBeInTheDocument();
+      expect(screen.queryByTestId("library-list-grid")).toBeNull();
     });
 
     it("registers the panel for a folder that only holds folders", () => {

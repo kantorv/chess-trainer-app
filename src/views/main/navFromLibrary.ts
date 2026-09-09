@@ -165,12 +165,14 @@ export const userPgnsNavOptions: LibraryNavOptions = {
   */
   hasScreen: (category) => {
     const kind = pgnKindOf(category.path, userPgnsLibrary().kinds);
-    return kind === "collection" || kind === "uploads";
+    // `repertoire` joins `collection` here: its root only groups chapter
+    // sub-folders, but its list screen (chapter folder-cards) is a real screen.
+    return kind === "collection" || kind === "uploads" || kind === "repertoire";
   },
-  rootId: "user-pgns",
-  rootLabelKey: "nav.folders.userPgns",
+  rootId: "library",
+  rootLabelKey: "nav.folders.library",
   rootIcon: SnippetFolderRoundedIcon,
-  routeBase: "/pgn",
+  routeBase: "/library",
   categoryIcon: FolderRoundedIcon,
   screenIcon: ViewListRoundedIcon,
 };

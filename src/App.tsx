@@ -1,5 +1,5 @@
 //import * as Sentry from "@sentry/react";
-import { createBrowserRouter, RouterProvider } from "react-router";
+import { createBrowserRouter, Navigate, RouterProvider, useLocation } from "react-router";
 
 import { DefaultLayout } from './views/main/Layout';
 import { default as HomeScreen  } from './views/home/Main'
@@ -14,6 +14,17 @@ import { default as OpeningsScreen  } from './views/tools/openings/Main'
 import { default as UserPgnsScreen  } from './views/pgn/Main'
 
 
+/**
+ * Back-compat for the pre-CTA-38 `/pgn/*` URLs. The section is "Library" now
+ * and lives at `/library/*`; a bookmarked or shared `/pgn/...` link (with its
+ * query string, e.g. `?move=`) redirects to the same path under `/library`.
+ * `replace` so it does not leave the dead URL in history.
+ */
+export function LegacyPgnRedirect() {
+  const location = useLocation();
+  const rest = location.pathname.replace(/^\/pgn(?=\/|$)/, "");
+  return <Navigate to={`/library${rest}${location.search}${location.hash}`} replace />;
+}
 
 const routes = createBrowserRouter(
 
@@ -69,14 +80,20 @@ const routes = createBrowserRouter(
           path: "/tools/openings",
           element: <OpeningsScreen />
         },
-        // The User PGNs library. One splat route, over content that is
-        // not a JSON file at all: the folders are the `.pgn` files under
-        // `src/data/pgn/` and the items are the games inside them
-        // (`lib/pgnCatalog.ts`). Dropping a file in adds a folder and its games
-        // at `/pgn/<folder>` and `/pgn/<folder>/<game>` with no edit here.
+        // The Library section. One splat route, over content that is not a JSON
+        // file at all: the folders are the `.pgn` files under `src/data/pgn/`
+        // and the items are the games inside them (`lib/pgnCatalog.ts`).
+        // Dropping a file in adds a folder and its games at `/library/<folder>`
+        // and `/library/<folder>/<game>` with no edit here. (The `src/data/pgn/`
+        // directory keeps its name — internal.)
+        {
+          path: "/library/*",
+          element: <UserPgnsScreen />
+        },
+        // Pre-CTA-38 the section was "User PGNs" at `/pgn/*`. Old links redirect.
         {
           path: "/pgn/*",
-          element: <UserPgnsScreen />
+          element: <LegacyPgnRedirect />
         }
 
       ]

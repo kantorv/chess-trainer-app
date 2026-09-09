@@ -11,6 +11,7 @@ import {
 } from "../../lib/libraryCatalog";
 import LibraryGameDetail from "./LibraryGameDetail";
 import LibraryPositionDetail from "./LibraryPositionDetail";
+import LibraryVariationDetail from "./LibraryVariationDetail";
 import { sectionHome, type LibrarySection } from "./section";
 
 /**
@@ -25,12 +26,14 @@ import { sectionHome, type LibrarySection } from "./section";
  * | --- | --- | --- |
  * | `position` | `LibraryPositionDetail` | one FEN on a read-only board, with the three `?fen=` hand-offs |
  * | `game` | `LibraryGameDetail` | the game replayed, over the shared `MoveList` / `BoardControls` / `useGameNavigation` |
+ * | `game` + `variationMode` | `LibraryVariationDetail` | a repertoire line replayed with its **variation tree** (`parsePgnTree` + the shared `VariationTree`) |
  *
- * Separate because the game body runs hooks the position body does not, and a
- * hook cannot live behind a condition. Splitting on the kind *before* the hooks
- * run is what keeps both bodies honest — and it means the two shipped sections
- * reach exactly the code they always did, through a component whose props never
- * changed.
+ * Separate because each body runs hooks the others do not — `useGameNavigation`
+ * vs. `useTreeNavigation` vs. neither — and a hook cannot live behind a
+ * condition. Splitting on the kind (and the `variationMode` flag the section
+ * passes) *before* the hooks run is what keeps every body honest. The flag
+ * rides in as a prop rather than as a field on the item, so `views/library/`
+ * never learns what a `PgnKind` is (`lib/pgnKind.ts`).
  */
 
 type Props = {
@@ -38,9 +41,20 @@ type Props = {
   /** The category's full path under the section's route base. */
   categoryPath: string | undefined;
   positionId: string | undefined;
+  /**
+   * Render a `game` item with its variation tree rather than as a linear
+   * replay. The Library section sets this for a **repertoire line**; every
+   * other caller leaves it `false`.
+   */
+  variationMode?: boolean;
 };
 
-function LibraryDetail({ section, categoryPath, positionId }: Props) {
+function LibraryDetail({
+  section,
+  categoryPath,
+  positionId,
+  variationMode = false,
+}: Props) {
   const { t, i18n } = useTranslation();
   const language = asAppLanguage(i18n.language);
 
@@ -84,10 +98,16 @@ function LibraryDetail({ section, categoryPath, positionId }: Props) {
     );
   }
 
-  return item.kind === "game" ? (
-    <LibraryGameDetail section={section} category={found} item={item} />
+  if (item.kind !== "game") {
+    return (
+      <LibraryPositionDetail section={section} category={found} position={item} />
+    );
+  }
+
+  return variationMode ? (
+    <LibraryVariationDetail section={section} category={found} item={item} />
   ) : (
-    <LibraryPositionDetail section={section} category={found} position={item} />
+    <LibraryGameDetail section={section} category={found} item={item} />
   );
 }
 

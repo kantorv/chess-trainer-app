@@ -1,4 +1,4 @@
-import { PGN_REFERENCE_KEY } from "../../lib/gameReference";
+import { LIBRARY_REFERENCE_KEY } from "../../lib/gameReference";
 import { userPgnsLibrary } from "../../lib/pgnCatalog";
 import type { LibraryCatalog } from "../../lib/libraryCatalog";
 import type { FolderNotes } from "./folderNotes";
@@ -10,7 +10,7 @@ import { pgnFolderNotes } from "./pgnFolderNotes";
  * `LibraryList` and `LibraryDetail` render any library; a section descriptor is
  * everything that tells one from another — where its routes live, which catalog
  * it reads, which locale block its chrome comes out of, and what its test ids
- * are called. User PGNs is one of these and nothing more, which is what would
+ * are called. The Library is one of these and nothing more, which is what would
  * make another section a data file plus a descriptor rather than a second pair
  * of screens.
  *
@@ -27,7 +27,7 @@ import { pgnFolderNotes } from "./pgnFolderNotes";
  * something no section actually differs on.
  */
 export type LibrarySection = {
-  /** Route base, no trailing slash — `"/pgn"`. */
+  /** Route base, no trailing slash — `"/library"`. */
   routeBase: string;
   /** The catalog behind it. */
   catalog: LibraryCatalog;
@@ -55,7 +55,7 @@ export type LibrarySection = {
    * hint exactly as before.
    *
    * It is a field rather than something `LibraryList` looks up, because the
-   * lookup is what would tell two sections apart: User PGNs resolves it from
+   * lookup is what would tell two sections apart: the Library resolves it from
    * `.mdx` files beside its `.pgn` files, and a section of positions could
    * carry notes — from anywhere — by filling this in and nothing else.
    */
@@ -73,12 +73,18 @@ export const sectionHome = (section: LibrarySection): string => {
 };
 
 /**
- * The User PGNs section: one folder per `.pgn` file the project ships, one item
- * per game inside it. The one section whose items are **games**, which is why
- * it is also the one with a `gameReferenceKey`.
+ * The **Library** section: one folder per `.pgn` file the project ships (plus
+ * the reader's uploads), one item per game inside it. The one section whose
+ * items are **games**, which is why it is also the one with a
+ * `gameReferenceKey`.
+ *
+ * Called `userPgnsSection` for historical reasons (it was "User PGNs" before
+ * CTA-38 renamed the chrome and the routes to "Library" / `/library/*`); the
+ * export name is kept so callers do not churn. `librarySection` below is the
+ * same value under the current name.
  */
 export const userPgnsSection: LibrarySection = {
-  routeBase: "/pgn",
+  routeBase: "/library",
   /*
     A getter: this library is the shipped `.pgn` files **plus whatever the
     reader has uploaded**, and an upload happens while the app is running.
@@ -90,9 +96,12 @@ export const userPgnsSection: LibrarySection = {
   get catalog() {
     return userPgnsLibrary();
   },
-  chromeKey: "userPgns",
-  listTestId: "user-pgns-list",
-  itemTestId: "user-pgn",
-  gameReferenceKey: PGN_REFERENCE_KEY,
+  chromeKey: "library",
+  listTestId: "library-list",
+  itemTestId: "library-item",
+  gameReferenceKey: LIBRARY_REFERENCE_KEY,
   folderNotes: pgnFolderNotes,
 };
+
+/** The {@link userPgnsSection} descriptor under its current name. */
+export const librarySection = userPgnsSection;
