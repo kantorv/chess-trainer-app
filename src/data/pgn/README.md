@@ -131,11 +131,12 @@ section requires a name to be unique across files.
 ## A repertoire file
 
 An opening **repertoire** — a Chessable-style export, or a lichess study built
-as one — is a third folder-of-folders shape, and it splits on a different tag:
+as one — is a third folder-of-folders shape, and it splits on a different tag.
+No repertoire ships in this repo; drop one in (or upload one) and it looks like:
 
 ```
-tame-the-sicilian-alapin_….pgn      ← one file, 310 lines, no StudyName
-  └── /library/tame-the-sicilian-alapin-…            the file's folder
+my-repertoire.pgn                    ← one file, dozens of lines, no StudyName
+  └── /library/my-repertoire                         the file's folder
         ├── …/introduction                           a chapter (White: "Introduction")
         ├── …/2-qa5                                   a chapter (White: "1) 2...Qa5")
         │     └── …/2-qa5-3-g3-b5-1                   a line (Black: "2... Qa5 3. g3 b5 #1")
@@ -153,10 +154,11 @@ tame-the-sicilian-alapin_….pgn      ← one file, 310 lines, no StudyName
   linear move list. Everything else about the detail screen — the hand-offs,
   the sibling nav, `?game=` / `?move=` — is unchanged.
 - **Recognised from the manifest first, the shape second.** `kind: "repertoire"`
-  in `pgn.json` is the reliable declaration a shipped file uses; an undeclared
-  file (or an upload) is classified by `looksLikeRepertoire` — many games, no
-  `StudyName`, several `White` tags sharing a `"N) "` prefix over most of the
-  games. A manifest `kind` always wins over the heuristic.
+  in `pgn.json` is the reliable declaration a shipped file would use; an
+  undeclared file (or an upload — the only way one reaches this section today)
+  is classified by `looksLikeRepertoire` — many games, no `StudyName`, several
+  `White` tags sharing a `"N) "` prefix over most of the games. A manifest
+  `kind` always wins over the heuristic.
 
 ## Notes for a folder — a sibling `.mdx`
 

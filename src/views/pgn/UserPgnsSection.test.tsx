@@ -925,38 +925,67 @@ describe("the Uploads folder", () => {
   });
 });
 
-describe("a repertoire", () => {
-  const REPERTOIRE = "tame-the-sicilian-alapin-by-kasimdzhanov-ganguly";
-  const CHAPTER = `${REPERTOIRE}/2-qa5`;
-  const LINE = `${CHAPTER}/2-qa5-3-g3-b5-1`;
+/*
+  A repertoire-shaped PGN: no `StudyName`, the chapter name on `White` with an
+  `"N) "` order prefix, the line name on `Black`, and a `( )` side line in the
+  first line so the variation tree has a branch to render. Enough chapters and
+  lines for the structural heuristic to classify it (`looksLikeRepertoire`) —
+  there is no shipped repertoire file, so an upload is how the section's own
+  tests reach the kind.
+*/
+const REPERTOIRE_PGN = [1, 2, 3, 4]
+  .flatMap((chapter) =>
+    [1, 2].map(
+      (line) => `[Event "?"]
+[White "${chapter}) 2...move ${chapter}"]
+[Black "line ${chapter}.${line}"]
+[Result "*"]
+[ECO "B22"]
+
+1. e4 c5 2. c3 ${
+        chapter === 1 && line === 1
+          ? "d5 3. exd5 (3. Nf3 Nf6) 3... Qxd5"
+          : `${line === 1 ? "d5 3. exd5" : "Nf6 3. e5"}`
+      } *
+`,
+    ),
+  )
+  .join("\n");
+
+describe("an uploaded repertoire", () => {
+  const ROOT = "uploads/alapin";
+  const CHAPTER = `${ROOT}/2-move-1`;
+  const LINE = `${CHAPTER}/line-1-1`;
 
   beforeEach(async () => {
     await i18n.changeLanguage("en");
+    clearUploads();
+    addUpload("alapin.pgn", REPERTOIRE_PGN);
   });
 
-  it("shows the repertoire root as a screen of chapter folder-cards", () => {
-    renderAt(`/library/${REPERTOIRE}`);
+  it("is recognised by shape and shows the root as chapter folder-cards", () => {
+    renderAt(`/library/${ROOT}`);
 
     // Chapter sub-folders render as folder cards, not game cards.
     expect(
       screen.getAllByTestId(/^library-list-folder-/).length,
-    ).toBeGreaterThan(5);
+    ).toBeGreaterThan(2);
     expect(screen.queryByTestId("board")).toBeNull();
   });
 
   it("lists a chapter's lines as cards named from the `Black` tag", () => {
     renderAt(`/library/${CHAPTER}`);
 
-    expect(
-      screen.getByTestId("library-item-card-2-qa5-3-g3-b5-1"),
-    ).toHaveTextContent("2... Qa5 3. g3 b5 #1");
+    expect(screen.getByTestId("library-item-card-line-1-1")).toHaveTextContent(
+      "line 1.1",
+    );
   });
 
   it("opens a line in variation-tree mode, not the linear move list", () => {
     renderAt(`/library/${LINE}`);
 
-    // The shared VariationTree renders clickable move tokens; the linear
-    // MoveList never does.
+    // The shared VariationTree renders clickable move tokens (and the `( )`
+    // side line as a variation block); the linear MoveList never does.
     expect(screen.getAllByTestId(/^tree-move-/).length).toBeGreaterThan(0);
     expect(screen.getByTestId("library-item-detail-board")).toBeInTheDocument();
   });
@@ -968,7 +997,7 @@ describe("a repertoire", () => {
 
     expect(screen.getByTestId("analysis-arrival")).toHaveAttribute(
       "data-game",
-      `library/${CHAPTER}/2-qa5-3-g3-b5-1`,
+      `library/${CHAPTER}/line-1-1`,
     );
   });
 });

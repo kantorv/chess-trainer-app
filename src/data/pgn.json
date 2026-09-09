@@ -24,14 +24,6 @@
       },
       "order": 40
     },
-    "tame-the-sicilian-alapin_by_kasimdzhanov-ganguly.pgn": {
-      "label": {
-        "en": "Tame the Sicilian: the Alapin",
-        "he": "לאלף את הסיציליאני: וריאציית אלפין"
-      },
-      "kind": "repertoire",
-      "order": 50
-    },
     "lichess_study_chess-fundamentals-by-jr-capablanca-part-1-of-3_by_frankv53_2021.02.16.pgn": {
       "under": "chess-fundamentals-capablanca",
       "label": { "en": "Part 1 of 3", "he": "חלק 1 מתוך 3" },
