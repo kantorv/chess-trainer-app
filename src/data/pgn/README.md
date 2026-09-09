@@ -208,7 +208,7 @@ hide a file.
 
 - A **single** file's folder holds exactly one list screen, so the sidebar
   renders it as **one clickable item** — no redundant folder-with-one-child.
-  (The same fold applies to the Mates and Positions sections.)
+  (The same fold applies to any generated library subtree.)
 - A **manifest group** of two or more files stays a **folder** you expand to
   reach each file's list.
 - A **multi-study file** is a folder too: its studies are the rows inside it.

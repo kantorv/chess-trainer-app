@@ -73,8 +73,8 @@ describe("sidebar navigation", () => {
   /*
     Walks every screen in the tree, opening its whole folder chain on the way —
     a click per folder, and `userEvent` is deliberately slow. The generated
-    Positions screens roughly doubled the count, which is real coverage rather
-    than a slow test to trim, so the budget is raised instead.
+    User PGNs screens push the count up, which is real coverage rather than a
+    slow test to trim, so the budget is raised instead.
   */
   it("links to the route each entry declares", async () => {
     renderAt("/");
@@ -158,8 +158,8 @@ describe("the folder tree", () => {
     renderAt("/tools/analysis");
 
     // Top-level rows only: a sub-folder lives in its parent's `Collapse` body,
-    // which is unmounted while that parent is shut. Opening Positions is what
-    // brings its one surviving sub-folder row into the tree.
+    // which is unmounted while that parent is shut. Opening User PGNs is what
+    // brings its surviving sub-folder rows into the tree.
     expect(screen.getAllByRole("button")).toHaveLength(navFolders().length);
     expect(toolsFolder()).toHaveAttribute("aria-expanded", "true");
 
@@ -180,22 +180,25 @@ describe("the folder tree", () => {
     const user = userEvent.setup();
 
     await user.click(
-      screen.getByRole("button", { name: i18n.t("nav.folders.positions") }),
+      screen.getByRole("button", { name: i18n.t("nav.folders.userPgns") }),
     );
 
     /*
-      Opening Positions mounts its rows. A leaf category folds to a plain link,
-      but a category that still has sub-categories of its own — Queen vs Rook —
-      stays a collapsible folder row, and comes in shut. One chain is open at a
-      time, so nothing under any other section is mounted.
+      Opening User PGNs mounts its rows. A single-study file folds to a plain
+      link, but a **collection** — one `.pgn` holding several studies — keeps
+      its sub-folders, so it stays a collapsible folder row and comes in shut.
+      One chain is open at a time, so nothing under any other section is
+      mounted.
     */
-    const queenVsRook = screen.getByRole("button", {
-      name: folderNameOf("positions:queen-vs-rook"),
+    const collection = screen.getByRole("button", {
+      name: folderNameOf("user-pgns:methurst-public-studies"),
     });
-    expect(queenVsRook).toHaveAttribute("aria-expanded", "false");
+    expect(collection).toHaveAttribute("aria-expanded", "false");
 
-    // The top-level rows, plus the single sub-folder Positions brought with it.
-    expect(screen.getAllByRole("button")).toHaveLength(navFolders().length + 1);
+    // Opening the section brought at least one sub-folder row in with it.
+    expect(screen.getAllByRole("button").length).toBeGreaterThan(
+      navFolders().length,
+    );
   });
 
   it("starts with everything shut on a route that is no screen", () => {
@@ -321,35 +324,35 @@ describe("the folder tree", () => {
   });
 
   it("leaves the open folder alone on a route that is no screen", async () => {
+    const LIST = "/pgn/lichess-study-puzzles-custom-set-1-by-lalala732-2026-05-03";
     render(
       <AppThemeWithLang>
-        <MemoryRouter initialEntries={["/mates/basic"]}>
-          {/* A position's detail page is a route, not a nav entry — it has no
+        <MemoryRouter initialEntries={[LIST]}>
+          {/* A game's detail page is a route, not a nav entry — it has no
               chain of its own, and shutting the section the reader is inside
               would be the wrong answer to that. */}
-          <Link to="/mates/basic/back-rank">go to a position</Link>
+          <Link to={`${LIST}/some-game`}>go to a game</Link>
           <SideBar />
         </MemoryRouter>
       </AppThemeWithLang>,
     );
     const user = userEvent.setup();
 
-    // `/mates/basic` is a plain link now — the redundant "Basic" sub-folder was
-    // folded away — so the section that holds it is Mates, and it opens with the
+    // `LIST` is a plain link — the redundant leaf-category folder was folded
+    // away — so the section that holds it is User PGNs, and it opens with the
     // route.
-    const mates = () =>
-      screen.getByRole("button", { name: i18n.t("nav.folders.mates") });
-    expect(mates()).toHaveAttribute("aria-expanded", "true");
+    const userPgns = () =>
+      screen.getByRole("button", { name: i18n.t("nav.folders.userPgns") });
+    const listName = "Puzzles, custom set #1";
+    expect(userPgns()).toHaveAttribute("aria-expanded", "true");
     expect(
-      screen.getByRole("link", { name: i18n.t("nav.matesBasic") }),
+      screen.getByRole("link", { name: listName }),
     ).toHaveAttribute("aria-current", "page");
 
-    await user.click(screen.getByRole("link", { name: "go to a position" }));
+    await user.click(screen.getByRole("link", { name: "go to a game" }));
 
-    expect(mates()).toHaveAttribute("aria-expanded", "true");
-    expect(
-      screen.getByRole("link", { name: i18n.t("nav.matesBasic") }),
-    ).toBeVisible();
+    expect(userPgns()).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("link", { name: listName })).toBeVisible();
   });
 });
 

@@ -25,8 +25,8 @@ const BLACK_TO_MOVE = "8/4k3/8/4K3/4P3/8/8/8 b - - 0 1";
 
 /**
  * A library nested two deep, with positions at both levels and a sub-category
- * holding none — the shape the Positions section actually ships, and deeper
- * than the Mates section can express.
+ * holding none — a nested, data-labelled shape a position-shaped section would
+ * ship.
  */
 const nested = () =>
   loadLibraryCatalog({
@@ -43,7 +43,7 @@ const nested = () =>
           },
         ],
       },
-      { id: "pawn-endgames", labelKey: "positions.categories.pawn" },
+      { id: "pawn-endgames", labelKey: "library.categories.pawn" },
     ],
     positions: [
       {
@@ -93,7 +93,7 @@ describe("loadLibraryCatalog reads a nested library", () => {
       "Rosettes",
     );
     expect(categoryLabel(findLibraryCategory("pawn-endgames", catalog), t, "en")).toBe(
-      "translated:positions.categories.pawn",
+      "translated:library.categories.pawn",
     );
   });
 
@@ -288,7 +288,7 @@ describe("loadLibraryCatalog reports rather than throws", () => {
 /*
   The item union, and the one invariant it rests on: `positions` is a projection
   of `items`, built by `libraryCatalogOf` so that a producer cannot fill one and
-  forget the other. The Mates and Positions sections read the projection; the two
+  forget the other. A position-shaped section reads the projection; the two
   shared screens read `items`, which is what lets a section of games render
   through them unchanged.
 */
@@ -324,7 +324,8 @@ describe("a catalog holds positions and games as one list of items", () => {
 
   it("lists both kinds in a category, in data order", () => {
     expect(itemsInLibraryCategory("shelf", catalog)).toEqual([position, game]);
-    // The narrowed reader the Mates binding speaks in sees only its own kind.
+    // The narrowed reader a position-shaped section speaks in sees only its
+    // own kind.
     expect(positionsInLibraryCategory("shelf", catalog)).toEqual([position]);
   });
 
