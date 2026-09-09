@@ -24,10 +24,10 @@ import type { LibrarySection } from "./section";
  * current one marked active, with a close control back to the category's list.
  *
  * **Section-agnostic**, like the two detail bodies that render it: it reads
- * `itemsInLibraryCategory` off whichever `section.catalog` it is handed, so
- * Mates, Positions and User PGNs all get it for free, and it branches on
- * neither the section nor the item's `kind` — a position and a game are both
- * just an item with a name and an id here.
+ * `itemsInLibraryCategory` off whichever `section.catalog` it is handed, so any
+ * library section gets it for free, and it branches on neither the section nor
+ * the item's `kind` — a position and a game are both just an item with a name
+ * and an id here.
  *
  * Registered through `<LeftPanel>` for exactly as long as the detail screen
  * that renders it stays mounted (`leftPanel.tsx`), the same lifetime rule the

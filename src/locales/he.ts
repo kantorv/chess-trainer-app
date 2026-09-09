@@ -21,19 +21,11 @@ const he: typeof en = {
     savedAnalyses: "ניתוחים שמורים",
     boardEditor: "עורך העמדות",
     openings: "פתיחות",
-    matesBasic: "מטים בסיסיים",
-    matesAdvanced: "מטים מתקדמים",
-    matesComplex: "מטים מורכבים",
     folders: {
       engine: "מנוע",
       maskedPieces: "כלים מוסווים",
       games: "משחקים",
       tools: "כלים",
-      mates: "מטים",
-      matesBasic: "בסיסי",
-      matesAdvanced: "מתקדם",
-      matesComplex: "מורכב",
-      positions: "עמדות",
       userPgns: "קבצי PGN שלי",
     },
   },
@@ -374,81 +366,6 @@ const he: typeof en = {
     nextMoves: { empty: "אין המשכים מוכרים מכאן." },
     moves: { empty: "עדיין אין מהלכים — שחקו על הלוח, או בחרו מהלך מוכר מלשונית המהלכים האפשריים." },
     controls: { newGame: "משחק חדש", playFromHere: "שחקו מכאן", reset:"איפוס" },
-  },
-  mates: {
-    categories: {
-      basic: "בסיסי",
-      advanced: "מתקדם",
-      complex: "מורכב",
-    },
-    list: {
-      count: "עמדות: {{count}}",
-      folders: "תיקיות: {{count}}",
-      empty: "אין עדיין עמדות בקטגוריה הזו.",
-      hint: "בחרו עמדה כדי לפתוח אותה על הלוח, ואז העבירו אותה ללוח הניתוח או שחקו אותה מול המנוע.",
-      search: "חיפוש עמדות",
-      noMatches: "אין עמדות שמתאימות לחיפוש הזה.",
-      cardSize: {
-        label: "גודל הכרטיסים",
-        compact: "כרטיסים צפופים",
-        comfortable: "כרטיסים מרווחים",
-      },
-    },
-    detail: {
-      back: "חזרה אל {{category}}",
-      fen: "עמדה (FEN)",
-      openInAnalysis: "פתיחה בלוח הניתוח",
-      playWithEngine: "משחק מול המנוע",
-      openInEditor: "פתיחה בעורך העמדות",
-    },
-    sideToMove: {
-      w: "הלבן במסע",
-      b: "השחור במסע",
-    },
-    notFound: {
-      category: "אין קטגוריית מטים כזו.",
-      position: "אין עמדה כזו בקטגוריה הזו.",
-      back: "חזרה אל מטים בסיסיים",
-    },
-    leftPanel: {
-      ariaLabel: "פריטים נוספים ב{{category}}",
-      close: "סגירה",
-    },
-  },
-  positions: {
-    list: {
-      count: "עמדות: {{count}}",
-      folders: "קטגוריות: {{count}}",
-      empty: "אין עדיין עמדות בקטגוריה הזו.",
-      hint: "בחרו עמדה כדי לפתוח אותה על הלוח, ואז העבירו אותה ללוח הניתוח או שחקו אותה מול המנוע.",
-      search: "חיפוש עמדות",
-      noMatches: "אין עמדות שמתאימות לחיפוש הזה.",
-      cardSize: {
-        label: "גודל הכרטיסים",
-        compact: "כרטיסים צפופים",
-        comfortable: "כרטיסים מרווחים",
-      },
-    },
-    detail: {
-      back: "חזרה אל {{category}}",
-      fen: "עמדה (FEN)",
-      openInAnalysis: "פתיחה בלוח הניתוח",
-      playWithEngine: "משחק מול המנוע",
-      openInEditor: "פתיחה בעורך העמדות",
-    },
-    sideToMove: {
-      w: "הלבן במסע",
-      b: "השחור במסע",
-    },
-    notFound: {
-      category: "אין קטגוריית סופי משחק כזו.",
-      position: "אין עמדה כזו בקטגוריה הזו.",
-      back: "חזרה אל עמדות סופי המשחק",
-    },
-    leftPanel: {
-      ariaLabel: "פריטים נוספים ב{{category}}",
-      close: "סגירה",
-    },
   },
   userPgns: {
     list: {

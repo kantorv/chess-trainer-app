@@ -4,8 +4,9 @@ import { initialFenOf, type Game } from "./gameModel";
 import { TreeManager } from "./treeManager";
 
 /**
- * A **library**, as data — the layer under the Mates section, the Positions
- * section and the User PGNs section alike.
+ * A **library**, as data — the layer under the User PGNs section, and
+ * general enough that another data-backed library section would run on it
+ * unchanged.
  *
  * A library is a tree of categories with a flat list of *items* hanging off it,
  * and its data files are the only thing an extension touches: adding a category
@@ -14,13 +15,14 @@ import { TreeManager } from "./treeManager";
  *
  * ## An item is a position **or** a game
  *
- * The first two sections list positions: one FEN, to be looked at and handed
- * on. The third lists whole games out of the project's `.pgn` files, and a game
- * is not a FEN — it is headers, a starting position and a line of moves. So
- * {@link LibraryItem} is a union discriminated by `kind`, and the two shared
- * screens branch on it exactly once each: the list screen for what a card
- * previews and what its caption says, the detail screen for which of the two
- * detail bodies it renders.
+ * A library can list positions — one FEN, to be looked at and handed on — or
+ * whole games out of `.pgn` files, and a game is not a FEN: it is headers, a
+ * starting position and a line of moves. So {@link LibraryItem} is a union
+ * discriminated by `kind`, and the two shared screens branch on it exactly once
+ * each: the list screen for what a card previews and what its caption says, the
+ * detail screen for which of the two detail bodies it renders. The shipped
+ * User PGNs section holds games; the position path stays supported for a future
+ * section.
  *
  * Two producers fill a catalog, and neither knows about the other:
  *
@@ -30,40 +32,40 @@ import { TreeManager } from "./treeManager";
  * | `loadPgnLibrary` (`lib/pgnLibrary.ts`) | the `.pgn` files under `src/data/pgn/` | games |
  *
  * Both build their result through {@link libraryCatalogOf}, which is what keeps
- * `positions` — the projection the two position-shaped sections speak in — from
- * ever drifting from `items`.
+ * `positions` — the projection a position-shaped section speaks in — from ever
+ * drifting from `items`.
  *
- * Three rules the shape rests on, two of them inherited from the Mates catalog
- * this generalises:
+ * Three rules the shape rests on:
  *
  * - **A category id is data, not a type.** Narrowing it to the shipped ids
- *   would make a new category a code edit, which is exactly what the JSON
+ *   would make a new category a code edit, which is exactly what the data
  *   exists to avoid — and the ids arrive from a route parameter anyway, where
- *   the compiler has nothing to say about them. What *is* checked is that a
- *   position names a category the catalog declares.
+ *   the compiler has nothing to say about them. What *is* checked is that an
+ *   item names a category the catalog declares.
  * - **A malformed entry is reported, never thrown.** A bad FEN, a missing name,
  *   a category with no label: the row is dropped and named in `problems`, and
  *   the rest of the library still loads. A screen that cannot render one card
  *   must not take the other five down with it, and a `throw` at module scope
  *   would take the whole app down.
  * - **A category is addressed by its full path**, `"queen-vs-rook/rosettes"`,
- *   and a position by that path plus its id. One splat route then serves every
+ *   and an item by that path plus its id. One splat route then serves every
  *   depth (`resolveLibraryPath` below), so the route table never learns how
- *   deep the data goes. A one-level library — Mates — is the same shape with
- *   every path a single segment, which is why `mates.json` needed no edit.
+ *   deep the data goes. A one-level library is the same shape with every path a
+ *   single segment.
  *
  * **A label is either chrome or content, and a category says which.** `labelKey`
  * names an `src/locales` key, for a section whose category names ship with the
- * app (Mates, whose keys were already written). `label` is a per-language
- * `{ en, he }` on the entry, for a section whose categories are content the
- * data owns (Positions) — the case that must not require a locale edit. Exactly
- * one of the two; `categoryLabel` reads whichever is there.
+ * app. `label` is a per-language `{ en, he }` on the entry, for a section whose
+ * categories are content the data owns — the case that must not require a
+ * locale edit. Exactly one of the two; `categoryLabel` reads whichever is
+ * there.
  *
- * What deliberately does **not** live here: the Mates rule that the mating side
- * is to move in every entry. That is asserted in `matesCatalog.test.ts` and is
- * true of mates only — Philidor's rook defense, Vancura, the short-side defense
- * and the trebuchet are positions in which the side to move is the *defender*,
- * and a library of them could not ship under an attacker-to-move rule.
+ * What deliberately does **not** live here: any rule about which side is to
+ * move in an entry. Whether the attacker or the defender is to move is a
+ * property of the content, and a section that cares asserts it in its own
+ * tests — Philidor's rook defense, Vancura and the trebuchet are positions in
+ * which the side to move is the *defender*, and a library of them could not
+ * ship under an attacker-to-move rule.
  */
 
 /** A category id, or a `"/"`-joined path of them. A string, deliberately. */
@@ -130,8 +132,8 @@ export type LibraryItem = LibraryPosition | LibraryGame;
  * diagnostic — what the data got wrong, for a developer and for the tests, not
  * a string to render at a reader.
  *
- * `items` is the one list; `positions` is the projection of it the two
- * position-shaped sections read, built by {@link libraryCatalogOf} so it cannot
+ * `items` is the one list; `positions` is the projection of it a
+ * position-shaped section reads, built by {@link libraryCatalogOf} so it cannot
  * come to disagree with `items`.
  */
 export type LibraryCatalog = {
@@ -185,8 +187,8 @@ const localizedTextOf = (value: unknown): LocalizedText | undefined => {
 };
 
 /**
- * Validate raw JSON into a library of **positions** — the producer behind
- * `mates.json` and `positions.json`. Never throws: everything it rejects comes
+ * Validate raw JSON into a library of **positions** — the producer for a
+ * JSON-backed library of FEN rows. Never throws: everything it rejects comes
  * back in `problems`, and what survives is safe for a screen to render.
  *
  * Takes the raw data as a parameter rather than reading an import, so the tests
@@ -343,7 +345,7 @@ export const allCategories = (
 /**
  * The category at this path, or `undefined` — an unknown path from a URL. A
  * single segment addresses a root category, which is what makes a flat library
- * (Mates) a special case of this one rather than a second shape.
+ * a special case of this one rather than a second shape.
  */
 export const findLibraryCategory = (
   path: string | undefined,
@@ -390,9 +392,9 @@ export const itemCountUnder = (
 };
 
 /**
- * The same, narrowed to positions — the vocabulary the Mates binding speaks, and
- * the shape its tests assert. A section whose every item is a position gets the
- * same list either way.
+ * The same, narrowed to positions — the vocabulary a position-shaped section
+ * speaks. A section whose every item is a position gets the same list either
+ * way.
  */
 export const positionsInLibraryCategory = (
   path: string | undefined,
