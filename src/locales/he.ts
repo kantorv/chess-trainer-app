@@ -34,7 +34,7 @@ const he: typeof en = {
       matesAdvanced: "מתקדם",
       matesComplex: "מורכב",
       positions: "עמדות",
-      userPgns: "קבצי PGN שלי",
+      library: "ספרייה",
     },
   },
   home: {
@@ -450,7 +450,7 @@ const he: typeof en = {
       close: "סגירה",
     },
   },
-  userPgns: {
+  library: {
     list: {
       count: "משחקים: {{count}}",
       folders: "מחקרים: {{count}}",
@@ -513,9 +513,9 @@ const he: typeof en = {
       b: "השחור במסע",
     },
     notFound: {
-      category: "אין תיקיית PGN כזו.",
+      category: "אין תיקיית ספרייה כזו.",
       position: "אין משחק כזה בתיקייה הזו.",
-      back: "חזרה אל קובצי ה-PGN שלי",
+      back: "חזרה אל הספרייה",
     },
     leftPanel: {
       ariaLabel: "פריטים נוספים ב{{category}}",

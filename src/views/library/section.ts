@@ -1,4 +1,4 @@
-import { PGN_REFERENCE_KEY } from "../../lib/gameReference";
+import { LIBRARY_REFERENCE_KEY } from "../../lib/gameReference";
 import { matesCatalog } from "../../lib/matesCatalog";
 import { userPgnsLibrary } from "../../lib/pgnCatalog";
 import { positionsCatalog } from "../../lib/positionsCatalog";
@@ -96,12 +96,18 @@ export const positionsSection: LibrarySection = {
 };
 
 /**
- * The User PGNs section: one folder per `.pgn` file the project ships, one item
- * per game inside it. The first section whose items are **games**, which is why
- * it is also the first with a `gameReferenceKey`.
+ * The **Library** section: one folder per `.pgn` file the project ships (plus
+ * the reader's uploads), one item per game inside it. The first section whose
+ * items are **games**, which is why it is also the first with a
+ * `gameReferenceKey`.
+ *
+ * Called `userPgnsSection` for historical reasons (it was "User PGNs" before
+ * CTA-38 renamed the chrome and the routes to "Library" / `/library/*`); the
+ * export name is kept so callers do not churn. `librarySection` below is the
+ * same value under the current name.
  */
 export const userPgnsSection: LibrarySection = {
-  routeBase: "/pgn",
+  routeBase: "/library",
   /*
     A getter, uniquely among the three sections: this library is the shipped
     `.pgn` files **plus whatever the reader has uploaded**, and an upload
@@ -113,9 +119,12 @@ export const userPgnsSection: LibrarySection = {
   get catalog() {
     return userPgnsLibrary();
   },
-  chromeKey: "userPgns",
-  listTestId: "user-pgns-list",
-  itemTestId: "user-pgn",
-  gameReferenceKey: PGN_REFERENCE_KEY,
+  chromeKey: "library",
+  listTestId: "library-list",
+  itemTestId: "library-item",
+  gameReferenceKey: LIBRARY_REFERENCE_KEY,
   folderNotes: pgnFolderNotes,
 };
+
+/** The {@link userPgnsSection} descriptor under its current name. */
+export const librarySection = userPgnsSection;

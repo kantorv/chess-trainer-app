@@ -54,12 +54,13 @@ const en = {
        */
       positions: "Positions",
       /**
-       * The User PGNs section's root, and the same rule as Positions above: its
-       * sub-folders are generated — one per `.pgn` file under `src/data/pgn/` —
-       * and named from the file's own `StudyName` tag or from `src/data/pgn.json`,
-       * so dropping a PGN in never touches this catalog.
+       * The Library section's root (was "User PGNs" before CTA-38), and the
+       * same rule as Positions above: its sub-folders are generated — one per
+       * `.pgn` file under `src/data/pgn/` — and named from the file's own
+       * `StudyName` tag or from `src/data/pgn.json`, so dropping a PGN in never
+       * touches this catalog.
        */
-      userPgns: "User PGNs",
+      library: "Library",
     },
   },
   /** The index screen — a landing page linking out to the real screens. */
@@ -82,7 +83,7 @@ const en = {
       moves: "Moves",
       info: "Info",
       load: "Load PGN",
-      /** The User PGNs game detail's third tab — its PGN annotation text. */
+      /** The Library game detail's third tab — its PGN annotation text. */
       description: "Description",
     },
     /** Accessible names for the icon-only board controls. */
@@ -648,18 +649,19 @@ const en = {
     },
   },
   /**
-   * The User PGNs section's chrome — `t(`${section.chromeKey}.…`)` again, in the
-   * same shape the two sections above carry, plus the keys a section whose items
-   * are **games** needs: `list.moves` for a card's caption and
+   * The **Library** section's chrome — `t(`${section.chromeKey}.…`)` again, in
+   * the same shape the two sections above carry, plus the keys a section whose
+   * items are **games** needs: `list.moves` for a card's caption and
    * `detail.openInLoadPgn` for the hand-off only a game has. The shared key
    * shape is a floor, not a ceiling; a section adds what its item kinds need.
+   * (Was `userPgns` before CTA-38 renamed "User PGNs" to "Library".)
    *
    * The folder and game names are *not* here. A folder is named from its file's
    * `StudyName` tag or from `src/data/pgn.json`, and a game from its
    * `ChapterName` or its players — which is what lets a new PGN file be a
    * drop-in rather than a two-file locale edit.
    */
-  userPgns: {
+  library: {
     /** The list screen's panel. */
     list: {
       count: "Games: {{count}}",
@@ -768,9 +770,9 @@ const en = {
     },
     /** A path or an id the URL names and the catalog does not have. */
     notFound: {
-      category: "There is no such PGN folder.",
+      category: "There is no such library folder.",
       position: "There is no such game in this folder.",
-      back: "Back to the user PGNs",
+      back: "Back to the library",
     },
     /** See `mates.leftPanel` above — same shape, same shared component. */
     leftPanel: {

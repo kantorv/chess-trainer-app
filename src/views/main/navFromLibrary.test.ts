@@ -257,8 +257,8 @@ describe("the generated User PGNs subtree", () => {
   it("makes a folder per PGN file, named from the data", () => {
     const folder = userPgnsNavFolder();
 
-    expect(folder.id).toBe("user-pgns");
-    expect(folder.labelKey).toBe("nav.folders.userPgns");
+    expect(folder.id).toBe("library");
+    expect(folder.labelKey).toBe("nav.folders.library");
     /*
       The section is chrome and is named from the catalog; a *file* is content
       and is named from itself, so it carries a `label` and no key.
@@ -270,8 +270,8 @@ describe("the generated User PGNs subtree", () => {
       from itself again.
     */
     for (const child of folder.children ?? []) {
-      if (child.id === "user-pgns:uploads") {
-        expect(child.labelKey).toBe("userPgns.uploads.title");
+      if (child.id === "library:uploads") {
+        expect(child.labelKey).toBe("library.uploads.title");
         expect(child.label).toBeUndefined();
         continue;
       }
@@ -322,7 +322,7 @@ describe("the generated User PGNs subtree", () => {
 
   it("puts every generated screen into the shipped nav tree, under User PGNs", () => {
     for (const item of userPgnsNavItems()) {
-      expectFiledUnder(item.to, item.folder, "user-pgns");
+      expectFiledUnder(item.to, item.folder, "library");
       expect(navItemsInFolder(item.folder)).toEqual([item]);
     }
   });
@@ -330,8 +330,8 @@ describe("the generated User PGNs subtree", () => {
   it("contributes no catalog key beyond the section's own", () => {
     const keys = navLabelKeys();
 
-    expect(keys).toContain("nav.folders.userPgns");
-    expect(keys.filter((key) => key.startsWith("nav.folders.userPgns."))).toEqual([]);
+    expect(keys).toContain("nav.folders.library");
+    expect(keys.filter((key) => key.startsWith("nav.folders.library."))).toEqual([]);
   });
 
   it("reaches every catalog folder that has games, and no others", () => {
@@ -350,7 +350,10 @@ describe("the generated User PGNs subtree", () => {
       return (
         itemsInLibraryCategory(category.path, library).length > 0 ||
         kind === "collection" ||
-        kind === "uploads"
+        kind === "uploads" ||
+        // A repertoire's root holds no lines of its own but claims a screen
+        // (chapter folder-cards) through `hasScreen`, same as a collection.
+        kind === "repertoire"
       );
     });
     expect(listable.length).toBeLessThan(allCategories(library).length);
@@ -360,7 +363,7 @@ describe("the generated User PGNs subtree", () => {
     );
 
     expect(userPgnsNavItems().map((item) => item.to).sort()).toEqual(
-      listable.map((category) => `/pgn/${category.path}`).sort(),
+      listable.map((category) => `/library/${category.path}`).sort(),
     );
   });
 
@@ -369,10 +372,10 @@ describe("the generated User PGNs subtree", () => {
     // nothing, and only the one with a screen of its own gets a row.
     const routes = userPgnsNavItems().map((item) => item.to);
 
-    expect(routes).toContain("/pgn/methurst-public-studies");
+    expect(routes).toContain("/library/methurst-public-studies");
     // The Uploads folder, always — its screen is how a file gets in.
-    expect(routes).toContain("/pgn/uploads");
-    expect(routes).not.toContain("/pgn/chess-fundamentals-capablanca");
+    expect(routes).toContain("/library/uploads");
+    expect(routes).not.toContain("/library/chess-fundamentals-capablanca");
   });
 
   it("cannot collide with the other generated section's ids", () => {

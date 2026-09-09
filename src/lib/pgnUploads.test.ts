@@ -115,7 +115,7 @@ describe("uploadsLibraryOf", () => {
     expect(empty.categories).toHaveLength(1);
     expect(empty.categories[0]).toMatchObject({
       path: UPLOADS_PATH,
-      labelKey: "userPgns.uploads.title",
+      labelKey: "library.uploads.title",
       children: [],
     });
     expect(empty.categories[0].label).toBeUndefined();

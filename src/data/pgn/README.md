@@ -1,9 +1,14 @@
-# User PGNs — adding a study
+# The Library section — adding a study
 
-This folder **is** the User PGNs library. Everything the section shows —
-the sidebar folders, the card grids, the replay screens at `/pgn/*` — is built
-from the `.pgn` files sitting here, their optional `.mdx` folder notes, and the
-optional manifest one level up (`src/data/pgn.json`).
+This folder **is** the Library. Everything the section shows —
+the sidebar folders, the card grids, the replay screens at `/library/*` — is
+built from the `.pgn` files sitting here, their optional `.mdx` folder notes,
+and the optional manifest one level up (`src/data/pgn.json`).
+
+> The section was called **"User PGNs"** and lived at `/pgn/*` before CTA-38.
+> Old `/pgn/*` URLs still redirect to `/library/*`, and a stored
+> `?game=pgn/<path>/<id>` reference still resolves. The `src/data/pgn/`
+> directory and `src/data/pgn.json` keep their names — they are internal.
 
 ## Drop a file in
 
@@ -13,11 +18,11 @@ TypeScript, no locale key, no route, no component edit.** A build-time glob
 (`src/lib/pgnLibrary.ts`) turns it into catalog entries, and the sidebar and
 routes are generated from the result.
 
-- **One file is one folder.** It gets one entry in the User PGNs sidebar.
+- **One file is one folder.** It gets one entry in the Library sidebar.
 - **One game — or one study chapter — is one card.** A lichess study export
   with 18 chapters becomes a folder of 18 cards; a chess.com export with 9
   games becomes a folder of 9.
-- Every card links to `/pgn/<folder>/<game-id>`, where the game replays over
+- Every card links to `/library/<folder>/<game-id>`, where the game replays over
   the shared move list and board controls.
 
 ## What kinds of PGN this section understands
@@ -32,6 +37,7 @@ screen that suits it. The kinds live in
 | --- | --- | --- | --- | --- |
 | **`study`** | one study; its chapters are the cards | exactly one `StudyName` | `LibraryList` — a card per chapter | the app's own, or the collection's nav when it is one study of a collection |
 | **`collection`** | one file holding **several** studies | two or more `StudyName`s | `PgnCollection` — the file's index: counts, author, its `.mdx` notes, and a row per study | the app's own |
+| **`repertoire`** | one file, an opening repertoire — the games are *lines*, the `( )` side lines are the content, and the `White` tag groups them into `"N) "`-ordered chapters | manifest `kind: "repertoire"`, else the shape (many games, no `StudyName`, `White` tags sharing a `"N) "` prefix) | `LibraryList` — chapter folder-cards, then a card per line; a line opens with its **variation tree** (`LibraryVariationDetail`) | the app's own |
 | **`shelf`** | a folder of several **files** | a `pgn.json` `under` path | `LibraryList` — a card per sub-folder | the app's own |
 | **`games`** | played games, no study at all | no `StudyName` (a chess.com export) | `LibraryList` — a card per game | the app's own |
 | **`uploads`** | **not a file** — the folder the reader's own files land in | the one folder `src/lib/pgnUploads.ts` builds | `PgnUploads` — the upload button, and what has been uploaded | the app's own |
@@ -40,7 +46,7 @@ An **item** — one chapter, one game — is the same everywhere: `LibraryDetail
 replays it, with its neighbours in the left panel. What kind of folder it came
 out of makes no difference to it.
 
-### The reader's own files: `/pgn/uploads`
+### The reader's own files: `/library/uploads`
 
 This folder is **not** in this directory — it is whatever the reader has
 uploaded, kept in their browser's `localStorage`
@@ -58,21 +64,23 @@ other device. Content that should ship belongs here, as a file.
 
 ### Adding a kind
 
-Two the project expects next: **`repertoire`** (a tree of lines to learn, where
-the variations are the content and a chapter list says nothing about it) and
-**`variations`** (one position's branches). Adding either is three edits, and
-none of them is in the shared library layer:
+`repertoire` is done (CTA-38); **`variations`** (one position's branches) is the
+one still expected. Adding a kind is three edits, and none of them is in the
+shared library layer:
 
 1. **Name it** in `PgnKind` (`src/lib/pgnKind.ts`), with a row in the table
    there.
 2. **Recognise it** in `loadPgnLibrary` (`src/lib/pgnLibrary.ts`), where the
    folder is created — the rule sits next to the tags it reads. A rule that
    cannot be read off the PGN goes in `src/data/pgn.json` as a manifest field
-   instead, and is applied in the same place.
+   instead (`kind`, validated in `readPgnManifest`), and is applied in the same
+   place; a structural heuristic can back it up, as `repertoire`'s
+   `looksLikeRepertoire` does, with the manifest always winning.
 3. **Give it a screen**, and add one line to the dispatcher in
    `UserPgnsSection.tsx`. If the folder groups sub-folders and holds no games of
    its own, also claim its sidebar row through `hasScreen` in
-   `views/main/navFromLibrary.ts` — that is what a `collection` does.
+   `views/main/navFromLibrary.ts` — that is what a `collection` and a
+   `repertoire` root both do.
 
 ## A file holding several studies
 
@@ -87,7 +95,7 @@ the whole of the work:
 
 ```
 methurst-public-studies.pgn        ← one file, 28 StudyNames, 169 chapters
-  └── /pgn/methurst-public-studies                    the file's folder
+  └── /library/methurst-public-studies                    the file's folder
         ├── …/queen-vs-rook-adjacent-rosettes         one study
         │     └── …/chapter-1                         one chapter
         └── …/queen-vs-rook-lightning                 the next study, …
@@ -112,13 +120,43 @@ methurst-public-studies.pgn        ← one file, 28 StudyNames, 169 chapters
   as two-line rows, the current one marked, a close back to the index. One level
   further down, on a chapter, the study's chapters take the panel instead: the
   innermost list is the useful one.
-- The routes did not change: `/pgn/*` is one splat at any depth, and a chapter
+- The routes did not change: `/library/*` is one splat at any depth, and a chapter
   still hands itself on with `?game=`.
 
 `methurst-public-studies.pgn` is the shipped example. Note that it *contains*
 the standalone `lichess_study_queen-vs-rook-rosettes…` study as one of its 28,
 so the sidebar names that study twice — the data says so, and nothing in the
 section requires a name to be unique across files.
+
+## A repertoire file
+
+An opening **repertoire** — a Chessable-style export, or a lichess study built
+as one — is a third folder-of-folders shape, and it splits on a different tag:
+
+```
+tame-the-sicilian-alapin_….pgn      ← one file, 310 lines, no StudyName
+  └── /library/tame-the-sicilian-alapin-…            the file's folder
+        ├── …/introduction                           a chapter (White: "Introduction")
+        ├── …/2-qa5                                   a chapter (White: "1) 2...Qa5")
+        │     └── …/2-qa5-3-g3-b5-1                   a line (Black: "2... Qa5 3. g3 b5 #1")
+        └── …/2-nc6                                   the next chapter, …
+```
+
+- **The chapter name is on the `White` tag**, usually with an `"N) "` order
+  prefix (`"12) 2...d5 …"`). The prefix is parsed off for ordering and stripped
+  for the label; chapters with no prefix (`"Introduction"`, `"Quickstarter"`)
+  sort ahead of the numbered ones, in the order the file names them.
+- **The line name is on the `Black` tag** (`"2... Qa5 3. g3 b5 #1"`).
+- **A line opens with its variation tree.** The `( )` side lines are the point
+  of a repertoire, so a line is re-read with `parsePgnTree` and rendered beside
+  the board with the shared `VariationTree` (`LibraryVariationDetail`), not the
+  linear move list. Everything else about the detail screen — the hand-offs,
+  the sibling nav, `?game=` / `?move=` — is unchanged.
+- **Recognised from the manifest first, the shape second.** `kind: "repertoire"`
+  in `pgn.json` is the reliable declaration a shipped file uses; an undeclared
+  file (or an upload) is classified by `looksLikeRepertoire` — many games, no
+  `StudyName`, several `White` tags sharing a `"N) "` prefix over most of the
+  games. A manifest `kind` always wins over the heuristic.
 
 ## Notes for a folder — a sibling `.mdx`
 
@@ -190,7 +228,8 @@ hide a file.
       "order": 10                                              // sort key among siblings
     },
     "lucena.pgn":   { "under": "lessons", "order": 10 },
-    "philidor.pgn": { "under": "lessons", "order": 20 }
+    "philidor.pgn": { "under": "lessons", "order": 20 },
+    "alapin.pgn":   { "kind": "repertoire", "order": 30 } // force the kind
   }
 }
 ```
@@ -203,6 +242,11 @@ hide a file.
   under one named folder. Two or more files sharing an `under` path produce a
   folder in the sidebar that lists each file's games. A grouping folder with no
   `folders` entry for its path is named from that path segment, humanised.
+- **`kind: "study" | "collection" | "repertoire" | "games"`** — force a file's
+  kind, overriding what its tags would say. Its real use is `"repertoire"` (a
+  Chessable-style export has no tag that declares itself); an unknown value is
+  reported in `problems` and ignored. `shelf` and `uploads` are not files, so
+  they are not accepted here.
 
 ### How a folder renders in the sidebar
 

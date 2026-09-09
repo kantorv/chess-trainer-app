@@ -59,7 +59,7 @@ export const UPLOADS_PATH = "uploads";
  * authored sections do — unlike the folders inside it, which are named from the
  * files the reader picked.
  */
-export const UPLOADS_LABEL_KEY = "userPgns.uploads.title";
+export const UPLOADS_LABEL_KEY = "library.uploads.title";
 
 /** What is wrong with a file the reader picked. The screen names each one. */
 export type UploadProblem = "empty" | "unreadable" | "too-large" | "storage";

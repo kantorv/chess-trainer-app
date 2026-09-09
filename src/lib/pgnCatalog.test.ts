@@ -8,6 +8,7 @@ import {
   resolveLibraryPath,
 } from "./libraryCatalog";
 import { pgnCatalog } from "./pgnCatalog";
+import { pgnKindOf } from "./pgnKind";
 
 /**
  * The **shipped** User PGNs library — the glob, the manifest and the `.pgn`
@@ -95,8 +96,9 @@ describe("the shipped User PGNs catalog", () => {
   it("holds every game the files could yield", () => {
     // 18 rosette chapters + 28 puzzle chapters + 9 annotated master games,
     // plus the Capablanca parts: 44 + 26 + 14 chapters once the ten king-less
-    // diagrams are dropped — and the 169 chapters of the multi-study export.
-    expect(pgnCatalog.items).toHaveLength(55 + 84 + 169);
+    // diagrams are dropped — and the 169 chapters of the multi-study export —
+    // and the 310 lines of the Alapin repertoire.
+    expect(pgnCatalog.items).toHaveLength(55 + 84 + 169 + 310);
     expect(pgnCatalog.items.every((item) => item.kind === "game")).toBe(true);
     // A game is not a position, so the projection the other two sections read is
     // empty for this one.
@@ -204,9 +206,34 @@ describe("the shipped User PGNs catalog", () => {
     expect(chapterOnes.length).toBeGreaterThan(1);
   });
 
+  it("loads the Alapin file as a repertoire: chapter sub-folders, lines inside", () => {
+    const REPERTOIRE = "tame-the-sicilian-alapin-by-kasimdzhanov-ganguly";
+    const root = findLibraryCategory(REPERTOIRE, pgnCatalog);
+    if (root === undefined) throw new Error("expected the repertoire folder");
+
+    // Declared `kind: "repertoire"` in `pgn.json`; the whole subtree is that kind.
+    expect(pgnKindOf(root.path, pgnCatalog.kinds)).toBe("repertoire");
+    // 27 numbered chapters + Introduction + Quickstarter.
+    expect(root.children).toHaveLength(29);
+    // Un-numbered chapters sort ahead of the numbered ones, in file order.
+    expect(root.children.map((child) => child.label?.en).slice(0, 3)).toEqual([
+      "Introduction",
+      "Quickstarter",
+      "2...Qa5",
+    ]);
+    expect(pgnKindOf(root.children[2].path, pgnCatalog.kinds)).toBe("repertoire");
+
+    // A chapter holds lines, and a line is named from its `Black` tag.
+    const lines = itemsInLibraryCategory(root.children[2].path, pgnCatalog);
+    expect(lines.length).toBeGreaterThan(0);
+    expect(lines[0].name.en).toBe("2... Qa5 3. g3 b5 #1");
+    // The root itself holds no loose items — every line is in a chapter.
+    expect(itemsInLibraryCategory(REPERTOIRE, pgnCatalog)).toHaveLength(0);
+  });
+
   it("resolves every shipped game from its own URL segments", () => {
-    // What `/pgn/*` does on every request: one splat, however deep the manifest
-    // nested the folder.
+    // What `/library/*` does on every request: one splat, however deep the
+    // manifest nested the folder.
     for (const item of pgnCatalog.items) {
       const segments = `${item.category}/${item.id}`.split("/");
 
