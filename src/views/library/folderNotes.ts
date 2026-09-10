@@ -24,8 +24,8 @@ import { readPgnManifest, slugify } from "../../lib/pgnLibrary";
  * It reaches the screens through the `LibrarySection` descriptor
  * ([`section.ts`](./section.ts)), so `LibraryList` renders whatever notes its
  * section carries and knows nothing about `.mdx`, about PGN files, or about
- * which sections happen to have any. Mates and Positions could carry notes
- * later by filling that one field.
+ * which sections happen to have any. Another section could carry notes later by
+ * filling that one field.
  *
  * ## Deriving the path
  *

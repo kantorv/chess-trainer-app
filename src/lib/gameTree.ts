@@ -103,6 +103,45 @@ export const findNode = (
 export const pathTo = (tree: GameTree, id: string | null): VariationNode[] =>
   id === null ? [] : (walker(tree).getPath((node) => node.id === id) ?? []);
 
+/**
+ * Where a node sits, written as the SAN of every move that leads to it —
+ * `["e4", "e5", "Nf3"]`. Empty for the start position.
+ *
+ * **A node id is not portable and this is.** Ids are minted per tree
+ * (`nextId`), so the id a reader was standing on means nothing once the same
+ * game has been round-tripped through PGN and re-parsed — which is exactly what
+ * a saved analysis does (`lib/savedAnalyses.ts`). SAN, on the other hand,
+ * identifies a move uniquely within its position, which is the property
+ * {@link addMove} already rests on. So a saved analysis records where the reader
+ * was as this path and {@link nodeAtSanPath} finds it again.
+ */
+export const sanPathTo = (tree: GameTree, id: string | null): string[] =>
+  pathTo(tree, id).map((node) => node.san);
+
+/**
+ * The node a {@link sanPathTo} path names, or `null` for the start position.
+ *
+ * Non-throwing, and **as far as the path goes**: a path whose next move the tree
+ * does not hold stops at the last node that matched, so a record written against
+ * a game that has since been edited reopens somewhere real rather than nowhere.
+ */
+export const nodeAtSanPath = (
+  tree: GameTree,
+  path: readonly string[] | undefined,
+): string | null => {
+  let children = tree.moves;
+  let found: string | null = null;
+
+  for (const san of path ?? []) {
+    const node = children.find((child) => child.san === san);
+    if (node === undefined) break;
+    found = node.id;
+    children = node.children;
+  }
+
+  return found;
+};
+
 /** The first-child chain from a starting list — the mainline of that subtree. */
 const firstChildChain = (from: VariationNode[]): VariationNode[] => {
   const chain: VariationNode[] = [];

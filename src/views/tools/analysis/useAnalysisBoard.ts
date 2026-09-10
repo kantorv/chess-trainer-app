@@ -1,5 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Chess, type Square } from "chess.js";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Chess, DEFAULT_POSITION, type Square } from "chess.js";
+import {
+  ANALYSIS_UCI_OPTION,
+  DEFAULT_ANALYSIS_SETTINGS,
+  type AnalysisSettings,
+} from "../../../lib/analysisSettings";
 import Engine, { type EngineOption } from "../../../lib/engine";
 import {
   EMPTY_ANALYSIS,
@@ -13,9 +18,18 @@ import { parseFen } from "../../../lib/fen";
 import {
   addMove,
   emptyTree,
+  sanPathTo,
   treeToPgn,
   type GameTree,
 } from "../../../lib/gameTree";
+import {
+  newSavedAnalysisId,
+  savedAnalysisNode,
+  savedAnalysisOf,
+  savedAnalysisToTree,
+  type SavedAnalysis,
+} from "../../../lib/savedAnalyses";
+import { saveAnalysis } from "../../../lib/savedAnalysisStore";
 import { useTreeNavigation } from "./useTreeNavigation";
 
 /**
@@ -45,52 +59,65 @@ import { useTreeNavigation } from "./useTreeNavigation";
  * screen is only ever an analysis whose FEN matches that position, so a set left
  * over from the previous one is never rendered under a new board.
  *
- * **3. An initial position — or a whole game — can come from outside.** The
- * Board Editor hands a position over as a query parameter on this screen's
- * route, and a User PGNs detail page hands over a game the same way; so the
- * optional `initialFen` and `initialTree` are read *once*, as this hook's
- * initial state — arriving at `/tools/analysis?fen=…` or `?game=…` mounts the
- * screen, so there is no later change to follow, and reading either in an effect
- * instead would mean writing state from one. What will not parse is the caller's
- * to reject; whatever arrives here is used as-is.
+ * **3. An initial position — a whole game, or a saved analysis — can come from
+ * outside.** The Board Editor hands a position over as a query parameter on this
+ * screen's route, a User PGNs detail page hands over a game the same way, and
+ * the Saved analyses screen hands back one of this screen's own; so every field
+ * of {@link AnalysisBoardStart} is read *once*, as this hook's initial state —
+ * arriving at `/tools/analysis?fen=…`, `?game=…` or `?analysis=…` mounts the
+ * screen, so there is no later change to follow, and reading any of them in an
+ * effect instead would mean writing state from one. What will not parse is the
+ * caller's to reject; whatever arrives here is used as-is.
  *
- * The two differ in one way, and it is the project's rule about it: **a position
- * turns the board, a game does not.** An arriving game opens at ply 0 from
- * White's side, exactly as `loadTree` leaves it.
+ * The first two differ in one way, and it is the project's rule about it: **a
+ * position turns the board, a game does not.** An arriving game opens at ply 0
+ * from White's side, exactly as `loadTree` leaves it. A **reopened analysis** is
+ * neither: it is the reader's own board handed back, so it opens on the node
+ * they were standing on, facing the way they left it.
  *
  * **4. Engine lifecycle.** Lazy ref resolved at call time, subscribe in an effect
  * with the returned unsubscribe, terminate on unmount —
  * `.claude/rules/chessboard.md` §4. The subscribe effect is declared first so a
  * StrictMode remount rebuilds the worker before anything asks it to search.
+ *
+ * **5. The analysis is written down as it is worked on.** An effect saves the
+ * tree, the settings, the orientation and where the reader is standing to
+ * `localStorage` (`lib/savedAnalyses.ts`) — gated on `persist`, and on the
+ * reader having actually done something, for which see `dirty` below.
  */
 
-/** The knobs the Engine tab drives. */
-export type AnalysisSettings = {
-  /** Plies per search. */
-  depth: number;
-  /** UCI `MultiPV` — how many lines the Variations tab shows. */
-  multiPv: number;
-  /** Milliseconds per search; `0` means "depth alone decides". */
-  moveTimeMs: number;
-};
-
-export const DEFAULT_ANALYSIS_SETTINGS: AnalysisSettings = {
-  depth: 16,
-  multiPv: 3,
-  moveTimeMs: 1000,
+/**
+ * What the screen opens with. Every field is read on the **first render only**:
+ * arriving at `/tools/analysis?fen=…`, `?game=…` or `?analysis=…` is what mounts
+ * the screen, so there is no later change to follow. A parameter that will not
+ * parse is the caller's to reject; it simply arrives here as `undefined`.
+ */
+export type AnalysisBoardStart = {
+  /** The position to open on — the Board Editor's and a library's `?fen=`. */
+  fen?: string;
+  /** A whole game to open on — a library detail page's `?game=`. */
+  tree?: GameTree;
+  /** The mainline ply an arriving game opens at — the `?move=` beside it. */
+  ply?: number;
+  /** An analysis to go on working on — the Saved analyses `?analysis=` hand-off. */
+  resume?: SavedAnalysis;
+  /** Whether the board is written to the saved-analyses store as it is worked on. */
+  persist?: boolean;
 };
 
 /**
- * Which UCI option each setting drives. The names are the engine's; whether the
- * running build *has* them is answered by `Engine.options`, never by this table.
- *
- * `Skill Level` is deliberately absent. An analysis board wants the engine's
- * best answer, so it never weakens it — and the build's own default is full
- * strength, so there is nothing to post.
+ * The engine knobs, re-exported from `lib/analysisSettings.ts` so this hook
+ * stays the one import a reader of this screen needs — the arrangement
+ * `usePlayWithEngine` has over `lib/engineSettings.ts`, and for the same reason:
+ * a saved analysis records them, and `src/lib/` cannot import a hook.
  */
-export const ANALYSIS_UCI_OPTION = {
-  multiPv: "MultiPV",
-} as const;
+export {
+  ANALYSIS_UCI_OPTION,
+  DEFAULT_ANALYSIS_SETTINGS,
+  analysisSettingsFrom,
+  sameAnalysisSettings,
+  type AnalysisSettings,
+} from "../../../lib/analysisSettings";
 
 /** The side to move in a FEN, without building a `Chess` to ask. */
 const turnOf = (fen: string): Turn => (fen.split(" ")[1] === "b" ? "b" : "w");
@@ -107,11 +134,13 @@ const isTerminal = (fen: string): boolean => {
 /** A tree with nothing in it, taken once — plain data that nothing mutates. */
 const NEW_TREE: GameTree = emptyTree();
 
-export const useAnalysisBoard = (
-  initialFen?: string,
-  initialTree?: GameTree,
-  initialPly?: number,
-) => {
+export const useAnalysisBoard = ({
+  fen: initialFen,
+  tree: arrivingTree,
+  ply: initialPly,
+  resume,
+  persist = false,
+}: AnalysisBoardStart = {}) => {
   const engineRef = useRef<Engine | null>(null);
   // Resolved at call time, never during render: StrictMode's mount → unmount →
   // remount terminates the worker and re-runs the effects with no render in
@@ -135,30 +164,54 @@ export const useAnalysisBoard = (
   }, []);
 
   /*
-    Lazily, and only on the first render: see note 3 above. A whole game
-    (`?game=`) wins over a bare position (`?fen=`) when a link somehow carries
-    both, because a game is the more specific thing to have been handed.
+    A reopened analysis, parsed once. `parsePgnTree` rather than the catalog's
+    `Game`, for the reason the `?game=` arrival does it too: the catalog holds a
+    mainline and the side lines are the whole point of this screen. A record that
+    will not parse reopens as nothing at all, which is the same answer an
+    unreadable `?fen=` gets.
+
+    Memoised on the record: only the first render's value is ever kept, but
+    parsing a PGN on every render would be a real cost for nothing.
   */
+  const reopened = useMemo(() => {
+    if (resume === undefined) return undefined;
+    const tree = savedAnalysisToTree(resume);
+    return tree === undefined
+      ? undefined
+      : { tree, nodeId: savedAnalysisNode(resume, tree) };
+  }, [resume]);
+
+  /*
+    Lazily, and only on the first render: see note 3 above. A reopened analysis
+    wins over a whole game (`?game=`), which wins over a bare position (`?fen=`)
+    — each is more specific than the one after it about what the reader meant to
+    be looking at.
+  */
+  const initialTree = reopened?.tree ?? arrivingTree;
   const [tree, setTree] = useState<GameTree>(() => {
     if (initialTree !== undefined) return initialTree;
     return initialFen === undefined ? NEW_TREE : emptyTree(initialFen);
   });
-  const [settings, setSettings] = useState<AnalysisSettings>(
-    DEFAULT_ANALYSIS_SETTINGS,
+  const [settings, setSettings] = useState<AnalysisSettings>(() =>
+    // A reopened analysis brings its own: the engine goes on searching at the
+    // depth and the width it was set to.
+    resume === undefined ? DEFAULT_ANALYSIS_SETTINGS : resume.settings,
   );
   const [analysis, setAnalysis] = useState<Analysis>(EMPTY_ANALYSIS);
   const [engineOn, setEngineOn] = useState(true);
   const [showEvalBar, setShowEvalBar] = useState(true);
   // Facing the side to move in the position this screen opened on — see
   // `loadFen` for why a position you are handed turns the board and a game you
-  // load does not.
-  const [orientation, setOrientation] = useState<"white" | "black">(() =>
-    initialTree === undefined &&
-    initialFen !== undefined &&
-    turnOf(initialFen) === "b"
+  // load does not. A reopened analysis is neither: it is the reader's own board
+  // handed back, so it comes back facing the way they left it.
+  const [orientation, setOrientation] = useState<"white" | "black">(() => {
+    if (resume !== undefined) return resume.orientation;
+    return initialTree === undefined &&
+      initialFen !== undefined &&
+      turnOf(initialFen) === "b"
       ? "black"
-      : "white",
-  );
+      : "white";
+  });
   const [promotion, setPromotion] = useState<{
     from: Square;
     to: Square;
@@ -173,13 +226,42 @@ export const useAnalysisBoard = (
   >(() => new Map());
 
   /*
+    The row this analysis is written to. Minted at call time rather than during
+    render — the same rule the engine ref follows — and seeded from a reopened
+    analysis, so going on working updates that row instead of starting a second
+    one beside it. Loading a different game, or clearing the board, drops it, so
+    the analysis just left stays in the list rather than being overwritten:
+    exactly the difference "New game" makes on the other engine screen.
+  */
+  const savedIdRef = useRef<string | null>(resume?.id ?? null);
+  const getSavedId = useCallback(
+    () => (savedIdRef.current ??= newSavedAnalysisId()),
+    [],
+  );
+
+  /*
+    Whether the reader has actually done something with this board.
+
+    Arriving at `?fen=` or `?game=` and looking is not an analysis: writing on
+    arrival would fill the list with every library game anyone opened here. So
+    nothing is written until a move is added to the tree or a position or game is
+    deliberately loaded into it. A **reopened** analysis starts dirty, because it
+    is already a record — walking around it is worth writing down, since where
+    the reader is standing is part of what is stored.
+  */
+  const [dirty, setDirty] = useState(resume !== undefined);
+
+  /*
     A `?move=` rides beside `?game=` and steps the arriving game's *mainline* to
     that ply. Beside a bare `?fen=` it means nothing — a position has no moves —
-    so it is passed only when a whole game arrived.
+    so it is passed only when a whole game arrived. A reopened analysis names a
+    node instead, because where the reader was may be inside a side line, which
+    no ply can say.
   */
   const navigation = useTreeNavigation(
     tree,
-    initialTree === undefined ? undefined : initialPly,
+    arrivingTree === undefined ? undefined : initialPly,
+    reopened?.nodeId,
   );
   const { fen, nodeId, goToNode } = navigation;
 
@@ -284,6 +366,40 @@ export const useAnalysisBoard = (
     settings.multiPv,
   ]);
 
+  /*
+    Write the analysis down, on every move, every setting and every step.
+
+    Nothing to click, for the reason the engine screen has nothing to click: work
+    is worth keeping by the fact of having been done, and a reader who has to
+    remember to save is a reader who loses an evening's analysis. It is an effect
+    on the state rather than a call inside the move handlers because the *place*
+    in the tree is part of the record and that changes without a move being made.
+
+    Three things keep it cheap and unsurprising:
+
+    - an empty board at the standard start is not an analysis yet, so merely
+      visiting the screen writes nothing;
+    - `saveAnalysis` is a no-op when the record would be identical, so a mount,
+      or the clamp that pulls the settings into the running build's bounds, does
+      not re-order a list sorted by when each was last worked on;
+    - `persist` is off unless the caller asks — the screen turns it on, and a
+      test or a future embedding of this hook does not have to.
+  */
+  useEffect(() => {
+    if (!persist || !dirty) return;
+    if (tree.moves.length === 0 && tree.startFen === DEFAULT_POSITION) return;
+
+    saveAnalysis(
+      savedAnalysisOf(
+        getSavedId(),
+        tree,
+        sanPathTo(tree, nodeId),
+        settings,
+        orientation,
+      ),
+    );
+  }, [persist, dirty, tree, nodeId, settings, orientation, getSavedId]);
+
   /** Apply a move that has already been checked for legality, under the current node. */
   const applyMove = useCallback(
     (from: Square, to: Square, promotionPiece?: string) => {
@@ -310,6 +426,13 @@ export const useAnalysisBoard = (
 
       setTree(added.tree);
       goToNode(added.nodeId);
+      /*
+        Only a move that actually added something makes this the reader's own
+        work: `addMove` returns the *same tree by reference* when the move was
+        already there, so stepping back and replaying a line goes on being the
+        game that arrived rather than becoming an analysis of it.
+      */
+      if (added.tree !== tree) setDirty(true);
       return true;
     },
     [chessAt, fen, goToNode, nodeId, tree],
@@ -376,6 +499,17 @@ export const useAnalysisBoard = (
       setAnalysis(EMPTY_ANALYSIS);
       // The start position, in the same batch as the tree it belongs to.
       goToNode(null);
+      /*
+        A new board is a new record. The one being left keeps the id it was
+        saved under, so it stays in the list rather than being overwritten by
+        whatever is worked on next — the whole difference between a saved
+        analysis and an autosave slot. And it is the reader's own doing, so it
+        is written down from here on: an empty board still writes nothing, since
+        the effect above has nothing worth saving until a move or a position
+        arrives.
+      */
+      savedIdRef.current = null;
+      setDirty(true);
     },
     [goToNode],
   );

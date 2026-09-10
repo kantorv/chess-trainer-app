@@ -18,22 +18,15 @@ const he: typeof en = {
     maskedPlay: "משחק מול המנוע (מוסווה)",
     loadPgn: "טעינת PGN",
     analysisBoard: "לוח ניתוח",
+    savedAnalyses: "ניתוחים שמורים",
     boardEditor: "עורך העמדות",
     openings: "פתיחות",
-    matesBasic: "מטים בסיסיים",
-    matesAdvanced: "מטים מתקדמים",
-    matesComplex: "מטים מורכבים",
     folders: {
       engine: "מנוע",
       maskedPieces: "כלים מוסווים",
       games: "משחקים",
       tools: "כלים",
-      mates: "מטים",
-      matesBasic: "בסיסי",
-      matesAdvanced: "מתקדם",
-      matesComplex: "מורכב",
-      positions: "עמדות",
-      userPgns: "קבצי PGN שלי",
+      library: "ספרייה",
     },
   },
   home: {
@@ -207,6 +200,40 @@ const he: typeof en = {
     analyse: "ניתוח",
     openInLoadPgn: "מציג PGN",
     remove: "מחיקת המשחק",
+    select: "בחירת המשחק",
+    selectAll: "בחירת כל המשחקים",
+    selected: "{{count}} נבחרו",
+    download: "הורדת הנבחרים כקובץ PGN",
+  },
+  savedAnalyses: {
+    title: "ניתוחים שמורים",
+    count: "ניתוחים: {{count}}",
+    empty:
+      "אין עדיין ניתוחים שמורים. בצעו מהלך בלוח הניתוח, או טענו אליו משחק, והלוח יופיע כאן מעצמו.",
+    hint: "כל לוח שאתם עובדים עליו בלוח הניתוח נשמר תוך כדי העבודה, על כל הווריאציות. אפשר להמשיך אותו מהמקום שבו הופסק, או לקחת את העמדה למקום אחר.",
+    storage:
+      "הניתוחים השמורים נשמרים בדפדפן הזה בלבד. מחיקת נתוני האתר תמחק אותם, והם אינם עוברים למכשיר אחר.",
+    untitled: "לוח ניתוח",
+    moves_one: "מהלך אחד",
+    moves_other: "{{count}} מהלכים",
+    variations_one: "וריאציה אחת",
+    variations_other: "{{count}} וריאציות",
+    atPly: "במהלך {{ply}}",
+    unreadable: "לא ניתן לקרוא את הניתוח הזה.",
+    view: {
+      label: "תצוגה",
+      list: "רשימה",
+      compact: "לוחות קטנים",
+      comfortable: "לוחות גדולים",
+    },
+    continue: "המשך",
+    openInLoadPgn: "מציג PGN",
+    play: "שחקו מכאן",
+    remove: "מחיקת הניתוח",
+    select: "בחירת הניתוח",
+    selectAll: "בחירת כל הניתוחים",
+    selected: "{{count}} נבחרו",
+    download: "הורדת הנבחרים כקובץ PGN",
   },
   analysis: {
     tabs: {
@@ -340,82 +367,7 @@ const he: typeof en = {
     moves: { empty: "עדיין אין מהלכים — שחקו על הלוח, או בחרו מהלך מוכר מלשונית המהלכים האפשריים." },
     controls: { newGame: "משחק חדש", playFromHere: "שחקו מכאן", reset:"איפוס" },
   },
-  mates: {
-    categories: {
-      basic: "בסיסי",
-      advanced: "מתקדם",
-      complex: "מורכב",
-    },
-    list: {
-      count: "עמדות: {{count}}",
-      folders: "תיקיות: {{count}}",
-      empty: "אין עדיין עמדות בקטגוריה הזו.",
-      hint: "בחרו עמדה כדי לפתוח אותה על הלוח, ואז העבירו אותה ללוח הניתוח או שחקו אותה מול המנוע.",
-      search: "חיפוש עמדות",
-      noMatches: "אין עמדות שמתאימות לחיפוש הזה.",
-      cardSize: {
-        label: "גודל הכרטיסים",
-        compact: "כרטיסים צפופים",
-        comfortable: "כרטיסים מרווחים",
-      },
-    },
-    detail: {
-      back: "חזרה אל {{category}}",
-      fen: "עמדה (FEN)",
-      openInAnalysis: "פתיחה בלוח הניתוח",
-      playWithEngine: "משחק מול המנוע",
-      openInEditor: "פתיחה בעורך העמדות",
-    },
-    sideToMove: {
-      w: "הלבן במסע",
-      b: "השחור במסע",
-    },
-    notFound: {
-      category: "אין קטגוריית מטים כזו.",
-      position: "אין עמדה כזו בקטגוריה הזו.",
-      back: "חזרה אל מטים בסיסיים",
-    },
-    leftPanel: {
-      ariaLabel: "פריטים נוספים ב{{category}}",
-      close: "סגירה",
-    },
-  },
-  positions: {
-    list: {
-      count: "עמדות: {{count}}",
-      folders: "קטגוריות: {{count}}",
-      empty: "אין עדיין עמדות בקטגוריה הזו.",
-      hint: "בחרו עמדה כדי לפתוח אותה על הלוח, ואז העבירו אותה ללוח הניתוח או שחקו אותה מול המנוע.",
-      search: "חיפוש עמדות",
-      noMatches: "אין עמדות שמתאימות לחיפוש הזה.",
-      cardSize: {
-        label: "גודל הכרטיסים",
-        compact: "כרטיסים צפופים",
-        comfortable: "כרטיסים מרווחים",
-      },
-    },
-    detail: {
-      back: "חזרה אל {{category}}",
-      fen: "עמדה (FEN)",
-      openInAnalysis: "פתיחה בלוח הניתוח",
-      playWithEngine: "משחק מול המנוע",
-      openInEditor: "פתיחה בעורך העמדות",
-    },
-    sideToMove: {
-      w: "הלבן במסע",
-      b: "השחור במסע",
-    },
-    notFound: {
-      category: "אין קטגוריית סופי משחק כזו.",
-      position: "אין עמדה כזו בקטגוריה הזו.",
-      back: "חזרה אל עמדות סופי המשחק",
-    },
-    leftPanel: {
-      ariaLabel: "פריטים נוספים ב{{category}}",
-      close: "סגירה",
-    },
-  },
-  userPgns: {
+  library: {
     list: {
       count: "משחקים: {{count}}",
       folders: "מחקרים: {{count}}",
@@ -478,9 +430,9 @@ const he: typeof en = {
       b: "השחור במסע",
     },
     notFound: {
-      category: "אין תיקיית PGN כזו.",
+      category: "אין תיקיית ספרייה כזו.",
       position: "אין משחק כזה בתיקייה הזו.",
-      back: "חזרה אל קובצי ה-PGN שלי",
+      back: "חזרה אל הספרייה",
     },
     leftPanel: {
       ariaLabel: "פריטים נוספים ב{{category}}",

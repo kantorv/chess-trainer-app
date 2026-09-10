@@ -34,17 +34,27 @@ import type { PgnKinds } from "./pgnKind";
  * export today — is untouched, and so is one with none.
  *
  * That is deliberately *not* a fourth kind of screen. A category holding
- * sub-categories is what the library layer has always been (`positions.json`
- * nests, and the manifest's `under` already builds a group here), so the splat
- * route, the sidebar generator, the list screen and the `?game=` reference all
- * serve the deeper paths with no edit: `/pgn/<file>/<study>/<chapter>` is
- * `resolveLibraryPath` doing what it does for `/positions/queen-vs-rook/…`.
+ * sub-categories is what the library layer has always supported (the manifest's
+ * `under` already builds a group here), so the splat route, the sidebar
+ * generator, the list screen and the `?game=` reference all serve the deeper
+ * paths with no edit: `/pgn/<file>/<study>/<chapter>` is `resolveLibraryPath`
+ * doing what it does for `/pgn/chess-fundamentals-capablanca/part-1`.
  * The one thing that did change is that a group's list screen now shows its
  * sub-folders (`views/library/LibraryList.tsx`), because a study you cannot
  * click is a folder that only the sidebar can reach.
  *
  * A game in a multi-study file with **no** `StudyName` stays in the file's own
  * folder, next to the study sub-folders rather than in a made-up one.
+ *
+ * ## A repertoire splits the same way, on a different tag
+ *
+ * An opening `repertoire` (a Chessable-style export: no `StudyName`, the
+ * chapter name on the `White` tag as `"1) 2...Qa5"`, the line name on `Black`)
+ * is the same folder-of-folders shape with the split key changed — `White`
+ * instead of `StudyName` — and the `"N) "` prefix parsed off for chapter
+ * order and stripped for the label. It is recognised from a manifest
+ * `kind: "repertoire"` or, undeclared, from {@link looksLikeRepertoire}; a
+ * line opens in `LibraryGameDetail`'s variation-tree mode.
  *
  * ## Where a name comes from
  *
@@ -54,7 +64,8 @@ import type { PgnKinds } from "./pgnKind";
  * | --- | --- | --- |
  * | a folder | the manifest's `label`, else the file's `StudyName` tag | the file name, humanised |
  * | a study sub-folder | its `StudyName` tag | — (a file only splits on that tag) |
- * | a game | its `ChapterName` tag (a study) | `White – Black (Result)` (a game), else `Event`, else its number |
+ * | a repertoire chapter sub-folder | its `White` tag, `"N) "` prefix stripped | the raw `White` tag |
+ * | a game | its `ChapterName` tag (a study), else its `Black` tag (a repertoire line) | `White – Black (Result)` (a game), else `Event`, else its number |
  *
  * A multi-study file has no single `StudyName` to be named from, so its own
  * folder falls to the manifest label or to the file name.
@@ -86,6 +97,19 @@ import type { PgnKinds } from "./pgnKind";
  */
 export type PgnLibrary = LibraryCatalog & { kinds: PgnKinds };
 
+/**
+ * A file's kind, as the manifest may declare it. Only the kinds a file can
+ * *be* are accepted — `shelf` is a grouping folder and `uploads` is a place,
+ * neither of which is a file, so declaring one is a `problems` line.
+ *
+ * In practice this is `"repertoire"`: it is the one kind that cannot always be
+ * read off the tags (a Chessable-style export has no `StudyName` and no
+ * `( … )` side lines, only a `"N) "` prefix on its `White` tags), so a shipped
+ * file declares itself and the structural heuristic is the fallback for
+ * undeclared files and uploads. A declared `kind` always wins.
+ */
+export type PgnManifestKind = "study" | "collection" | "repertoire" | "games";
+
 /** What the manifest may say about one file. Every field is optional. */
 export type PgnManifestEntry = {
   /** A category path to nest this file's folder under — `"studies"`. */
@@ -94,7 +118,20 @@ export type PgnManifestEntry = {
   label?: LocalizedText;
   /** Sort key among its siblings. Files without one sort last, by file name. */
   order?: number;
+  /**
+   * Force this file's kind, overriding what the tags would say. See
+   * {@link PgnManifestKind}; an unknown value is reported and ignored.
+   */
+  kind?: PgnManifestKind;
 };
+
+/** The manifest `kind` values a file may legitimately declare. */
+const MANIFEST_KINDS = new Set<PgnManifestKind>([
+  "study",
+  "collection",
+  "repertoire",
+  "games",
+]);
 
 /** `src/data/pgn.json`, validated. */
 export type PgnManifest = {
@@ -213,6 +250,20 @@ export const readPgnManifest = (
           problems.push(`Manifest file "${fileName}": entry is not an object.`);
           continue;
         }
+        let kind: PgnManifestKind | undefined;
+        if (value.kind !== undefined) {
+          if (
+            typeof value.kind === "string" &&
+            MANIFEST_KINDS.has(value.kind as PgnManifestKind)
+          ) {
+            kind = value.kind as PgnManifestKind;
+          } else {
+            problems.push(
+              `Manifest file "${fileName}": unknown kind "${String(value.kind)}".`,
+            );
+          }
+        }
+
         files[fileName] = {
           ...(nonEmptyString(value.under) ? { under: value.under.trim() } : {}),
           ...(localizedTextOf(value.label)
@@ -221,6 +272,7 @@ export const readPgnManifest = (
           ...(typeof value.order === "number" && Number.isFinite(value.order)
             ? { order: value.order }
             : {}),
+          ...(kind !== undefined ? { kind } : {}),
         };
       }
     }
@@ -241,34 +293,101 @@ type Building = Omit<LibraryCategory, "children"> & {
 /** One game of a file, parsed, with its 1-based position in that file. */
 type ParsedGame = { game: Game; pgn: string; number: number };
 
+/** One group of a file's games, keyed by whatever tag was chosen to split on. */
+export type PgnGroup = { study?: string; games: ParsedGame[] };
+
 /**
- * The games of one file, grouped by their `StudyName` tag — the whole of the
- * multi-study rule, and pure so it can be read on its own.
+ * The games of one file, grouped by a tag — the whole of the multi-study rule,
+ * and pure so it can be read on its own.
  *
- * Groups come back in the order the file **first mentions** each study, which is
+ * `keyOf` picks the tag: {@link studyNameKey} (the default) is the `StudyName`
+ * split a lichess collection needs; {@link chapterKey} is the `White`-tag split
+ * a `repertoire` needs, where the chapter name — `"1) 2...Qa5"` — is carried on
+ * `White` and there is no `StudyName` at all.
+ *
+ * Groups come back in the order the file **first mentions** each key, which is
  * the order a lichess export writes them in and the only order the data offers;
- * a study's chapters keep their own order inside it. Games with no `StudyName`
- * share one untitled group, so a mixed file loses nothing.
+ * the games inside a group keep their own order. Games with no value for that
+ * tag share one untitled group, so a mixed file loses nothing. (A `repertoire`
+ * re-sorts its groups afterwards — see the loader — because a repertoire's
+ * chapters carry an explicit `"N) "` order the file itself does not follow.)
  */
 export const studyGroupsOf = (
   parsed: readonly ParsedGame[],
-): { study?: string; games: ParsedGame[] }[] => {
-  const byStudy = new Map<string, { study?: string; games: ParsedGame[] }>();
+  keyOf: (game: Game) => string | undefined = studyNameKey,
+): PgnGroup[] => {
+  const byKey = new Map<string, PgnGroup>();
 
   for (const entry of parsed) {
-    const study = gameTag(entry.game.headers, "StudyName");
-    // `""` is the untitled group: a study cannot be named that, since `gameTag`
+    const value = keyOf(entry.game);
+    // `""` is the untitled group: a real key cannot be that, since `gameTag`
     // reports an empty tag as absent.
-    const key = study ?? "";
-    const group = byStudy.get(key);
+    const key = value ?? "";
+    const group = byKey.get(key);
     if (group === undefined) {
-      byStudy.set(key, { ...(study !== undefined ? { study } : {}), games: [entry] });
+      byKey.set(key, { ...(value !== undefined ? { study: value } : {}), games: [entry] });
     } else {
       group.games.push(entry);
     }
   }
 
-  return [...byStudy.values()];
+  return [...byKey.values()];
+};
+
+/** Split key: the `StudyName` tag (a lichess collection). */
+export const studyNameKey = (game: Game): string | undefined =>
+  gameTag(game.headers, "StudyName");
+
+/** Split key: the `White` tag (a repertoire's chapter name). */
+export const chapterKey = (game: Game): string | undefined =>
+  gameTag(game.headers, "White");
+
+/**
+ * A repertoire chapter's `"N) "` prefix, taken apart.
+ *
+ * `"12) 2...d5 3.exd5 Qxd5 4.d4 - ...Bf5 Setups"` → `{ order: 12, label: "2...d5
+ * 3.exd5 …" }`. A chapter with no numeric prefix — `"Introduction"`,
+ * `"Quickstarter"` — comes back `{ order: undefined, label: <the name> }` and
+ * the loader files those before the numbered ones, in the order the file names
+ * them.
+ */
+export const chapterPrefix = (
+  raw: string,
+): { order?: number; label: string } => {
+  const match = /^\s*(\d+)\)\s*(.*)$/s.exec(raw);
+  if (match === null) return { label: raw.trim() || raw };
+  const rest = match[2].trim();
+  return { order: Number(match[1]), label: rest === "" ? raw.trim() : rest };
+};
+
+/**
+ * Whether a file looks like an opening `repertoire` even though nothing
+ * declared it — the fallback the manifest `kind` overrides.
+ *
+ * The signature of the shape: **many** games, **no** `StudyName` on any of
+ * them, and their `White` tags carrying a `"N) "` chapter prefix — several
+ * distinct such chapters, over most of the games. Deep `( … )` nesting is a
+ * repertoire's usual fourth signal, but a Chessable-style export writes its
+ * alternatives as prose inside `{ … }` comments and has none, so it is not
+ * required here.
+ */
+export const looksLikeRepertoire = (parsed: readonly ParsedGame[]): boolean => {
+  if (parsed.length < 8) return false;
+  if (parsed.some((entry) => studyNameKey(entry.game) !== undefined)) return false;
+
+  const numbered = new Set<number>();
+  let withPrefix = 0;
+  for (const entry of parsed) {
+    const white = chapterKey(entry.game);
+    if (white === undefined) continue;
+    const { order } = chapterPrefix(white);
+    if (order !== undefined) {
+      numbered.add(order);
+      withPrefix += 1;
+    }
+  }
+
+  return numbered.size >= 3 && withPrefix >= parsed.length / 2;
 };
 
 /**
@@ -403,10 +522,14 @@ export const loadPgnLibrary = (
      * category**, which is what a URL addresses one by — so two studies in the
      * same file may both hold a `chapter-1`, exactly as two files may.
      */
-    const addGames = (categoryPath: string, games: readonly ParsedGame[]) => {
+    const addGames = (
+      categoryPath: string,
+      games: readonly ParsedGame[],
+      nameOf: (game: Game, gameNumber: number) => string = gameDisplayName,
+    ) => {
       const seen = new Set<string>();
       for (const { game, pgn, number } of games) {
-        const name = gameDisplayName(game, number);
+        const name = nameOf(game, number);
         /*
           A slug can collide (two chess.com games between the same players) or be
           empty (a chapter title with no ASCII in it). The game's own number
@@ -431,6 +554,70 @@ export const loadPgnLibrary = (
       }
     };
 
+    /*
+      A repertoire is recognised first, because it is otherwise `games` — no
+      `StudyName`, so the branch below would file 310 flat cards. A manifest
+      `kind` wins; an undeclared file falls to the structural heuristic.
+    */
+    const declaredKind = entry?.kind;
+    const isRepertoire =
+      declaredKind === "repertoire" ||
+      (declaredKind === undefined && looksLikeRepertoire(parsed));
+
+    if (isRepertoire) {
+      /*
+        Collection-shaped: the file's folder groups chapter sub-folders, each
+        holding the lines of that chapter. A line's name is its `Black` tag
+        ("2... Qa5 3. g3 b5 #1"); the whole subtree is kind `repertoire`, so
+        `UserPgnsSection` dispatches it — folder-cards then line-cards — with
+        one branch, and the line viewer knows to open in variation-tree mode.
+      */
+      folderAt(path, entry?.label ?? { en: humanizeFileName(fileName) });
+      kinds[path] = "repertoire";
+
+      const lineName = (game: Game, gameNumber: number): string =>
+        gameTag(game.headers, "Black") ?? gameDisplayName(game, gameNumber);
+
+      /*
+        Group by the `White`-tag chapter, then order it: chapters with no
+        `"N) "` prefix ("Introduction", "Quickstarter") keep the order the file
+        names them and sort ahead of the numbered ones, which sort by N.
+      */
+      const chapterGroups = studyGroupsOf(parsed, chapterKey)
+        .map((group, index) => {
+          const parts =
+            group.study !== undefined ? chapterPrefix(group.study) : undefined;
+          return { group, index, order: parts?.order, label: parts?.label };
+        })
+        .sort((a, b) => {
+          if (a.order === undefined && b.order === undefined) return a.index - b.index;
+          if (a.order === undefined) return -1;
+          if (b.order === undefined) return 1;
+          return a.order - b.order;
+        });
+
+      const takenChapterSlugs = new Set<string>();
+      for (const { group, index, label } of chapterGroups) {
+        if (group.study === undefined) {
+          // Lines with no chapter of their own stay in the file's own folder.
+          addGames(path, group.games, lineName);
+          continue;
+        }
+
+        const base =
+          slugify(label ?? group.study) || `chapter-${index + 1}`;
+        let slug = takenChapterSlugs.has(base) ? `${base}-${index + 1}` : base;
+        while (takenChapterSlugs.has(slug)) slug = `${slug}-${index + 1}`;
+        takenChapterSlugs.add(slug);
+
+        const chapterPath = `${path}/${slug}`;
+        folderAt(chapterPath, { en: label ?? group.study });
+        kinds[chapterPath] = "repertoire";
+        addGames(chapterPath, group.games, lineName);
+      }
+      continue;
+    }
+
     const groups = studyGroupsOf(parsed);
     const studies = groups.filter((group) => group.study !== undefined);
 
@@ -446,7 +633,13 @@ export const loadPgnLibrary = (
       );
       // A `StudyName` is what makes a file a study; without one it is a file of
       // played games, and the two are told apart nowhere else (`lib/pgnKind.ts`).
-      kinds[path] = studyName !== undefined ? "study" : "games";
+      // A manifest `kind` of `study` / `games` overrides that read.
+      kinds[path] =
+        declaredKind === "study" || declaredKind === "games"
+          ? declaredKind
+          : studyName !== undefined
+            ? "study"
+            : "games";
       addGames(path, parsed);
       continue;
     }

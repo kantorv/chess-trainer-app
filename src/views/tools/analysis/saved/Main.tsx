@@ -1,14 +1,14 @@
 import Box from "@mui/material/Box";
 
-import { default as MatesList } from "./MatesList";
+import { default as SavedAnalyses } from "./SavedAnalyses";
 
 /**
  * Layout-only wrapper, as on every other screen — the shell already insets and
  * squares the area this fills (`Layout.tsx`, `BOARD_INSET_PX`).
  */
 const Main = () => (
-  <Box data-testid="mates-list-wrapper" sx={{ height: "100%" }}>
-    <MatesList />
+  <Box data-testid="saved-analyses-wrapper" sx={{ height: "100%" }}>
+    <SavedAnalyses />
   </Box>
 );
 

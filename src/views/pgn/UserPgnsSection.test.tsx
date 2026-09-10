@@ -12,7 +12,6 @@ import {
 import i18n from "../../i18n";
 import AppThemeWithLang from "../../theme/AppThemeWithLang";
 import { itemsInLibraryCategory } from "../../lib/libraryCatalog";
-import { matesSection } from "../library/section";
 import { pgnCatalog } from "../../lib/pgnCatalog";
 import { initialFenOf } from "../../lib/gameModel";
 import { fenAtPly } from "../../lib/gameNavigation";
@@ -22,6 +21,7 @@ import { RightPanelOutlet, RightPanelProvider } from "../main/rightPanel";
 import { LeftPanelOutlet, LeftPanelProvider } from "../main/leftPanel";
 import { addUpload, clearUploads } from "../../lib/pgnUploadStore";
 import UserPgnsSection from "./UserPgnsSection";
+import { LegacyPgnRedirect } from "../../App";
 
 /* Stubbed for the reason in `.claude/rules/chessboard.md` §8 — jsdom has no
    layout engine, and a real board throws from its mount effect. */
@@ -79,7 +79,7 @@ const renderAt = (path: string) =>
           <LeftPanelProvider>
             <Routes>
               <Route
-                path="/pgn/*"
+                path="/library/*"
                 element={
                   <>
                     <UserPgnsSection />
@@ -92,6 +92,7 @@ const renderAt = (path: string) =>
                   </>
                 }
               />
+              <Route path="/pgn/*" element={<LegacyPgnRedirect />} />
               <Route path="/tools/analysis" element={<Arrival name="analysis" />} />
               <Route path="/games/load-pgn" element={<Arrival name="load-pgn" />} />
               <Route path="/engine/play" element={<Arrival name="play" />} />
@@ -116,15 +117,15 @@ describe("the User PGNs section", () => {
   });
 
   it("lists a file's games as cards, previewing each one's starting position", () => {
-    renderAt(`/pgn/${PLAYED}`);
+    renderAt(`/library/${PLAYED}`);
 
     const listed = itemsInLibraryCategory(PLAYED, pgnCatalog);
     expect(listed).toHaveLength(9);
     for (const item of listed) {
-      expect(screen.getByTestId(`user-pgn-card-${item.id}`)).toBeInTheDocument();
+      expect(screen.getByTestId(`library-item-card-${item.id}`)).toBeInTheDocument();
     }
 
-    const topBar = screen.getByTestId("user-pgns-list-top-bar");
+    const topBar = screen.getByTestId("library-list-top-bar");
     expect(topBar).toHaveTextContent("Zwischenzug best games [part1]");
     expect(topBar).toHaveTextContent("Games: 9");
   });
@@ -136,9 +137,9 @@ describe("the User PGNs section", () => {
       game is footed with how it ended, how long it ran, where it was played and
       what was opened.
     */
-    renderAt(`/pgn/${PLAYED}`);
+    renderAt(`/library/${PLAYED}`);
 
-    const footer = screen.getByTestId(`user-pgn-footer-${played.id}`);
+    const footer = screen.getByTestId(`library-item-footer-${played.id}`);
 
     expect(footer).toHaveTextContent("Jose Raul Capablanca - Savielly Tartakower");
     expect(footer).toHaveTextContent(`1-0 · ${played.game.moves.length} moves`);
@@ -150,9 +151,9 @@ describe("the User PGNs section", () => {
     // A rosettes chapter is a position and a comment: no players, no result, and
     // an Event tag that only repeats the chapter's own name. Nothing is invented
     // and no placeholder row is rendered.
-    renderAt(`/pgn/${STUDY}`);
+    renderAt(`/library/${STUDY}`);
 
-    const footer = screen.getByTestId("user-pgn-footer-chapter-1");
+    const footer = screen.getByTestId("library-item-footer-chapter-1");
 
     expect(footer).toHaveTextContent("Chapter 1");
     // Singular, not "1 moves" — that chapter ships a single move.
@@ -161,23 +162,15 @@ describe("the User PGNs section", () => {
     expect(footer).not.toHaveTextContent("?");
   });
 
-  it("captions a position card by whose move it is, unchanged", () => {
-    // The other side of the same branch, asserted here because this is the file
-    // that owns it: the two position sections are untouched by any of the above.
-    expect(matesSection.catalog.items.every((item) => item.kind === "position")).toBe(
-      true,
-    );
-  });
-
   it("serves a folder the manifest nested, from the same one splat route", () => {
-    renderAt(`/pgn/${STUDY}`);
+    renderAt(`/library/${STUDY}`);
 
-    expect(screen.getByTestId("user-pgns-list-top-bar")).toHaveTextContent(
+    expect(screen.getByTestId("library-list-top-bar")).toHaveTextContent(
       "Queen vs Rook, Rosettes",
     );
-    expect(screen.getByTestId("user-pgn-card-chapter-1")).toHaveAttribute(
+    expect(screen.getByTestId("library-item-card-chapter-1")).toHaveAttribute(
       "href",
-      `/pgn/${STUDY}/chapter-1`,
+      `/library/${STUDY}/chapter-1`,
     );
   });
 
@@ -188,7 +181,7 @@ describe("the User PGNs section", () => {
       which side is being studied. A *position* library faces the side to move;
       this deliberately does not.
     */
-    renderAt(`/pgn/${STUDY}/chapter-1`);
+    renderAt(`/library/${STUDY}/chapter-1`);
 
     const board = screen.getByTestId("board");
     expect(board).toHaveAttribute("data-orientation", "white");
@@ -199,7 +192,7 @@ describe("the User PGNs section", () => {
   });
 
   it("replays the game through the shared move list and board controls", async () => {
-    renderAt(`/pgn/${PLAYED}/${played.id}`);
+    renderAt(`/library/${PLAYED}/${played.id}`);
 
     expect(screen.getByTestId("board")).toHaveAttribute(
       "data-position",
@@ -226,9 +219,9 @@ describe("the User PGNs section", () => {
   });
 
   it("shows the game's PGN tags in its Info tab", async () => {
-    renderAt(`/pgn/${PLAYED}/${played.id}`);
+    renderAt(`/library/${PLAYED}/${played.id}`);
 
-    await userEvent.click(screen.getByTestId("user-pgn-tab-info"));
+    await userEvent.click(screen.getByTestId("library-item-tab-info"));
 
     const panel = screen.getByTestId("layout-right-panel");
     expect(panel).toHaveTextContent("Jose Raul Capablanca");
@@ -236,24 +229,24 @@ describe("the User PGNs section", () => {
   });
 
   it.each([
-    ["analysis", "user-pgn-open-analysis"],
-    ["load-pgn", "user-pgn-open-load-pgn"],
+    ["analysis", "library-item-open-analysis"],
+    ["load-pgn", "library-item-open-load-pgn"],
   ])("hands the whole game to %s as ?game=", async (arrival, testId) => {
-    renderAt(`/pgn/${PLAYED}/${played.id}`);
+    renderAt(`/library/${PLAYED}/${played.id}`);
 
     await userEvent.click(screen.getByTestId(testId));
 
     expect(screen.getByTestId(`${arrival}-arrival`)).toHaveAttribute(
       "data-game",
-      `pgn/${PLAYED}/${played.id}`,
+      `library/${PLAYED}/${played.id}`,
     );
   });
 
   it.each([
-    ["play", "user-pgn-play-engine"],
-    ["editor", "user-pgn-open-editor"],
+    ["play", "library-item-play-engine"],
+    ["editor", "library-item-open-editor"],
   ])("hands the position at the ply on screen to %s as ?fen=", async (arrival, testId) => {
-    renderAt(`/pgn/${PLAYED}/${played.id}`);
+    renderAt(`/library/${PLAYED}/${played.id}`);
 
     // Step forward twice first — the point of `?fen=` here is that it carries
     // *this* ply, not the game's start.
@@ -271,10 +264,10 @@ describe("the User PGNs section", () => {
   });
 
   it.each([
-    ["analysis", "user-pgn-open-analysis"],
-    ["load-pgn", "user-pgn-open-load-pgn"],
+    ["analysis", "library-item-open-analysis"],
+    ["load-pgn", "library-item-open-load-pgn"],
   ])("carries the ply on screen to %s as &move=", async (arrival, testId) => {
-    renderAt(`/pgn/${PLAYED}/${played.id}`);
+    renderAt(`/library/${PLAYED}/${played.id}`);
 
     const next = screen.getByRole("button", {
       name: i18n.t("gamePanel.controls.next"),
@@ -284,14 +277,14 @@ describe("the User PGNs section", () => {
     await userEvent.click(screen.getByTestId(testId));
 
     const landed = screen.getByTestId(`${arrival}-arrival`);
-    expect(landed).toHaveAttribute("data-game", `pgn/${PLAYED}/${played.id}`);
+    expect(landed).toHaveAttribute("data-game", `library/${PLAYED}/${played.id}`);
     expect(landed).toHaveAttribute("data-move", "2");
   });
 
   it("omits &move= from the hand-off at ply 0", async () => {
-    renderAt(`/pgn/${PLAYED}/${played.id}`);
+    renderAt(`/library/${PLAYED}/${played.id}`);
 
-    await userEvent.click(screen.getByTestId("user-pgn-open-analysis"));
+    await userEvent.click(screen.getByTestId("library-item-open-analysis"));
 
     expect(screen.getByTestId("analysis-arrival")).not.toHaveAttribute(
       "data-move",
@@ -305,7 +298,7 @@ describe("the User PGNs section", () => {
       screen.getByTestId("location-search").getAttribute("data-search") ?? "";
 
     it("reflects the ply on screen, replacing in place", async () => {
-      renderAt(`/pgn/${PLAYED}/${played.id}`);
+      renderAt(`/library/${PLAYED}/${played.id}`);
       expect(search()).not.toContain("move=");
 
       await userEvent.click(next());
@@ -318,7 +311,7 @@ describe("the User PGNs section", () => {
     });
 
     it("drops the parameter back at ply 0 rather than writing move=0", async () => {
-      renderAt(`/pgn/${PLAYED}/${played.id}`);
+      renderAt(`/library/${PLAYED}/${played.id}`);
 
       await userEvent.click(next());
       expect(search()).toContain("move=1");
@@ -327,7 +320,7 @@ describe("the User PGNs section", () => {
     });
 
     it("opens on the ply the URL names", () => {
-      renderAt(`/pgn/${PLAYED}/${played.id}?move=3`);
+      renderAt(`/library/${PLAYED}/${played.id}?move=3`);
 
       expect(screen.getByTestId("board")).toHaveAttribute(
         "data-position",
@@ -336,7 +329,7 @@ describe("the User PGNs section", () => {
     });
 
     it("clamps a ply past the end of the game rather than throwing", () => {
-      renderAt(`/pgn/${PLAYED}/${played.id}?move=99999`);
+      renderAt(`/library/${PLAYED}/${played.id}?move=99999`);
 
       expect(screen.getByTestId("board")).toHaveAttribute(
         "data-position",
@@ -345,7 +338,7 @@ describe("the User PGNs section", () => {
     });
 
     it("ignores a ?move= that is not a ply", () => {
-      renderAt(`/pgn/${PLAYED}/${played.id}?move=abc`);
+      renderAt(`/library/${PLAYED}/${played.id}?move=abc`);
 
       expect(screen.getByTestId("board")).toHaveAttribute(
         "data-position",
@@ -379,7 +372,7 @@ describe("the User PGNs section", () => {
 
     it("opens on the ply the tag declares when the URL names none", () => {
       addUpload("my_study.pgn", START_PLY_PGN);
-      renderAt("/pgn/uploads/my-study/chapter-1");
+      renderAt("/library/uploads/my-study/chapter-1");
 
       expect(screen.getByTestId("board")).toHaveAttribute(
         "data-position",
@@ -389,7 +382,7 @@ describe("the User PGNs section", () => {
 
     it("lets an explicit ?move= win over the tag", () => {
       addUpload("my_study.pgn", START_PLY_PGN);
-      renderAt("/pgn/uploads/my-study/chapter-1?move=1");
+      renderAt("/library/uploads/my-study/chapter-1?move=1");
 
       expect(screen.getByTestId("board")).toHaveAttribute(
         "data-position",
@@ -402,7 +395,7 @@ describe("the User PGNs section", () => {
         "my_study.pgn",
         START_PLY_PGN.replace('[StartPly "3"]', '[StartPly "99"]'),
       );
-      renderAt("/pgn/uploads/my-study/chapter-1");
+      renderAt("/library/uploads/my-study/chapter-1");
 
       expect(screen.getByTestId("board")).toHaveAttribute(
         "data-position",
@@ -412,11 +405,11 @@ describe("the User PGNs section", () => {
   });
 
   it("closes to the same folder from the top-right close button", async () => {
-    renderAt(`/pgn/${PLAYED}/${played.id}`);
+    renderAt(`/library/${PLAYED}/${played.id}`);
 
-    await userEvent.click(screen.getByTestId("user-pgn-detail-close"));
+    await userEvent.click(screen.getByTestId("library-item-detail-close"));
 
-    expect(screen.getByTestId("user-pgns-list")).toBeInTheDocument();
+    expect(screen.getByTestId("library-list")).toBeInTheDocument();
   });
 
   describe("sibling-nav left panel", () => {
@@ -424,26 +417,26 @@ describe("the User PGNs section", () => {
     const other = siblings.find((sibling) => sibling.id !== played.id)!;
 
     it("replaces the sidebar with the folder's other games, the current one active", () => {
-      renderAt(`/pgn/${PLAYED}/${played.id}`);
+      renderAt(`/library/${PLAYED}/${played.id}`);
 
       const panel = screen.getByTestId("layout-left-panel");
-      const active = screen.getByTestId(`user-pgn-sibling-nav-item-${played.id}`);
-      const otherRow = screen.getByTestId(`user-pgn-sibling-nav-item-${other.id}`);
+      const active = screen.getByTestId(`library-item-sibling-nav-item-${played.id}`);
+      const otherRow = screen.getByTestId(`library-item-sibling-nav-item-${other.id}`);
 
       expect(panel).toContainElement(active);
       expect(panel).toContainElement(otherRow);
       expect(active).toHaveAttribute("aria-current", "true");
       expect(otherRow).not.toHaveAttribute("aria-current");
-      expect(screen.getAllByTestId(/^user-pgn-sibling-nav-item-/)).toHaveLength(
+      expect(screen.getAllByTestId(/^library-item-sibling-nav-item-/)).toHaveLength(
         siblings.length,
       );
     });
 
     it("navigates to a sibling game when clicked", async () => {
-      renderAt(`/pgn/${PLAYED}/${played.id}`);
+      renderAt(`/library/${PLAYED}/${played.id}`);
 
       await userEvent.click(
-        screen.getByTestId(`user-pgn-sibling-nav-item-${other.id}`),
+        screen.getByTestId(`library-item-sibling-nav-item-${other.id}`),
       );
 
       if (other.kind !== "game") throw new Error("expected a game");
@@ -452,63 +445,63 @@ describe("the User PGNs section", () => {
         fenAtPly(other.game, 0),
       );
       expect(
-        screen.getByTestId(`user-pgn-sibling-nav-item-${other.id}`),
+        screen.getByTestId(`library-item-sibling-nav-item-${other.id}`),
       ).toHaveAttribute("aria-current", "true");
     });
 
     it("closes back to the folder's list", async () => {
-      renderAt(`/pgn/${PLAYED}/${played.id}`);
+      renderAt(`/library/${PLAYED}/${played.id}`);
 
-      await userEvent.click(screen.getByTestId("user-pgn-sibling-nav-close"));
+      await userEvent.click(screen.getByTestId("library-item-sibling-nav-close"));
 
-      expect(screen.getByTestId("user-pgns-list")).toBeInTheDocument();
+      expect(screen.getByTestId("library-list")).toBeInTheDocument();
     });
 
     it("keeps the right-panel hand-offs and close button unaffected", () => {
-      renderAt(`/pgn/${PLAYED}/${played.id}`);
+      renderAt(`/library/${PLAYED}/${played.id}`);
 
-      expect(screen.getByTestId("user-pgn-open-analysis")).toBeInTheDocument();
-      expect(screen.getByTestId("user-pgn-detail-close")).toBeInTheDocument();
+      expect(screen.getByTestId("library-item-open-analysis")).toBeInTheDocument();
+      expect(screen.getByTestId("library-item-detail-close")).toBeInTheDocument();
     });
   });
 
   it("says so, and renders no board, for a folder that does not exist", () => {
-    renderAt("/pgn/no-such-file");
+    renderAt("/library/no-such-file");
 
-    expect(screen.getByTestId("user-pgns-list-unknown-category")).toHaveTextContent(
-      "There is no such PGN folder.",
+    expect(screen.getByTestId("library-list-unknown-category")).toHaveTextContent(
+      "There is no such library folder.",
     );
     expect(screen.queryByTestId("board")).toBeNull();
   });
 
   it("names the folder when only the game is unknown", () => {
-    renderAt(`/pgn/${PLAYED}/no-such-game`);
+    renderAt(`/library/${PLAYED}/no-such-game`);
 
-    expect(screen.getByTestId("user-pgn-detail-not-found")).toHaveTextContent(
+    expect(screen.getByTestId("library-item-detail-not-found")).toHaveTextContent(
       "There is no such game in this folder.",
     );
     expect(screen.queryByTestId("board")).toBeNull();
   });
 
   it("opens on the Moves tab, not the new Description tab", () => {
-    renderAt(`/pgn/${PLAYED}/${played.id}`);
+    renderAt(`/library/${PLAYED}/${played.id}`);
 
     expect(
-      screen.getByTestId("user-pgn-detail-content-moves"),
+      screen.getByTestId("library-item-detail-content-moves"),
     ).toBeInTheDocument();
     expect(
-      screen.queryByTestId("user-pgn-detail-content-description"),
+      screen.queryByTestId("library-item-detail-content-description"),
     ).toBeNull();
   });
 
   it("shows the chapter's re-flowed preamble in the Description tab", async () => {
     // Rosettes Chapter 1 opens with a multi-paragraph note on the starting
     // position and carries no per-move comments.
-    renderAt(`/pgn/${STUDY}/chapter-1`);
+    renderAt(`/library/${STUDY}/chapter-1`);
 
-    await userEvent.click(screen.getByTestId("user-pgn-tab-description"));
+    await userEvent.click(screen.getByTestId("library-item-tab-description"));
 
-    const preamble = screen.getByTestId("user-pgn-description-preamble");
+    const preamble = screen.getByTestId("library-item-description-preamble");
     expect(preamble).toHaveTextContent("three different rosette types");
     // The numbered points the source wrote with single newlines survive as
     // their own paragraphs.
@@ -520,11 +513,11 @@ describe("the User PGNs section", () => {
     const first = comments.moves[0];
     expect(first).toBeDefined();
 
-    renderAt(`/pgn/${PLAYED}/${played.id}`);
-    await userEvent.click(screen.getByTestId("user-pgn-tab-description"));
+    renderAt(`/library/${PLAYED}/${played.id}`);
+    await userEvent.click(screen.getByTestId("library-item-tab-description"));
 
     const entry = screen.getByTestId(
-      `user-pgn-description-entry-${first.ply}`,
+      `library-item-description-entry-${first.ply}`,
     );
     expect(entry).toHaveTextContent(played.game.moves[first.ply - 1].san);
 
@@ -541,7 +534,7 @@ describe("the User PGNs section", () => {
     const first = comments.moves[0];
     expect(first).toBeDefined();
 
-    renderAt(`/pgn/${PLAYED}/${played.id}`);
+    renderAt(`/library/${PLAYED}/${played.id}`);
 
     // The move list is the Moves tab, which opens by default.
     expect(
@@ -557,11 +550,11 @@ describe("the User PGNs section", () => {
     ).toBeNull();
 
     // Nothing under the FEN until the annotated move is the one on screen.
-    expect(screen.queryByTestId("user-pgn-move-comment")).toBeNull();
+    expect(screen.queryByTestId("library-item-move-comment")).toBeNull();
 
     await userEvent.click(screen.getByTestId(`move-ply-${first.ply}`));
 
-    const shown = screen.getByTestId("user-pgn-move-comment");
+    const shown = screen.getByTestId("library-item-move-comment");
     expect(shown).toHaveTextContent(played.game.moves[first.ply - 1].san);
     expect(shown).toHaveTextContent(first.paragraphs[0].slice(0, 20));
   });
@@ -577,39 +570,39 @@ describe("the User PGNs section", () => {
       throw new Error("expected a puzzle chapter with no comments");
     }
 
-    renderAt(`/pgn/${PUZZLES}/${bare.id}`);
-    await userEvent.click(screen.getByTestId("user-pgn-tab-description"));
+    renderAt(`/library/${PUZZLES}/${bare.id}`);
+    await userEvent.click(screen.getByTestId("library-item-tab-description"));
 
-    const panel = screen.getByTestId("user-pgn-description");
+    const panel = screen.getByTestId("library-item-description");
     expect(panel).toHaveTextContent("This game has no annotations.");
     expect(
-      screen.queryAllByTestId(/^user-pgn-description-entry-/),
+      screen.queryAllByTestId(/^library-item-description-entry-/),
     ).toHaveLength(0);
   });
 
   it("translates its chrome, and takes its content from the PGN, under Hebrew", async () => {
     await i18n.changeLanguage("he");
-    renderAt(`/pgn/${PLAYED}/${played.id}`);
+    renderAt(`/library/${PLAYED}/${played.id}`);
 
     const panel = screen.getByTestId("layout-right-panel");
     // Chrome out of `src/locales`; the game's name out of its own tag pairs.
-    expect(panel).toHaveTextContent(i18n.t("userPgns.detail.openInAnalysis"));
+    expect(panel).toHaveTextContent(i18n.t("library.detail.openInAnalysis"));
     expect(panel).toHaveTextContent(played.name.en);
   });
 });
 
 /**
  * The section's **dispatcher**, which is where the PGN taxonomy
- * (`lib/pgnKind.ts`) becomes visible: which screen a `/pgn/*` URL gets, and
+ * (`lib/pgnKind.ts`) becomes visible: which screen a `/library/*` URL gets, and
  * which sidebar it gets with it.
  *
  * Asserted against the shipped catalog rather than a fixture, because the
- * promise is about the files in `src/data/pgn/`: a kind that stopped being
+ * promise is about the files in `src/data/library/`: a kind that stopped being
  * recognised would be a screen nobody could reach.
  */
 
 /** The shipped collection: one file, 28 studies, 169 chapters. */
-const COLLECTION = "/pgn/methurst-public-studies";
+const COLLECTION = "/library/methurst-public-studies";
 const COLLECTION_STUDY = `${COLLECTION}/queen-vs-rook-lightning`;
 
 describe("a collection gets its own index screen", () => {
@@ -629,7 +622,7 @@ describe("a collection gets its own index screen", () => {
       "https://lichess.org/@/methurst",
     );
     // Not the shared list screen: no cards, no card-size toggle.
-    expect(screen.queryByTestId("user-pgns-list")).toBeNull();
+    expect(screen.queryByTestId("library-list")).toBeNull();
   });
 
   it("renders the file's authored notes in the body, above the studies", () => {
@@ -698,8 +691,8 @@ describe("a study inside a collection", () => {
     // A study is a study wherever it was filed: the shared screen, unchanged.
     renderAt(COLLECTION_STUDY);
 
-    expect(screen.getByTestId("user-pgns-list")).toBeInTheDocument();
-    expect(screen.getByTestId("user-pgns-list-count")).toHaveTextContent("Games: 7");
+    expect(screen.getByTestId("library-list")).toBeInTheDocument();
+    expect(screen.getByTestId("library-list-count")).toHaveTextContent("Games: 7");
   });
 
   it("puts the collection's other studies in the sidebar's place", () => {
@@ -736,7 +729,7 @@ describe("a study inside a collection", () => {
     // and one panel is claimed at a time.
     renderAt(`${COLLECTION_STUDY}/chapter-1`);
 
-    expect(screen.getByTestId("user-pgn-sibling-nav")).toBeInTheDocument();
+    expect(screen.getByTestId("library-item-sibling-nav")).toBeInTheDocument();
     expect(screen.queryByTestId("user-pgns-collection-nav")).toBeNull();
   });
 });
@@ -747,17 +740,17 @@ describe("every other kind keeps the screen it had", () => {
   });
 
   it("gives a study in its own file the list screen and the app sidebar", () => {
-    renderAt(`/pgn/${STUDY}`);
+    renderAt(`/library/${STUDY}`);
 
-    expect(screen.getByTestId("user-pgns-list")).toBeInTheDocument();
+    expect(screen.getByTestId("library-list")).toBeInTheDocument();
     expect(screen.getByText("app sidebar")).toBeInTheDocument();
     expect(screen.queryByTestId("user-pgns-collection-nav")).toBeNull();
   });
 
   it("gives a manifest shelf the list screen, with a card per file", () => {
-    renderAt("/pgn/chess-fundamentals-capablanca");
+    renderAt("/library/chess-fundamentals-capablanca");
 
-    expect(screen.getByTestId("user-pgns-list-folder-count")).toHaveTextContent(
+    expect(screen.getByTestId("library-list-folder-count")).toHaveTextContent(
       "Studies: 3",
     );
     expect(screen.queryByTestId("user-pgns-collection")).toBeNull();
@@ -799,7 +792,7 @@ describe("the Uploads folder", () => {
   });
 
   it("is reachable with nothing in it, and offers the button", () => {
-    renderAt("/pgn/uploads");
+    renderAt("/library/uploads");
 
     expect(screen.getByTestId("user-pgns-uploads")).toBeInTheDocument();
     expect(screen.getByTestId("user-pgns-uploads-button")).toHaveTextContent(
@@ -814,7 +807,7 @@ describe("the Uploads folder", () => {
   it("says where the files are kept", () => {
     // A reader who uploads a study they care about should know this is a
     // browser and not a backup.
-    renderAt("/pgn/uploads");
+    renderAt("/library/uploads");
 
     expect(screen.getByTestId("user-pgns-uploads-storage-note")).toHaveTextContent(
       "kept in this browser only",
@@ -822,7 +815,7 @@ describe("the Uploads folder", () => {
   });
 
   it("keeps a picked file and lists what it turned out to be", async () => {
-    renderAt("/pgn/uploads");
+    renderAt("/library/uploads");
 
     await userEvent.upload(
       screen.getByTestId("user-pgns-uploads-input"),
@@ -833,14 +826,14 @@ describe("the Uploads folder", () => {
     // Named from its own StudyName tag, like any other file in the section.
     expect(row).toHaveTextContent("Uploaded Study");
     expect(row).toHaveTextContent("Study · Games: 2");
-    expect(row).toHaveAttribute("href", "/pgn/uploads/my-study");
+    expect(row).toHaveAttribute("href", "/library/uploads/my-study");
     expect(screen.getByTestId("user-pgns-uploads-count")).toHaveTextContent(
       "Files: 1",
     );
   });
 
   it("puts the uploaded study into the catalog the whole section reads", async () => {
-    renderAt("/pgn/uploads");
+    renderAt("/library/uploads");
     await userEvent.upload(
       screen.getByTestId("user-pgns-uploads-input"),
       pgnFile("my_study.pgn"),
@@ -850,31 +843,31 @@ describe("the Uploads folder", () => {
     // The ordinary list screen, at the ordinary splat route.
     await userEvent.click(screen.getByTestId("user-pgns-uploads-item-my_study.pgn"));
 
-    expect(screen.getByTestId("user-pgns-list-top-bar")).toHaveTextContent(
+    expect(screen.getByTestId("library-list-top-bar")).toHaveTextContent(
       "Uploaded Study",
     );
-    expect(screen.getByTestId("user-pgn-card-chapter-1")).toBeInTheDocument();
+    expect(screen.getByTestId("library-item-card-chapter-1")).toBeInTheDocument();
   });
 
   it("replays an uploaded chapter like any other game", async () => {
     addUpload("my_study.pgn", STUDY_PGN);
-    renderAt("/pgn/uploads/my-study/chapter-1");
+    renderAt("/library/uploads/my-study/chapter-1");
 
     expect(screen.getByTestId("board")).toBeInTheDocument();
     // The shared detail screen, with its hand-offs — nothing knows it was
     // uploaded rather than shipped.
-    expect(screen.getByTestId("user-pgn-open-analysis")).toBeInTheDocument();
+    expect(screen.getByTestId("library-item-open-analysis")).toBeInTheDocument();
   });
 
   it("hands an uploaded game on with ?game=, like a shipped one", async () => {
     addUpload("my_study.pgn", STUDY_PGN);
-    renderAt("/pgn/uploads/my-study/chapter-1");
+    renderAt("/library/uploads/my-study/chapter-1");
 
-    await userEvent.click(screen.getByTestId("user-pgn-open-analysis"));
+    await userEvent.click(screen.getByTestId("library-item-open-analysis"));
 
     expect(screen.getByTestId("analysis-arrival")).toHaveAttribute(
       "data-game",
-      "pgn/uploads/my-study/chapter-1",
+      "library/uploads/my-study/chapter-1",
     );
   });
 
@@ -887,7 +880,7 @@ describe("the Uploads folder", () => {
 1. c4 *
 
 `;
-    renderAt("/pgn/uploads");
+    renderAt("/library/uploads");
     await userEvent.upload(
       screen.getByTestId("user-pgns-uploads-input"),
       pgnFile("all_studies.pgn", twoStudies),
@@ -905,7 +898,7 @@ describe("the Uploads folder", () => {
   });
 
   it("refuses a file with no readable game, and says which", async () => {
-    renderAt("/pgn/uploads");
+    renderAt("/library/uploads");
 
     await userEvent.upload(
       screen.getByTestId("user-pgns-uploads-input"),
@@ -921,7 +914,7 @@ describe("the Uploads folder", () => {
 
   it("removes one on request", async () => {
     addUpload("my_study.pgn", STUDY_PGN);
-    renderAt("/pgn/uploads");
+    renderAt("/library/uploads");
 
     await userEvent.click(
       screen.getByTestId("user-pgns-uploads-remove-my_study.pgn"),
@@ -929,5 +922,95 @@ describe("the Uploads folder", () => {
 
     expect(screen.getByTestId("user-pgns-uploads-empty")).toBeInTheDocument();
     expect(screen.queryByTestId("user-pgns-uploads-item-my_study.pgn")).toBeNull();
+  });
+});
+
+/*
+  A repertoire-shaped PGN: no `StudyName`, the chapter name on `White` with an
+  `"N) "` order prefix, the line name on `Black`, and a `( )` side line in the
+  first line so the variation tree has a branch to render. Enough chapters and
+  lines for the structural heuristic to classify it (`looksLikeRepertoire`) —
+  there is no shipped repertoire file, so an upload is how the section's own
+  tests reach the kind.
+*/
+const REPERTOIRE_PGN = [1, 2, 3, 4]
+  .flatMap((chapter) =>
+    [1, 2].map(
+      (line) => `[Event "?"]
+[White "${chapter}) 2...move ${chapter}"]
+[Black "line ${chapter}.${line}"]
+[Result "*"]
+[ECO "B22"]
+
+1. e4 c5 2. c3 ${
+        chapter === 1 && line === 1
+          ? "d5 3. exd5 (3. Nf3 Nf6) 3... Qxd5"
+          : `${line === 1 ? "d5 3. exd5" : "Nf6 3. e5"}`
+      } *
+`,
+    ),
+  )
+  .join("\n");
+
+describe("an uploaded repertoire", () => {
+  const ROOT = "uploads/alapin";
+  const CHAPTER = `${ROOT}/2-move-1`;
+  const LINE = `${CHAPTER}/line-1-1`;
+
+  beforeEach(async () => {
+    await i18n.changeLanguage("en");
+    clearUploads();
+    addUpload("alapin.pgn", REPERTOIRE_PGN);
+  });
+
+  it("is recognised by shape and shows the root as chapter folder-cards", () => {
+    renderAt(`/library/${ROOT}`);
+
+    // Chapter sub-folders render as folder cards, not game cards.
+    expect(
+      screen.getAllByTestId(/^library-list-folder-/).length,
+    ).toBeGreaterThan(2);
+    expect(screen.queryByTestId("board")).toBeNull();
+  });
+
+  it("lists a chapter's lines as cards named from the `Black` tag", () => {
+    renderAt(`/library/${CHAPTER}`);
+
+    expect(screen.getByTestId("library-item-card-line-1-1")).toHaveTextContent(
+      "line 1.1",
+    );
+  });
+
+  it("opens a line in variation-tree mode, not the linear move list", () => {
+    renderAt(`/library/${LINE}`);
+
+    // The shared VariationTree renders clickable move tokens (and the `( )`
+    // side line as a variation block); the linear MoveList never does.
+    expect(screen.getAllByTestId(/^tree-move-/).length).toBeGreaterThan(0);
+    expect(screen.getByTestId("library-item-detail-board")).toBeInTheDocument();
+  });
+
+  it("still hands a repertoire line to analysis as ?game=", async () => {
+    renderAt(`/library/${LINE}`);
+
+    await userEvent.click(screen.getByTestId("library-item-open-analysis"));
+
+    expect(screen.getByTestId("analysis-arrival")).toHaveAttribute(
+      "data-game",
+      `library/${CHAPTER}/line-1-1`,
+    );
+  });
+});
+
+describe("the /pgn -> /library redirect (CTA-38 back-compat)", () => {
+  it("sends an old /pgn/* URL to the same path under /library, query kept", () => {
+    renderAt(`/pgn/${PLAYED}/${played.id}?move=4`);
+
+    // It landed on the Library detail screen, on the same game and move.
+    expect(screen.getByTestId("library-item-detail-board")).toBeInTheDocument();
+    expect(screen.getByTestId("location-search")).toHaveAttribute(
+      "data-search",
+      "?move=4",
+    );
   });
 });

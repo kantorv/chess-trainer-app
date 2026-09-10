@@ -15,6 +15,7 @@
  * | --- | --- | --- | --- |
  * | `study` | one study — its chapters are the items | a file with exactly one `StudyName`, or one study of a `collection` | `LibraryList` — a card per chapter |
  * | `collection` | one file holding **several** studies | a file with two or more `StudyName`s | `PgnCollection` — an index of its studies, with the collection's own left-hand nav |
+ * | `repertoire` | one file, an opening repertoire — the games are *lines*, the side lines are the content, and the `White` tag groups them into chapters | manifest `kind: "repertoire"`, else the heuristic in `lib/pgnLibrary.ts` (many games, no `StudyName`, `White` tags sharing a `"N) "` prefix) | `LibraryList` — chapter folder-cards, then a card per line; a line opens in `LibraryGameDetail`'s variation-tree mode |
  * | `shelf` | a folder of several **files** | a `src/data/pgn.json` `under` path | `LibraryList` — a card per sub-folder |
  * | `games` | played games, not a study at all | a file with no `StudyName` (a chess.com export) | `LibraryList` — a card per game |
  * | `uploads` | **not a file at all** — the folder the reader puts files in | the one folder `lib/pgnUploads.ts` builds | `PgnUploads` — the upload button, and what has been uploaded |
@@ -28,16 +29,17 @@
  *
  * ## Adding a kind
  *
- * The two the project expects next are `repertoire` (a tree of lines to learn,
- * where the *variations* are the content and a chapter list says nothing) and
- * `variations` (one position's branches). Adding one is three edits and no
- * changes to the shared library layer:
+ * `repertoire` is done (the row above); `variations` (one position's branches)
+ * is the one still expected. Adding one is three edits and no changes to the
+ * shared library layer:
  *
  * 1. **Name it here**, in {@link PgnKind}, with a row in the table above.
  * 2. **Recognise it** where the folder is created — `lib/pgnLibrary.ts` decides
  *    a file's kind from its tags, so the rule is written next to the tags it
  *    reads. A rule that cannot be read off the PGN goes in `src/data/pgn.json`
- *    instead, as a manifest field, and is applied in the same place.
+ *    instead, as a manifest field (`kind`), and is applied in the same place —
+ *    `repertoire` uses both: a manifest `kind` that always wins, and a
+ *    structural heuristic for undeclared files and uploads.
  * 3. **Give it a screen**, and add one line to the dispatcher in
  *    `views/pgn/UserPgnsSection.tsx`.
  *
@@ -50,7 +52,13 @@
  */
 
 /** What a User PGNs folder is. See the table above. */
-export type PgnKind = "study" | "collection" | "shelf" | "games" | "uploads";
+export type PgnKind =
+  | "study"
+  | "collection"
+  | "repertoire"
+  | "shelf"
+  | "games"
+  | "uploads";
 
 /** Category path → what that folder is. Every folder the loader made is in it. */
 export type PgnKinds = Record<string, PgnKind>;

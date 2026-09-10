@@ -15,6 +15,7 @@ import {
 } from "react-chessboard";
 import { FenParseError, parseFen } from "../../../lib/fen";
 import { resolveGameReference } from "../../../lib/gameReference";
+import { findSavedAnalysis } from "../../../lib/savedAnalysisStore";
 import { initialPlyOf, parseMoveParam } from "../../../lib/gameNavigation";
 import type { GameTree } from "../../../lib/gameTree";
 import {
@@ -49,7 +50,18 @@ import { useAnalysisBoard } from "./useAnalysisBoard";
  * hand-off. `/tools/analysis?game=<reference>` opens on a whole game out of a
  * library, side lines and all — the User PGNs hand-off, where what travels is a
  * catalog reference rather than the PGN, because a game does not fit in a URL
- * (`lib/gameReference.ts`).
+ * (`lib/gameReference.ts`). `/tools/analysis?analysis=<id>` reopens one of this
+ * screen's *own* boards, which the Saved analyses screen lists — `?analysis=`
+ * rather than `?game=` for the one thing a catalog reference cannot carry: an
+ * analysis is a tree, a place inside it, an orientation and the engine settings,
+ * and going on with it needs all four.
+ *
+ * ### And it is written down as it is worked on
+ *
+ * Every board here is saved to `localStorage` as the reader works — no button,
+ * the same rule Play with Engine follows (`lib/savedAnalyses.ts`). The whole of
+ * it on this side is `persist: true` below; the effect, the id and the rule
+ * about *when* a board becomes worth keeping are all in `useAnalysisBoard`.
  *
  * Both travel in the URL rather than in router state so that the link survives
  * being bookmarked, shared or reloaded, and both are validated here — `parseFen`
@@ -136,7 +148,27 @@ function AnalysisBoard() {
     [requestedMove, arrived],
   );
 
-  const state = useAnalysisBoard(initialFen, initialTree, initialPly);
+  /*
+    One of this screen's own boards, handed back by the Saved analyses screen.
+    Looked up rather than parsed: what travels is an id, and the store is the
+    only thing that knows what it names. An id that names nothing opens an empty
+    board, exactly as an unreadable `?fen=` does.
+  */
+  const requestedAnalysis = searchParams.get("analysis");
+  const resume = useMemo(
+    () => findSavedAnalysis(requestedAnalysis),
+    [requestedAnalysis],
+  );
+
+  const state = useAnalysisBoard({
+    fen: initialFen,
+    tree: initialTree,
+    ply: initialPly,
+    resume,
+    // The screen that writes. Everything about the board is already in the hook;
+    // this is the one line that says the work outlives the tab.
+    persist: true,
+  });
 
   /*
     Ingestion state: what the reader has typed, what came out of the last

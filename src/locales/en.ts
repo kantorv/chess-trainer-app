@@ -23,42 +23,23 @@ const en = {
     maskedPlay: "Play with Engine (masked)",
     loadPgn: "Load PGN",
     analysisBoard: "Analysis Board",
+    savedAnalyses: "Saved analyses",
     boardEditor: "Board Editor",
     openings: "Openings",
-    /**
-     * The three mates list screens. Each sits alone inside its own sub-folder,
-     * so the label repeats the folder's word — with the section qualifier,
-     * because a folder is a toggle and a screen is a link and a screen reader
-     * announces the link on its own.
-     */
-    matesBasic: "Basic mates",
-    matesAdvanced: "Advanced mates",
-    matesComplex: "Complex mates",
     /** Sidebar folders — groupings over the routes, never routes themselves. */
     folders: {
       engine: "Engine",
       maskedPieces: "Masked Pieces",
       games: "Games",
       tools: "Tools",
-      mates: "Mates",
-      matesBasic: "Basic",
-      matesAdvanced: "Advanced",
-      matesComplex: "Complex",
       /**
-       * The Positions section's root. Its *sub*-folders have no key here and
-       * never will: they are generated from `src/data/positions.json` and named
-       * from it, one per endgame category at any depth, which is what makes a
-       * new category a data edit alone. The section itself is chrome, so it is
-       * named here.
+       * The Library section's root (was "User PGNs" before CTA-38). Its
+       * sub-folders have no key here and never will: they are generated — one
+       * per `.pgn` file under `src/data/pgn/` — and named from the file's own
+       * `StudyName` tag or from `src/data/pgn.json`, so dropping a PGN in never
+       * touches this catalog. The section itself is chrome, so it is named here.
        */
-      positions: "Positions",
-      /**
-       * The User PGNs section's root, and the same rule as Positions above: its
-       * sub-folders are generated — one per `.pgn` file under `src/data/pgn/` —
-       * and named from the file's own `StudyName` tag or from `src/data/pgn.json`,
-       * so dropping a PGN in never touches this catalog.
-       */
-      userPgns: "User PGNs",
+      library: "Library",
     },
   },
   /** The index screen — a landing page linking out to the real screens. */
@@ -81,7 +62,7 @@ const en = {
       moves: "Moves",
       info: "Info",
       load: "Load PGN",
-      /** The User PGNs game detail's third tab — its PGN annotation text. */
+      /** The Library game detail's third tab — its PGN annotation text. */
       description: "Description",
     },
     /** Accessible names for the icon-only board controls. */
@@ -286,6 +267,67 @@ const en = {
     analyse: "Analysis",
     openInLoadPgn: "PGN viewer",
     remove: "Delete this game",
+    /**
+     * Picking games and taking them out as one `.pgn` — the list view only, see
+     * `SavedGames.tsx`. These are the only games in the app that exist nowhere
+     * else, so this is the one way out of the browser.
+     */
+    select: "Select this game",
+    selectAll: "Select all games",
+    selected: "{{count}} selected",
+    download: "Download selected as PGN",
+  },
+  /**
+   * The **Saved analyses** screen — the boards the reader has worked on at the
+   * Analysis Board (`views/tools/analysis/saved/`). The same block shape as
+   * `savedGames` above, minus the two things an analysis does not have (a result
+   * and a side the reader was on) and plus the two it does: how many side lines
+   * were tried, and how far in the reader had got.
+   */
+  savedAnalyses: {
+    title: "Saved analyses",
+    count: "Analyses: {{count}}",
+    empty:
+      "No saved analyses yet. Play a move on the Analysis Board, or load a game into it, and the board appears here on its own.",
+    hint: "Every board you work on at the Analysis Board is written down as you go — side lines and all. Pick one up where you left it, or take the position somewhere else.",
+    /** Said plainly: this is a browser, not a backup — as the Uploads screen does. */
+    storage:
+      "Saved analyses are kept in this browser only. Clearing site data removes them, and they do not follow you to another device.",
+    /**
+     * A board that is not a game: one begun from an empty board or from a
+     * position carries no players to name it by, so it is named for what it is.
+     */
+    untitled: "Analysis board",
+    /** Plural forms, because a one-move analysis is a real row here. */
+    moves_one: "{{count}} move",
+    moves_other: "{{count}} moves",
+    /** Every move past the mainline — the side lines the reader tried and kept. */
+    variations_one: "{{count}} variation",
+    variations_other: "{{count}} variations",
+    /** Where the reader stopped, as a half-move count from the start position. */
+    atPly: "at ply {{ply}}",
+    /** A stored record whose PGN no longer parses: it can only be deleted. */
+    unreadable: "This analysis could not be read.",
+    /**
+     * The three-way view toggle in the top bar: the list the screen shipped
+     * with, and the library list screen's own two board sizes.
+     */
+    view: {
+      label: "View",
+      list: "List",
+      compact: "Small boards",
+      comfortable: "Big boards",
+    },
+    /** The three destinations — see `SavedAnalyses.tsx` for why these three. */
+    continue: "Continue",
+    openInLoadPgn: "PGN viewer",
+    play: "Play from here",
+    remove: "Delete this analysis",
+    /** Picking analyses and taking them out as one `.pgn`, side lines and all. */
+    select: "Select this analysis",
+    selectAll: "Select all analyses",
+    selected: "{{count}} selected",
+    download: "Download selected as PGN",
   },
   /**
    * The Analysis Board. Chrome only: SAN, the FEN and the scores are notation
@@ -463,141 +505,19 @@ const en = {
     },
   },
   /**
-   * The Mates section — **chrome only**. The positions' own names and
-   * descriptions are per-language fields in `src/data/mates.json`, so adding a
-   * position never touches this file; see `lib/matesCatalog.ts` for why.
-   */
-  mates: {
-    /** Category labels, named here by each category's `labelKey` in the data. */
-    categories: {
-      basic: "Basic",
-      advanced: "Advanced",
-      complex: "Complex",
-    },
-    /** The list screen's panel. */
-    list: {
-      /*
-        Deliberately not an i18next plural key (`count_one` / `count_other`):
-        Hebrew's plural categories are not English's, so the two catalogs would
-        stop shipping the same key set — which `locales.test.ts` asserts, and
-        which the `typeof en` typing of `he` enforces in the other direction.
-      */
-      count: "Positions: {{count}}",
-      /** Sub-folders of the category on screen, counted beside its own items. */
-      folders: "Folders: {{count}}",
-      empty: "No positions in this category yet.",
-      hint: "Pick a position to open it on a board, then hand it to the Analysis Board or play it against the engine.",
-      /**
-       * The list screen's top bar: the name search and the card-size toggle.
-       * Both are chrome the app ships in every section, so unlike a position's
-       * own name they belong here — see the section's own comment above.
-       */
-      search: "Search positions",
-      noMatches: "No positions match that search.",
-      cardSize: {
-        label: "Card size",
-        compact: "Compact cards",
-        comfortable: "Comfortable cards",
-      },
-    },
-    /** The detail screen's panel. */
-    detail: {
-      back: "Back to {{category}}",
-      fen: "Position (FEN)",
-      openInAnalysis: "Open in Analysis Board",
-      playWithEngine: "Play with Engine",
-      openInEditor: "Open in Board Editor",
-    },
-    /** Whose move it is — the side that has to find the mate. */
-    sideToMove: {
-      w: "White to play",
-      b: "Black to play",
-    },
-    /** An id or a category the URL names and the catalog does not have. */
-    notFound: {
-      category: "There is no such mates category.",
-      position: "There is no such position in this category.",
-      back: "Back to Basic mates",
-    },
-    /**
-     * The sibling-nav panel that replaces the sidebar while a detail screen is
-     * open (`views/library/LibrarySiblingNav.tsx`) — the landmark's own label
-     * and its close control, which returns to this category's list.
-     */
-    leftPanel: {
-      ariaLabel: "Other items in {{category}}",
-      close: "Close",
-    },
-  },
-  /**
-   * The endgame Positions section — **chrome only**, and deliberately the same
-   * key shape as `mates` above, because one pair of components
-   * (`views/library/`) renders both and reads them by
-   * `t(`${section.chromeKey}.…`)`.
-   *
-   * The category names are *not* here. They live in
-   * `src/data/positions.json` as `{ en, he }` fields, which is what lets a new
-   * category — at any depth — be a single data edit rather than a three-file
-   * one; see `lib/positionsCatalog.ts`.
-   */
-  positions: {
-    /** The list screen's panel. */
-    list: {
-      count: "Positions: {{count}}",
-      /** Sub-categories of the one on screen — Rosettes under Queen vs Rook. */
-      folders: "Categories: {{count}}",
-      empty: "No positions in this category yet.",
-      hint: "Pick a position to open it on a board, then hand it to the Analysis Board or play it against the engine.",
-      search: "Search positions",
-      noMatches: "No positions match that search.",
-      cardSize: {
-        label: "Card size",
-        compact: "Compact cards",
-        comfortable: "Comfortable cards",
-      },
-    },
-    /** The detail screen's panel. */
-    detail: {
-      back: "Back to {{category}}",
-      fen: "Position (FEN)",
-      openInAnalysis: "Open in Analysis Board",
-      playWithEngine: "Play with Engine",
-      openInEditor: "Open in Board Editor",
-    },
-    /**
-     * Whose move it is. Not always the attacker here, unlike the mates
-     * section: a drawing defense or a mutual zugzwang is the defender's to
-     * play, and that is the position's whole point.
-     */
-    sideToMove: {
-      w: "White to play",
-      b: "Black to play",
-    },
-    /** A path or an id the URL names and the catalog does not have. */
-    notFound: {
-      category: "There is no such endgame category.",
-      position: "There is no such position in this category.",
-      back: "Back to the endgame positions",
-    },
-    /** See `mates.leftPanel` above — same shape, same shared component. */
-    leftPanel: {
-      ariaLabel: "Other items in {{category}}",
-      close: "Close",
-    },
-  },
-  /**
-   * The User PGNs section's chrome — `t(`${section.chromeKey}.…`)` again, in the
-   * same shape the two sections above carry, plus the keys a section whose items
-   * are **games** needs: `list.moves` for a card's caption and
+   * The **Library** section's chrome — `t(`${section.chromeKey}.…`)`, the
+   * shared key shape a library section carries, plus the keys a section whose
+   * items are **games** needs: `list.moves` for a card's caption and
    * `detail.openInLoadPgn` for the hand-off only a game has. The shared key
    * shape is a floor, not a ceiling; a section adds what its item kinds need.
+   * (Was `userPgns` before CTA-38 renamed "User PGNs" to "Library".)
    *
    * The folder and game names are *not* here. A folder is named from its file's
    * `StudyName` tag or from `src/data/pgn.json`, and a game from its
    * `ChapterName` or its players — which is what lets a new PGN file be a
    * drop-in rather than a two-file locale edit.
    */
-  userPgns: {
+  library: {
     /** The list screen's panel. */
     list: {
       count: "Games: {{count}}",
@@ -706,11 +626,15 @@ const en = {
     },
     /** A path or an id the URL names and the catalog does not have. */
     notFound: {
-      category: "There is no such PGN folder.",
+      category: "There is no such library folder.",
       position: "There is no such game in this folder.",
-      back: "Back to the user PGNs",
+      back: "Back to the library",
     },
-    /** See `mates.leftPanel` above — same shape, same shared component. */
+    /**
+     * The sibling-nav panel that replaces the sidebar while a detail screen is
+     * open (`views/library/LibrarySiblingNav.tsx`) — the landmark's own label
+     * and its close control, which returns to this category's list.
+     */
     leftPanel: {
       ariaLabel: "Other items in {{category}}",
       close: "Close",

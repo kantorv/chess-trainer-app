@@ -204,9 +204,17 @@ describe("the shipped User PGNs catalog", () => {
     expect(chapterOnes.length).toBeGreaterThan(1);
   });
 
+  /*
+    The `repertoire` kind ships no example file (the section's other kinds all
+    do). Its loader behaviour — the `"N) "` chapter split, the `Black`-tag line
+    name, the manifest `kind` field, the structural heuristic — is pinned down
+    against fixtures in `pgnLibrary.test.ts`, and the tree-mode viewer in
+    `views/pgn/UserPgnsSection.test.tsx` over an uploaded repertoire.
+  */
+
   it("resolves every shipped game from its own URL segments", () => {
-    // What `/pgn/*` does on every request: one splat, however deep the manifest
-    // nested the folder.
+    // What `/library/*` does on every request: one splat, however deep the
+    // manifest nested the folder.
     for (const item of pgnCatalog.items) {
       const segments = `${item.category}/${item.id}`.split("/");
 

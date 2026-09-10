@@ -7,7 +7,13 @@ import {
   resolveLibraryPath,
 } from "./libraryCatalog";
 import { pgnKindOf } from "./pgnKind";
-import { gameDisplayName, loadPgnLibrary, slugify } from "./pgnLibrary";
+import {
+  chapterPrefix,
+  gameDisplayName,
+  loadPgnLibrary,
+  looksLikeRepertoire,
+  slugify,
+} from "./pgnLibrary";
 import { parsePgnGame, splitPgnGames } from "./pgn";
 
 /**
@@ -307,11 +313,110 @@ describe("loadPgnLibrary says what kind of thing each folder is", () => {
   });
 });
 
+/**
+ * A repertoire-shaped file: no `StudyName`, the chapter name on `White` with an
+ * `"N) "` order prefix, the line name on `Black`, results `*`. Enough lines
+ * across enough chapters for the structural heuristic to fire.
+ */
+const REPERTOIRE = [
+  ...[1, 2, 3, 4].flatMap((chapter) =>
+    [1, 2].map(
+      (line) => `[Event "?"]
+[White "${chapter}) Chapter ${chapter}"]
+[Black "Line ${chapter}.${line}"]
+[Result "*"]
+
+1. e4 c5 2. c3 ${line === 1 ? "d5 3. exd5" : "Nf6 3. e5"} *
+`,
+    ),
+  ),
+  `[Event "?"]
+[White "Introduction"]
+[Black "Introduction"]
+[Result "*"]
+
+1. e4 c5 2. c3 *
+`,
+].join("\n");
+
+describe("loadPgnLibrary recognises a repertoire", () => {
+  it("splits the manifest-declared kind into chapter sub-folders of lines", () => {
+    const catalog = loadPgnLibrary(
+      { "rep.pgn": REPERTOIRE },
+      { files: { "rep.pgn": { kind: "repertoire" } } },
+    );
+
+    expect(catalog.problems).toEqual([]);
+    expect(catalog.kinds["rep"]).toBe("repertoire");
+
+    const root = findLibraryCategory("rep", catalog);
+    // Four numbered chapters + Introduction, un-numbered first, in file order.
+    expect(root?.children.map((child) => child.label?.en)).toEqual([
+      "Introduction",
+      "Chapter 1",
+      "Chapter 2",
+      "Chapter 3",
+      "Chapter 4",
+    ]);
+    expect(catalog.kinds["rep/chapter-1"]).toBe("repertoire");
+
+    // Every chapter — Introduction included — is a sub-folder, so the root
+    // holds no loose lines. A chapter holds its lines, named from `Black`.
+    expect(itemsInLibraryCategory("rep", catalog)).toHaveLength(0);
+    const lines = itemsInLibraryCategory("rep/chapter-1", catalog);
+    expect(lines.map((item) => item.name.en)).toEqual(["Line 1.1", "Line 1.2"]);
+    expect(itemsInLibraryCategory("rep/introduction", catalog)).toHaveLength(1);
+  });
+
+  it("recognises an undeclared repertoire by its shape, and a manifest kind overrides", () => {
+    // No manifest entry at all: the structural heuristic classifies it.
+    const auto = loadPgnLibrary({ "rep.pgn": REPERTOIRE });
+    expect(auto.kinds["rep"]).toBe("repertoire");
+
+    // The same file forced back to `games` by the manifest — manifest wins.
+    const forced = loadPgnLibrary(
+      { "rep.pgn": REPERTOIRE },
+      { files: { "rep.pgn": { kind: "games" } } },
+    );
+    expect(forced.kinds["rep"]).toBe("games");
+  });
+
+  it("leaves an ordinary file of games alone", () => {
+    // Two games, no `"N) "` prefixes: nothing repertoire-shaped about it.
+    const games = splitPgnGames(CHESS_COM).map((pgn, index) => ({
+      game: parsePgnGame(pgn),
+      pgn,
+      number: index + 1,
+    }));
+    expect(looksLikeRepertoire(games)).toBe(false);
+  });
+
+  it("takes a chapter's `\"N) \"` prefix apart for order and label", () => {
+    expect(chapterPrefix("12) 2...d5 3.exd5 Qxd5 4.d4 - ...Bf5 Setups")).toEqual({
+      order: 12,
+      label: "2...d5 3.exd5 Qxd5 4.d4 - ...Bf5 Setups",
+    });
+    expect(chapterPrefix("Introduction")).toEqual({ label: "Introduction" });
+  });
+});
+
 describe("loadPgnLibrary reads the manifest", () => {
   const files = {
     "study.pgn": STUDY,
     "games.pgn": CHESS_COM,
   };
+
+  it("reports an unknown manifest `kind` and ignores it", () => {
+    const catalog = loadPgnLibrary(files, {
+      files: { "study.pgn": { kind: "nonsense" as never } },
+    });
+
+    expect(catalog.problems).toContain(
+      'Manifest file "study.pgn": unknown kind "nonsense".',
+    );
+    // Falls through to the tag-derived kind.
+    expect(catalog.kinds["study"]).toBe("study");
+  });
 
   it("renames, translates and nests a folder", () => {
     const catalog = loadPgnLibrary(files, {
