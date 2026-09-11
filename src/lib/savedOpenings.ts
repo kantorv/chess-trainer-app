@@ -1,4 +1,4 @@
-import { finalFenOf, gameTag, type GameHeaders } from "./gameModel";
+import { finalFenOf, type GameHeaders } from "./gameModel";
 import { mainlineGame, treeToPgn, type GameTree, type VariationNode } from "./gameTree";
 import { parsePgnTree } from "./pgn";
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Button from "@mui/material/Button";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
@@ -34,11 +34,18 @@ function NoteDialog({
   const { t } = useTranslation();
   const [note, setNote] = useState(initial);
 
-  // Seed the field whenever the dialog opens — the edit dialog opens on a
-  // different record each time, so the value is reset rather than kept.
-  useEffect(() => {
-    if (open) setNote(initial);
-  }, [open, initial]);
+  /*
+    Seed the field whenever the dialog opens — the edit dialog opens on a
+    different record each time, so the value is reset rather than kept. Adjusted
+    during render rather than in an effect (the sanctioned derived-state pattern,
+    `.claude/rules/chessboard.md` aside): an effect would reset the field a frame
+    after it is already showing, and the lint rule rejects the setState entirely.
+  */
+  const [seed, setSeed] = useState({ open, initial });
+  if (seed.open !== open || seed.initial !== initial) {
+    setSeed({ open, initial });
+    setNote(initial);
+  }
 
   const save = () => {
     onSave(note);
