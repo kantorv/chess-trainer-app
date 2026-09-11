@@ -83,10 +83,16 @@ export const navItems = (): readonly NavItem[] => [
     folder: "tools",
   },
   {
-    to: "/tools/openings",
+    to: "/openings",
     labelKey: "nav.openings",
     icon: TravelExploreRoundedIcon,
-    folder: "tools",
+    folder: "openings",
+  },
+  {
+    to: "/openings/saved",
+    labelKey: "nav.savedOpenings",
+    icon: HistoryRoundedIcon,
+    folder: "openings",
   },
 ];
 

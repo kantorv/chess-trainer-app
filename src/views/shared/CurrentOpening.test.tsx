@@ -59,7 +59,7 @@ describe("CurrentOpening", () => {
     const link = await screen.findByTestId("test-current-opening-eco");
     // `createSearchParams` encodes spaces as `+`, so compare the parsed params.
     const href = link.getAttribute("href") ?? "";
-    expect(href.startsWith("/tools/openings?")).toBe(true);
+    expect(href.startsWith("/openings?")).toBe(true);
     expect(new URLSearchParams(href.split("?")[1]).get("fen")).toBe(AFTER_E4);
   });
 

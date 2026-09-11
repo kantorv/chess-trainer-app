@@ -1,5 +1,5 @@
 import { finalFenOf, gameTag, type GameHeaders } from "./gameModel";
-import { mainlineGame, treeToPgn, type GameTree } from "./gameTree";
+import { mainlineGame, treeToPgn, type GameTree, type VariationNode } from "./gameTree";
 import { parsePgnTree } from "./pgn";
 
 /**
@@ -145,6 +145,29 @@ export const savedOpeningFen = (
   saved: SavedOpening,
   tree: GameTree,
 ): string => finalFenOf(mainlineGame(tree));
+
+/** What a row shows about an opening without opening it. Pure, so it is testable. */
+export type SavedOpeningSummary = {
+  /** How many half-moves the mainline runs to. */
+  moves: number;
+  /** How many nodes there are in total — mainline plus every side line. */
+  nodes: number;
+};
+
+/** Every node in a tree, counted — the mainline and every side line alike. */
+const countNodes = (tree: GameTree): number => {
+  const walk = (nodes: readonly VariationNode[]): number =>
+    nodes.reduce((total, node) => total + 1 + walk(node.children), 0);
+  return walk(tree.moves);
+};
+
+export const savedOpeningSummary = (
+  saved: SavedOpening,
+  tree: GameTree | undefined,
+): SavedOpeningSummary => ({
+  moves: tree === undefined ? 0 : mainlineGame(tree).moves.length,
+  nodes: tree === undefined ? 0 : countNodes(tree),
+});
 
 /** Whether a value parsed out of storage is a saved opening. Structural, on purpose. */
 export const isSavedOpening = (value: unknown): value is SavedOpening => {

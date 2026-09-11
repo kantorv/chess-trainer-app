@@ -79,7 +79,7 @@ const handOffFen = () =>
     screen.getByTestId("location").getAttribute("data-search") ?? "",
   ).get("fen");
 
-const renderScreen = (entry = "/tools/openings") =>
+const renderScreen = (entry = "/openings") =>
   render(
     <MemoryRouter initialEntries={[entry]}>
       <AppThemeWithLang>
@@ -361,7 +361,7 @@ describe("the Openings screen — Play from here", () => {
 
 describe("the Openings screen — arriving with a position", () => {
   it("opens on a readable ?fen= and faces the side to move", async () => {
-    renderScreen(`/tools/openings?fen=${encodeURIComponent(AFTER_E4)}`);
+    renderScreen(`/openings?fen=${encodeURIComponent(AFTER_E4)}`);
     await bookSettled();
 
     expect(screen.getByTestId("board")).toHaveAttribute(
@@ -379,7 +379,7 @@ describe("the Openings screen — arriving with a position", () => {
 
   it("reports an off-book ?fen= as unknown with no next moves or arrows", async () => {
     const fen = offBookFen();
-    renderScreen(`/tools/openings?fen=${encodeURIComponent(fen)}`);
+    renderScreen(`/openings?fen=${encodeURIComponent(fen)}`);
     await bookSettled();
 
     expect(screen.getByTestId("openings-current")).toHaveTextContent(
@@ -391,7 +391,7 @@ describe("the Openings screen — arriving with a position", () => {
 
   it("New game returns to the handed-over position, not the standard start", async () => {
     const user = userEvent.setup();
-    renderScreen(`/tools/openings?fen=${encodeURIComponent(AFTER_E4)}`);
+    renderScreen(`/openings?fen=${encodeURIComponent(AFTER_E4)}`);
     await bookSettled();
 
     await user.click(screen.getByTestId("openings-next-move-e5"));
@@ -404,7 +404,7 @@ describe("the Openings screen — arriving with a position", () => {
   });
 
   it("ignores a ?fen= nobody can read", () => {
-    renderScreen("/tools/openings?fen=not-a-fen");
+    renderScreen("/openings?fen=not-a-fen");
 
     expect(screen.getByTestId("board")).toHaveAttribute(
       "data-position",

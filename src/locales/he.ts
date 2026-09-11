@@ -21,12 +21,14 @@ const he: typeof en = {
     savedAnalyses: "ניתוחים שמורים",
     boardEditor: "עורך העמדות",
     openings: "פתיחות",
+    savedOpenings: "פתיחות שמורות",
     folders: {
       engine: "מנוע",
       maskedPieces: "כלים מוסווים",
       games: "משחקים",
       tools: "כלים",
       library: "ספרייה",
+      openings: "פתיחות",
     },
   },
   home: {
@@ -235,6 +237,38 @@ const he: typeof en = {
     selected: "{{count}} נבחרו",
     download: "הורדת הנבחרים כקובץ PGN",
   },
+  savedOpenings: {
+    title: "פתיחות שמורות",
+    count: "פתיחות: {{count}}",
+    empty:
+      "אין עדיין פתיחות שמורות. שחקו מהלך במסך הפתיחות ושמרו אותו כדי לשמור אותה כאן.",
+    hint: "כל עמדה שאתם שומרים במסך הפתיחות נשמרת כאן עם כל עץ המהלכים שלה. תנו לה הערה, ותוכלו לערוך את ההערה בכל עת.",
+    storage:
+      "הפתיחות השמורות נשמרות בדפדפן הזה בלבד. מחיקת נתוני האתר תמחק אותן, והן אינן עוברות למכשיר אחר.",
+    untitled: "פתיחה שמורה",
+    moves_one: "מהלך אחד",
+    moves_other: "{{count}} מהלכים",
+    variations_one: "וריאציה אחת",
+    variations_other: "{{count}} וריאציות",
+    unreadable: "לא ניתן לקרוא את הפתיחה הזו.",
+    view: {
+      label: "תצוגה",
+      list: "רשימה",
+      compact: "לוחות קטנים",
+      comfortable: "לוחות גדולים",
+    },
+    continue: "המשך",
+    play: "שחקו מכאן",
+    remove: "מחיקת הפתיחה",
+    note: {
+      label: "הערה",
+      save: "שמירה",
+      cancel: "ביטול",
+      saveTitle: "שמירת הפתיחה",
+      editTitle: "עריכת ההערה",
+      edit: "עריכת ההערה",
+    },
+  },
   analysis: {
     tabs: {
       moves: "מהלכים",
@@ -365,7 +399,7 @@ const he: typeof en = {
     },
     nextMoves: { empty: "אין המשכים מוכרים מכאן." },
     moves: { empty: "עדיין אין מהלכים — שחקו על הלוח, או בחרו מהלך מוכר מלשונית המהלכים האפשריים." },
-    controls: { newGame: "משחק חדש", playFromHere: "שחקו מכאן", reset:"איפוס" },
+    controls: { newGame: "משחק חדש", playFromHere: "שחקו מכאן", reset:"איפוס", save: "שמירה" },
   },
   library: {
     list: {

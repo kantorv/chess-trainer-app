@@ -11,6 +11,7 @@ import { default as AnalysisBoardScreen  } from './views/tools/analysis/Main'
 import { default as SavedAnalysesScreen  } from './views/tools/analysis/saved/Main'
 import { default as BoardEditorScreen  } from './views/tools/editor/Main'
 import { default as OpeningsScreen  } from './views/tools/openings/Main'
+import { default as SavedOpeningsScreen  } from './views/tools/openings/saved/Main'
 import { default as UserPgnsScreen  } from './views/pgn/Main'
 
 
@@ -24,6 +25,17 @@ export function LegacyPgnRedirect() {
   const location = useLocation();
   const rest = location.pathname.replace(/^\/pgn(?=\/|$)/, "");
   return <Navigate to={`/library${rest}${location.search}${location.hash}`} replace />;
+}
+
+/**
+ * Back-compat for the pre-CTA-39 `/tools/openings` URL. The Openings screen now
+ * lives at `/openings` (a top-level folder of its own), so a bookmarked or
+ * shared `/tools/openings` link (with its query string, e.g. `?fen=`) redirects
+ * there. `replace` so it does not leave the dead URL in history.
+ */
+export function ToolsOpeningsRedirect() {
+  const location = useLocation();
+  return <Navigate to={`/openings${location.search}${location.hash}`} replace />;
 }
 
 const routes = createBrowserRouter(
@@ -77,8 +89,21 @@ const routes = createBrowserRouter(
           element: <BoardEditorScreen />
         },
         {
-          path: "/tools/openings",
+          path: "/openings",
           element: <OpeningsScreen />
+        },
+        // The reader's own saved openings, kept in `localStorage`
+        // (`lib/savedOpeningStore.ts`). The Saved analyses screen's counterpart,
+        // and a screen rather than a library section for the same reason: these
+        // are this app's own output, so there is no catalog to nest.
+        {
+          path: "/openings/saved",
+          element: <SavedOpeningsScreen />
+        },
+        // Pre-CTA-39 the Openings screen lived under `/tools`. Old links redirect.
+        {
+          path: "/tools/openings",
+          element: <ToolsOpeningsRedirect />
         },
         // The Library section. One splat route, over content that is not a JSON
         // file at all: the folders are the `.pgn` files under `src/data/pgn/`
