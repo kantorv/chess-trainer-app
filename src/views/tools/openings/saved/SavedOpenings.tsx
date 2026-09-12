@@ -14,6 +14,7 @@ import ToggleButton from "@mui/material/ToggleButton";
 import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
+import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import CreateNewFolderRoundedIcon from "@mui/icons-material/CreateNewFolderRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
@@ -961,6 +962,23 @@ function SavedOpenings() {
               {t("savedOpenings.count", { count: openings.length })}
             </Typography>
           </Box>
+
+          {/*
+            The board this screen's sidebar entry hides (CTA-42): the Openings
+            folder is a single entry to *this* screen, so the plain
+            new-opening view is reached from here. No query params — the
+            arrival is a fresh board.
+          */}
+          <Button
+            size="small"
+            variant="outlined"
+            component={RouterLink}
+            to="/openings"
+            startIcon={<AddRoundedIcon fontSize="small" />}
+            data-testid="saved-openings-new"
+          >
+            {t("savedOpenings.new")}
+          </Button>
 
           <Button
             size="small"

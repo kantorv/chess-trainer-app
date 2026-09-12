@@ -25,7 +25,6 @@ const en = {
     analysisBoard: "Analysis Board",
     savedAnalyses: "Saved analyses",
     boardEditor: "Board Editor",
-    openings: "Openings",
     savedOpenings: "Saved openings",
     /** Sidebar folders — groupings over the routes, never routes themselves. */
     folders: {
@@ -343,6 +342,11 @@ const en = {
   savedOpenings: {
     title: "Saved openings",
     count: "Openings: {{count}}",
+    /**
+     * The top-bar button to the Openings board — the screen the sidebar's
+     * single Openings entry hides (CTA-42), so the board is reached from here.
+     */
+    new: "New",
     empty:
       "No saved openings yet. Play through an opening on the Openings screen and save it to keep it here.",
     hint: "Every position you save on the Openings screen is kept here with its whole tree of moves. Give it a note, and edit the note any time.",

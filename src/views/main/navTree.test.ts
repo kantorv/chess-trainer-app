@@ -6,6 +6,7 @@ import {
   collapseLeafCategories,
   folderChain,
   folderPath,
+  foldSingleEntryFolders,
   navLabelKeys,
   navTree,
   type NavTreeNode,
@@ -14,12 +15,27 @@ import { navItems, navItemsInFolder } from "./navItems";
 import { navFolders } from "./navFolders";
 
 describe("the shipped nav tree", () => {
-  it("mirrors the folder tree at the top and holds every screen as a leaf", () => {
+  it("mirrors the folder tree at the top, a single-entry folder as its screen", () => {
     const tree = navTree();
+    const folders = navFolders();
 
-    expect(tree.map((node) => node.id)).toEqual(navFolders().map((f) => f.id));
-    expect(tree.every((node) => node.kind === "folder")).toBe(true);
+    expect(tree).toHaveLength(folders.length);
+    for (const [index, folder] of folders.entries()) {
+      const node = tree[index];
+      if (folder.singleEntry) {
+        // One destination: the row is the folder's single screen, under the
+        // folder's own name — not the screen's own label.
+        const item = navItemsInFolder(folder.id)[0];
+        expect(node.kind).toBe("screen");
+        expect(node.to).toBe(item.to);
+        expect(node.labelKey).toBe(folder.labelKey);
+      } else {
+        expect(node.kind).toBe("folder");
+        expect(node.id).toBe(folder.id);
+      }
+    }
 
+    // Every screen is still reachable — the folded one included.
     const screens = new TreeManager<NavTreeNode>(tree)
       .toArray()
       .filter((node) => node.kind === "screen");
@@ -42,11 +58,20 @@ describe("the shipped nav tree", () => {
         The rendered tree folds a redundant leaf-category folder away, so a
         screen that named one now hangs one level up. The breadcrumb is then a
         *prefix* of the registered chain — never empty, never a different
-        branch.
+        branch. A screen filed under a single-entry folder is the one
+        exception: folded to the top level, it has no breadcrumb at all — the
+        row *is* the top level, and no chain has to open for it.
       */
       const rendered = folderPath(item.to);
-      expect(rendered.length).toBeGreaterThan(0);
-      expect(registered.slice(0, rendered.length)).toEqual(rendered);
+      const singleEntryParent = navFolders().find(
+        (folder) => folder.singleEntry && folder.id === item.folder,
+      );
+      if (singleEntryParent !== undefined) {
+        expect(rendered).toEqual([]);
+      } else {
+        expect(rendered.length).toBeGreaterThan(0);
+        expect(registered.slice(0, rendered.length)).toEqual(rendered);
+      }
     }
   });
 
@@ -64,7 +89,17 @@ describe("the shipped nav tree", () => {
     */
     const authoredKeys = [
       ...navFolders().map((f) => f.labelKey),
-      ...navItems().map((i) => i.labelKey),
+      /*
+        A screen filed under a single-entry folder renders under the
+        *folder's* name (`foldSingleEntryFolders`), so its own key is declared
+        but never rendered — the one screen whose key the tree drops.
+      */
+      ...navItems()
+        .filter(
+          (item) =>
+            !navFolders().some((f) => f.singleEntry && f.id === item.folder),
+        )
+        .map((i) => i.labelKey),
     ].filter((key) => key !== undefined);
 
     expect(navLabelKeys()).toEqual(expect.arrayContaining(authoredKeys));
@@ -291,5 +326,99 @@ describe("collapseLeafCategories folds a redundant category folder", () => {
       kind: "folder",
       id: "top",
     });
+  });
+});
+
+describe("foldSingleEntryFolders folds a folder marked as one destination", () => {
+  const icon = GridViewRoundedIcon;
+
+  it("renders the folder as its single screen, under the folder's own name", () => {
+    const folder: NavTreeNode = {
+      kind: "folder",
+      id: "openings",
+      labelKey: "nav.folders.openings",
+      icon,
+      singleEntry: true,
+      children: [
+        {
+          kind: "screen",
+          id: "/openings/saved",
+          labelKey: "nav.savedOpenings",
+          icon,
+          to: "/openings/saved",
+        },
+      ],
+    };
+
+    const [folded] = foldSingleEntryFolders([folder]);
+
+    // The row is the screen — the folder's name and icon, the screen's route.
+    // A screen node's active state is an exact pathname match and it has no
+    // folder ancestors, so it lights up with nothing opened.
+    expect(folded).toEqual({
+      kind: "screen",
+      id: "/openings/saved",
+      labelKey: "nav.folders.openings",
+      icon,
+      to: "/openings/saved",
+    });
+  });
+
+  it("keeps a single-entry folder that does not hold exactly one screen", () => {
+    // The flag says "one destination"; a folder that does not match stays a
+    // folder with the flag inert — the same way a mis-shaped leaf category is.
+    const twoScreens: NavTreeNode = {
+      kind: "folder",
+      id: "two",
+      labelKey: "two",
+      icon,
+      singleEntry: true,
+      children: [
+        { kind: "screen", id: "/a", labelKey: "a", icon, to: "/a" },
+        { kind: "screen", id: "/b", labelKey: "b", icon, to: "/b" },
+      ],
+    };
+    const withSubFolder: NavTreeNode = {
+      kind: "folder",
+      id: "with-sub",
+      labelKey: "with-sub",
+      icon,
+      singleEntry: true,
+      children: [
+        {
+          kind: "folder",
+          id: "with-sub/inner",
+          labelKey: "inner",
+          icon,
+          children: [{ kind: "screen", id: "/c", labelKey: "c", icon, to: "/c" }],
+        },
+      ],
+    };
+
+    const folded = foldSingleEntryFolders([twoScreens, withSubFolder]);
+    expect(folded[0]).toEqual(twoScreens);
+    expect(folded[1]).toEqual(withSubFolder);
+  });
+
+  it("never folds below the top level — the leaf fold's rule is the other one", () => {
+    const nested: NavTreeNode = {
+      kind: "folder",
+      id: "outer",
+      labelKey: "outer",
+      icon,
+      children: [
+        {
+          kind: "folder",
+          id: "outer/inner",
+          labelKey: "inner",
+          icon,
+          singleEntry: true,
+          children: [{ kind: "screen", id: "/d", labelKey: "d", icon, to: "/d" }],
+        },
+      ],
+    };
+
+    // The inner folder carries the flag, but the fold does not reach it.
+    expect(foldSingleEntryFolders([nested])[0]).toEqual(nested);
   });
 });

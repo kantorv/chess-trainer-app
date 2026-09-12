@@ -20,7 +20,6 @@ const he: typeof en = {
     analysisBoard: "לוח ניתוח",
     savedAnalyses: "ניתוחים שמורים",
     boardEditor: "עורך העמדות",
-    openings: "פתיחות",
     savedOpenings: "פתיחות שמורות",
     folders: {
       engine: "מנוע",
@@ -240,6 +239,7 @@ const he: typeof en = {
   savedOpenings: {
     title: "פתיחות שמורות",
     count: "פתיחות: {{count}}",
+    new: "חדש",
     empty:
       "אין עדיין פתיחות שמורות. שחקו מהלך במסך הפתיחות ושמרו אותו כדי לשמור אותה כאן.",
     hint: "כל עמדה שאתם שומרים במסך הפתיחות נשמרת כאן עם כל עץ המהלכים שלה. תנו לה הערה, ותוכלו לערוך את ההערה בכל עת.",

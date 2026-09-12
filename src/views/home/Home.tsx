@@ -40,48 +40,57 @@ const Home = () => {
         {t("home.subtitle")}
       </Typography>
 
-      {navTree().map((folder) => (
-        <Box key={folder.id} component="section" sx={{ mb: 3 }}>
-          <Typography
-            variant="overline"
-            color="text.secondary"
-            sx={{ display: "block", mb: 1 }}
-          >
-            {labelOf(folder)}
-          </Typography>
+      {navTree().map((node) => {
+        /*
+          A top-level node is a folder — or a single-entry folder folded to its
+          screen (`navTree.ts`), which renders as one card, the same entry the
+          sidebar shows. Its own label names both the section and the card:
+          there is nothing inside the folder to list.
+        */
+        const entries = node.kind === "folder" ? screensOf(node) : [node];
+        return (
+          <Box key={node.id} component="section" sx={{ mb: 3 }}>
+            <Typography
+              variant="overline"
+              color="text.secondary"
+              sx={{ display: "block", mb: 1 }}
+            >
+              {labelOf(node)}
+            </Typography>
 
-          <Box
-            sx={{
-              display: "grid",
-              gap: 1.5,
-              gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
-            }}
-          >
-            {screensOf(folder).map((entry) => {
-              const Icon = entry.icon;
-              return (
-                <Card key={entry.to} variant="outlined">
-                  <CardActionArea
-                    component={RouterLink}
-                    to={entry.to as string}
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 1.5,
-                      p: 1.5,
-                    }}
-                  >
-                    <Icon color="primary" />
-                    <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>
-                      {labelOf(entry)}
-                    </Typography>
-                  </CardActionArea>
-                </Card>
-              );
-            })}
+            <Box
+              sx={{
+                display: "grid",
+                gap: 1.5,
+                gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+              }}
+            >
+              {entries.map((entry) => {
+                const Icon = entry.icon;
+                return (
+                  <Card key={entry.to} variant="outlined">
+                    <CardActionArea
+                      component={RouterLink}
+                      to={entry.to as string}
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1.5,
+                        p: 1.5,
+                      }}
+                    >
+                      <Icon color="primary" />
+                      <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>
+                        {labelOf(entry)}
+                      </Typography>
+                    </CardActionArea>
+                  </Card>
+                );
+              })}
+            </Box>
           </Box>
-        </Box>
-      ))}
+        );
+      })}
     </Box>
   );
 };
