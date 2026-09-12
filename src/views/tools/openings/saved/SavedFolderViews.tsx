@@ -49,8 +49,15 @@ function FolderActions({
 }) {
   const { t } = useTranslation();
 
+  /*
+    A flex row of the four, so they sit **in line** in both views: the download
+    button's tooltip wrapper is an inline-flex span, and inside a plain block
+    box the four align by baseline — where that span's line puts the icon a
+    hair above the three bare buttons beside it. Centered flex items have no
+    baseline to disagree about.
+  */
   return (
-    <>
+    <Box sx={{ display: "flex", alignItems: "center" }}>
       <Tooltip title={t("savedOpenings.folder.download")}>
         {/* A disabled button takes no pointer events, so the tooltip needs a
             wrapper that still does — the same wrapper the board controls use. */}
@@ -96,7 +103,7 @@ function FolderActions({
           <DeleteOutlineRoundedIcon fontSize="small" />
         </IconButton>
       </Tooltip>
-    </>
+    </Box>
   );
 }
 
