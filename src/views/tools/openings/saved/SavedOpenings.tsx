@@ -3,6 +3,8 @@ import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
 import CardActionArea from "@mui/material/CardActionArea";
+import Checkbox from "@mui/material/Checkbox";
+import Chip from "@mui/material/Chip";
 import IconButton from "@mui/material/IconButton";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
@@ -14,6 +16,7 @@ import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import CreateNewFolderRoundedIcon from "@mui/icons-material/CreateNewFolderRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
+import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
 import DriveFileMoveRoundedIcon from "@mui/icons-material/DriveFileMoveRounded";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
 import FolderRoundedIcon from "@mui/icons-material/FolderRounded";
@@ -34,6 +37,8 @@ import {
   type OpeningEntry,
   type PositionBook,
 } from "../../../../lib/openings";
+import { downloadPgn } from "../../../../lib/pgnExport";
+import { slugify } from "../../../../lib/pgnLibrary";
 import {
   savedOpeningFen,
   savedOpeningSummary,
@@ -45,6 +50,7 @@ import {
   updateSavedOpeningNote,
 } from "../../../../lib/savedOpeningStore";
 import {
+  openInFolder,
   openingFolderChildren,
   openingFolderPath,
   openingFolderSubtree,
@@ -89,13 +95,28 @@ import { useOpeningFolders } from "./useOpeningFolders";
  * Openings screen, changed in place on this one through the shared
  * {@link NoteDialog}), whereas an analysis' name is fixed.
  *
- * ### 2. There is nothing to export
+ * ### 2. Taking openings out again
  *
- * The saved-games and saved-analyses screens both offer a select-and-download,
- * because a game against the engine and an analysis live nowhere else. An
- * opening does too — but unlike those, an opening is a *position to come back
- * to*, not a piece of work worth taking out of the browser, so there is no
- * export machinery here. The two hand-offs below are the whole of it.
+ * The list view carries a checkbox per row and, in the top bar, a select-all
+ * and a download — pick some openings, get one `.pgn` holding them
+ * (`lib/pgnExport.ts`), the same join of the stored PGN the saved-games and
+ * saved-analyses screens make: nothing re-parsed, so a record whose PGN will
+ * not parse still exports byte for byte, which is why it stays selectable.
+ * It is list-view only for the same reason it is there: a checkbox has no
+ * place in a 160px card's footer, and a selection nothing on screen shows is
+ * a trap — so switching view drops it.
+ *
+ * Where it parts company with those two screens is the folder tree (CTA-40).
+ * A pick is not scoped to what is on screen: it **persists across folder
+ * navigation** — drilling in keeps it, select-all in a folder *adds* that
+ * folder's openings to the picks (unchecking removes just these), and the
+ * count chip counts the whole picked set wherever the reader is standing. The
+ * selection clears only through the chip's clear, a view switch, or the
+ * opening's own delete — which reads out of the picks through the snapshot,
+ * so the deleted record falls out of the count rather than leaving a phantom.
+ * Each folder row and folder card also carries a download of its own — one
+ * `.pgn` of everything under that folder, the same set its count stands for
+ * ({@link openInFolder}), named from the folder's own name, slugified.
  *
  * ### 3. The browser is folders first
  *
@@ -126,6 +147,25 @@ type SavedOpeningsView = "list" | CardSize;
 
 /** What the screen opens on — the list, as its sibling screen does. */
 const DEFAULT_VIEW: SavedOpeningsView = "list";
+
+/**
+ * The selective export's file stem — the fixed one the saved-games screen uses
+ * ("chess-trainer-games"), because a download of picks is not about any one
+ * folder and the dated suffix is what keeps repeated downloads apart.
+ */
+const SELECTED_STEM = "chess-trainer-openings";
+
+/** The folder export's fallback stem — for a name that slugs to nothing. */
+const FOLDER_STEM_FALLBACK = "saved-openings";
+
+/**
+ * The folder export's file stem: the reader's own name for the folder,
+ * slugified. A name that slugs to nothing — an empty one, or one written in a
+ * non-Latin script (`slugify` keeps `[a-z0-9]` only) — falls back to the fixed
+ * stem rather than producing `-2026-09-12.pgn`.
+ */
+const folderStem = (folder: OpeningFolder): string =>
+  slugify(folder.name) || FOLDER_STEM_FALLBACK;
 
 /**
  * A card's preview board. Read-only, and showing the end of the mainline — where
@@ -259,9 +299,12 @@ function EditNoteButton({
 
 type RowProps = EntryProps & {
   onEdit: (id: string) => void;
+  /** Whether this row is picked for export. */
+  checked: boolean;
+  onToggle: () => void;
 };
 
-function SavedOpeningRow({ saved, tree, onEdit }: RowProps) {
+function SavedOpeningRow({ saved, tree, onEdit, checked, onToggle }: RowProps) {
   const { t } = useTranslation();
   const { primary, secondary } = useCaption({ saved, tree });
   const to = destinationsOf(saved, tree);
@@ -323,12 +366,29 @@ function SavedOpeningRow({ saved, tree, onEdit }: RowProps) {
         )}
         <EditNoteButton id={saved.id} onEdit={onEdit} />
         <RemoveButton id={saved.id} />
+        {/* Last in the row, as it is on the sites a reader will have exported
+            a game from — and selectable even for a record that will not parse,
+            since the export copies the stored PGN rather than re-writing it. */}
+        <Checkbox
+          size="small"
+          checked={checked}
+          onChange={onToggle}
+          slotProps={{ input: { "aria-label": t("savedOpenings.select") } }}
+          data-testid={`saved-openings-select-${saved.id}`}
+        />
       </Box>
     </ListItem>
   );
 }
 
-function SavedOpeningCard({ saved, tree, opening, onEdit }: CardProps & RowProps) {
+function SavedOpeningCard({
+  saved,
+  tree,
+  opening,
+  onEdit,
+}: CardProps & {
+  onEdit: (id: string) => void;
+}) {
   const { t } = useTranslation();
   const { primary, secondary } = useCaption({ saved, tree });
   const to = destinationsOf(saved, tree);
@@ -447,17 +507,24 @@ function SavedOpeningCard({ saved, tree, opening, onEdit }: CardProps & RowProps
 }
 
 /**
- * One folder's three management controls — rename, move, delete — the same in
+ * One folder's four controls — download, rename, move, delete — the same in
  * the row and the card view. Deleting runs through the caller's `onDelete`,
  * which decides whether a confirmation is needed; the other two open dialogs.
+ * The download is the caller's handler too (the caller has the snapshots the
+ * subtree read needs); `downloadDisabled` is the caller's count, because an
+ * empty folder has nothing to export.
  */
 function FolderActions({
   folder,
+  downloadDisabled,
+  onDownload,
   onRename,
   onMove,
   onDelete,
 }: {
   folder: OpeningFolder;
+  downloadDisabled: boolean;
+  onDownload: (folder: OpeningFolder) => void;
   onRename: (folder: OpeningFolder) => void;
   onMove: (folder: OpeningFolder) => void;
   onDelete: (folder: OpeningFolder) => void;
@@ -466,6 +533,21 @@ function FolderActions({
 
   return (
     <>
+      <Tooltip title={t("savedOpenings.folder.download")}>
+        {/* A disabled button takes no pointer events, so the tooltip needs a
+            wrapper that still does — the same wrapper the board controls use. */}
+        <Box component="span" sx={{ display: "inline-flex" }}>
+          <IconButton
+            size="small"
+            disabled={downloadDisabled}
+            aria-label={t("savedOpenings.folder.download")}
+            data-testid={`saved-openings-folder-download-${folder.id}`}
+            onClick={() => onDownload(folder)}
+          >
+            <DownloadRoundedIcon fontSize="small" />
+          </IconButton>
+        </Box>
+      </Tooltip>
       <Tooltip title={t("savedOpenings.folder.renameFolder")}>
         <IconButton
           size="small"
@@ -510,6 +592,7 @@ function SavedFolderRow({
   folder,
   count,
   onOpen,
+  onDownload,
   onRename,
   onMove,
   onDelete,
@@ -518,6 +601,7 @@ function SavedFolderRow({
   /** Openings under this folder, across its whole subtree. */
   count: number;
   onOpen: (id: string) => void;
+  onDownload: (folder: OpeningFolder) => void;
   onRename: (folder: OpeningFolder) => void;
   onMove: (folder: OpeningFolder) => void;
   onDelete: (folder: OpeningFolder) => void;
@@ -555,6 +639,8 @@ function SavedFolderRow({
       <Box sx={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
         <FolderActions
           folder={folder}
+          downloadDisabled={count === 0}
+          onDownload={onDownload}
           onRename={onRename}
           onMove={onMove}
           onDelete={onDelete}
@@ -569,6 +655,7 @@ function SavedFolderCard({
   folder,
   count,
   onOpen,
+  onDownload,
   onRename,
   onMove,
   onDelete,
@@ -577,6 +664,7 @@ function SavedFolderCard({
   /** Openings under this folder, across its whole subtree. */
   count: number;
   onOpen: (id: string) => void;
+  onDownload: (folder: OpeningFolder) => void;
   onRename: (folder: OpeningFolder) => void;
   onMove: (folder: OpeningFolder) => void;
   onDelete: (folder: OpeningFolder) => void;
@@ -609,6 +697,8 @@ function SavedFolderCard({
         <Box sx={{ marginInlineStart: "auto" }}>
           <FolderActions
             folder={folder}
+            downloadDisabled={count === 0}
+            onDownload={onDownload}
             onRename={onRename}
             onMove={onMove}
             onDelete={onDelete}
@@ -744,6 +834,55 @@ function SavedOpenings() {
     tree: treeById.get(saved.id),
   }));
 
+  /*
+    Which openings are picked for export. Held as a set of ids rather than a
+    flag per row, so a deleted opening — here or in another tab — falls out of
+    the list without leaving a phantom in the count: everything below reads the
+    selection *through* `openings`, never on its own.
+  */
+  const [picked, setPicked] = useState<ReadonlySet<string>>(new Set());
+  const selected = openings.filter((saved) => picked.has(saved.id));
+
+  const togglePicked = (id: string) =>
+    setPicked((current) => {
+      const next = new Set(current);
+      if (!next.delete(id)) next.add(id);
+      return next;
+    });
+
+  /*
+    Select-all over the rows on screen. The picks persist across folder
+    navigation — the one place this screen parts company with the saved-games
+    one, whose selection is scoped to a flat list — so this is an **add** of
+    this folder's openings rather than a replace: checking adds what is on
+    screen, unchecking removes just these, and picks made elsewhere stay.
+  */
+  const selectedHere = openingsHere.filter((saved) => picked.has(saved.id));
+  const toggleAllHere = () =>
+    setPicked((current) => {
+      const next = new Set(current);
+      const allPicked =
+        openingsHere.length > 0 && selectedHere.length === openingsHere.length;
+      for (const saved of openingsHere) {
+        if (allPicked) next.delete(saved.id);
+        else next.add(saved.id);
+      }
+      return next;
+    });
+
+  const downloadSelected = () =>
+    downloadPgn(
+      SELECTED_STEM,
+      selected.map((saved) => saved.pgn),
+    );
+
+  /** One `.pgn` of everything under the folder — the set its count stands for. */
+  const downloadFolder = (folder: OpeningFolder) =>
+    downloadPgn(
+      folderStem(folder),
+      openInFolder(openings, folders, folder.id).map((row) => row.pgn),
+    );
+
   const startEdit = (id: string) => {
     const found = openings.find((saved) => saved.id === id);
     if (found !== undefined) setEditing({ id, note: found.note });
@@ -833,6 +972,61 @@ function SavedOpenings() {
             {t("savedOpenings.folder.newFolder")}
           </Button>
 
+          {/*
+            The export controls, and only beside the view that has the
+            checkboxes they drive — see the header comment. The chip counts the
+            whole picked set, not this folder's share of it, so it stays visible
+            while the reader drills around; the select-all works on the rows on
+            screen and adds to the set.
+          */}
+          {view === "list" && openings.length > 0 && (
+            <Box
+              data-testid="saved-openings-export"
+              sx={{ display: "flex", alignItems: "center", gap: 0.5, flexShrink: 0 }}
+            >
+              <Tooltip title={t("savedOpenings.selectAll")}>
+                <Checkbox
+                  size="small"
+                  checked={
+                    openingsHere.length > 0 &&
+                    selectedHere.length === openingsHere.length
+                  }
+                  indeterminate={
+                    selectedHere.length > 0 &&
+                    selectedHere.length < openingsHere.length
+                  }
+                  onChange={toggleAllHere}
+                  slotProps={{ input: { "aria-label": t("savedOpenings.selectAll") } }}
+                  data-testid="saved-openings-select-all"
+                />
+              </Tooltip>
+              {selected.length > 0 && (
+                <Chip
+                  size="small"
+                  label={t("savedOpenings.selected", { count: selected.length })}
+                  onDelete={() => setPicked(new Set())}
+                  data-testid="saved-openings-selected-count"
+                />
+              )}
+              <Tooltip title={t("savedOpenings.download")}>
+                {/* A disabled button takes no pointer events, so the tooltip
+                    needs a wrapper that still does — the same wrapper the board
+                    controls use. */}
+                <Box component="span" sx={{ display: "inline-flex" }}>
+                  <IconButton
+                    size="small"
+                    disabled={selected.length === 0}
+                    onClick={downloadSelected}
+                    aria-label={t("savedOpenings.download")}
+                    data-testid="saved-openings-download"
+                  >
+                    <DownloadRoundedIcon fontSize="small" />
+                  </IconButton>
+                </Box>
+              </Tooltip>
+            </Box>
+          )}
+
           <ToggleButtonGroup
             exclusive
             size="small"
@@ -840,10 +1034,15 @@ function SavedOpenings() {
             /*
               `null` when the pressed button is the one already selected: the
               screen has to be showing *something*, so that is a no-op.
+
+              A real change drops the selection, because the checkboxes only
+              exist in the list view — a count for rows nobody can see is a
+              trap. Folder navigation keeps it; only this clears it.
             */
             onChange={(_event, next: SavedOpeningsView | null) => {
               if (next === null) return;
               setView(next);
+              setPicked(new Set());
             }}
             aria-label={t("savedOpenings.view.label")}
             sx={{ flexShrink: 0 }}
@@ -970,6 +1169,7 @@ function SavedOpenings() {
                   folder={folder}
                   count={openingsUnderFolder(openings, folders, folder.id)}
                   onOpen={setFolderId}
+                  onDownload={downloadFolder}
                   onRename={(renamed) =>
                     setNameDialog({ mode: "rename", folder: renamed })
                   }
@@ -981,6 +1181,8 @@ function SavedOpenings() {
                 <SavedOpeningRow
                   key={entry.saved.id}
                   {...entry}
+                  checked={picked.has(entry.saved.id)}
+                  onToggle={() => togglePicked(entry.saved.id)}
                   onEdit={startEdit}
                 />
               ))}
@@ -1015,6 +1217,7 @@ function SavedOpenings() {
                 folder={folder}
                 count={openingsUnderFolder(openings, folders, folder.id)}
                 onOpen={setFolderId}
+                onDownload={downloadFolder}
                 onRename={(renamed) =>
                   setNameDialog({ mode: "rename", folder: renamed })
                 }

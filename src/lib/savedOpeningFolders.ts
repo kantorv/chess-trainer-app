@@ -189,22 +189,34 @@ export const openingFolderSubtree = (
 };
 
 /**
- * How many openings are behind a click — the count a folder card stands for.
- * Everything under the folder, directly and not: a folder card opens onto its
- * whole subtree, so the count that names it counts the same thing. Openings
- * that name a folder no longer there are nobody's to count here; they render
- * as Unfiled at the top level.
+ * The openings behind a click — everything under the folder, directly and not:
+ * a folder card opens onto its whole subtree, so the rows that stand behind it
+ * are the same set its count counts. Openings that name a folder no longer
+ * there are nobody's to return here; they render as Unfiled at the top level.
+ * The order is the caller's (the store's, which is newest first) — the filter
+ * does not sort.
+ */
+export const openInFolder = (
+  openings: readonly SavedOpening[],
+  folders: readonly OpeningFolder[],
+  id: string,
+): SavedOpening[] => {
+  const subtree = openingFolderSubtree(folders, id);
+  return openings.filter(
+    (opening) => opening.folderId !== null && subtree.has(opening.folderId),
+  );
+};
+
+/**
+ * How many openings {@link openInFolder} returns — the count a folder card
+ * stands for. The same filter, counted, because a card's caption and the
+ * subtree export behind it name the same set by construction.
  */
 export const openingsUnderFolder = (
   openings: readonly SavedOpening[],
   folders: readonly OpeningFolder[],
   id: string,
-): number => {
-  const subtree = openingFolderSubtree(folders, id);
-  return openings.filter(
-    (opening) => opening.folderId !== null && subtree.has(opening.folderId),
-  ).length;
-};
+): number => openInFolder(openings, folders, id).length;
 
 /** One folder in a picker, at its depth below the top level. */
 export type FlattenedOpeningFolder = {
