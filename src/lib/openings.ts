@@ -122,6 +122,17 @@ export const topLevelOpeningName = (name: string): string =>
   name.split(":")[0].trim();
 
 /**
+ * The opening's variation name: the part of eco.json's
+ * `"Opening: Variation, SubVariation"` convention after its first `":"`, or
+ * `""` for a name without one — the piece a saved opening's default note
+ * names, with the top level as the fallback when there is no variation.
+ */
+export const openingVariationName = (name: string): string => {
+  const index = name.indexOf(":");
+  return index === -1 ? "" : name.slice(index + 1).trim();
+};
+
+/**
  * The opening a whole **line of play** ended up in: the deepest position along
  * it that the book names, or `undefined` for a line it never recognised.
  *

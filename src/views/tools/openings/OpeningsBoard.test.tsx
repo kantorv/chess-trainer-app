@@ -60,6 +60,13 @@ const offBookFen = () => {
   return chess.fen();
 };
 
+/** After 1. e4 e5 2. f4 Nf6 — the book names it "King's Gambit Declined: Petrov's Defense". */
+const deepFen = () => {
+  const chess = new Chess();
+  for (const san of ["e4", "e5", "f4", "Nf6"]) chess.move(san);
+  return chess.fen();
+};
+
 const boardArrows = (): BoardArrow[] =>
   JSON.parse(screen.getByTestId("board").getAttribute("data-arrows") ?? "[]");
 
@@ -520,18 +527,15 @@ describe("the Openings screen — saving", () => {
     );
     expect(created?.parentId).toBeNull();
     expect(savedOpeningsSnapshot()[0].folderId).toBe(created?.id);
+    // And the note defaults to the top-level name — no variation to take.
+    expect(savedOpeningsSnapshot()[0].note).toBe("King's Pawn Game");
   });
 
   it("files by the opening's top-level name when the book name is deep", async () => {
     const user = userEvent.setup();
     // After 1. e4 e5 2. f4 Nf6 — the book names it "King's Gambit Declined:
     // Petrov's Defense"; the folder is the part before the first ":".
-    const deepFen = (() => {
-      const chess = new Chess();
-      for (const san of ["e4", "e5", "f4", "Nf6"]) chess.move(san);
-      return chess.fen();
-    })();
-    renderScreen(`/openings?fen=${encodeURIComponent(deepFen)}`);
+    renderScreen(`/openings?fen=${encodeURIComponent(deepFen())}`);
     await bookSettled();
 
     await user.click(screen.getByTestId("openings-save"));
@@ -549,6 +553,30 @@ describe("the Openings screen — saving", () => {
         (f) => f.name === "King's Gambit Declined: Petrov's Defense",
       ),
     ).toBeUndefined();
+  });
+
+  it("names a note-less save by the variation, falling back to the top level", async () => {
+    const user = userEvent.setup();
+    // "King's Gambit Declined: Petrov's Defense" — the variation is the name.
+    renderScreen(`/openings?fen=${encodeURIComponent(deepFen())}`);
+    await bookSettled();
+
+    await user.click(screen.getByTestId("openings-save"));
+    await user.click(screen.getByTestId("opening-note-save"));
+
+    expect(savedOpeningsSnapshot()[0].note).toBe("Petrov's Defense");
+  });
+
+  it("keeps a typed note over the default name", async () => {
+    const user = userEvent.setup();
+    renderScreen(`/openings?fen=${encodeURIComponent(deepFen())}`);
+    await bookSettled();
+
+    await user.click(screen.getByTestId("openings-save"));
+    await user.type(screen.getByTestId("opening-note-input"), "My line");
+    await user.click(screen.getByTestId("opening-note-save"));
+
+    expect(savedOpeningsSnapshot()[0].note).toBe("My line");
   });
 
   it("files an off-book position to Unfiled when no folder was chosen", async () => {

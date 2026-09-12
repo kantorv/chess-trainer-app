@@ -7,6 +7,7 @@ import {
   loadOpeningBook,
   nextMoveOpenings,
   openingOfLine,
+  openingVariationName,
   stickyOpening,
   topLevelOpeningName,
   type LastKnownOpening,
@@ -245,5 +246,29 @@ describe("topLevelOpeningName", () => {
   it("reads a name that is nothing but a separator as empty", () => {
     expect(topLevelOpeningName("")).toBe("");
     expect(topLevelOpeningName(":")).toBe("");
+  });
+});
+
+describe("openingVariationName", () => {
+  it("keeps the part after the first separator, whole", () => {
+    expect(openingVariationName("Petrov's Defense: Classical Attack")).toBe(
+      "Classical Attack",
+    );
+    expect(
+      openingVariationName(
+        "Petrov's Defense: Classical Attack, Chigorin Variation",
+      ),
+    ).toBe("Classical Attack, Chigorin Variation");
+  });
+
+  it("reads a colon-less name as no variation", () => {
+    expect(openingVariationName("King's Pawn Game")).toBe("");
+  });
+
+  it("trims around the separator, and reads a bare one as empty", () => {
+    expect(openingVariationName("Ruy Lopez : Berlin Defence")).toBe(
+      "Berlin Defence",
+    );
+    expect(openingVariationName("King's Pawn Game:")).toBe("");
   });
 });
