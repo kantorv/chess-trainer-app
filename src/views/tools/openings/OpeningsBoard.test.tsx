@@ -6,11 +6,17 @@ import { MemoryRouter, useLocation } from "react-router";
 import i18n from "../../../i18n";
 import AppThemeWithLang from "../../../theme/AppThemeWithLang";
 import { MOVE_ARROW_COLOR } from "../../../lib/gameNavigation";
+import { treeFromGame } from "../../../lib/gameTree";
+import { gameFromChess } from "../../../lib/gameModel";
 import {
   HOVERED_MOVE_ARROW_COLOR,
   KNOWN_MOVE_ARROW_COLOR,
 } from "../../../lib/openings";
-import { savedOpeningsSnapshot } from "../../../lib/savedOpeningStore";
+import {
+  newSavedOpeningId,
+  savedOpeningOf,
+} from "../../../lib/savedOpenings";
+import { saveOpening, savedOpeningsSnapshot } from "../../../lib/savedOpeningStore";
 import {
   createOpeningFolder,
   openingFoldersSnapshot,
@@ -417,6 +423,42 @@ describe("the Openings screen — arriving with a position", () => {
 
   it("ignores a ?fen= nobody can read", () => {
     renderScreen("/openings?fen=not-a-fen");
+
+    expect(screen.getByTestId("board")).toHaveAttribute(
+      "data-position",
+      START_FEN,
+    );
+  });
+});
+
+/*
+  A saved opening is reopened by the `?openings=` hand-off: the tree, the
+  orientation and the note arrive as initial state — and the board opens at the
+  end of the mainline, the position the reader goes on playing from.
+*/
+describe("the Openings screen — arriving with a saved opening", () => {
+  it("opens at the end of the mainline, not at ply 0", () => {
+    const chess = new Chess();
+    for (const san of ["e4", "e5", "f4"]) chess.move(san);
+    const record = savedOpeningOf(
+      newSavedOpeningId(),
+      treeFromGame(gameFromChess(chess)),
+      "white",
+      "My line",
+      null,
+    );
+    saveOpening(record);
+
+    renderScreen(`/openings?openings=${encodeURIComponent(record.id)}`);
+
+    expect(screen.getByTestId("board")).toHaveAttribute(
+      "data-position",
+      chess.fen(),
+    );
+  });
+
+  it("reopens an id that is not there as a fresh board", () => {
+    renderScreen("/openings?openings=no-such-id");
 
     expect(screen.getByTestId("board")).toHaveAttribute(
       "data-position",

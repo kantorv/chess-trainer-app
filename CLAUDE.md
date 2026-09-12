@@ -676,9 +676,9 @@ Four things are different, and they are the whole of it:
   Side lines are what an opening explorer keeps, so it is `treeToPgn` out and
   `parsePgnTree` back — the saved analysis' record for the same reason. What it
   does **not** carry is a place in the tree or engine settings: an opening
-  reopens at ply 0, because the tree itself is the point, and there is nothing
-  to restore but the orientation, which rides along for the same reason it does
-  on an analysis.
+  reopens at the **end of its mainline** — the position the reader goes on
+  playing from — and there is nothing else to restore but the orientation,
+  which rides along for the same reason it does on an analysis.
 - **The note is the name, and it is edited in place.** A position begun from an
   empty board carries no players to name a row after, so the record carries the
   reader's own one-line name instead — prompted at save time, changed afterward

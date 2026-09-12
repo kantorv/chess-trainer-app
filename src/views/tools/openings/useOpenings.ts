@@ -14,7 +14,7 @@ import {
   type OpeningBook,
   type PositionBook,
 } from "../../../lib/openings";
-import { addMove, emptyTree, type GameTree } from "../../../lib/gameTree";
+import { addMove, emptyTree, mainline, type GameTree } from "../../../lib/gameTree";
 import {
   newSavedOpeningId,
   savedOpeningOf,
@@ -54,11 +54,13 @@ import { useTreeNavigation } from "../analysis/useTreeNavigation";
  * often than it is kept, and a reader who has to delete an autosave is a
  * reader who gives up on saving anything. {@link OpeningsStart.resume} reopens
  * one saved earlier: the tree (side lines and all), the orientation it was
- * viewed from, and its note, which is shown read-only — editing a note happens
- * on the Saved openings screen, not here. The save also names the folder the
- * opening is filed under — a choice from the save dialog, or the default rule
- * (an ECO-named position into a folder named after that opening) when the
- * reader leaves it unchosen.
+ * viewed from, its note, which is shown read-only — editing a note happens
+ * on the Saved openings screen, not here — and it opens at the **end of its
+ * mainline**, the position the reader goes on playing from. The save also
+ * names the folder the opening is filed under — a choice from the save dialog,
+ * or the default rule (a position the book names into a folder named after its
+ * top-level name, and an empty note by the variation, or the top level) when
+ * the reader leaves it unchosen.
  */
 
 /** A tree with nothing in it, taken once — plain data that nothing mutates. */
@@ -106,9 +108,10 @@ export const useOpenings = ({ fen: initialFen, resume }: OpeningsStart = {}) => 
   }, [resume]);
 
   /*
-    The position the screen was opened on. A reopened opening reopens at ply 0 —
-    the tree itself is the thing to explore — so its start position is what "New
-    game" returns to, exactly as a `?fen=` hand-off does.
+    The position the screen was opened on — what "New game" returns to, exactly
+    as a `?fen=` hand-off does. A reopened opening navigates to the end of its
+    mainline rather than staying here, but its start position is still what the
+    tree was grown from, so this is the reset either way.
   */
   const startFen = reopened?.tree.startFen ?? initialFen;
 
@@ -130,7 +133,17 @@ export const useOpenings = ({ fen: initialFen, resume }: OpeningsStart = {}) => 
   const [book, setBook] = useState<OpeningBook | null>(null);
   const [positionBook, setPositionBook] = useState<PositionBook | undefined>(undefined);
 
-  const navigation = useTreeNavigation(tree);
+  const navigation = useTreeNavigation(
+    tree,
+    /*
+      A reopened opening starts at the **end of its mainline** — the position
+      the reader goes on playing from — rather than at ply 0. The seed is a
+      mainline ply (the hook walks it to its node, and clamps to the last move
+      of a record saved with side lines), and 0 on an empty mainline — a record
+      saved with no moves — reads as ply 0, the root.
+    */
+    reopened !== undefined ? mainline(reopened.tree).length : undefined,
+  );
   const { fen, nodeId, goToNode } = navigation;
 
   // Loaded once per mount; `loadOpeningBook` itself caches across mounts, so a
