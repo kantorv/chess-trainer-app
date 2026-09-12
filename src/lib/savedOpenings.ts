@@ -29,6 +29,14 @@ import { parsePgnTree } from "./pgn";
  * Saved openings screen. It is the thing a row is named by, since a position
  * begun from an empty board carries no players to name it after.
  *
+ * And, since CTA-40, the **folder** it is filed under — {@link OpeningFolder}
+ * (in [`savedOpeningFolders.ts`](./savedOpeningFolders.ts)) is the tree the
+ * reader organises their openings into, and {@link SavedOpening.folderId} names
+ * one of its leaves. `null` is not "no folder" in the sense of a missing value:
+ * it is the **Unfiled** choice, the top level — the state a pre-folder record is
+ * already in and the one {@link savedOpeningFrom} normalises anything unreadable
+ * back to, so existing records migrate without a version bump.
+ *
  * Like an analysis, the record is **PGN** (`treeToPgn` out, `parsePgnTree` back)
  * rather than a serialised tree: side lines are the one thing an opening
  * explorer keeps, and PGN is what this app already round-trips.
@@ -44,6 +52,14 @@ export type SavedOpening = {
   orientation: "white" | "black";
   /** The reader's own name for the position. May be empty. */
   note: string;
+  /**
+   * The {@link OpeningFolder} this opening is filed under, or `null` for
+   * **Unfiled** — the top level. A folder id outlives nothing: deleting a
+   * folder files its openings back to Unfiled
+   * (`removeOpeningFolder` in [`savedOpeningFolderStore.ts`](./savedOpeningFolderStore.ts)),
+   * so a `folderId` always names a folder that exists.
+   */
+  folderId: string | null;
   /** ISO 8601, when it was first saved. */
   savedAt: string;
   /** ISO 8601, when it was last changed. What "newest first" sorts on. */
@@ -102,7 +118,14 @@ export const savedOpeningHeaders = (now: Date = new Date()): GameHeaders => ({
 
 /**
  * Write an opening down: the whole tree as PGN, the orientation it was viewed
- * from, and the note.
+ * from, the note, and the folder it is filed under.
+ *
+ * `folderId` is a required parameter — unlike the note, an opening is always
+ * filed *somewhere*: the save dialog names a folder, or the default rule does
+ * (an ECO-named position into a folder named after that opening, an off-book
+ * position Unfiled). There is no "unfiled by accident" to normalise at the
+ * writer; only {@link savedOpeningFrom} normalises, for records older than the
+ * field.
  *
  * `savedAt` is carried in rather than derived so that editing the note of a
  * record saved yesterday keeps yesterday's date — the record is updated, not
@@ -113,6 +136,7 @@ export const savedOpeningOf = (
   tree: GameTree,
   orientation: "white" | "black",
   note: string,
+  folderId: string | null,
   now: Date = new Date(),
   savedAt: string = now.toISOString(),
 ): SavedOpening => ({
@@ -123,6 +147,7 @@ export const savedOpeningOf = (
   }),
   orientation,
   note,
+  folderId,
   savedAt,
   updatedAt: now.toISOString(),
 });
@@ -184,9 +209,15 @@ export const isSavedOpening = (value: unknown): value is SavedOpening => {
 };
 
 /**
- * One stored row, normalised — the note and the orientation filled in from the
- * defaults for anything the record does not have, so an older or hand-edited
- * entry reopens rather than being dropped.
+ * One stored row, normalised — the note, the orientation and the folder filled
+ * in from the defaults for anything the record does not have, so an older or
+ * hand-edited entry reopens rather than being dropped.
+ *
+ * The folder is the one field *added* to the record (CTA-40), and this is why
+ * there is no version bump: `folderId` arriving as anything but a usable id —
+ * absent, non-string, empty — reads as `null`, Unfiled. Every pre-folder record
+ * is already Unfiled, so the normalisation is not a migration, it is the same
+ * default the field has always had.
  */
 export const savedOpeningFrom = (value: unknown): SavedOpening | undefined => {
   if (!isSavedOpening(value)) return undefined;
@@ -199,5 +230,9 @@ export const savedOpeningFrom = (value: unknown): SavedOpening | undefined => {
     ...value,
     note: typeof row.note === "string" ? row.note : "",
     orientation: row.orientation === "black" ? "black" : "white",
+    folderId:
+      typeof row.folderId === "string" && row.folderId !== ""
+        ? row.folderId
+        : null,
   };
 };

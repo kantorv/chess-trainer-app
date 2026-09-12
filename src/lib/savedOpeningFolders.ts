@@ -1,0 +1,236 @@
+import type { SavedOpening } from "./savedOpenings";
+
+/**
+ * **The reader's saved-opening folders** — what one is, and the tree it
+ * nests into.
+ *
+ * The Saved openings screen's flat list grew into a folder system (CTA-40), and
+ * this is the pure half of it: the {@link OpeningFolder} entity and the reads
+ * over a list of them. The storage half is
+ * [`savedOpeningFolderStore.ts`](./savedOpeningFolderStore.ts) — a versioned
+ * `localStorage` key beside the openings' own
+ * ([`savedOpeningStore.ts`](./savedOpeningStore.ts)) — and the React binding is
+ * `views/tools/openings/saved/useOpeningFolders.ts`. A folder is **not** an
+ * opening, which is the whole reason it is a separate record in a separate
+ * store: an opening carries a position and a tree; a folder carries only a
+ * name and a parent. What joins them is {@link SavedOpening.folderId}, a plain
+ * id — no join table, no `children` array on the folder, because a folder's
+ * children are derivable from the list and a second copy of them could desync.
+ *
+ * ## A parent is an id, not a position in a list
+ *
+ * Nesting is `parentId: string | null` — `null` is the top level. Two rules
+ * every helper below applies:
+ *
+ * - **A `parentId` that does not resolve is treated as `null`.** A hand-edited
+ *   or half-deleted store can name a parent that is not there; a folder whose
+ *   parent is gone still belongs somewhere, so it reads as top level rather
+ *   than vanishing from every list.
+ * - **A cycle is a fact about the data, not an error.** `parentId` is plain
+ *   JSON; a hand-edited `a → b → a` would send a naive walk into an infinite
+ *   loop. Every walk here carries a visited set and stops rather than
+ *   recurring — {@link openingFolderPath} starts the cycle's own chain at the
+ *   folder it entered it on, and {@link openingFolderSubtree} just stops. The
+ *   store's write side prevents cycles from forming in the first place
+ *   (`moveOpeningFolder` refuses a folder's own subtree), so these reads are
+ *   defence in depth, not the rule.
+ */
+
+/** One folder in the reader's saved-openings tree. Plain JSON. */
+export type OpeningFolder = {
+  /** Stable for the life of the record, and the join to {@link SavedOpening.folderId}. */
+  id: string;
+  /** The reader's own name for the folder. Not unique — ids are. */
+  name: string;
+  /** The parent folder's id, or `null` for the top level. */
+  parentId: string | null;
+  /** ISO 8601, when it was created. */
+  savedAt: string;
+  /** ISO 8601, when it was last changed (renamed, moved, or re-parented). */
+  updatedAt: string;
+};
+
+/** Whether a value parsed out of storage is an opening folder. Structural, on purpose. */
+export const isOpeningFolder = (value: unknown): value is OpeningFolder => {
+  if (typeof value !== "object" || value === null) return false;
+  const row = value as Record<string, unknown>;
+  return (
+    typeof row.id === "string" &&
+    row.id !== "" &&
+    typeof row.name === "string" &&
+    (row.parentId === null || typeof row.parentId === "string") &&
+    typeof row.savedAt === "string" &&
+    typeof row.updatedAt === "string"
+  );
+};
+
+/**
+ * One stored row, normalised — a `parentId` that is neither `null` nor a
+ * non-empty string reads as `null`, and a `name` that is not a string reads as
+ * empty rather than dropping the whole folder. Dropping is the openings'
+ * answer to a broken row; a folder has nothing irreplaceable behind its fields,
+ * but it does have *position* in the reader's tree, and a half-broken record
+ * that still renders one folder is better than a tree with a hole in it.
+ */
+export const openingFolderFrom = (value: unknown): OpeningFolder | undefined => {
+  if (!isOpeningFolder(value)) return undefined;
+  const row: Record<string, unknown> = { ...value };
+
+  return {
+    id: row.id,
+    name: row.name,
+    parentId:
+      typeof row.parentId === "string" && row.parentId !== ""
+        ? row.parentId
+        : null,
+    savedAt: row.savedAt,
+    updatedAt: row.updatedAt,
+  };
+};
+
+/**
+ * The id a folder is filed under, resolved — the one place a `parentId` is
+ * checked against the list it names into. A parent that is not there is the top
+ * level, and a folder is never its own parent.
+ */
+const resolvedParentOf = (
+  folders: readonly OpeningFolder[],
+  folder: OpeningFolder,
+): string | null =>
+  folder.parentId !== null &&
+  folder.parentId !== folder.id &&
+  folders.some((candidate) => candidate.id === folder.parentId)
+    ? folder.parentId
+    : null;
+
+/**
+ * The direct children of a folder, sorted by name — what drilling in shows,
+ * and what the pickers nest by. A folder whose parent does not resolve counts
+ * as a child of `null`, so a half-broken store still renders every folder.
+ *
+ * Sorted by name rather than by when each was created: a folder list is
+ * browsed, not appended to, and two folders created in the same millisecond
+ * would otherwise have no order at all. `localeCompare` rather than `<` —
+ * names are reader's words, and a Hebrew list should sort in Hebrew order.
+ */
+export const openingFolderChildren = (
+  folders: readonly OpeningFolder[],
+  parentId: string | null,
+): OpeningFolder[] =>
+  folders
+    .filter((folder) => resolvedParentOf(folders, folder) === parentId)
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+/**
+ * The chain from the top level down *to and including* one folder — what a
+ * breadcrumb is. A folder whose parent does not resolve starts its own chain,
+ * and a cycle is cut at the folder it was entered on: the chain shows the
+ * loop's first lap rather than never finishing.
+ */
+export const openingFolderPath = (
+  folders: readonly OpeningFolder[],
+  id: string,
+): OpeningFolder[] => {
+  const byId = new Map(folders.map((folder) => [folder.id, folder]));
+  const start = byId.get(id);
+  if (start === undefined) return [];
+
+  const chain: OpeningFolder[] = [];
+  const seen = new Set<string>();
+  let current: OpeningFolder | undefined = start;
+
+  while (current !== undefined && !seen.has(current.id)) {
+    seen.add(current.id);
+    chain.push(current);
+    current =
+      current.parentId === null
+        ? undefined
+        : byId.get(current.parentId);
+  }
+
+  // The chain was built folder-first; a breadcrumb reads top down.
+  return chain.reverse();
+};
+
+/**
+ * One folder and everything under it, as ids — the set a move is checked
+ * against (a folder may not be moved into its own subtree) and what "a
+ * non-empty folder" means for the delete confirmation. Includes the folder's
+ * own id.
+ */
+export const openingFolderSubtree = (
+  folders: readonly OpeningFolder[],
+  id: string,
+): Set<string> => {
+  const subtree = new Set<string>([id]);
+
+  // Breadth-first over resolved parents, so a cycle adds nothing the second
+  // time it is reached.
+  let frontier = [id];
+  while (frontier.length > 0) {
+    const next: string[] = [];
+    for (const folder of folders) {
+      if (
+        folder.parentId !== null &&
+        !subtree.has(folder.id) &&
+        frontier.includes(folder.parentId)
+      ) {
+        subtree.add(folder.id);
+        next.push(folder.id);
+      }
+    }
+    frontier = next;
+  }
+
+  return subtree;
+};
+
+/**
+ * How many openings are behind a click — the count a folder card stands for.
+ * Everything under the folder, directly and not: a folder card opens onto its
+ * whole subtree, so the count that names it counts the same thing. Openings
+ * that name a folder no longer there are nobody's to count here; they render
+ * as Unfiled at the top level.
+ */
+export const openingsUnderFolder = (
+  openings: readonly SavedOpening[],
+  folders: readonly OpeningFolder[],
+  id: string,
+): number => {
+  const subtree = openingFolderSubtree(folders, id);
+  return openings.filter(
+    (opening) => opening.folderId !== null && subtree.has(opening.folderId),
+  ).length;
+};
+
+/** One folder in a picker, at its depth below the top level. */
+export type FlattenedOpeningFolder = {
+  folder: OpeningFolder;
+  /** 0 at the top level, 1 under a root folder, and so on. */
+  depth: number;
+};
+
+/**
+ * The whole tree, depth-annotated, parents before children — what a picker
+ * renders as one indented list. Children are name-sorted at every level, the
+ * same rule {@link openingFolderChildren} applies, and cycles are cut the same
+ * way every other walk cuts them.
+ */
+export const flattenOpeningFolders = (
+  folders: readonly OpeningFolder[],
+): FlattenedOpeningFolder[] => {
+  const flat: FlattenedOpeningFolder[] = [];
+  const seen = new Set<string>();
+
+  const walk = (parentId: string | null, depth: number) => {
+    for (const folder of openingFolderChildren(folders, parentId)) {
+      if (seen.has(folder.id)) continue;
+      seen.add(folder.id);
+      flat.push({ folder, depth });
+      walk(folder.id, depth + 1);
+    }
+  };
+
+  walk(null, 0);
+  return flat;
+};

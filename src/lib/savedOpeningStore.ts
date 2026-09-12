@@ -19,6 +19,16 @@ import {
  *   is not "working on" the opening, and re-ordering on every keystroke would be
  *   noise. {@link updateSavedOpeningNote} is that write.
  *
+ * - **The folder rides with the record.** A save names the folder an opening is
+ *   filed under ({@link SavedOpening.folderId}), so {@link unchanged} compares
+ *   it beside the PGN and the note — a re-save that only *refiles* the opening
+ *   is a change, not a duplicate, and one that files it identically is still a
+ *   no-op. The folders themselves are a separate store
+ *   ([`savedOpeningFolderStore.ts`](./savedOpeningFolderStore.ts)) — a folder is
+ *   not an opening — but the one write that spans both,
+ *   {@link unfileOpeningsIn}, lives here, because it is the openings whose
+ *   folder it changes.
+ *
  * The writer is **idempotent** for the same reason the other stores' are: the
  * save button is not an effect, but a re-save of an identical record must still
  * be a no-op so a reader cannot stack duplicates by clicking twice.
@@ -136,7 +146,8 @@ const write = (
 const unchanged = (a: SavedOpening, b: SavedOpening): boolean =>
   a.pgn === b.pgn &&
   a.orientation === b.orientation &&
-  a.note === b.note;
+  a.note === b.note &&
+  a.folderId === b.folderId;
 
 /**
  * Keep one opening, newest first.
@@ -188,6 +199,31 @@ export const findSavedOpening = (
   id === null || id === undefined
     ? undefined
     : savedOpeningsSnapshot().find((row) => row.id === id);
+
+/**
+ * File every opening under a folder back to **Unfiled** — the openings half of
+ * what deleting a folder does to its contents
+ * (`removeOpeningFolder` in [`savedOpeningFolderStore.ts`](./savedOpeningFolderStore.ts)).
+ *
+ * This is the one folder operation that changes *openings*, which is why it
+ * lives in the openings store rather than beside the folder CRUD: a folder's
+ * own moves (re-parenting sub-folders) are the folder store's to make, but the
+ * records whose `folderId` is being set are these. Only the openings *directly*
+ * in the folder are unfiled — a sub-folder's openings stay filed, because the
+ * sub-folder itself is re-parented, not deleted. An unknown id changes nothing.
+ */
+export const unfileOpeningsIn = (
+  folderId: string,
+): SavedOpeningProblem | undefined => {
+  const current = savedOpeningsSnapshot();
+  if (!current.some((row) => row.folderId === folderId)) return undefined;
+
+  return write(
+    current.map((row) =>
+      row.folderId === folderId ? { ...row, folderId: null } : row,
+    ),
+  );
+};
 
 /** Forget one. Unknown ids are a no-op, not an error. */
 export const removeSavedOpening = (

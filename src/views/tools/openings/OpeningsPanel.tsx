@@ -15,7 +15,8 @@ import { useTranslation } from "react-i18next";
 import BoardControls from "../../shared/BoardControls";
 import CurrentOpening from "../../shared/CurrentOpening";
 import VariationTree from "../analysis/VariationTree";
-import NoteDialog from "./NoteDialog";
+import { useOpeningFolders } from "./saved/useOpeningFolders";
+import SaveOpeningDialog from "./SaveOpeningDialog";
 import type { OpeningsState } from "./useOpenings";
 
 /**
@@ -58,6 +59,13 @@ function OpeningsPanel({
   const { t } = useTranslation();
   const [tab, setTab] = useState<TabId>("nextMoves");
   const [saveOpen, setSaveOpen] = useState(false);
+
+  /*
+    The folders, for the save dialog's picker — the same `useSyncExternalStore`
+    binding the Saved openings screen reads, so a folder created there (or in
+    the dialog just below) is in this list the moment it exists.
+  */
+  const folders = useOpeningFolders();
 
   return (
     <Box
@@ -216,10 +224,9 @@ function OpeningsPanel({
         onFlip={state.flipBoard}
       />
 
-      <NoteDialog
+      <SaveOpeningDialog
         open={saveOpen}
-        title={t("savedOpenings.note.saveTitle")}
-        initial=""
+        folders={folders}
         onSave={state.saveOpening}
         onClose={() => setSaveOpen(false)}
       />
