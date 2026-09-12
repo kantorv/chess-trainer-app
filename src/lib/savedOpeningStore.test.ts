@@ -47,8 +47,10 @@ const save = (
   moves: readonly string[],
   note = "",
   orientation: "white" | "black" = "white",
+  folderId: string | null = null,
   now = new Date("2026-09-07T10:00:00.000Z"),
-): SavedOpening => savedOpeningOf(id, grownTree(moves), orientation, note, now);
+): SavedOpening =>
+  savedOpeningOf(id, grownTree(moves), orientation, note, folderId, now);
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -95,10 +97,24 @@ describe("the saved-openings store", () => {
 
   it("keeps the date an opening was begun when it is re-saved", () => {
     saveOpening(
-      save("a1", ["e4"], "", "white", new Date("2026-09-01T08:00:00.000Z")),
+      save(
+        "a1",
+        ["e4"],
+        "",
+        "white",
+        null,
+        new Date("2026-09-01T08:00:00.000Z"),
+      ),
     );
     saveOpening(
-      save("a1", ["e4", "e5"], "", "white", new Date("2026-09-07T10:00:00.000Z")),
+      save(
+        "a1",
+        ["e4", "e5"],
+        "",
+        "white",
+        null,
+        new Date("2026-09-07T10:00:00.000Z"),
+      ),
     );
 
     expect(savedOpeningsSnapshot()[0].savedAt).toBe("2026-09-01T08:00:00.000Z");
@@ -127,6 +143,20 @@ describe("the saved-openings store", () => {
 
     saveOpening(save("a1", ["e4"], "After", "black"));
     expect(savedOpeningsSnapshot()[0].orientation).toBe("black");
+  });
+
+  it("does write when only the folder changed, and stays put when it has not", () => {
+    saveOpening(save("a1", ["e4"], "Same", "white", null));
+
+    // Re-filing into a folder is a real change — the idempotency check
+    // includes the folderId, so the write lands.
+    saveOpening(save("a1", ["e4"], "Same", "white", "folder-1"));
+    expect(savedOpeningsSnapshot()[0].folderId).toBe("folder-1");
+
+    // The same folder again: a no-op, not a duplicate or a re-order.
+    const before = savedOpeningsSnapshot();
+    saveOpening(save("a1", ["e4"], "Same", "white", "folder-1"));
+    expect(savedOpeningsSnapshot()).toBe(before);
   });
 
   it("edits a note in place, without moving the record to the top", () => {

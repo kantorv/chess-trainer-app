@@ -261,7 +261,8 @@ export const moveOpeningFolder = (
   ) {
     return undefined;
   }
-  if (openingFolderSubtree(current, id).has(newParentId)) return undefined;
+  if (newParentId !== null && openingFolderSubtree(current, id).has(newParentId))
+    return undefined;
 
   return write(
     current.map((folder) =>

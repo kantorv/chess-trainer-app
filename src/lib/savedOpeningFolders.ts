@@ -50,18 +50,17 @@ export type OpeningFolder = {
   updatedAt: string;
 };
 
-/** Whether a value parsed out of storage is an opening folder. Structural, on purpose. */
+/**
+ * Whether a value parsed out of storage has a folder's **identity** — the one
+ * field that cannot be normalised, because a folder without an id is nothing to
+ * file other records under. Structural, on purpose, and deliberately minimal:
+ * everything else a row gets wrong is {@link openingFolderFrom}'s to normalise,
+ * not a reason to drop the record.
+ */
 export const isOpeningFolder = (value: unknown): value is OpeningFolder => {
   if (typeof value !== "object" || value === null) return false;
   const row = value as Record<string, unknown>;
-  return (
-    typeof row.id === "string" &&
-    row.id !== "" &&
-    typeof row.name === "string" &&
-    (row.parentId === null || typeof row.parentId === "string") &&
-    typeof row.savedAt === "string" &&
-    typeof row.updatedAt === "string"
-  );
+  return typeof row.id === "string" && row.id !== "";
 };
 
 /**
@@ -70,21 +69,25 @@ export const isOpeningFolder = (value: unknown): value is OpeningFolder => {
  * empty rather than dropping the whole folder. Dropping is the openings'
  * answer to a broken row; a folder has nothing irreplaceable behind its fields,
  * but it does have *position* in the reader's tree, and a half-broken record
- * that still renders one folder is better than a tree with a hole in it.
+ * that still renders one folder is better than a tree with a hole in it. A row
+ * without an id is dropped — there is nothing to file anything under.
  */
 export const openingFolderFrom = (value: unknown): OpeningFolder | undefined => {
   if (!isOpeningFolder(value)) return undefined;
-  const row: Record<string, unknown> = { ...value };
+  // The guard has the identity; what is left is normalising the rest. The
+  // runtime `typeof` checks are not dead even though `value` is typed — a row
+  // out of storage may say `name: null` where the type says `string`.
+  const row = value as OpeningFolder & Record<string, unknown>;
 
   return {
     id: row.id,
-    name: row.name,
+    name: typeof row.name === "string" ? row.name : "",
     parentId:
       typeof row.parentId === "string" && row.parentId !== ""
         ? row.parentId
         : null,
-    savedAt: row.savedAt,
-    updatedAt: row.updatedAt,
+    savedAt: typeof row.savedAt === "string" ? row.savedAt : "",
+    updatedAt: typeof row.updatedAt === "string" ? row.updatedAt : "",
   };
 };
 

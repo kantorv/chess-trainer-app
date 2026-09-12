@@ -9,8 +9,8 @@ import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import CreateNewFolderRoundedIcon from "@mui/icons-material/CreateNewFolderRounded";
 import { useTranslation } from "react-i18next";
-import type { OpeningFolder } from "../../lib/savedOpeningFolders";
-import { createOpeningFolder } from "../../lib/savedOpeningFolderStore";
+import type { OpeningFolder } from "../../../lib/savedOpeningFolders";
+import { createOpeningFolder } from "../../../lib/savedOpeningFolderStore";
 import FolderPicker from "./FolderPicker";
 
 /**

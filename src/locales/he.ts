@@ -268,6 +268,28 @@ const he: typeof en = {
       editTitle: "עריכת ההערה",
       edit: "עריכת ההערה",
     },
+    folder: {
+      root: "כל הפתיחות",
+      newFolder: "תיקייה חדשה",
+      renameFolder: "שינוי שם תיקייה",
+      moveFolder: "העברת תיקייה",
+      deleteFolder: "מחיקת תיקייה",
+      unfiled: "ללא תיקייה",
+      topLevel: "ברמה העליונה",
+      label: "תיקייה",
+      defaultHint:
+        "אם לא נבחרת תיקייה, הפתיחה נשמרת לפי שם הפתיחה שלה — עמדה מחוץ לספר נשמרת ללא תיקייה.",
+      name: "שם התיקייה",
+      save: "שמירה",
+      cancel: "ביטול",
+      deleteConfirm:
+        "מחיקת התיקייה הזו שומרת על התוכן שבה: פתיחות שנשמרו בה יהפכו לללא תיקייה, ותתי־התיקיות שלה יעלו רמה אחת.",
+      deleteCounts:
+        "התיקייה הזו מחזיקה {{openings}} פתיחות ו־{{subFolders}} תתי־תיקיות.",
+      count_one: "פתיחה אחת",
+      count_other: "{{count}} פתיחות",
+      empty: "התיקייה הזו ריקה.",
+    },
   },
   analysis: {
     tabs: {

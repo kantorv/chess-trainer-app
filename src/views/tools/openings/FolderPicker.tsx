@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next";
 import {
   flattenOpeningFolders,
   type OpeningFolder,
-} from "../../lib/savedOpeningFolders";
+} from "../../../lib/savedOpeningFolders";
 
 /**
  * A folder tree as one selectable list — the picker both folder-choosing
@@ -79,7 +79,7 @@ function FolderPicker({
           />
           <ListItemText
             primary={folder.name === "" ? t("savedOpenings.untitled") : folder.name}
-            primaryTypographyProps={{ noWrap: true }}
+            slotProps={{ primary: { noWrap: true } }}
           />
         </ListItemButton>
       ))}
