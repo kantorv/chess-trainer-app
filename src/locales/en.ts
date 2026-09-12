@@ -376,6 +376,15 @@ const en = {
     continue: "Continue",
     play: "Play from here",
     remove: "Delete this opening",
+    /**
+     * The export controls (CTA-41), mirroring the savedGames block's naming —
+     * see `SavedOpenings.tsx` for why they are list-view only and how the
+     * picks persist across folder navigation.
+     */
+    select: "Select this opening",
+    selectAll: "Select all openings",
+    selected: "{{count}} selected",
+    download: "Download selected as PGN",
     /** The note dialog — shared with the Openings screen's save prompt. */
     note: {
       label: "Note",
@@ -400,6 +409,8 @@ const en = {
       renameFolder: "Rename folder",
       moveFolder: "Move folder",
       deleteFolder: "Delete folder",
+      /** The folder's own download — one .pgn of everything under it (CTA-41). */
+      download: "Download this folder as PGN",
       /** The save dialog's "no folder" choice — filing at the top level. */
       unfiled: "Unfiled",
       /** The move dialog's "none" row — the move's other destination. */

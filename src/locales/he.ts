@@ -260,6 +260,10 @@ const he: typeof en = {
     continue: "המשך",
     play: "שחקו מכאן",
     remove: "מחיקת הפתיחה",
+    select: "בחירת הפתיחה",
+    selectAll: "בחירת כל הפתיחות",
+    selected: "{{count}} נבחרו",
+    download: "הורדת הנבחרים כקובץ PGN",
     note: {
       label: "הערה",
       save: "שמירה",
@@ -274,6 +278,7 @@ const he: typeof en = {
       renameFolder: "שינוי שם תיקייה",
       moveFolder: "העברת תיקייה",
       deleteFolder: "מחיקת תיקייה",
+      download: "הורדת התיקייה כקובץ PGN",
       unfiled: "ללא תיקייה",
       topLevel: "ברמה העליונה",
       label: "תיקייה",

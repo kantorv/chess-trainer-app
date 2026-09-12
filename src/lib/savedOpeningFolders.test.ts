@@ -4,6 +4,7 @@ import { emptyTree } from "./gameTree";
 import { savedOpeningOf, type SavedOpening } from "./savedOpenings";
 import {
   flattenOpeningFolders,
+  openInFolder,
   openingFolderChildren,
   openingFolderPath,
   openingFolderSubtree,
@@ -241,6 +242,33 @@ describe("openingsUnderFolder — the count a folder card stands for", () => {
     const rows = [opening("o1", null)];
 
     expect(openingsUnderFolder(rows, tree, "open")).toBe(0);
+  });
+});
+
+describe("openInFolder — the rows behind a folder click", () => {
+  it("returns the openings across the whole subtree, in the caller's order", () => {
+    const tree = [
+      folder("open", "Openings", null),
+      folder("e4", "e4 lines", "open"),
+    ];
+    const rows = [
+      opening("o1", "open"),
+      opening("o2", "e4"),
+      opening("o3", "e4"),
+      opening("o4", null),
+    ];
+
+    expect(openInFolder(rows, tree, "open")).toEqual([rows[0], rows[1], rows[2]]);
+    expect(openInFolder(rows, tree, "e4")).toEqual([rows[1], rows[2]]);
+  });
+
+  it("is the same set openingsUnderFolder counts, by construction", () => {
+    const tree = [folder("open", "Openings", null)];
+    const rows = [opening("o1", "open"), opening("o2", "gone"), opening("o3", null)];
+
+    expect(openingsUnderFolder(rows, tree, "open")).toBe(
+      openInFolder(rows, tree, "open").length,
+    );
   });
 });
 

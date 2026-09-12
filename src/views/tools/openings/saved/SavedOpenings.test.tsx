@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { act, render, screen } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { Chess } from "chess.js";
@@ -58,6 +58,23 @@ vi.mock("react-chessboard", () => ({
   ),
 }));
 
+/*
+  The export is mocked at the module boundary rather than through the blob URL:
+  what is under test is *what* the screen hands `downloadPgn` — the stems and
+  the records — not the browser's save itself, which is the DOM half of
+  `lib/pgnExport.ts` and cannot run in jsdom meaningfully anyway.
+*/
+const { downloadCalls } = vi.hoisted(() => ({
+  downloadCalls: [] as { stem: string; pgns: string[] }[],
+}));
+
+vi.mock("../../../../lib/pgnExport", () => ({
+  downloadPgn: (stem: string, pgns: readonly string[]) => {
+    downloadCalls.push({ stem, pgns: [...pgns] });
+    return true;
+  },
+}));
+
 /**
  * A tree grown by playing SAN: each entry is `[parent path, moves]`, so a second
  * entry branching off an earlier point is how a side line is made.
@@ -113,6 +130,18 @@ const settleBook = async () => {
     await Promise.resolve();
   });
 };
+
+/*
+  A checkbox's `data-testid` sits on the Checkbox's root, and in jsdom a click
+  there never reaches the input — so a row's checkbox is queried by role inside
+  its row, and the header's inside its own box. The input is what carries the
+  state (and MUI's `data-indeterminate`), and the click is what toggles it.
+*/
+const rowCheckbox = (id: string) =>
+  within(screen.getByTestId(`saved-openings-item-${id}`)).getByRole("checkbox");
+
+const selectAllInput = () =>
+  within(screen.getByTestId("saved-openings-select-all")).getByRole("checkbox");
 
 beforeEach(async () => {
   await i18n.changeLanguage("en");
@@ -595,5 +624,169 @@ describe("Saved openings — the folder browser", () => {
     // The opening survives, unfiled — it shows at the top level again.
     expect(savedOpeningsSnapshot().find((row) => row.id === "direct")?.folderId).toBeNull();
     expect(screen.getByTestId("saved-openings-item-direct")).toBeInTheDocument();
+  });
+});
+
+describe("Saved openings — export", () => {
+  beforeEach(() => {
+    downloadCalls.length = 0;
+  });
+
+  /** Two root folders, one opening in each. */
+  const seedTwoFolders = () => {
+    const open = createOpeningFolder("Openings", null);
+    const games = createOpeningFolder("Games", null);
+    saveOpening(save("inOpen", [[[], ["e4"]]], "In Openings", "white", open?.id ?? null));
+    saveOpening(save("inGames", [[[], ["d4"]]], "In Games", "white", games?.id ?? null));
+    return { open: open?.id, games: games?.id };
+  };
+
+  it("keeps the picks across folder navigation, and select-all in a folder adds to them", async () => {
+    const ids = seedTwoFolders();
+    renderScreen();
+
+    // Drill into Openings and pick its one opening.
+    await userEvent.click(screen.getByTestId(`saved-openings-folder-open-${ids.open}`));
+    await userEvent.click(rowCheckbox("inOpen"));
+    expect(screen.getByTestId("saved-openings-selected-count")).toHaveTextContent(
+      "1 selected",
+    );
+
+    // Back out and into Games: the pick persists, the chip stays visible.
+    await userEvent.click(screen.getByTestId("saved-openings-breadcrumb-root"));
+    await userEvent.click(screen.getByTestId(`saved-openings-folder-open-${ids.games}`));
+    expect(screen.getByTestId("saved-openings-selected-count")).toHaveTextContent(
+      "1 selected",
+    );
+
+    // Select-all here adds Games' opening to the picks, not replaces them.
+    await userEvent.click(selectAllInput());
+    expect(screen.getByTestId("saved-openings-selected-count")).toHaveTextContent(
+      "2 selected",
+    );
+
+    // And the first pick is still ticked back in Openings.
+    await userEvent.click(screen.getByTestId("saved-openings-breadcrumb-root"));
+    await userEvent.click(screen.getByTestId(`saved-openings-folder-open-${ids.open}`));
+    expect(rowCheckbox("inOpen")).toBeChecked();
+    expect(screen.getByTestId("saved-openings-selected-count")).toHaveTextContent(
+      "2 selected",
+    );
+  });
+
+  it("marks select-all indeterminate while only part of the folder is picked", async () => {
+    const open = createOpeningFolder("Openings", null);
+    saveOpening(save("a1", [[[], ["e4"]]], "First", "white", open?.id ?? null));
+    saveOpening(save("a2", [[[], ["d4"]]], "Second", "white", open?.id ?? null));
+
+    renderScreen();
+
+    await userEvent.click(screen.getByTestId(`saved-openings-folder-open-${open?.id}`));
+    await userEvent.click(rowCheckbox("a1"));
+
+    // One of this folder's two openings is picked — the header box says so,
+    // without claiming that all of them are (MUI surfaces the tri-state as an
+    // attribute on the input rather than the `.indeterminate` property).
+    const selectAll = selectAllInput();
+    expect(selectAll).toHaveAttribute("data-indeterminate", "true");
+    expect(selectAll).not.toBeChecked();
+  });
+
+  it("exports one .pgn of everything under the folder, sub-folders included", async () => {
+    const open = createOpeningFolder("Openings", null);
+    const e4 = createOpeningFolder("e4 lines", open?.id ?? null);
+    const direct = save("direct", [[[], ["e4"]]], "Direct", "white", open?.id ?? null);
+    const nested = save("nested", [[[], ["d4"]]], "Nested", "white", e4?.id ?? null);
+    saveOpening(direct);
+    saveOpening(nested);
+    saveOpening(save("loose", [[[], ["c4"]]], "Unfiled"));
+
+    renderScreen();
+
+    await userEvent.click(
+      screen.getByTestId(`saved-openings-folder-download-${open?.id}`),
+    );
+
+    // One file, named from the folder, holding the subtree's openings — the
+    // same set the folder's count stands for — and not the Unfiled one. The
+    // store is newest first, so the nested opening (saved later) leads.
+    expect(downloadCalls).toHaveLength(1);
+    expect(downloadCalls[0].stem).toBe("openings");
+    expect(downloadCalls[0].pgns).toEqual([nested.pgn, direct.pgn]);
+  });
+
+  it("falls back to a fixed stem for a folder whose name slugs to nothing", async () => {
+    // A folder named in Hebrew slugs to empty — `slugify` keeps [a-z0-9] only.
+    const hebrew = createOpeningFolder("פתיחות", null);
+    saveOpening(save("a1", [[[], ["e4"]]], "Here", "white", hebrew?.id ?? null));
+
+    renderScreen();
+
+    await userEvent.click(
+      screen.getByTestId(`saved-openings-folder-download-${hebrew?.id}`),
+    );
+
+    expect(downloadCalls).toHaveLength(1);
+    expect(downloadCalls[0].stem).toBe("saved-openings");
+  });
+
+  it("exports the raw stored PGN for a record that will not parse", async () => {
+    saveOpening({ ...save("broken", [[[], ["e4"]]]), pgn: "1. Zz9" });
+
+    renderScreen();
+
+    // Selectable, despite not parsing — the export copies the stored PGN.
+    await userEvent.click(rowCheckbox("broken"));
+    expect(screen.getByTestId("saved-openings-download")).toBeEnabled();
+
+    await userEvent.click(screen.getByTestId("saved-openings-download"));
+
+    expect(downloadCalls).toHaveLength(1);
+    expect(downloadCalls[0].stem).toBe("chess-trainer-openings");
+    expect(downloadCalls[0].pgns).toEqual(["1. Zz9"]);
+  });
+
+  it("disables the download while nothing is picked", () => {
+    saveOpening(save("a1", [[[], ["e4"]]]));
+
+    renderScreen();
+
+    expect(screen.getByTestId("saved-openings-download")).toBeDisabled();
+    expect(
+      screen.queryByTestId("saved-openings-selected-count"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("disables a folder's download when it is empty, and enables one with contents", () => {
+    const empty = createOpeningFolder("Empty", null);
+    const full = createOpeningFolder("Full", null);
+    saveOpening(save("a1", [[[], ["d4"]]], "In Full", "white", full?.id ?? null));
+
+    renderScreen();
+
+    expect(
+      screen.getByTestId(`saved-openings-folder-download-${empty?.id}`),
+    ).toBeDisabled();
+    expect(
+      screen.getByTestId(`saved-openings-folder-download-${full?.id}`),
+    ).toBeEnabled();
+  });
+
+  it("drops the selection when the view switches to boards", async () => {
+    saveOpening(save("a1", [[[], ["e4"]]]));
+
+    renderScreen();
+
+    await userEvent.click(rowCheckbox("a1"));
+    expect(screen.getByTestId("saved-openings-selected-count")).toBeInTheDocument();
+
+    // The checkboxes only exist in the list view, and the selection drops with
+    // them.
+    await userEvent.click(screen.getByTestId("saved-openings-view-compact"));
+    expect(screen.queryByTestId("saved-openings-export")).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByTestId("saved-openings-view-list"));
+    expect(screen.getByTestId("saved-openings-download")).toBeDisabled();
+    expect(rowCheckbox("a1")).not.toBeChecked();
   });
 });
