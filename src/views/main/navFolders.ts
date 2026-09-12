@@ -2,6 +2,7 @@ import type { SvgIconComponent } from "@mui/icons-material";
 import FolderSpecialRoundedIcon from "@mui/icons-material/FolderSpecialRounded";
 import HandymanRoundedIcon from "@mui/icons-material/HandymanRounded";
 import MemoryRoundedIcon from "@mui/icons-material/MemoryRounded";
+import TravelExploreRoundedIcon from "@mui/icons-material/TravelExploreRounded";
 import VisibilityOffRoundedIcon from "@mui/icons-material/VisibilityOffRounded";
 
 import type { LocalizedText } from "../../lib/libraryCatalog";
@@ -80,5 +81,10 @@ export const navFolders = (): readonly NavFolder[] => [
     id: "tools",
     labelKey: "nav.folders.tools",
     icon: HandymanRoundedIcon,
+  },
+  {
+    id: "openings",
+    labelKey: "nav.folders.openings",
+    icon: TravelExploreRoundedIcon,
   },
 ];

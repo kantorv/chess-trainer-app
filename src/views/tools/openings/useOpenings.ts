@@ -12,6 +12,13 @@ import {
   type PositionBook,
 } from "../../../lib/openings";
 import { addMove, emptyTree, type GameTree } from "../../../lib/gameTree";
+import {
+  newSavedOpeningId,
+  savedOpeningOf,
+  savedOpeningToTree,
+  type SavedOpening,
+} from "../../../lib/savedOpenings";
+import { saveOpening as persistOpening } from "../../../lib/savedOpeningStore";
 import { useTreeNavigation } from "../analysis/useTreeNavigation";
 
 /**
@@ -35,12 +42,35 @@ import { useTreeNavigation } from "../analysis/useTreeNavigation";
  * position on screen*, live or not — stepping back through a line already
  * played is exactly when a reader wants to see what it was called, and what
  * else eco.json knows from there.
+ *
+ * ## Saving and reopening
+ *
+ * A position worth coming back to is saved by a **button** — nothing here
+ * writes on its own, because an opening is explored and discarded far more
+ * often than it is kept, and a reader who has to delete an autosave is a
+ * reader who gives up on saving anything. {@link OpeningsStart.resume} reopens
+ * one saved earlier: the tree (side lines and all), the orientation it was
+ * viewed from, and its note, which is shown read-only — editing a note happens
+ * on the Saved openings screen, not here.
  */
 
 /** A tree with nothing in it, taken once — plain data that nothing mutates. */
 const NEW_TREE: GameTree = emptyTree();
 
-export const useOpenings = (initialFen?: string) => {
+/**
+ * What the screen opens with. Every field is read on the **first render only**:
+ * arriving at `/openings?fen=…` or `/openings?openings=…` is what mounts the
+ * screen, so there is no later change to follow. A parameter that will not
+ * parse is the caller's to reject; it simply arrives here as `undefined`.
+ */
+export type OpeningsStart = {
+  /** The position to open on — the same `?fen=` hand-off every other screen takes. */
+  fen?: string;
+  /** An opening to go on exploring — the Saved openings `?openings=` hand-off. */
+  resume?: SavedOpening;
+};
+
+export const useOpenings = ({ fen: initialFen, resume }: OpeningsStart = {}) => {
   /*
     One `chess.js` instance, in a ref, moved to whichever position is being
     asked about — the board's position comes from the tree, so this is a rules
@@ -55,13 +85,38 @@ export const useOpenings = (initialFen?: string) => {
     return chess;
   }, []);
 
-  // Read once, as initial state: arriving at `?fen=` is what mounts the screen.
-  const [tree, setTree] = useState<GameTree>(() =>
-    initialFen === undefined ? NEW_TREE : emptyTree(initialFen),
-  );
-  const [orientation, setOrientation] = useState<"white" | "black">(() =>
-    initialFen !== undefined && initialFen.split(" ")[1] === "b" ? "black" : "white",
-  );
+  /*
+    A reopened opening, parsed once. `parsePgnTree` rather than a mainline parse,
+    because the side lines are the one thing an opening explorer keeps. A record
+    that will not parse reopens as nothing at all — the same answer an unreadable
+    `?fen=` gets. Memoised on the record: only the first render's value is ever
+    kept, but parsing a PGN on every render would be a real cost for nothing.
+  */
+  const reopened = useMemo(() => {
+    if (resume === undefined) return undefined;
+    const tree = savedOpeningToTree(resume);
+    return tree === undefined ? undefined : { tree, note: resume.note };
+  }, [resume]);
+
+  /*
+    The position the screen was opened on. A reopened opening reopens at ply 0 —
+    the tree itself is the thing to explore — so its start position is what "New
+    game" returns to, exactly as a `?fen=` hand-off does.
+  */
+  const startFen = reopened?.tree.startFen ?? initialFen;
+
+  // Read once, as initial state: arriving at `?fen=` or `?openings=` is what
+  // mounts the screen.
+  const [tree, setTree] = useState<GameTree>(() => {
+    if (reopened !== undefined) return reopened.tree;
+    return initialFen === undefined ? NEW_TREE : emptyTree(initialFen);
+  });
+  const [orientation, setOrientation] = useState<"white" | "black">(() => {
+    if (resume !== undefined) return resume.orientation;
+    return initialFen !== undefined && initialFen.split(" ")[1] === "b"
+      ? "black"
+      : "white";
+  });
   const [promotion, setPromotion] = useState<{ from: Square; to: Square } | null>(null);
   const [hoveredMove, setHoveredMove] = useState<KnownMoveOpening | null>(null);
 
@@ -221,15 +276,30 @@ export const useOpenings = (initialFen?: string) => {
    * the reader came here to explore, with no way back to it.
    */
   const newGame = useCallback(() => {
-    chessRef.current = new Chess(initialFen);
-    setTree(initialFen === undefined ? NEW_TREE : emptyTree(initialFen));
+    chessRef.current = new Chess(startFen);
+    setTree(startFen === undefined ? NEW_TREE : emptyTree(startFen));
     setPromotion(null);
     goToNode(null);
-  }, [goToNode, initialFen]);
+  }, [goToNode, startFen]);
 
   const flipBoard = useCallback(
     () => setOrientation((side) => (side === "white" ? "black" : "white")),
     [],
+  );
+
+  /*
+    Save the position on screen, with the note the reader just wrote, as a brand
+    new record — each save is a new position, not an update to the last one, so
+    a fresh id every time. The store's idempotency is the guard against a double
+    click stacking a duplicate; nothing here needs to remember a session id.
+  */
+  const saveOpening = useCallback(
+    (note: string) => {
+      persistOpening(
+        savedOpeningOf(newSavedOpeningId(), tree, orientation, note),
+      );
+    },
+    [tree, orientation],
   );
 
   return {
@@ -245,6 +315,10 @@ export const useOpenings = (initialFen?: string) => {
     nextMoves,
     playMove,
     setHoveredMove,
+    /** The note of a reopened opening, or `undefined` when this is not one. */
+    note: reopened?.note,
+    /** Save the position on screen under a note. Button-triggered only. */
+    saveOpening,
   };
 };
 

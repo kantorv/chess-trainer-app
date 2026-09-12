@@ -3,6 +3,7 @@ import Box from "@mui/material/Box";
 import { createSearchParams, useNavigate, useSearchParams } from "react-router";
 import { Chessboard, type ChessboardOptions, type PieceDropHandlerArgs } from "react-chessboard";
 import { FenParseError, parseFen } from "../../../lib/fen";
+import { findSavedOpening } from "../../../lib/savedOpeningStore";
 import { RightPanel } from "../../main/rightPanel";
 import PromotionPicker from "../../shared/PromotionPicker";
 import OpeningsPanel from "./OpeningsPanel";
@@ -25,7 +26,7 @@ import { useOpenings } from "./useOpenings";
  *
  * ### Arriving with a position
  *
- * `/tools/openings?fen=<position>` opens on that position — the same `?fen=`
+ * `/openings?fen=<position>` opens on that position — the same `?fen=`
  * hand-off the Board Editor, Play with Engine and the Analysis Board already
  * take (see the root `CLAUDE.md`, "An editor owns a position, not a game").
  * This screen does not replay anything, so unlike the two library hand-offs
@@ -37,6 +38,14 @@ import { useOpenings } from "./useOpenings";
  * Validated with `parseFen` and taken as *initial* state, like every other
  * screen that reads this parameter: a link nobody can read opens on the
  * starting position instead of throwing.
+ *
+ * ### Arriving with a saved opening
+ *
+ * `/openings?openings=<id>` reopens a saved opening — the whole tree (side
+ * lines and all), the orientation it was viewed from, and its note, which is
+ * shown read-only (editing happens on the Saved openings screen). The id is
+ * resolved against the store with `findSavedOpening`; one that is not there
+ * reopens as a fresh board, exactly as an unreadable `?fen=` does.
  */
 function OpeningsBoard() {
   const navigate = useNavigate();
@@ -53,7 +62,17 @@ function OpeningsBoard() {
     }
   }, [requested]);
 
-  const state = useOpenings(initialFen);
+  // A saved opening the reader asked to go on exploring. `findSavedOpening`
+  // resolves the `?openings=` id against the store and returns `undefined` for
+  // an id that is not there, exactly as an unreadable `?fen=` reopens as the
+  // starting position rather than throwing.
+  const requestedOpening = searchParams.get("openings");
+  const resume = useMemo(
+    () => findSavedOpening(requestedOpening),
+    [requestedOpening],
+  );
+
+  const state = useOpenings({ fen: initialFen, resume });
 
   /**
    * "Play from here" — continue the position on screen against the engine. The

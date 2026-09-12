@@ -26,12 +26,14 @@ const en = {
     savedAnalyses: "Saved analyses",
     boardEditor: "Board Editor",
     openings: "Openings",
+    savedOpenings: "Saved openings",
     /** Sidebar folders — groupings over the routes, never routes themselves. */
     folders: {
       engine: "Engine",
       maskedPieces: "Masked Pieces",
       games: "Games",
       tools: "Tools",
+      openings: "Openings",
       /**
        * The Library section's root (was "User PGNs" before CTA-38). Its
        * sub-folders have no key here and never will: they are generated — one
@@ -330,6 +332,61 @@ const en = {
     download: "Download selected as PGN",
   },
   /**
+   * The **Saved openings** screen — the positions the reader has saved on the
+   * Openings screen (`views/tools/openings/saved/`). The savedAnalyses block
+   * above, minus the export machinery an opening has no use for, and plus the
+   * one thing an opening has that an analysis does not: a note, named by it
+   * and editable in place.
+   */
+  savedOpenings: {
+    title: "Saved openings",
+    count: "Openings: {{count}}",
+    empty:
+      "No saved openings yet. Play through an opening on the Openings screen and save it to keep it here.",
+    hint: "Every position you save on the Openings screen is kept here with its whole tree of moves. Give it a note, and edit the note any time.",
+    /** Said plainly: this is a browser, not a backup — as the Uploads screen does. */
+    storage:
+      "Saved openings are kept in this browser only. Clearing site data removes them, and they do not follow you to another device.",
+    /**
+     * A saved opening with no note yet. The note is what a row is named by, so
+     * a nameless one falls back to the translated generic.
+     */
+    untitled: "Saved opening",
+    /** Plural forms, because a one-move opening is a real row here. */
+    moves_one: "{{count}} move",
+    moves_other: "{{count}} moves",
+    /** Every move past the mainline — the side lines the reader tried and kept. */
+    variations_one: "{{count}} variation",
+    variations_other: "{{count}} variations",
+    /** A stored record whose PGN no longer parses: it can only be deleted. */
+    unreadable: "This opening could not be read.",
+    /**
+     * The three-way view toggle in the top bar: the list the screen shipped
+     * with, and the library list screen's own two board sizes.
+     */
+    view: {
+      label: "View",
+      list: "List",
+      compact: "Small boards",
+      comfortable: "Big boards",
+    },
+    /** The two destinations — see `SavedOpenings.tsx` for why these two. */
+    continue: "Continue",
+    play: "Play from here",
+    remove: "Delete this opening",
+    /** The note dialog — shared with the Openings screen's save prompt. */
+    note: {
+      label: "Note",
+      save: "Save",
+      cancel: "Cancel",
+      /** The Openings screen asks for the note when saving a brand-new record. */
+      saveTitle: "Save this opening",
+      /** The Saved openings screen asks for it again when editing one. */
+      editTitle: "Edit note",
+      edit: "Edit note",
+    },
+  },
+  /**
    * The Analysis Board. Chrome only: SAN, the FEN and the scores are notation
    * and stay language-independent.
    */
@@ -502,6 +559,8 @@ const en = {
       reset: "Reset",
       /** Hand this position off to Play with Engine — the Board Editor's wording. */
       playFromHere: "Play from here",
+      /** Keep the position on screen — opens the note prompt before it is saved. */
+      save: "Save",
     },
   },
   /**
