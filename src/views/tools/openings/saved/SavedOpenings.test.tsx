@@ -8,7 +8,12 @@ import i18n from "../../../../i18n";
 import AppThemeWithLang from "../../../../theme/AppThemeWithLang";
 import { addMove, emptyTree, fenAtNode, nodeAtSanPath, type GameTree } from "../../../../lib/gameTree";
 import { savedOpeningOf, type SavedOpening } from "../../../../lib/savedOpenings";
-import { saveOpening } from "../../../../lib/savedOpeningStore";
+import { saveOpening, savedOpeningsSnapshot } from "../../../../lib/savedOpeningStore";
+import {
+  createOpeningFolder,
+  findOpeningFolder,
+  openingFoldersSnapshot,
+} from "../../../../lib/savedOpeningFolderStore";
 import { cardSizeTrack } from "../../../library/cardSize";
 import { RightPanelOutlet, RightPanelProvider } from "../../../main/rightPanel";
 import SavedOpenings from "./SavedOpenings";
@@ -85,8 +90,10 @@ const save = (
   lines: readonly (readonly [readonly string[], readonly string[]])[],
   note = "",
   orientation: "white" | "black" = "white",
+  folderId: string | null = null,
   now = new Date("2026-09-07T10:00:00.000Z"),
-): SavedOpening => savedOpeningOf(id, grow(lines), orientation, note, now);
+): SavedOpening =>
+  savedOpeningOf(id, grow(lines), orientation, note, folderId, now);
 
 const renderScreen = () =>
   render(
@@ -358,5 +365,235 @@ describe("Saved openings — the panel", () => {
     expect(screen.getByTestId("saved-openings-storage-note")).toHaveTextContent(
       "this browser only",
     );
+  });
+});
+
+describe("Saved openings — the folder browser", () => {
+  /** Two roots, a sub-folder, and openings filed at each level. */
+  const seedTree = () => {
+    const open = createOpeningFolder("Openings", null);
+    const e4 = createOpeningFolder("e4 lines", open?.id ?? null);
+    const games = createOpeningFolder("Games", null);
+
+    saveOpening(save("direct", [[[], ["e4"]]], "In Openings", "white", open?.id ?? null));
+    saveOpening(save("nested", [[[], ["d4"]]], "In e4 lines", "white", e4?.id ?? null));
+    saveOpening(save("loose", [[[], ["c4"]]], "Unfiled"));
+
+    return { open: open?.id, e4: e4?.id, games: games?.id };
+  };
+
+  it("shows root folders at the top level, each counting everything under it", () => {
+    const ids = seedTree();
+
+    renderScreen();
+
+    // Openings' caption counts its whole subtree: the opening in it and the
+    // one in e4 lines — a folder card stands for what is behind the click.
+    // e4 lines itself is one level down; only the roots are listed here.
+    expect(screen.getByTestId(`saved-openings-folder-${ids.open}`)).toHaveTextContent(
+      "2 openings",
+    );
+    // Games has nothing under it: the Unfiled opening is an item at the top
+    // level, not filed in a folder.
+    expect(screen.getByTestId(`saved-openings-folder-${ids.games}`)).toHaveTextContent(
+      "0 openings",
+    );
+    // The Unfiled opening is an item at the top level, not hidden away.
+    expect(screen.getByTestId("saved-openings-item-loose")).toBeInTheDocument();
+    // No breadcrumb at the top — there is no chain to show.
+    expect(
+      screen.queryByTestId("saved-openings-breadcrumb"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("drills in and shows that folder's sub-folders and its openings", async () => {
+    const ids = seedTree();
+    renderScreen();
+
+    await userEvent.click(
+      screen.getByTestId(`saved-openings-folder-open-${ids.open}`),
+    );
+
+    // The sub-folder is listed; the Unfiled opening is not.
+    expect(
+      screen.queryByTestId(`saved-openings-folder-${ids.e4}`),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId("saved-openings-item-loose")).not.toBeInTheDocument();
+    // The opening filed directly here shows; the nested one stays a level down.
+    expect(screen.getByTestId("saved-openings-item-direct")).toBeInTheDocument();
+    expect(screen.queryByTestId("saved-openings-item-nested")).not.toBeInTheDocument();
+  });
+
+  it("navigates back up by the breadcrumb chain", async () => {
+    const ids = seedTree();
+    renderScreen();
+
+    await userEvent.click(
+      screen.getByTestId(`saved-openings-folder-open-${ids.open}`),
+    );
+    await userEvent.click(
+      screen.getByTestId(`saved-openings-folder-open-${ids.e4}`),
+    );
+
+    // Two levels down: the breadcrumb names the whole chain.
+    expect(screen.getByTestId("saved-openings-breadcrumb-root")).toBeInTheDocument();
+    expect(screen.getByTestId(`saved-openings-breadcrumb-${ids.open}`)).toBeInTheDocument();
+    expect(screen.getByTestId(`saved-openings-breadcrumb-${ids.e4}`)).toHaveTextContent(
+      "e4 lines",
+    );
+
+    await userEvent.click(
+      screen.getByTestId(`saved-openings-breadcrumb-${ids.open}`),
+    );
+
+    // Back at Openings, not at the top.
+    expect(screen.getByTestId("saved-openings-item-direct")).toBeInTheDocument();
+    await userEvent.click(screen.getByTestId("saved-openings-breadcrumb-root"));
+
+    // And the top level again: root folders and the Unfiled opening.
+    expect(screen.getByTestId(`saved-openings-folder-${ids.open}`)).toBeInTheDocument();
+    expect(screen.getByTestId("saved-openings-item-loose")).toBeInTheDocument();
+  });
+
+  it("creates a folder under the folder the reader is standing in", async () => {
+    const ids = seedTree();
+    renderScreen();
+
+    await userEvent.click(screen.getByTestId("saved-openings-new-folder"));
+    await userEvent.type(screen.getByTestId("opening-folder-name-input"), "New root");
+    await userEvent.click(screen.getByTestId("opening-folder-name-save"));
+
+    const created = openingFoldersSnapshot().find((f) => f.name === "New root");
+    expect(created?.parentId).toBeNull();
+
+    // Inside Openings, the same button nests one level down.
+    await userEvent.click(
+      screen.getByTestId(`saved-openings-folder-open-${ids.open}`),
+    );
+    await userEvent.click(screen.getByTestId("saved-openings-new-folder"));
+    await userEvent.type(screen.getByTestId("opening-folder-name-input"), "New sub");
+    await userEvent.click(screen.getByTestId("opening-folder-name-save"));
+
+    const sub = openingFoldersSnapshot().find((f) => f.name === "New sub");
+    expect(sub?.parentId).toBe(ids.open);
+  });
+
+  it("renames a folder in place", async () => {
+    const ids = seedTree();
+    renderScreen();
+
+    await userEvent.click(
+      screen.getByTestId(`saved-openings-folder-rename-${ids.open}`),
+    );
+    const input = screen.getByTestId("opening-folder-name-input");
+    await userEvent.clear(input);
+    await userEvent.type(input, "Renamed");
+    await userEvent.click(screen.getByTestId("opening-folder-name-save"));
+
+    expect(screen.getByTestId(`saved-openings-folder-${ids.open}`)).toHaveTextContent(
+      "Renamed",
+    );
+  });
+
+  it("moves a folder via the dialog, never into its own subtree", async () => {
+    const ids = seedTree();
+    renderScreen();
+
+    // Move "Openings" from the top: Games is offered, but e4 lines — inside
+    // Openings' own subtree — is never offered.
+    await userEvent.click(
+      screen.getByTestId(`saved-openings-folder-move-${ids.open}`),
+    );
+    expect(
+      screen.getByTestId(`opening-folder-picker-${ids.games}`),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByTestId(`opening-folder-picker-${ids.e4}`),
+    ).not.toBeInTheDocument();
+    await userEvent.click(screen.getByTestId("opening-folder-move-cancel"));
+    expect(findOpeningFolder(ids.open)?.parentId).toBeNull();
+
+    // Move "e4 lines" (inside Openings): Games is offered; e4 itself is not.
+    await userEvent.click(
+      screen.getByTestId(`saved-openings-folder-open-${ids.open}`),
+    );
+    await userEvent.click(
+      screen.getByTestId(`saved-openings-folder-move-${ids.e4}`),
+    );
+    expect(
+      screen.getByTestId(`opening-folder-picker-${ids.games}`),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByTestId(`opening-folder-picker-${ids.e4}`),
+    ).not.toBeInTheDocument();
+    await userEvent.click(
+      screen.getByTestId(`opening-folder-picker-${ids.games}`),
+    );
+
+    expect(findOpeningFolder(ids.e4)?.parentId).toBe(ids.games);
+  });
+
+  it("deletes an empty folder outright, without asking", async () => {
+    const empty = createOpeningFolder("Empty", null);
+    renderScreen();
+
+    await userEvent.click(
+      screen.getByTestId(`saved-openings-folder-delete-${empty?.id}`),
+    );
+
+    expect(openingFoldersSnapshot()).toEqual([]);
+    expect(
+      screen.queryByTestId("opening-folder-delete-confirm"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("asks before deleting a folder with contents, and keeps them", async () => {
+    const ids = seedTree();
+    renderScreen();
+
+    await userEvent.click(
+      screen.getByTestId(`saved-openings-folder-delete-${ids.open}`),
+    );
+
+    // The dialog states the rule and what is behind the click — everything
+    // under Openings, directly and not: two openings (one in e4 lines), one
+    // sub-folder.
+    expect(screen.getByTestId("opening-folder-delete-counts")).toHaveTextContent(
+      "2 openings",
+    );
+    expect(screen.getByTestId("opening-folder-delete-counts")).toHaveTextContent(
+      "1 sub-folders",
+    );
+
+    await userEvent.click(screen.getByTestId("opening-folder-delete-cancel"));
+    expect(findOpeningFolder(ids.open)).toBeDefined();
+
+    await userEvent.click(
+      screen.getByTestId(`saved-openings-folder-delete-${ids.open}`),
+    );
+    await userEvent.click(screen.getByTestId("opening-folder-delete-confirm"));
+
+    // The folder is gone; the tree closed up — e4 lines re-parented to the
+    // top, its opening still filed in it.
+    expect(findOpeningFolder(ids.open)).toBeUndefined();
+    expect(findOpeningFolder(ids.e4)?.parentId).toBeNull();
+    expect(
+      savedOpeningsSnapshot().find((row) => row.id === "nested")?.folderId,
+    ).toBe(ids.e4);
+  });
+
+  it("files openings filed directly in a deleted folder back to Unfiled", async () => {
+    const only = createOpeningFolder("Only", null);
+    saveOpening(save("direct", [[[], ["e4"]]], "In Only", "white", only?.id ?? null));
+    renderScreen();
+
+    await userEvent.click(
+      screen.getByTestId(`saved-openings-folder-delete-${only?.id}`),
+    );
+    await userEvent.click(screen.getByTestId("opening-folder-delete-confirm"));
+
+    // The opening survives, unfiled — it shows at the top level again.
+    expect(savedOpeningsSnapshot().find((row) => row.id === "direct")?.folderId).toBeNull();
+    expect(screen.getByTestId("saved-openings-item-direct")).toBeInTheDocument();
   });
 });

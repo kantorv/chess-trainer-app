@@ -336,7 +336,9 @@ const en = {
    * Openings screen (`views/tools/openings/saved/`). The savedAnalyses block
    * above, minus the export machinery an opening has no use for, and plus the
    * one thing an opening has that an analysis does not: a note, named by it
-   * and editable in place.
+   * and editable in place. Since CTA-40 the list is filed into a tree of
+   * folders — the save dialog's picker and the screen's folder browser share
+   * the `folder` block below.
    */
   savedOpenings: {
     title: "Saved openings",
@@ -384,6 +386,49 @@ const en = {
       /** The Saved openings screen asks for it again when editing one. */
       editTitle: "Edit note",
       edit: "Edit note",
+    },
+    /**
+     * The folder system (CTA-40): a folder picker in the save dialog, a folder
+     * browser on the Saved openings screen, and the CRUD wording for both.
+     * Chrome only — a folder's name is the reader's own words, never a key.
+     */
+    folder: {
+      /** The breadcrumb's first crumb — standing at the top of the tree. */
+      root: "All openings",
+      /** The top bar's create button, and the save dialog's inline create. */
+      newFolder: "New folder",
+      renameFolder: "Rename folder",
+      moveFolder: "Move folder",
+      deleteFolder: "Delete folder",
+      /** The save dialog's "no folder" choice — filing at the top level. */
+      unfiled: "Unfiled",
+      /** The move dialog's "none" row — the move's other destination. */
+      topLevel: "Top level",
+      /** The save dialog's section heading. */
+      label: "Folder",
+      /**
+       * Said under the save dialog's picker: leaving it unchosen files the
+       * opening by the default rule, which `useOpenings.saveOpening` owns.
+       */
+      defaultHint:
+        "Leave it unchosen and the opening is filed by its opening name — an off-book position goes to Unfiled.",
+      /** Both the create and the rename dialog's field. */
+      name: "Folder name",
+      save: "Save",
+      cancel: "Cancel",
+      /**
+       * The delete confirmation for a non-empty folder: the contents stay —
+       * openings become Unfiled, sub-folders re-parent up a level.
+       */
+      deleteConfirm:
+        "Deleting this folder keeps its contents: openings filed in it become Unfiled, and its sub-folders move up one level.",
+      deleteCounts:
+        "This folder holds {{openings}} openings and {{subFolders}} sub-folders.",
+      /** A folder card's caption, counting everything under it. */
+      count_one: "{{count}} opening",
+      count_other: "{{count}} openings",
+      /** An empty folder's body, once the reader has drilled in. */
+      empty: "This folder is empty.",
     },
   },
   /**

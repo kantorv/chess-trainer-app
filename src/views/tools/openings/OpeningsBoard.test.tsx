@@ -10,6 +10,11 @@ import {
   HOVERED_MOVE_ARROW_COLOR,
   KNOWN_MOVE_ARROW_COLOR,
 } from "../../../lib/openings";
+import { savedOpeningsSnapshot } from "../../../lib/savedOpeningStore";
+import {
+  createOpeningFolder,
+  openingFoldersSnapshot,
+} from "../../../lib/savedOpeningFolderStore";
 import { RightPanelOutlet, RightPanelProvider } from "../../main/rightPanel";
 import OpeningsBoard from "./OpeningsBoard";
 
@@ -410,5 +415,122 @@ describe("the Openings screen — arriving with a position", () => {
       "data-position",
       START_FEN,
     );
+  });
+});
+
+/*
+  The store is *not* stubbed: it writes to the `localStorage` jsdom provides and
+  `src/test/setup.ts` clears between tests, which is the behaviour under test —
+  the same stand-in policy the Saved openings suite states.
+*/
+describe("the Openings screen — saving", () => {
+  it("opens the save prompt with Unfiled, a picker and the default hint", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    await bookSettled();
+
+    await user.click(screen.getByTestId("openings-save"));
+
+    expect(screen.getByTestId("opening-folder-picker-unfiled")).toBeInTheDocument();
+    expect(screen.getByTestId("opening-new-folder")).toBeInTheDocument();
+    expect(screen.getByTestId("opening-folder-default-hint")).toHaveTextContent(
+      i18n.t("savedOpenings.folder.defaultHint"),
+    );
+  });
+
+  it("saves into the folder the reader chose", async () => {
+    const user = userEvent.setup();
+    const folder = createOpeningFolder("My lines", null);
+    renderScreen();
+    await bookSettled();
+
+    await user.click(screen.getByTestId("openings-save"));
+    await user.click(screen.getByTestId(`opening-folder-picker-${folder?.id}`));
+    await user.type(screen.getByTestId("opening-note-input"), "My line");
+    await user.click(screen.getByTestId("opening-note-save"));
+
+    expect(savedOpeningsSnapshot()).toHaveLength(1);
+    expect(savedOpeningsSnapshot()[0].note).toBe("My line");
+    expect(savedOpeningsSnapshot()[0].folderId).toBe(folder?.id);
+  });
+
+  it("saves Unfiled when the reader picks it, over the default rule", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    await bookSettled();
+
+    // After 1. e4 the default rule would file by the opening's name; picking
+    // Unfiled explicitly is the choice that wins.
+    await user.click(screen.getByTestId("openings-next-move-e4"));
+    await user.click(screen.getByTestId("openings-save"));
+    await user.click(screen.getByTestId("opening-folder-picker-unfiled"));
+    await user.click(screen.getByTestId("opening-note-save"));
+
+    expect(savedOpeningsSnapshot()[0].folderId).toBeNull();
+    expect(openingFoldersSnapshot()).toEqual([]);
+  });
+
+  it("creates a folder inline and saves into it", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    await bookSettled();
+
+    await user.click(screen.getByTestId("openings-save"));
+    await user.click(screen.getByTestId("opening-new-folder"));
+    await user.type(
+      screen.getByTestId("opening-new-folder-input"),
+      "New lines{Enter}",
+    );
+
+    // The folder is a real record already, and it is the picker's selection.
+    const created = openingFoldersSnapshot().find((f) => f.name === "New lines");
+    expect(created).toBeDefined();
+
+    await user.click(screen.getByTestId("opening-note-save"));
+
+    expect(savedOpeningsSnapshot()[0].folderId).toBe(created?.id);
+  });
+
+  it("keeps a folder the reader created inline, even if the save is cancelled", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    await bookSettled();
+
+    await user.click(screen.getByTestId("openings-save"));
+    await user.click(screen.getByTestId("opening-new-folder"));
+    await user.type(screen.getByTestId("opening-new-folder-input"), "Kept{Enter}");
+    await user.click(screen.getByTestId("opening-note-cancel"));
+
+    expect(openingFoldersSnapshot().map((f) => f.name)).toEqual(["Kept"]);
+    expect(savedOpeningsSnapshot()).toEqual([]);
+  });
+
+  it("files by the opening's own name when no folder was chosen", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    await bookSettled();
+
+    await user.click(screen.getByTestId("openings-next-move-e4"));
+    await user.click(screen.getByTestId("openings-save"));
+    await user.click(screen.getByTestId("opening-note-save"));
+
+    // A folder named after the opening, at the top level, and the opening in it.
+    const created = openingFoldersSnapshot().find(
+      (f) => f.name === "King's Pawn Game",
+    );
+    expect(created?.parentId).toBeNull();
+    expect(savedOpeningsSnapshot()[0].folderId).toBe(created?.id);
+  });
+
+  it("files an off-book position to Unfiled when no folder was chosen", async () => {
+    const user = userEvent.setup();
+    renderScreen(`/openings?fen=${encodeURIComponent(offBookFen())}`);
+    await bookSettled();
+
+    await user.click(screen.getByTestId("openings-save"));
+    await user.click(screen.getByTestId("opening-note-save"));
+
+    expect(savedOpeningsSnapshot()[0].folderId).toBeNull();
+    expect(openingFoldersSnapshot()).toEqual([]);
   });
 });

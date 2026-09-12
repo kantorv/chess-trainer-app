@@ -56,7 +56,7 @@ const save = (
   tree: GameTree,
   overrides: Partial<SavedOpening> = {},
 ): SavedOpening => ({
-  ...savedOpeningOf("a1", tree, "white", "My Italian", AT),
+  ...savedOpeningOf("a1", tree, "white", "My Italian", null, AT),
   ...overrides,
 });
 
@@ -102,7 +102,14 @@ describe("savedOpeningOf — writing an opening down", () => {
   });
 
   it("carries the note and the orientation the board was saved from", () => {
-    const saved = savedOpeningOf("a1", grow([[[], ["e4"]]]), "black", "My line", AT);
+    const saved = savedOpeningOf(
+      "a1",
+      grow([[[], ["e4"]]]),
+      "black",
+      "My line",
+      null,
+      AT,
+    );
 
     expect(saved.note).toBe("My line");
     expect(saved.orientation).toBe("black");
@@ -114,6 +121,7 @@ describe("savedOpeningOf — writing an opening down", () => {
       grow([[[], ["e4"]]]),
       "white",
       "",
+      null,
       new Date("2026-09-08T09:00:00.000Z"),
       "2026-09-01T09:00:00.000Z",
     );
@@ -167,6 +175,38 @@ describe("savedOpeningFrom — a row out of storage", () => {
 
     expect(row.orientation).toBe("black");
     expect(row.note).toBe("Sicilian side line");
+  });
+
+  it("normalises the folder a record lacks to Unfiled, without a version bump", () => {
+    // A record written before CTA-40 has no folderId at all: it reads as
+    // Unfiled rather than forcing every stored record to be re-written.
+    const row = savedOpeningFrom({
+      id: "a1",
+      pgn: "1. e4 *",
+      savedAt: AT.toISOString(),
+      updatedAt: AT.toISOString(),
+    })!;
+
+    expect(row.folderId).toBeNull();
+  });
+
+  it("normalises a broken folderId to Unfiled, and keeps a real one", () => {
+    const kept = savedOpeningFrom({
+      ...save(grow([[[], ["e4"]]]), { folderId: "folder-1" }),
+    })!;
+    expect(kept.folderId).toBe("folder-1");
+
+    const broken = savedOpeningFrom({
+      ...save(grow([[[], ["e4"]]])),
+      folderId: 7 as unknown as string,
+    })!;
+    expect(broken.folderId).toBeNull();
+
+    const empty = savedOpeningFrom({
+      ...save(grow([[[], ["e4"]]])),
+      folderId: "",
+    })!;
+    expect(empty.folderId).toBeNull();
   });
 
   it("rejects a value that is not a record at all", () => {

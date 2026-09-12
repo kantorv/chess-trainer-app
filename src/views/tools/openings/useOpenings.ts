@@ -4,6 +4,7 @@ import type { Arrow } from "react-chessboard";
 import {
   HOVERED_MOVE_ARROW_COLOR,
   KNOWN_MOVE_ARROW_COLOR,
+  findOpening,
   getPositionBook,
   knownMoveOpenings,
   loadOpeningBook,
@@ -18,6 +19,7 @@ import {
   savedOpeningToTree,
   type SavedOpening,
 } from "../../../lib/savedOpenings";
+import { ensureOpeningFolder } from "../../../lib/savedOpeningFolderStore";
 import { saveOpening as persistOpening } from "../../../lib/savedOpeningStore";
 import { useTreeNavigation } from "../analysis/useTreeNavigation";
 
@@ -51,7 +53,10 @@ import { useTreeNavigation } from "../analysis/useTreeNavigation";
  * reader who gives up on saving anything. {@link OpeningsStart.resume} reopens
  * one saved earlier: the tree (side lines and all), the orientation it was
  * viewed from, and its note, which is shown read-only — editing a note happens
- * on the Saved openings screen, not here.
+ * on the Saved openings screen, not here. The save also names the folder the
+ * opening is filed under — a choice from the save dialog, or the default rule
+ * (an ECO-named position into a folder named after that opening) when the
+ * reader leaves it unchosen.
  */
 
 /** A tree with nothing in it, taken once — plain data that nothing mutates. */
@@ -288,18 +293,34 @@ export const useOpenings = ({ fen: initialFen, resume }: OpeningsStart = {}) => 
   );
 
   /*
-    Save the position on screen, with the note the reader just wrote, as a brand
-    new record — each save is a new position, not an update to the last one, so
-    a fresh id every time. The store's idempotency is the guard against a double
-    click stacking a duplicate; nothing here needs to remember a session id.
+    Save the position on screen, with the note the reader just wrote and the
+    folder it is filed under, as a brand new record — each save is a new
+    position, not an update to the last one, so a fresh id every time. The
+    store's idempotency is the guard against a double click stacking a
+    duplicate; nothing here needs to remember a session id.
+
+    The folder: an explicit choice from the save dialog (a folder id, or `null`
+    for Unfiled) is taken as it is. `undefined` — the dialog opens with no
+    choice — is the **default rule's** cue, and this is where that rule lives:
+    a position the ECO book names saves into a folder named after that opening
+    (created at the top level if no such folder exists yet), and an off-book
+    position saves to Unfiled. The book lookup is of *the position on screen*
+    — the same one `CurrentOpening` names — because the reader is filing what
+    they are looking at, not the line it came from; and a book that has not
+    loaded yet is an off-book position, which is the honest answer either way.
   */
   const saveOpening = useCallback(
-    (note: string) => {
+    (note: string, folderChoice?: string | null) => {
+      let folderId: string | null = folderChoice ?? null;
+      if (folderChoice === undefined && book !== null) {
+        const named = findOpening(book, fen, positionBook);
+        folderId = named === undefined ? null : (ensureOpeningFolder(named.name, null)?.id ?? null);
+      }
       persistOpening(
-        savedOpeningOf(newSavedOpeningId(), tree, orientation, note),
+        savedOpeningOf(newSavedOpeningId(), tree, orientation, note, folderId),
       );
     },
-    [tree, orientation],
+    [book, fen, positionBook, tree, orientation],
   );
 
   return {

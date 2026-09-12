@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
@@ -6,12 +6,17 @@ import CardActionArea from "@mui/material/CardActionArea";
 import IconButton from "@mui/material/IconButton";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
+import ListItemButton from "@mui/material/ListItemButton";
+import ListItemText from "@mui/material/ListItemText";
 import ToggleButton from "@mui/material/ToggleButton";
 import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
+import CreateNewFolderRoundedIcon from "@mui/icons-material/CreateNewFolderRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
+import DriveFileMoveRoundedIcon from "@mui/icons-material/DriveFileMoveRounded";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
+import FolderRoundedIcon from "@mui/icons-material/FolderRounded";
 import SportsEsportsRounded from "@mui/icons-material/SportsEsportsRounded";
 import ViewComfyRounded from "@mui/icons-material/ViewComfyRounded";
 import ViewListRounded from "@mui/icons-material/ViewListRounded";
@@ -39,14 +44,32 @@ import {
   removeSavedOpening,
   updateSavedOpeningNote,
 } from "../../../../lib/savedOpeningStore";
+import {
+  openingFolderChildren,
+  openingFolderPath,
+  openingFolderSubtree,
+  openingsUnderFolder,
+  type OpeningFolder,
+} from "../../../../lib/savedOpeningFolders";
+import {
+  createOpeningFolder,
+  moveOpeningFolder,
+  removeOpeningFolder,
+  renameOpeningFolder,
+} from "../../../../lib/savedOpeningFolderStore";
 import { RightPanel } from "../../../main/rightPanel";
 import { cardSizeTrack, type CardSize } from "../../../library/cardSize";
 import NoteDialog from "../NoteDialog";
+import FolderNameDialog from "./FolderNameDialog";
+import FolderMoveDialog from "./FolderMoveDialog";
+import FolderDeleteDialog from "./FolderDeleteDialog";
 import { useSavedOpenings } from "./useSavedOpenings";
+import { useOpeningFolders } from "./useOpeningFolders";
 
 /**
  * **Saved openings** — every position the reader has saved on the Openings
- * screen, newest first, each with somewhere to take it.
+ * screen, newest first, filed into a tree of folders (CTA-40) and each with
+ * somewhere to take it.
  *
  * It is [`views/tools/analysis/saved/SavedAnalyses.tsx`](../../analysis/saved/SavedAnalyses.tsx)
  * again, in the Tools folder beside the screen whose output it lists: the same
@@ -54,7 +77,7 @@ import { useSavedOpenings } from "./useSavedOpenings";
  * ([`cardSize.ts`](../../../library/cardSize.ts)), the same delete control, the
  * same rule that a record the store has and the PGN cannot parse is still listed
  * so it can still be removed. What that screen's header comment says about all
- * of it holds here and is not repeated; only the two places an opening is **not**
+ * of it holds here and is not repeated; only the places an opening is **not**
  * an analysis are written out below.
  *
  * ### 1. A row is named by its note, not by any players
@@ -74,7 +97,23 @@ import { useSavedOpenings } from "./useSavedOpenings";
  * to*, not a piece of work worth taking out of the browser, so there is no
  * export machinery here. The two hand-offs below are the whole of it.
  *
- * ### Where a row can go, and why those two
+ * ### 3. The browser is folders first
+ *
+ * The flat list this screen shipped with grew a tree (CTA-40): the top level
+ * shows the reader's root folders and the **Unfiled** openings, drilling in
+ * shows that folder's sub-folders and its openings, and a breadcrumb row takes
+ * the reader back up. The join is {@link SavedOpening.folderId} — a plain id,
+ * resolved against the folder list in [`lib/savedOpeningFolders.ts`](../../../../lib/savedOpeningFolders.ts) —
+ * and an opening whose folder is gone reads as Unfiled, so a half-deleted store
+ * still renders every record. A folder card counts everything **under** it (the
+ * whole subtree), because that is what the click opens onto.
+ *
+ * The folder CRUD lives here too, as the manager: create (under the folder the
+ * reader is standing in), rename, move (anywhere but the folder's own subtree —
+ * the store refuses that move), and delete. Deleting an **empty** folder runs
+ * at once; deleting one with contents asks first, and keeps them — its
+ * openings become Unfiled and its sub-folders re-parent to the deleted
+ * folder's own parent, so the tree closes up rather than leaving a hole.
  *
  * | Destination | Carries | Because |
  * | --- | --- | --- |
@@ -407,6 +446,179 @@ function SavedOpeningCard({ saved, tree, opening, onEdit }: CardProps & RowProps
   );
 }
 
+/**
+ * One folder's three management controls — rename, move, delete — the same in
+ * the row and the card view. Deleting runs through the caller's `onDelete`,
+ * which decides whether a confirmation is needed; the other two open dialogs.
+ */
+function FolderActions({
+  folder,
+  onRename,
+  onMove,
+  onDelete,
+}: {
+  folder: OpeningFolder;
+  onRename: (folder: OpeningFolder) => void;
+  onMove: (folder: OpeningFolder) => void;
+  onDelete: (folder: OpeningFolder) => void;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <>
+      <Tooltip title={t("savedOpenings.folder.renameFolder")}>
+        <IconButton
+          size="small"
+          aria-label={t("savedOpenings.folder.renameFolder")}
+          data-testid={`saved-openings-folder-rename-${folder.id}`}
+          onClick={() => onRename(folder)}
+        >
+          <EditRoundedIcon fontSize="small" />
+        </IconButton>
+      </Tooltip>
+      <Tooltip title={t("savedOpenings.folder.moveFolder")}>
+        <IconButton
+          size="small"
+          aria-label={t("savedOpenings.folder.moveFolder")}
+          data-testid={`saved-openings-folder-move-${folder.id}`}
+          onClick={() => onMove(folder)}
+        >
+          <DriveFileMoveRoundedIcon fontSize="small" />
+        </IconButton>
+      </Tooltip>
+      <Tooltip title={t("savedOpenings.folder.deleteFolder")}>
+        <IconButton
+          size="small"
+          aria-label={t("savedOpenings.folder.deleteFolder")}
+          data-testid={`saved-openings-folder-delete-${folder.id}`}
+          onClick={() => onDelete(folder)}
+        >
+          <DeleteOutlineRoundedIcon fontSize="small" />
+        </IconButton>
+      </Tooltip>
+    </>
+  );
+}
+
+/**
+ * One folder in the list view: a clickable drill-in half and the management
+ * controls beside it. The caption counts everything **under** the folder —
+ * openings across its whole subtree — because that is what the click opens
+ * onto, the same rule `LibraryFolderCard` applies.
+ */
+function SavedFolderRow({
+  folder,
+  count,
+  onOpen,
+  onRename,
+  onMove,
+  onDelete,
+}: {
+  folder: OpeningFolder;
+  /** Openings under this folder, across its whole subtree. */
+  count: number;
+  onOpen: (id: string) => void;
+  onRename: (folder: OpeningFolder) => void;
+  onMove: (folder: OpeningFolder) => void;
+  onDelete: (folder: OpeningFolder) => void;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <ListItem
+      disableGutters
+      data-testid={`saved-openings-folder-${folder.id}`}
+      sx={{
+        display: "flex",
+        alignItems: "center",
+        gap: 1,
+        py: 1.25,
+        borderBottom: "1px solid",
+        borderColor: "divider",
+      }}
+    >
+      <ListItemButton
+        onClick={() => onOpen(folder.id)}
+        data-testid={`saved-openings-folder-open-${folder.id}`}
+        sx={{ minWidth: 0, flex: 1, borderRadius: 1, px: 1 }}
+      >
+        <FolderRoundedIcon
+          fontSize="small"
+          sx={{ marginInlineEnd: 1.5, color: "text.secondary", flexShrink: 0 }}
+        />
+        <ListItemText
+          primary={folder.name === "" ? t("savedOpenings.untitled") : folder.name}
+          secondary={t("savedOpenings.folder.count", { count })}
+          slotProps={{ primary: { noWrap: true } }}
+        />
+      </ListItemButton>
+      <Box sx={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
+        <FolderActions
+          folder={folder}
+          onRename={onRename}
+          onMove={onMove}
+          onDelete={onDelete}
+        />
+      </Box>
+    </ListItem>
+  );
+}
+
+/** The same folder as a card, for the two board views. */
+function SavedFolderCard({
+  folder,
+  count,
+  onOpen,
+  onRename,
+  onMove,
+  onDelete,
+}: {
+  folder: OpeningFolder;
+  /** Openings under this folder, across its whole subtree. */
+  count: number;
+  onOpen: (id: string) => void;
+  onRename: (folder: OpeningFolder) => void;
+  onMove: (folder: OpeningFolder) => void;
+  onDelete: (folder: OpeningFolder) => void;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <Card variant="outlined" data-testid={`saved-openings-folder-${folder.id}`}>
+      <CardActionArea
+        onClick={() => onOpen(folder.id)}
+        data-testid={`saved-openings-folder-open-${folder.id}`}
+        aria-label={folder.name}
+      >
+        <Box sx={{ p: 2, minHeight: 140, display: "grid", placeItems: "center" }}>
+          <Box sx={{ textAlign: "center" }}>
+            <FolderRoundedIcon sx={{ fontSize: 44, color: "text.secondary" }} />
+            <Typography
+              variant="subtitle2"
+              sx={{ fontWeight: 600, lineHeight: 1.3, mt: 1 }}
+            >
+              {folder.name === "" ? t("savedOpenings.untitled") : folder.name}
+            </Typography>
+            <Typography variant="caption" sx={{ color: "text.secondary" }}>
+              {t("savedOpenings.folder.count", { count })}
+            </Typography>
+          </Box>
+        </Box>
+      </CardActionArea>
+      <Box sx={{ px: 1, pb: 1, display: "flex", alignItems: "center" }}>
+        <Box sx={{ marginInlineStart: "auto" }}>
+          <FolderActions
+            folder={folder}
+            onRename={onRename}
+            onMove={onMove}
+            onDelete={onDelete}
+          />
+        </Box>
+      </Box>
+    </Card>
+  );
+}
+
 function SavedOpenings() {
   const { t } = useTranslation();
 
@@ -415,7 +627,38 @@ function SavedOpenings() {
     null,
   );
 
+  /*
+    Where the browser is standing: `null` is the top level, everything else is
+    a folder id. Browse state, not URL state — the criterion is breadcrumbs and
+    a back path, not deep links, and nothing else in this screen travels.
+  */
+  const [folderId, setFolderId] = useState<string | null>(null);
+
+  /** What the name dialog is open for: creating under a parent, or renaming. */
+  const [nameDialog, setNameDialog] = useState<
+    | { mode: "create"; parentId: string | null }
+    | { mode: "rename"; folder: OpeningFolder }
+    | null
+  >(null);
+  const [moving, setMoving] = useState<OpeningFolder | null>(null);
+  const [deleting, setDeleting] = useState<OpeningFolder | null>(null);
+
   const openings = useSavedOpenings();
+  const folders = useOpeningFolders();
+
+  /*
+    The folder the reader is standing in, resolved — a folder deleted out from
+    under this screen (its own delete below, or another tab's) reads as the top
+    level rather than as a hole in the tree. Adjusted during render rather than
+    in an effect, the sanctioned derived-state pattern, and every read below
+    goes through `browseId` so even the discarded pass is consistent.
+  */
+  const currentFolder =
+    folderId === null
+      ? undefined
+      : folders.find((folder) => folder.id === folderId);
+  if (folderId !== null && currentFolder === undefined) setFolderId(null);
+  const browseId = currentFolder?.id ?? null;
 
   /*
     The trees, parsed once per snapshot. An opening's PGN is re-read as a tree
@@ -431,16 +674,6 @@ function SavedOpenings() {
     }
     return found;
   }, [openings]);
-
-  const entries = openings.map((saved) => ({
-    saved,
-    tree: treeById.get(saved.id),
-  }));
-
-  const startEdit = (id: string) => {
-    const found = openings.find((saved) => saved.id === id);
-    if (found !== undefined) setEditing({ id, note: found.note });
-  };
 
   /*
     The opening book, for the line under each card. Loaded lazily and shared:
@@ -484,6 +717,74 @@ function SavedOpenings() {
     return found;
   }, [treeById, book]);
 
+  /*
+    What the current view holds: this folder's direct sub-folders (name-sorted,
+    dangling parents already resolved by the helper) and the openings filed
+    here. An opening whose folderId names a folder that is gone reads as
+    Unfiled — it shows at the top level, and nowhere else.
+
+    Not memoised, deliberately: `browseId` derives from the render-time adjust
+    above, so the compiler cannot preserve a memo that reads it (the lint says
+    so) — and a filter over the capped folder and opening lists is cheaper than
+    the memo it would skip.
+  */
+  const foldersHere = openingFolderChildren(folders, browseId);
+
+  const openingsHere = openings.filter((opening) => {
+    const parent =
+      opening.folderId !== null &&
+      folders.some((folder) => folder.id === opening.folderId)
+        ? opening.folderId
+        : null;
+    return parent === browseId;
+  });
+
+  const entriesHere = openingsHere.map((saved) => ({
+    saved,
+    tree: treeById.get(saved.id),
+  }));
+
+  const startEdit = (id: string) => {
+    const found = openings.find((saved) => saved.id === id);
+    if (found !== undefined) setEditing({ id, note: found.note });
+  };
+
+  /*
+    Delete one folder, keeping its contents — the store's `removeOpeningFolder`
+    is the operation; this only decides the wording. An **empty** folder (no
+    openings across its subtree, no direct sub-folders) deletes at once, the
+    same way deleting nothing asks for nothing; anything else opens the
+    confirmation, which states the rule before it runs.
+  */
+  const confirmDelete = (folder: OpeningFolder) => {
+    /*
+      Stand where the contents went: its sub-folders re-parent to this folder's
+      own parent, so landing there keeps the reader beside what they kept — and
+      it is also the only move that keeps the browser off a folder that no
+      longer exists.
+    */
+    if (
+      folderId !== null &&
+      openingFolderSubtree(folders, folder.id).has(folderId)
+    ) {
+      setFolderId(folder.parentId);
+    }
+    removeOpeningFolder(folder.id);
+  };
+
+  const startDelete = (folder: OpeningFolder) => {
+    const isEmpty =
+      openingsUnderFolder(openings, folders, folder.id) === 0 &&
+      openingFolderChildren(folders, folder.id).length === 0;
+    if (isEmpty) confirmDelete(folder);
+    else setDeleting(folder);
+  };
+
+  const crumbs =
+    currentFolder === undefined
+      ? []
+      : openingFolderPath(folders, currentFolder.id);
+
   return (
     <>
       <Box
@@ -521,6 +822,16 @@ function SavedOpenings() {
               {t("savedOpenings.count", { count: openings.length })}
             </Typography>
           </Box>
+
+          <Button
+            size="small"
+            variant="outlined"
+            startIcon={<CreateNewFolderRoundedIcon fontSize="small" />}
+            data-testid="saved-openings-new-folder"
+            onClick={() => setNameDialog({ mode: "create", parentId: browseId })}
+          >
+            {t("savedOpenings.folder.newFolder")}
+          </Button>
 
           <ToggleButtonGroup
             exclusive
@@ -568,22 +879,83 @@ function SavedOpenings() {
         </Box>
 
         {/*
+          The breadcrumb, only once the reader has drilled in: the top level has
+          no chain to show. The last crumb is where they are standing — text,
+          not a button — and every earlier one navigates.
+        */}
+        {currentFolder !== undefined && (
+          <Box
+            data-testid="saved-openings-breadcrumb"
+            sx={{
+              flexShrink: 0,
+              display: "flex",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: 0.5,
+              py: 0.5,
+            }}
+          >
+            <Button
+              size="small"
+              data-testid="saved-openings-breadcrumb-root"
+              onClick={() => setFolderId(null)}
+              sx={{ minWidth: 0, px: 1, textTransform: "none" }}
+            >
+              {t("savedOpenings.folder.root")}
+            </Button>
+            {crumbs.map((crumb, index) =>
+              index === crumbs.length - 1 ? (
+                <Typography
+                  key={crumb.id}
+                  variant="body2"
+                  data-testid={`saved-openings-breadcrumb-${crumb.id}`}
+                  sx={{ color: "text.secondary" }}
+                >
+                  {crumb.name}
+                </Typography>
+              ) : (
+                <Fragment key={crumb.id}>
+                  <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                    /
+                  </Typography>
+                  <Button
+                    size="small"
+                    data-testid={`saved-openings-breadcrumb-${crumb.id}`}
+                    onClick={() => setFolderId(crumb.id)}
+                    sx={{ minWidth: 0, px: 1, textTransform: "none" }}
+                  >
+                    {crumb.name}
+                  </Button>
+                </Fragment>
+              ),
+            )}
+          </Box>
+        )}
+
+        {/*
           The one region that scrolls. The shell hands this screen a fixed-height
           box and scrolls nothing inside it, so whichever view is showing has to
           do it itself — the same flex column every screen filling the board
-          square uses.
+          square uses. Folders come first in both views, then this folder's
+          openings: the reader drills into a folder, they do not scroll past it.
         */}
-        {openings.length === 0 ? (
+        {foldersHere.length === 0 && openingsHere.length === 0 ? (
           <Box
             data-testid="saved-openings-body"
             sx={{ flex: 1, minHeight: 0, overflowY: "auto" }}
           >
             <Typography
-              data-testid="saved-openings-empty"
+              data-testid={
+                browseId === null
+                  ? "saved-openings-empty"
+                  : "saved-openings-folder-empty"
+              }
               variant="body2"
               sx={{ color: "text.secondary", textAlign: "center", py: 4 }}
             >
-              {t("savedOpenings.empty")}
+              {browseId === null
+                ? t("savedOpenings.empty")
+                : t("savedOpenings.folder.empty")}
             </Typography>
           </Box>
         ) : view === "list" ? (
@@ -592,7 +964,20 @@ function SavedOpenings() {
             sx={{ flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden" }}
           >
             <List disablePadding>
-              {entries.map((entry) => (
+              {foldersHere.map((folder) => (
+                <SavedFolderRow
+                  key={folder.id}
+                  folder={folder}
+                  count={openingsUnderFolder(openings, folders, folder.id)}
+                  onOpen={setFolderId}
+                  onRename={(renamed) =>
+                    setNameDialog({ mode: "rename", folder: renamed })
+                  }
+                  onMove={setMoving}
+                  onDelete={startDelete}
+                />
+              ))}
+              {entriesHere.map((entry) => (
                 <SavedOpeningRow
                   key={entry.saved.id}
                   {...entry}
@@ -624,7 +1009,20 @@ function SavedOpenings() {
               pt: 1.5,
             }}
           >
-            {entries.map((entry) => (
+            {foldersHere.map((folder) => (
+              <SavedFolderCard
+                key={folder.id}
+                folder={folder}
+                count={openingsUnderFolder(openings, folders, folder.id)}
+                onOpen={setFolderId}
+                onRename={(renamed) =>
+                  setNameDialog({ mode: "rename", folder: renamed })
+                }
+                onMove={setMoving}
+                onDelete={startDelete}
+              />
+            ))}
+            {entriesHere.map((entry) => (
               <SavedOpeningCard
                 key={entry.saved.id}
                 {...entry}
@@ -646,6 +1044,58 @@ function SavedOpenings() {
           </Typography>
         </Box>
       </RightPanel>
+
+      <FolderNameDialog
+        open={nameDialog !== null}
+        title={
+          nameDialog === null
+            ? ""
+            : nameDialog.mode === "create"
+              ? t("savedOpenings.folder.newFolder")
+              : t("savedOpenings.folder.renameFolder")
+        }
+        initial={
+          nameDialog !== null && nameDialog.mode === "rename"
+            ? nameDialog.folder.name
+            : ""
+        }
+        onSave={(name) => {
+          if (nameDialog === null) return;
+          if (nameDialog.mode === "create") {
+            createOpeningFolder(name, nameDialog.parentId);
+          } else {
+            renameOpeningFolder(nameDialog.folder.id, name);
+          }
+        }}
+        onClose={() => setNameDialog(null)}
+      />
+
+      <FolderMoveDialog
+        open={moving !== null}
+        folders={folders}
+        folder={moving}
+        currentParentName={t("savedOpenings.folder.topLevel")}
+        onMove={(newParentId) => {
+          if (moving !== null) moveOpeningFolder(moving.id, newParentId);
+          setMoving(null);
+        }}
+        onClose={() => setMoving(null)}
+      />
+
+      <FolderDeleteDialog
+        open={deleting !== null}
+        folder={deleting}
+        openings={
+          deleting === null ? 0 : openingsUnderFolder(openings, folders, deleting.id)
+        }
+        subFolders={
+          deleting === null ? 0 : openingFolderChildren(folders, deleting.id).length
+        }
+        onConfirm={() => {
+          if (deleting !== null) confirmDelete(deleting);
+        }}
+        onClose={() => setDeleting(null)}
+      />
 
       <NoteDialog
         open={editing !== null}
