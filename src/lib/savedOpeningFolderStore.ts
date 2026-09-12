@@ -4,11 +4,7 @@ import {
   openingFolderSubtree,
   type OpeningFolder,
 } from "./savedOpeningFolders";
-import {
-  savedOpeningsSnapshot,
-  unfileOpeningsIn,
-  type SavedOpeningProblem,
-} from "./savedOpeningStore";
+import { unfileOpeningsIn } from "./savedOpeningStore";
 
 /**
  * Where the reader's saved-opening folders are kept: one `localStorage` key,

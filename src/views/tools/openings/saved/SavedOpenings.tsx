@@ -722,22 +722,22 @@ function SavedOpenings() {
     dangling parents already resolved by the helper) and the openings filed
     here. An opening whose folderId names a folder that is gone reads as
     Unfiled — it shows at the top level, and nowhere else.
-  */
-  const foldersHere = useMemo(
-    () => openingFolderChildren(folders, browseId),
-    [folders, browseId],
-  );
 
-  const openingsHere = useMemo(() => {
-    return openings.filter((opening) => {
-      const parent =
-        opening.folderId !== null &&
-        folders.some((folder) => folder.id === opening.folderId)
-          ? opening.folderId
-          : null;
-      return parent === browseId;
-    });
-  }, [openings, folders, browseId]);
+    Not memoised, deliberately: `browseId` derives from the render-time adjust
+    above, so the compiler cannot preserve a memo that reads it (the lint says
+    so) — and a filter over the capped folder and opening lists is cheaper than
+    the memo it would skip.
+  */
+  const foldersHere = openingFolderChildren(folders, browseId);
+
+  const openingsHere = openings.filter((opening) => {
+    const parent =
+      opening.folderId !== null &&
+      folders.some((folder) => folder.id === opening.folderId)
+        ? opening.folderId
+        : null;
+    return parent === browseId;
+  });
 
   const entriesHere = openingsHere.map((saved) => ({
     saved,
