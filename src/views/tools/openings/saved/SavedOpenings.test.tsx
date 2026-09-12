@@ -240,6 +240,16 @@ describe("Saved openings — where a row goes", () => {
     );
   });
 
+  it("offers a New button to the plain board view, with no query params", () => {
+    renderScreen();
+
+    // The board left the sidebar (CTA-42) — this button is how it is reached.
+    expect(screen.getByTestId("saved-openings-new")).toHaveAttribute(
+      "href",
+      "/openings",
+    );
+  });
+
   it("hands Play with Engine the position at the end of the mainline", () => {
     renderScreen();
 

@@ -4,7 +4,6 @@ import SportsEsportsRoundedIcon from "@mui/icons-material/SportsEsportsRounded";
 import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
 import AccountTreeRoundedIcon from "@mui/icons-material/AccountTreeRounded";
 import DashboardCustomizeRoundedIcon from "@mui/icons-material/DashboardCustomizeRounded";
-import TravelExploreRoundedIcon from "@mui/icons-material/TravelExploreRounded";
 import VisibilityOffRoundedIcon from "@mui/icons-material/VisibilityOffRounded";
 
 import type { LocalizedText } from "../../lib/libraryCatalog";
@@ -82,12 +81,12 @@ export const navItems = (): readonly NavItem[] => [
     icon: DashboardCustomizeRoundedIcon,
     folder: "tools",
   },
-  {
-    to: "/openings",
-    labelKey: "nav.openings",
-    icon: TravelExploreRoundedIcon,
-    folder: "openings",
-  },
+  /*
+    The Openings board has no nav entry (CTA-42): the top-level Openings folder
+    is a single entry (`navFolders.ts`) that renders as the screen below, and
+    the board is reached from the saved list's New button. The `/openings`
+    route stays — it is where a Continue hand-off and the ECO chip land.
+  */
   {
     to: "/openings/saved",
     labelKey: "nav.savedOpenings",

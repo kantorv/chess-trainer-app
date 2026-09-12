@@ -42,6 +42,15 @@ export type NavFolder = {
   icon: SvgIconComponent;
   /** Sub-folders. A folder may carry these *and* screens of its own. */
   children?: NavFolder[];
+  /**
+   * The folder is one destination, not a grouping: the top level renders its
+   * single screen as one clickable row under the **folder's** own name and
+   * icon, navigating straight to that screen — no expand toggle, one click.
+   * The screen's own label (which says what is inside the folder) never
+   * renders (`navTree.ts`, `foldSingleEntryFolders`), and a board screen the
+   * entry hides is reached from that screen's own controls, not from here.
+   */
+  singleEntry?: boolean;
 };
 
 /**
@@ -86,5 +95,9 @@ export const navFolders = (): readonly NavFolder[] => [
     id: "openings",
     labelKey: "nav.folders.openings",
     icon: TravelExploreRoundedIcon,
+    // One destination (CTA-42): the saved list is the screen worth reaching
+    // for, so the folder renders as one clickable row to it and the board
+    // view leaves the sidebar entirely — it is the saved list's New button.
+    singleEntry: true,
   },
 ];

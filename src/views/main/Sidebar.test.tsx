@@ -6,9 +6,9 @@ import { Link, MemoryRouter } from "react-router";
 import i18n from "../../i18n";
 import AppThemeWithLang from "../../theme/AppThemeWithLang";
 import SideBar from "./Sidebar";
-import { navItems, navItemsInFolder } from "./navItems";
+import { navItemsInFolder } from "./navItems";
 import { navFolders, type NavFolder } from "./navFolders";
-import { folderPath, navLabel, type NavTreeNode } from "./navTree";
+import { folderPath, navLabel, navTree, type NavTreeNode } from "./navTree";
 
 const renderAt = (path: string, tree?: NavTreeNode[]) =>
   render(
@@ -18,6 +18,13 @@ const renderAt = (path: string, tree?: NavTreeNode[]) =>
       </MemoryRouter>
     </AppThemeWithLang>,
   );
+
+/**
+ * A single-entry folder (`navFolders.ts`) folds to its screen, which renders
+ * as a top-level row — always visible, never inside a folder's `Collapse`.
+ */
+const topLevelScreenCount = () =>
+  navTree().filter((node) => node.kind === "screen").length;
 
 /** A shipped folder with more than one screen, by its translated name. Folders are buttons, not links. */
 const toolsFolder = () =>
@@ -54,15 +61,22 @@ describe("sidebar navigation", () => {
   it("renders one link per screen of the open folder, and no more", async () => {
     renderAt("/tools/analysis");
     // Only the active folder is open, so only its screens are links; the folder
-    // row is a toggle and adds nothing to the count either way.
+    // row is a toggle and adds nothing to the count either way. The one
+    // exception is a top-level screen row — a single-entry folder's screen,
+    // always visible, never inside a folder's `Collapse`.
     expect(screen.getAllByRole("link")).toHaveLength(
-      navItemsInFolder("tools").length,
+      navItemsInFolder("tools").length + topLevelScreenCount(),
     );
 
     // Every screen is reachable — one folder at a time.
     const user = userEvent.setup();
     for (const folder of navFolders()) {
       if (folder.children) continue;
+      if (folder.singleEntry) {
+        // One destination: the row is the screen itself — a link, not a toggle.
+        expect(screen.getByRole("link", { name: nameOf(folder) })).toBeVisible();
+        continue;
+      }
       await user.click(screen.getByRole("button", { name: nameOf(folder) }));
       for (const item of navItemsInFolder(folder.id)) {
         expect(screen.getByRole("link", { name: nameOf(item) })).toBeVisible();
@@ -80,11 +94,27 @@ describe("sidebar navigation", () => {
     renderAt("/");
     const user = userEvent.setup();
 
-    for (const item of navItems()) {
+    /*
+      Walks what the sidebar renders — every screen node in the tree, named as
+      it renders (a single-entry folder's screen under the *folder's* name) —
+      opening its whole folder chain on the way. `userEvent` is deliberately
+      slow; the generated User PGNs screens push the count up, which is real
+      coverage rather than a slow test to trim, so the budget is raised.
+    */
+    const screens = navTree().flatMap(function collect(
+      node: NavTreeNode,
+    ): NavTreeNode[] {
+      return node.kind === "screen"
+        ? [node]
+        : (node.children ?? []).flatMap(collect);
+    });
+
+    for (const node of screens) {
       // The screen's folder chain has to be opened first — and `folderPath`
       // gives it as the *rendered* tree has it, after a redundant leaf-category
-      // folder has been folded into the screen itself.
-      for (const id of folderPath(item.to)) {
+      // folder has been folded into the screen itself. Empty for a screen
+      // folded to the top level, which needs no chain opened.
+      for (const id of folderPath(node.to ?? "")) {
         const row = screen.getByRole("button", { name: folderNameOf(id) });
         if (row.getAttribute("aria-expanded") === "false") await user.click(row);
       }
@@ -97,10 +127,10 @@ describe("sidebar navigation", () => {
         with this name links here.
       */
       const links = screen
-        .getAllByRole("link", { name: nameOf(item) })
+        .getAllByRole("link", { name: nameOf(node) })
         .map((link) => link.getAttribute("href"));
 
-      expect(links).toContain(item.to);
+      expect(links).toContain(node.to);
     }
   }, 30000);
 
@@ -159,8 +189,11 @@ describe("the folder tree", () => {
 
     // Top-level rows only: a sub-folder lives in its parent's `Collapse` body,
     // which is unmounted while that parent is shut. Opening User PGNs is what
-    // brings its surviving sub-folder rows into the tree.
-    expect(screen.getAllByRole("button")).toHaveLength(navFolders().length);
+    // brings its surviving sub-folder rows into the tree. A single-entry
+    // folder is a screen row, not a button — one fewer.
+    expect(screen.getAllByRole("button")).toHaveLength(
+      navFolders().filter((folder) => !folder.singleEntry).length,
+    );
     expect(toolsFolder()).toHaveAttribute("aria-expanded", "true");
 
     for (const folder of screen.getAllByRole("button")) {
@@ -169,9 +202,10 @@ describe("the folder tree", () => {
       }
     }
 
-    // Only the open folder's screens are on screen; the rest are one click away.
+    // Only the open folder's screens are on screen, plus the single entry;
+    // the rest are one click away.
     expect(screen.getAllByRole("link")).toHaveLength(
-      navItemsInFolder("tools").length,
+      navItemsInFolder("tools").length + topLevelScreenCount(),
     );
   });
 
@@ -207,7 +241,8 @@ describe("the folder tree", () => {
     for (const folder of screen.getAllByRole("button")) {
       expect(folder).toHaveAttribute("aria-expanded", "false");
     }
-    expect(screen.queryAllByRole("link")).toHaveLength(0);
+    // The single entry is a top-level screen row — visible with nothing opened.
+    expect(screen.queryAllByRole("link")).toHaveLength(topLevelScreenCount());
   });
 
   it("toggles its own body shut and open again", async () => {
@@ -217,12 +252,15 @@ describe("the folder tree", () => {
     await user.click(toolsFolder());
     expect(toolsFolder()).toHaveAttribute("aria-expanded", "false");
     // `Collapse` unmounts its body when the shut animation ends, not on click.
-    await waitFor(() => expect(screen.queryAllByRole("link")).toHaveLength(0));
+    // The single entry stays — a top-level row, not in the folder's body.
+    await waitFor(() =>
+      expect(screen.queryAllByRole("link")).toHaveLength(topLevelScreenCount()),
+    );
 
     await user.click(toolsFolder());
     expect(toolsFolder()).toHaveAttribute("aria-expanded", "true");
     expect(screen.getAllByRole("link")).toHaveLength(
-      navItemsInFolder("tools").length,
+      navItemsInFolder("tools").length + topLevelScreenCount(),
     );
   });
 
@@ -240,7 +278,7 @@ describe("the folder tree", () => {
     expect(toolsFolder()).toHaveAttribute("aria-expanded", "false");
     await waitFor(() =>
       expect(screen.queryAllByRole("link")).toHaveLength(
-        navItemsInFolder("games").length,
+        navItemsInFolder("games").length + topLevelScreenCount(),
       ),
     );
   });

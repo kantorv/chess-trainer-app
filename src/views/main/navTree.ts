@@ -32,6 +32,8 @@ export type NavTreeNode = {
   /** The route, screen nodes only. */
   to?: string;
   children?: NavTreeNode[];
+  /** Carried from a single-entry folder, for the top-level fold. */
+  singleEntry?: boolean;
 };
 
 /**
@@ -45,6 +47,7 @@ type FolderLike<Id extends string> = {
   label?: LocalizedText;
   icon: SvgIconComponent;
   children?: readonly FolderLike<Id>[];
+  singleEntry?: boolean;
 };
 
 type ScreenLike = {
@@ -74,6 +77,7 @@ export const buildNavTree = <Id extends string>(
     id: folder.id,
     ...nameOf(folder),
     icon: folder.icon,
+    ...(folder.singleEntry ? { singleEntry: true } : {}),
     children: [
       ...buildNavTree(folder.children ?? [], screensOf),
       ...screensOf(folder.id).map((item) => ({
@@ -103,8 +107,10 @@ export const buildNavTree = <Id extends string>(
  *   to screens it holds several of them, which is again two-or-more children.
  *
  * Applied **below the top level only**: the top-level rows are app-area
- * groupings (Engine, Games, Tools…), not categories, and both `navTree` and the
- * landing page expect every one of them to stay a folder.
+ * groupings (Engine, Games, Tools…), not categories. A top-level folder is
+ * folded only by the other rule — `foldSingleEntryFolders`, for a folder
+ * marked as one destination — so every level is folded by exactly one of the
+ * two.
  */
 export const collapseLeafCategory = (node: NavTreeNode): NavTreeNode => {
   if (node.kind !== "folder") return node;
@@ -126,14 +132,58 @@ export const collapseLeafCategories = (tree: NavTreeNode[]): NavTreeNode[] =>
       : folder,
   );
 
+/**
+ * Fold a **single-entry** folder into its one screen, under the folder's own
+ * name.
+ *
+ * An app-area folder can be one destination rather than a grouping: the
+ * Openings folder holds one screen worth reaching for, so a folder row that
+ * expands to a single link is two clicks and a second row on the way to it.
+ * Marked `singleEntry` in `navFolders.ts`, it renders as just that screen —
+ * one clickable row, named by the **folder** (the folder's name is what the
+ * reader navigates by, and the screen's own label says what is inside it, so
+ * showing both would read the same thing twice) — carrying the folder's icon,
+ * and navigating to the screen's route.
+ *
+ * Applied **at the top level only** — the counterpart of
+ * `collapseLeafCategory`'s below-the-top-level-only rule, so every level is
+ * folded by exactly one of the two. A top-level screen row has no folder
+ * ancestors, so its exact-pathname active state shows with nothing opened.
+ *
+ * Fires on the same shape test the leaf fold applies — one child, and it is a
+ * screen. A `singleEntry` folder that does not match (two screens, or a
+ * sub-folder) stays a folder and the flag sits inert, the same way a
+ * mis-shaped leaf category does.
+ */
+export const foldSingleEntryFolders = (tree: NavTreeNode[]): NavTreeNode[] =>
+  tree.map((node) => {
+    if (node.kind !== "folder" || !node.singleEntry) return node;
+    const [only] = node.children ?? [];
+    return node.children?.length === 1 &&
+      only.kind === "screen" &&
+      only.to !== undefined
+      ? {
+          kind: "screen",
+          id: only.to,
+          ...nameOf(node),
+          icon: node.icon,
+          to: only.to,
+        }
+      : node;
+  });
+
 /** Build the tree fresh from the registries. Cheap — a handful of nodes. */
 export const navTree = (): NavTreeNode[] =>
-  collapseLeafCategories(buildNavTree(navFolders(), navItemsInFolder));
+  collapseLeafCategories(
+    foldSingleEntryFolders(buildNavTree(navFolders(), navItemsInFolder)),
+  );
 
 /**
  * The folder ids from the top of the tree down to the screen at `to`, in order
  * — the breadcrumb trail, and the chain the sidebar expands so the active
- * screen is never hidden. Empty for a path that is not a screen.
+ * screen is never hidden. Empty for a path that is not a screen — and for one
+ * folded to the top level by `foldSingleEntryFolders`, which has no folder
+ * ancestors to open.
  */
 export const folderPath = (to: string, tree: NavTreeNode[] = navTree()): string[] =>
   (
