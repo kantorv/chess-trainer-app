@@ -112,6 +112,16 @@ export const findOpening = (
 };
 
 /**
+ * The opening's top-level name: the part of eco.json's
+ * `"Opening: Variation, SubVariation"` convention before its first `":"` — the
+ * family, which is what the save dialog's default rule files a position under.
+ * A name with no `":"` is its own top level, and one that trims to nothing
+ * stays empty for the caller's normaliser to refuse.
+ */
+export const topLevelOpeningName = (name: string): string =>
+  name.split(":")[0].trim();
+
+/**
  * The opening a whole **line of play** ended up in: the deepest position along
  * it that the book names, or `undefined` for a line it never recognised.
  *

@@ -8,6 +8,7 @@ import {
   getPositionBook,
   knownMoveOpenings,
   loadOpeningBook,
+  topLevelOpeningName,
   type KnownMoveOpening,
   type OpeningBook,
   type PositionBook,
@@ -302,19 +303,26 @@ export const useOpenings = ({ fen: initialFen, resume }: OpeningsStart = {}) => 
     The folder: an explicit choice from the save dialog (a folder id, or `null`
     for Unfiled) is taken as it is. `undefined` — the dialog opens with no
     choice — is the **default rule's** cue, and this is where that rule lives:
-    a position the ECO book names saves into a folder named after that opening
-    (created at the top level if no such folder exists yet), and an off-book
-    position saves to Unfiled. The book lookup is of *the position on screen*
-    — the same one `CurrentOpening` names — because the reader is filing what
-    they are looking at, not the line it came from; and a book that has not
-    loaded yet is an off-book position, which is the honest answer either way.
+    a position the ECO book names saves into a folder named after that
+    opening's **top-level name** — the part of eco.json's
+    `"Opening: Variation, SubVariation"` convention before its first `":"`, so
+    a deep line like `"Petrov's Defense: Classical Attack"` files under
+    `"Petrov's Defense"` rather than a folder per variant (created at the top
+    level if no such folder exists yet), and an off-book position saves to
+    Unfiled. The book lookup is of *the position on screen* — the same one
+    `CurrentOpening` names — because the reader is filing what they are looking
+    at, not the line it came from; and a book that has not loaded yet is an
+    off-book position, which is the honest answer either way.
   */
   const saveOpening = useCallback(
     (note: string, folderChoice?: string | null) => {
       let folderId: string | null = folderChoice ?? null;
       if (folderChoice === undefined && book !== null) {
         const named = findOpening(book, fen, positionBook);
-        folderId = named === undefined ? null : (ensureOpeningFolder(named.name, null)?.id ?? null);
+        folderId =
+          named === undefined
+            ? null
+            : (ensureOpeningFolder(topLevelOpeningName(named.name), null)?.id ?? null);
       }
       persistOpening(
         savedOpeningOf(newSavedOpeningId(), tree, orientation, note, folderId),

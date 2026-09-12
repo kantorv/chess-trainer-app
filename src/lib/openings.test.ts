@@ -8,6 +8,7 @@ import {
   nextMoveOpenings,
   openingOfLine,
   stickyOpening,
+  topLevelOpeningName,
   type LastKnownOpening,
   type OpeningBook,
 } from "./openings";
@@ -215,5 +216,34 @@ describe("loadOpeningBook", () => {
   it("caches the promise across calls", async () => {
     const [first, second] = await Promise.all([loadOpeningBook(), loadOpeningBook()]);
     expect(first).toBe(second);
+  });
+});
+
+describe("topLevelOpeningName", () => {
+  it("keeps only the family part of a colon-named opening", () => {
+    expect(topLevelOpeningName("Petrov's Defense: Classical Attack")).toBe(
+      "Petrov's Defense",
+    );
+    expect(topLevelOpeningName("King's Gambit Declined: Petrov's Defense")).toBe(
+      "King's Gambit Declined",
+    );
+  });
+
+  it("goes to the top level on a three-deep name", () => {
+    expect(
+      topLevelOpeningName(
+        "Petrov's Defense: Classical Attack, Chigorin Variation, Browne Attack",
+      ),
+    ).toBe("Petrov's Defense");
+  });
+
+  it("keeps a colon-less name whole, and trims around the separator", () => {
+    expect(topLevelOpeningName("King's Pawn Game")).toBe("King's Pawn Game");
+    expect(topLevelOpeningName("Ruy Lopez : Berlin Defence")).toBe("Ruy Lopez");
+  });
+
+  it("reads a name that is nothing but a separator as empty", () => {
+    expect(topLevelOpeningName("")).toBe("");
+    expect(topLevelOpeningName(":")).toBe("");
   });
 });

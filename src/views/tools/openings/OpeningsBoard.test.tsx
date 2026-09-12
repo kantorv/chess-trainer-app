@@ -522,6 +522,35 @@ describe("the Openings screen — saving", () => {
     expect(savedOpeningsSnapshot()[0].folderId).toBe(created?.id);
   });
 
+  it("files by the opening's top-level name when the book name is deep", async () => {
+    const user = userEvent.setup();
+    // After 1. e4 e5 2. f4 Nf6 — the book names it "King's Gambit Declined:
+    // Petrov's Defense"; the folder is the part before the first ":".
+    const deepFen = (() => {
+      const chess = new Chess();
+      for (const san of ["e4", "e5", "f4", "Nf6"]) chess.move(san);
+      return chess.fen();
+    })();
+    renderScreen(`/openings?fen=${encodeURIComponent(deepFen)}`);
+    await bookSettled();
+
+    await user.click(screen.getByTestId("openings-save"));
+    await user.click(screen.getByTestId("opening-note-save"));
+
+    // The family name, not the whole "Opening: Variation" convention.
+    const created = openingFoldersSnapshot().find(
+      (f) => f.name === "King's Gambit Declined",
+    );
+    expect(created).toBeDefined();
+    expect(created?.parentId).toBeNull();
+    expect(savedOpeningsSnapshot()[0].folderId).toBe(created?.id);
+    expect(
+      openingFoldersSnapshot().find(
+        (f) => f.name === "King's Gambit Declined: Petrov's Defense",
+      ),
+    ).toBeUndefined();
+  });
+
   it("files an off-book position to Unfiled when no folder was chosen", async () => {
     const user = userEvent.setup();
     renderScreen(`/openings?fen=${encodeURIComponent(offBookFen())}`);
