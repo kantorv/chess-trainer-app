@@ -66,6 +66,14 @@ export type SavedGame = {
   savedAt: string;
   /** ISO 8601, when it was last added to. What "newest first" sorts on. */
   updatedAt: string;
+  /**
+   * The folder the game is filed under, or `null` for **Unfiled** — the state a
+   * pre-folder record (CTA-46) is already in. A folder is not a game
+   * ([`savedGameFolders.ts`](./savedGameFolders.ts)); this is the plain id that
+   * joins them, and the store, not the writer of a record, is what keeps it
+   * across the saves the autosave effect makes.
+   */
+  folderId: string | null;
 };
 
 /** The category path the saved games sit under, and their reference segment. */
@@ -155,7 +163,10 @@ export const savedGameHeaders = (
  *
  * `savedAt` is carried in rather than derived so that adding a move to a game
  * saved yesterday keeps yesterday's date — the record is updated, not replaced,
- * which is what makes the id stable across a whole game.
+ * which is what makes the id stable across a whole game. `folderId` is `null`
+ * by default because the autosave effect — the one caller — cannot know where
+ * the reader filed the game; the *store* carries the stored folder forward
+ * (`saveGame`), so a record this writes never strips an assignment.
  */
 export const savedGameOf = (
   id: string,
@@ -163,6 +174,7 @@ export const savedGameOf = (
   settings: EngineSettings,
   now: Date = new Date(),
   savedAt: string = now.toISOString(),
+  folderId: string | null = null,
 ): SavedGame => {
   const result = resultOfFen(finalFenOf(game));
 
@@ -177,6 +189,7 @@ export const savedGameOf = (
     settings,
     savedAt,
     updatedAt: now.toISOString(),
+    folderId,
   };
 };
 
@@ -223,11 +236,29 @@ export const isSavedGame = (value: unknown): value is SavedGame => {
  * One stored row, normalised — the settings filled in from the defaults for
  * anything the record does not have, so an older or hand-edited entry resumes
  * rather than being dropped.
+ *
+ * The folder is the one field *added* to the record (CTA-46), and this is why
+ * there is no version bump: `folderId` arriving as anything but a usable id —
+ * absent, non-string, empty — reads as `null`, Unfiled. Every pre-folder record
+ * is already Unfiled, so the normalisation is not a migration, it is the same
+ * default the field has always had.
  */
-export const savedGameFrom = (value: unknown): SavedGame | undefined =>
-  isSavedGame(value)
-    ? { ...value, settings: engineSettingsFrom(value.settings) }
-    : undefined;
+export const savedGameFrom = (value: unknown): SavedGame | undefined => {
+  if (!isSavedGame(value)) return undefined;
+  // Read the untrusted field off the raw object: the guard above only vouches
+  // for the four it actually checks, and a narrowed type would let the rest be
+  // taken on trust.
+  const row: Record<string, unknown> = { ...value };
+
+  return {
+    ...value,
+    settings: engineSettingsFrom(value.settings),
+    folderId:
+      typeof row.folderId === "string" && row.folderId !== ""
+        ? row.folderId
+        : null,
+  };
+};
 
 /** What a row shows about a game without opening it. Pure, so it is testable. */
 export type SavedGameSummary = {

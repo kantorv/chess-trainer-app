@@ -137,6 +137,10 @@ describe("savedGameOf — writing a game down", () => {
     expect(saved.savedAt).toBe("2026-09-01T08:00:00.000Z");
     expect(saved.updatedAt).toBe("2026-09-07T10:00:00.000Z");
   });
+
+  it("writes a game as Unfiled — the folder rides beside it, not in it", () => {
+    expect(save(playedGame(["e4"])).folderId).toBeNull();
+  });
 });
 
 describe("chessFromSavedGame — resuming", () => {
@@ -196,6 +200,29 @@ describe("savedGameFrom — reading a stored row back", () => {
     for (const value of [null, 7, "g1", {}, { id: "g1" }, { id: "", pgn: "x" }]) {
       expect(savedGameFrom(value)).toBe(undefined);
     }
+  });
+
+  it("reads a record stored before folders as Unfiled — no version bump", () => {
+    const row = savedGameFrom({
+      id: "g1",
+      pgn: "1. e4 *",
+      savedAt: "x",
+      updatedAt: "x",
+    });
+
+    expect(row?.folderId).toBeNull();
+  });
+
+  it("reads an unreadable folderId as Unfiled too", () => {
+    const row = savedGameFrom({
+      id: "g1",
+      pgn: "1. e4 *",
+      savedAt: "x",
+      updatedAt: "x",
+      folderId: 7,
+    });
+
+    expect(row?.folderId).toBeNull();
   });
 });
 

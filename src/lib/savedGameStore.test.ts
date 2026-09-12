@@ -7,6 +7,7 @@ import { resolveGameReference } from "./gameReference";
 import { savedGameOf, type SavedGame } from "./savedGames";
 import {
   clearSavedGames,
+  fileSavedGame,
   findSavedGame,
   MAX_SAVED_GAMES,
   removeSavedGame,
@@ -132,6 +133,80 @@ describe("the saved-games store", () => {
     saveGame(save("g1", ["e4"], { ...DEFAULT_ENGINE_SETTINGS, skillLevel: 20 }));
 
     expect(savedGamesSnapshot()[0].settings.skillLevel).toBe(20);
+  });
+
+  it("carries the stored folder forward when the effect writes over a filed game", () => {
+    /*
+      The autosave trap (CTA-46): the record `usePlayWithEngine` builds carries
+      no folder knowledge — `savedGameOf` defaults `folderId` to null — so the
+      first move after filing a game must not strip its folder. The store keeps
+      the stored one, exactly as it keeps the stored `savedAt`.
+    */
+    saveGame(
+      savedGameOf(
+        "g1",
+        playedGame(["e4"]),
+        DEFAULT_ENGINE_SETTINGS,
+        new Date("2026-09-07T10:00:00.000Z"),
+        undefined,
+        "folder-a",
+      ),
+    );
+    expect(savedGamesSnapshot()[0].folderId).toBe("folder-a");
+
+    // What the effect writes on the next move: same id, one move more, no
+    // folder of its own.
+    saveGame(save("g1", ["e4", "e5"]));
+
+    expect(savedGamesSnapshot()).toHaveLength(1);
+    expect(
+      savedGamesSnapshot().find((row) => row.id === "g1")?.folderId,
+    ).toBe("folder-a");
+  });
+
+  it("still treats a filed game as identical on resume, so mounting it re-orders nothing", () => {
+    /*
+      `folderId` is not in the idempotent compare — the effect cannot know it —
+      so a filed game resumed and re-saved unchanged stays a no-op, and the
+      list is not re-ordered by a game nobody played on.
+    */
+    saveGame(save("g1", ["e4"]));
+    saveGame(save("g2", ["d4"]));
+    fileSavedGame("g2", "folder-a");
+    const before = savedGamesSnapshot();
+
+    // What the screen's save effect does on mount of a resumed filed game:
+    // the same game and settings, folderId defaulted to null.
+    saveGame(
+      savedGameOf(
+        "g2",
+        playedGame(["d4"]),
+        DEFAULT_ENGINE_SETTINGS,
+        new Date("2026-09-07T10:00:00.000Z"),
+      ),
+    );
+
+    expect(savedGamesSnapshot()).toBe(before);
+    expect(savedGamesSnapshot().map((row) => row.id)).toEqual(["g2", "g1"]);
+  });
+
+  it("gives a brand-new game the folder its record carries, and Unfiled to one that carries none", () => {
+    saveGame(save("g1", ["e4"]));
+    expect(savedGamesSnapshot()[0].folderId).toBeNull();
+
+    saveGame(
+      savedGameOf(
+        "g2",
+        playedGame(["d4"]),
+        DEFAULT_ENGINE_SETTINGS,
+        new Date("2026-09-07T10:00:00.000Z"),
+        undefined,
+        "folder-a",
+      ),
+    );
+    expect(
+      savedGamesSnapshot().find((row) => row.id === "g2")?.folderId,
+    ).toBe("folder-a");
   });
 
   it("keeps at most MAX_SAVED_GAMES, dropping the oldest", () => {
