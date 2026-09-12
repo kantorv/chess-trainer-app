@@ -1,3 +1,4 @@
+import { recordStore } from "./recordStore";
 import { newSavedGameId as newSavedOpeningFolderId } from "./savedGames";
 import {
   openingFolderFrom,
@@ -11,16 +12,17 @@ import { unfileOpeningsIn } from "./savedOpeningStore";
  * holding a JSON array of {@link OpeningFolder}.
  *
  * The store half of [`savedOpeningFolders.ts`](./savedOpeningFolders.ts), and
- * [`savedOpeningStore.ts`](./savedOpeningStore.ts) again — a versioned key, a
- * revision stamp so a snapshot is cheap, non-throwing reads and writes, and a
- * cap. See that file for the reasoning, which is not repeated here. The folder
- * CRUD lives here rather than in the views because every caller of it must
- * mean the same thing: a move can never make a cycle
- * ({@link moveOpeningFolder} refuses the folder's own subtree), and a delete
- * never orphans anything — {@link removeOpeningFolder} re-parents sub-folders
- * and files the openings back to Unfiled in one write-through, so the "deleting
- * a folder keeps its contents" rule is one operation rather than a protocol
- * every screen has to remember to follow.
+ * [`savedOpeningStore.ts`](./savedOpeningStore.ts) again, built over the
+ * shared [`recordStore.ts`](./recordStore.ts) scaffolding — which owns the
+ * non-throwing read, the revision-stamped snapshot and the `storage`-event
+ * subscription, and carries the reasoning for all of it. The folder CRUD lives
+ * here rather than in the views because every caller of it must mean the same
+ * thing: a move can never make a cycle ({@link moveOpeningFolder} refuses the
+ * folder's own subtree), and a delete never orphans anything —
+ * {@link removeOpeningFolder} re-parents sub-folders and files the openings
+ * back to Unfiled in one write-through, so the "deleting a folder keeps its
+ * contents" rule is one operation rather than a protocol every screen has to
+ * remember to follow.
  *
  * One return shape is different from the openings store's, and it is the whole
  * of what creating is that renaming is not: {@link createOpeningFolder} hands
@@ -34,9 +36,6 @@ import { unfileOpeningsIn } from "./savedOpeningStore";
 /** The `localStorage` key. Versioned, so a future shape change is a new key. */
 export const OPENING_FOLDERS_STORAGE_KEY = "chessapp.savedOpeningFolders.v1";
 
-/** Where the revision is stamped — a few bytes, read on every snapshot. */
-export const OPENING_FOLDERS_REVISION_KEY = `${OPENING_FOLDERS_STORAGE_KEY}.rev`;
-
 /**
  * How many folders are kept — a generous bound, as on the openings themselves
  * ({@link MAX_SAVED_OPENINGS}), but a bound all the same.
@@ -49,98 +48,19 @@ export const MAX_OPENING_FOLDER_NAME = 100;
 /** What went wrong with a write. One case, but named rather than boolean. */
 export type OpeningFolderProblem = "storage";
 
-const EMPTY: readonly OpeningFolder[] = [];
-
-const listeners = new Set<() => void>();
-
-/** Cached parse, and the revision it was read at. `undefined` = never read. */
-let lastRevision: string | null | undefined;
-let cached: readonly OpeningFolder[] = EMPTY;
-
-const read = (key: string): string | null => {
-  try {
-    return localStorage.getItem(key);
-  } catch {
-    return null;
-  }
-};
-
-const parse = (raw: string | null): readonly OpeningFolder[] => {
-  if (raw === null || raw.trim() === "") return EMPTY;
-  try {
-    const value: unknown = JSON.parse(raw);
-    if (!Array.isArray(value)) return EMPTY;
-    const rows = value
-      .map(openingFolderFrom)
-      .filter((row): row is OpeningFolder => row !== undefined);
-    return rows.length === 0 ? EMPTY : rows;
-  } catch {
-    return EMPTY;
-  }
-};
+const folders = recordStore<OpeningFolder>(
+  OPENING_FOLDERS_STORAGE_KEY,
+  openingFolderFrom,
+);
 
 /** The folders, in storage order. Stable between changes. */
-export const openingFoldersSnapshot = (): readonly OpeningFolder[] => {
-  const revision = read(OPENING_FOLDERS_REVISION_KEY);
-  if (revision !== lastRevision) {
-    lastRevision = revision;
-    cached = parse(read(OPENING_FOLDERS_STORAGE_KEY));
-  }
-  return cached;
-};
-
-const emit = () => {
-  for (const listener of listeners) listener();
-};
-
-const onStorageEvent = (event: StorageEvent) => {
-  // `key === null` is a `clear()` from another tab, which affects us too.
-  if (
-    event.key === null ||
-    event.key === OPENING_FOLDERS_STORAGE_KEY ||
-    event.key === OPENING_FOLDERS_REVISION_KEY
-  ) {
-    emit();
-  }
-};
+export const openingFoldersSnapshot = folders.snapshot;
 
 /** Subscribe to changes — this tab's writes, and other tabs' through `storage`. */
-export const subscribeOpeningFolders = (onChange: () => void): (() => void) => {
-  listeners.add(onChange);
+export const subscribeOpeningFolders = folders.subscribe;
 
-  if (listeners.size === 1 && typeof window !== "undefined") {
-    window.addEventListener("storage", onStorageEvent);
-  }
-
-  return () => {
-    listeners.delete(onChange);
-    if (listeners.size === 0 && typeof window !== "undefined") {
-      window.removeEventListener("storage", onStorageEvent);
-    }
-  };
-};
-
-/** Bumped on every write, so a snapshot can tell "changed" from "unchanged". */
-let writes = 0;
-
-/** Write the list, or say why it could not be written. Never throws. */
-const write = (
-  folders: readonly OpeningFolder[],
-): OpeningFolderProblem | undefined => {
-  try {
-    localStorage.setItem(
-      OPENING_FOLDERS_STORAGE_KEY,
-      JSON.stringify(folders),
-    );
-    // After the data, so a revision never claims a write that did not land.
-    writes += 1;
-    localStorage.setItem(OPENING_FOLDERS_REVISION_KEY, `${Date.now()}-${writes}`);
-  } catch {
-    return "storage";
-  }
-  emit();
-  return undefined;
-};
+/** The store's write — every operation below funnels through it. */
+const write = folders.write;
 
 /** A folder's name as it is stored: trimmed, bounded, and never empty. */
 const normaliseName = (name: string): string =>
