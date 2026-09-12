@@ -1,24 +1,16 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
 import CardActionArea from "@mui/material/CardActionArea";
 import Checkbox from "@mui/material/Checkbox";
-import Chip from "@mui/material/Chip";
 import IconButton from "@mui/material/IconButton";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
-import ToggleButton from "@mui/material/ToggleButton";
-import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import AccountTreeRounded from "@mui/icons-material/AccountTreeRounded";
 import ArticleRounded from "@mui/icons-material/ArticleRounded";
-import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
-import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
-import ViewComfyRounded from "@mui/icons-material/ViewComfyRounded";
-import ViewListRounded from "@mui/icons-material/ViewListRounded";
-import ViewModuleRounded from "@mui/icons-material/ViewModuleRounded";
 import { Link as RouterLink } from "react-router";
 import { useTranslation } from "react-i18next";
 import { Chessboard, type ChessboardOptions } from "react-chessboard";
@@ -30,12 +22,8 @@ import {
 import { finalFenOf, type Game } from "../../../lib/gameModel";
 import type { LibraryGame } from "../../../lib/libraryCatalog";
 import {
-  getPositionBook,
-  loadOpeningBook,
   openingOfLine,
-  type OpeningBook,
   type OpeningEntry,
-  type PositionBook,
 } from "../../../lib/openings";
 import { downloadPgn } from "../../../lib/pgnExport";
 import { savedGameSummary, type SavedGame } from "../../../lib/savedGames";
@@ -44,7 +32,17 @@ import {
   savedGamesCatalog,
 } from "../../../lib/savedGameStore";
 import { RightPanel } from "../../main/rightPanel";
-import { cardSizeTrack, type CardSize } from "../../library/cardSize";
+import SavedListExportBar from "../../shared/SavedListExportBar";
+import SavedListRemoveButton from "../../shared/SavedListRemoveButton";
+import SavedListViewToggle from "../../shared/SavedListViewToggle";
+import {
+  SAVED_LIST_DEFAULT_VIEW,
+  savedListDate,
+  savedListGridSx,
+  savedListLine,
+  type SavedListView,
+} from "../../shared/savedList";
+import { useOpeningBook } from "../../shared/useOpeningBook";
 import { useSavedGames } from "./useSavedGames";
 
 /**
@@ -64,9 +62,9 @@ import { useSavedGames } from "./useSavedGames";
  * top bar carries a three-way toggle — the list, small boards, big boards — and
  * the two board settings are the library list screen's own two, through
  * [`cardSize.ts`](../../library/cardSize.ts) rather than a second copy of the
- * grid track. The list stays the default: it is what the screen shipped with, so
- * a reader is left with exactly what they had and the boards are something
- * offered.
+ * grid track. The toggle, the export bar and the delete control are the shared
+ * saved-list machinery (`views/shared/savedList.ts` and the three
+ * `SavedList*.tsx` beside it), which all three saved screens consume.
  *
  * **A saved game's card previews the position it was left at**, not the one it
  * started from — which is where it deliberately parts company with
@@ -128,20 +126,6 @@ import { useSavedGames } from "./useSavedGames";
  * position to draw — so in the board view it is a card with the message in it.
  */
 
-/** The list, or one of the two board sizes. */
-type SavedGamesView = "list" | CardSize;
-
-/** What the screen opens on — what it shipped with, so nothing is taken away. */
-const DEFAULT_VIEW: SavedGamesView = "list";
-
-/** How a game stands, as a locale key under `savedGames.result`. */
-const resultKey = (result: string | undefined): string => {
-  if (result === "1-0") return "white";
-  if (result === "0-1") return "black";
-  if (result === "1/2-1/2") return "draw";
-  return "inProgress";
-};
-
 /**
  * A card's preview board. Read-only, and showing the position the game was left
  * at — see the note above on why that is not `libraryItemFen`. Each board takes
@@ -185,58 +169,36 @@ type CardProps = EntryProps & {
  * A hook rather than a pure helper because every part of it is translated, and
  * not exported because both callers are in this file — a non-component export
  * from a `.tsx` costs fast refresh, which is why `cardSize.ts` is its own module
- * and this is not.
+ * and this is not. The `when` formatting and the join are the shared
+ * `savedList.ts` helpers rather than a second copy of them.
  */
 const useCaption = ({ saved, item }: EntryProps) => {
   const { t, i18n } = useTranslation();
   const summary = savedGameSummary(saved, item?.game);
 
-  /*
-    The reader's own clock and their own language: `updatedAt` is stored as ISO
-    so the record stays plain JSON, and it is a date rather than notation, so it
-    is the one thing here formatted for the reader rather than written the way
-    PGN writes it.
-  */
-  const played = new Date(saved.updatedAt);
-  const when = Number.isNaN(played.valueOf())
-    ? ""
-    : played.toLocaleDateString(i18n.language, {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-      });
+  const when = savedListDate(saved.updatedAt, i18n.language);
 
   return {
     primary: t(`savedGames.playingAs.${summary.playAs}`),
     secondary:
       item === undefined
         ? t("savedGames.unreadable")
-        : [
+        : savedListLine([
             t("savedGames.moves", { count: summary.moves }),
             t(`savedGames.result.${resultKey(summary.result)}`),
             t("savedGames.level", { level: summary.skillLevel }),
             when,
-          ]
-            .filter((part) => part !== "")
-            .join(" · "),
+          ]),
   };
 };
 
-/** The delete control, identical in both views. */
-function RemoveButton({ id }: { id: string }) {
-  const { t } = useTranslation();
-
-  return (
-    <IconButton
-      size="small"
-      aria-label={t("savedGames.remove")}
-      data-testid={`saved-games-remove-${id}`}
-      onClick={() => removeSavedGame(id)}
-    >
-      <DeleteOutlineRoundedIcon fontSize="small" />
-    </IconButton>
-  );
-}
+/** How a game stands, as a locale key under `savedGames.result`. */
+const resultKey = (result: string | undefined): string => {
+  if (result === "1-0") return "white";
+  if (result === "0-1") return "black";
+  if (result === "1/2-1/2") return "draw";
+  return "inProgress";
+};
 
 type RowProps = EntryProps & {
   /** Whether this row is picked for export. */
@@ -313,7 +275,12 @@ function SavedGameRow({ saved, item, checked, onToggle }: RowProps) {
             </Button>
           </>
         )}
-        <RemoveButton id={saved.id} />
+        <SavedListRemoveButton
+          id={saved.id}
+          onRemove={removeSavedGame}
+          labelKey="savedGames"
+          testIdPrefix="saved-games"
+        />
         {/* Last in the row, as it is on the sites a reader will have exported
             a game from — and selectable even for a record that will not parse,
             since the export copies the stored PGN rather than re-writing it. */}
@@ -452,7 +419,12 @@ function SavedGameCard({ saved, item, opening }: CardProps) {
             </>
           )}
           <Box sx={{ marginInlineStart: "auto" }}>
-            <RemoveButton id={saved.id} />
+            <SavedListRemoveButton
+              id={saved.id}
+              onRemove={removeSavedGame}
+              labelKey="savedGames"
+              testIdPrefix="saved-games"
+            />
           </Box>
         </Box>
       </Box>
@@ -463,7 +435,7 @@ function SavedGameCard({ saved, item, opening }: CardProps) {
 function SavedGames() {
   const { t } = useTranslation();
 
-  const [view, setView] = useState<SavedGamesView>(DEFAULT_VIEW);
+  const [view, setView] = useState<SavedListView>(SAVED_LIST_DEFAULT_VIEW);
 
   const games = useSavedGames();
   /*
@@ -514,28 +486,7 @@ function SavedGames() {
       selected.map((saved) => saved.pgn),
     );
 
-  /*
-    The opening book, for the line under each card. Loaded lazily and shared:
-    `loadOpeningBook` caches its promise, so a reader who has already opened a
-    game screen pays nothing here, and one who never opens this screen never
-    downloads it. Until it resolves the cards simply carry no opening line —
-    where `CurrentOpening` says "loading", because there it is the whole point
-    of the line and here it is a fourth fact on a card.
-  */
-  const [book, setBook] = useState<{
-    book: OpeningBook;
-    positions: PositionBook;
-  } | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    void loadOpeningBook().then((loaded) => {
-      if (!cancelled) setBook({ book: loaded, positions: getPositionBook(loaded) });
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const book = useOpeningBook();
 
   /*
     One walk per game, memoised on the snapshot and the book — both stable
@@ -605,97 +556,35 @@ function SavedGames() {
             and the selection is dropped with them.
           */}
           {view === "list" && games.length > 0 && (
-            <Box
-              data-testid="saved-games-export"
-              sx={{ display: "flex", alignItems: "center", gap: 0.5, flexShrink: 0 }}
-            >
-              <Tooltip title={t("savedGames.selectAll")}>
-                <Checkbox
-                  size="small"
-                  checked={selected.length === games.length}
-                  indeterminate={
-                    selected.length > 0 && selected.length < games.length
-                  }
-                  onChange={toggleAll}
-                  slotProps={{ input: { "aria-label": t("savedGames.selectAll") } }}
-                  data-testid="saved-games-select-all"
-                />
-              </Tooltip>
-              {selected.length > 0 && (
-                <Chip
-                  size="small"
-                  label={t("savedGames.selected", { count: selected.length })}
-                  onDelete={() => setPicked(new Set())}
-                  data-testid="saved-games-selected-count"
-                />
-              )}
-              <Tooltip title={t("savedGames.download")}>
-                {/* A disabled button takes no pointer events, so the tooltip
-                    needs a wrapper that still does — the same wrapper the board
-                    controls use. */}
-                <Box component="span" sx={{ display: "inline-flex" }}>
-                  <IconButton
-                    size="small"
-                    disabled={selected.length === 0}
-                    onClick={downloadSelected}
-                    aria-label={t("savedGames.download")}
-                    data-testid="saved-games-download"
-                  >
-                    <DownloadRoundedIcon fontSize="small" />
-                  </IconButton>
-                </Box>
-              </Tooltip>
-            </Box>
+            <SavedListExportBar
+              testIdPrefix="saved-games"
+              labelKey="savedGames"
+              checked={selected.length === games.length}
+              indeterminate={
+                selected.length > 0 && selected.length < games.length
+              }
+              onToggleAll={toggleAll}
+              selectedCount={selected.length}
+              onClearSelected={() => setPicked(new Set())}
+              onDownload={downloadSelected}
+            />
           )}
 
-          <ToggleButtonGroup
-            exclusive
-            size="small"
+          {/*
+            A real change drops the selection, because the checkboxes only
+            exist in the list view — a count for rows nobody can see is a trap.
+            The toggle itself is the shared one (`SavedListViewToggle`), which
+            never calls back with the view already showing.
+          */}
+          <SavedListViewToggle
             value={view}
-            /*
-              `null` when the pressed button is the one already selected: the
-              screen has to be showing *something*, so that is a no-op.
-
-              A real change drops the selection, because the checkboxes only
-              exist in the list view — a count for rows nobody can see is a
-              trap.
-            */
-            onChange={(_event, next: SavedGamesView | null) => {
-              if (next === null) return;
+            onChange={(next) => {
               setView(next);
               setPicked(new Set());
             }}
-            aria-label={t("savedGames.view.label")}
-            sx={{ flexShrink: 0 }}
-          >
-            <ToggleButton
-              value="list"
-              data-testid="saved-games-view-list"
-              aria-label={t("savedGames.view.list")}
-            >
-              <Tooltip title={t("savedGames.view.list")}>
-                <ViewListRounded fontSize="small" />
-              </Tooltip>
-            </ToggleButton>
-            <ToggleButton
-              value="compact"
-              data-testid="saved-games-view-compact"
-              aria-label={t("savedGames.view.compact")}
-            >
-              <Tooltip title={t("savedGames.view.compact")}>
-                <ViewComfyRounded fontSize="small" />
-              </Tooltip>
-            </ToggleButton>
-            <ToggleButton
-              value="comfortable"
-              data-testid="saved-games-view-comfortable"
-              aria-label={t("savedGames.view.comfortable")}
-            >
-              <Tooltip title={t("savedGames.view.comfortable")}>
-                <ViewModuleRounded fontSize="small" />
-              </Tooltip>
-            </ToggleButton>
-          </ToggleButtonGroup>
+            labelKey="savedGames"
+            testIdPrefix="saved-games"
+          />
         </Box>
 
         {/*
@@ -734,28 +623,7 @@ function SavedGames() {
             </List>
           </Box>
         ) : (
-          <Box
-            data-testid="saved-games-grid"
-            sx={{
-              flex: 1,
-              minHeight: 0,
-              overflowY: "auto",
-              overflowX: "hidden",
-              display: "grid",
-              gridTemplateColumns: cardSizeTrack(view),
-              /*
-                **This is the line that makes it scroll** — the same trap
-                `LibraryList` documents: an `auto` row inside a grid whose own
-                height is definite is stretched to share that height out, so the
-                cards would be squashed and clipped and there would be no
-                overflow to scroll. Sized by their content, the rows overflow.
-              */
-              gridAutoRows: "max-content",
-              gap: 2,
-              alignContent: "start",
-              pt: 1.5,
-            }}
-          >
+          <Box data-testid="saved-games-grid" sx={savedListGridSx(view)}>
             {entries.map((entry) => (
               <SavedGameCard
                 key={entry.saved.id}
