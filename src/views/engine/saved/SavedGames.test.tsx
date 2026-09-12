@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { act, render, screen } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { Chess } from "chess.js";
@@ -9,7 +9,12 @@ import AppThemeWithLang from "../../../theme/AppThemeWithLang";
 import { DEFAULT_ENGINE_SETTINGS } from "../../../lib/engineSettings";
 import { gameFromChess, type Game } from "../../../lib/gameModel";
 import { savedGameOf, type SavedGame } from "../../../lib/savedGames";
-import { saveGame } from "../../../lib/savedGameStore";
+import { fileSavedGame, saveGame, savedGamesSnapshot } from "../../../lib/savedGameStore";
+import {
+  createGameFolder,
+  findGameFolder,
+  gameFoldersSnapshot,
+} from "../../../lib/savedGameFolderStore";
 import { cardSizeTrack } from "../../library/cardSize";
 import { RightPanelOutlet, RightPanelProvider } from "../../main/rightPanel";
 import SavedGames from "./SavedGames";
@@ -54,6 +59,23 @@ vi.mock("react-chessboard", () => ({
   ),
 }));
 
+/*
+  The export is mocked at the module boundary rather than through the blob URL:
+  what is under test is *what* the screen hands `downloadPgn` — the stems and
+  the records — not the browser's save itself, which is the DOM half of
+  `lib/pgnExport.ts` and cannot run in jsdom meaningfully anyway.
+*/
+const { downloadCalls } = vi.hoisted(() => ({
+  downloadCalls: [] as { stem: string; pgns: string[] }[],
+}));
+
+vi.mock("../../../lib/pgnExport", () => ({
+  downloadPgn: (stem: string, pgns: readonly string[]) => {
+    downloadCalls.push({ stem, pgns: [...pgns] });
+    return true;
+  },
+}));
+
 const playedGame = (moves: readonly string[]): Game => {
   const chess = new Chess();
   for (const san of moves) chess.move(san);
@@ -72,6 +94,12 @@ const save = (
     { ...DEFAULT_ENGINE_SETTINGS, ...settings },
     now,
   );
+
+/** Save one game and file it, the way the screen's move control does. */
+const saveIn = (id: string, moves: readonly string[], folderId: string | null) => {
+  saveGame(save(id, moves));
+  if (folderId !== null) fileSavedGame(id, folderId);
+};
 
 const renderScreen = () =>
   render(
@@ -376,5 +404,443 @@ describe("Saved games — the panel", () => {
     expect(screen.getByTestId("saved-games-storage-note")).toHaveTextContent(
       "kept in this browser only",
     );
+  });
+});
+
+/*
+  A checkbox's `data-testid` sits on the Checkbox's root, and in jsdom a click
+  there never reaches the input — so a row's checkbox is queried by role inside
+  its row, and the header's inside its own box. The input is what carries the
+  state (and MUI's `data-indeterminate`), and the click is what toggles it.
+*/
+const rowCheckbox = (id: string) =>
+  within(screen.getByTestId(`saved-games-item-${id}`)).getByRole("checkbox");
+
+const selectAllInput = () =>
+  within(screen.getByTestId("saved-games-select-all")).getByRole("checkbox");
+
+describe("Saved games — the folder browser", () => {
+  /** Two roots, a sub-folder, and games filed at each level. */
+  const seedTree = () => {
+    const games = createGameFolder("Games", null);
+    const e4 = createGameFolder("e4 games", games?.id ?? null);
+    const endgames = createGameFolder("Endgames", null);
+
+    saveIn("direct", ["e4"], games?.id ?? null);
+    saveIn("nested", ["d4"], e4?.id ?? null);
+    saveIn("loose", ["c4"], null);
+
+    return { games: games?.id, e4: e4?.id, endgames: endgames?.id };
+  };
+
+  it("shows root folders at the top level, each counting everything under it", () => {
+    const ids = seedTree();
+
+    renderScreen();
+
+    // Games' caption counts its whole subtree: the game in it and the one in
+    // e4 games — a folder card stands for what is behind the click. e4 games
+    // itself is one level down; only the roots are listed here.
+    expect(screen.getByTestId(`saved-games-folder-${ids.games}`)).toHaveTextContent(
+      "2 games",
+    );
+    // Endgames has nothing under it: the Unfiled game is an item at the top
+    // level, not filed in a folder.
+    expect(
+      screen.getByTestId(`saved-games-folder-${ids.endgames}`),
+    ).toHaveTextContent("0 games");
+    // The Unfiled game is an item at the top level, not hidden away.
+    expect(screen.getByTestId("saved-games-item-loose")).toBeInTheDocument();
+    // No breadcrumb at the top — there is no chain to show.
+    expect(
+      screen.queryByTestId("saved-games-breadcrumb"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("drills in and shows that folder's sub-folders and its games", async () => {
+    const ids = seedTree();
+    renderScreen();
+
+    await userEvent.click(
+      screen.getByTestId(`saved-games-folder-open-${ids.games}`),
+    );
+
+    // The sub-folder is listed; the Unfiled game is not.
+    expect(
+      screen.queryByTestId(`saved-games-folder-${ids.e4}`),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId("saved-games-item-loose")).not.toBeInTheDocument();
+    // The game filed directly here shows; the nested one stays a level down.
+    expect(screen.getByTestId("saved-games-item-direct")).toBeInTheDocument();
+    expect(screen.queryByTestId("saved-games-item-nested")).not.toBeInTheDocument();
+  });
+
+  it("navigates back up by the breadcrumb chain", async () => {
+    const ids = seedTree();
+    renderScreen();
+
+    await userEvent.click(
+      screen.getByTestId(`saved-games-folder-open-${ids.games}`),
+    );
+    await userEvent.click(
+      screen.getByTestId(`saved-games-folder-open-${ids.e4}`),
+    );
+
+    // Two levels down: the breadcrumb names the whole chain.
+    expect(screen.getByTestId("saved-games-breadcrumb-root")).toBeInTheDocument();
+    expect(screen.getByTestId(`saved-games-breadcrumb-${ids.games}`)).toBeInTheDocument();
+    expect(screen.getByTestId(`saved-games-breadcrumb-${ids.e4}`)).toHaveTextContent(
+      "e4 games",
+    );
+
+    await userEvent.click(
+      screen.getByTestId(`saved-games-breadcrumb-${ids.games}`),
+    );
+
+    // Back at Games, not at the top.
+    expect(screen.getByTestId("saved-games-item-direct")).toBeInTheDocument();
+    await userEvent.click(screen.getByTestId("saved-games-breadcrumb-root"));
+
+    // And the top level again: root folders and the Unfiled game.
+    expect(screen.getByTestId(`saved-games-folder-${ids.games}`)).toBeInTheDocument();
+    expect(screen.getByTestId("saved-games-item-loose")).toBeInTheDocument();
+  });
+
+  it("creates a folder under the folder the reader is standing in", async () => {
+    const ids = seedTree();
+    renderScreen();
+
+    await userEvent.click(screen.getByTestId("saved-games-new-folder"));
+    await userEvent.type(screen.getByTestId("game-folder-name-input"), "New root");
+    await userEvent.click(screen.getByTestId("game-folder-name-save"));
+
+    const created = gameFoldersSnapshot().find((f) => f.name === "New root");
+    expect(created?.parentId).toBeNull();
+
+    // Inside Games, the same button nests one level down.
+    await userEvent.click(
+      screen.getByTestId(`saved-games-folder-open-${ids.games}`),
+    );
+    await userEvent.click(screen.getByTestId("saved-games-new-folder"));
+    await userEvent.type(screen.getByTestId("game-folder-name-input"), "New sub");
+    await userEvent.click(screen.getByTestId("game-folder-name-save"));
+
+    const sub = gameFoldersSnapshot().find((f) => f.name === "New sub");
+    expect(sub?.parentId).toBe(ids.games);
+  });
+
+  it("renames a folder in place", async () => {
+    const ids = seedTree();
+    renderScreen();
+
+    await userEvent.click(
+      screen.getByTestId(`saved-games-folder-rename-${ids.games}`),
+    );
+    const input = screen.getByTestId("game-folder-name-input");
+    await userEvent.clear(input);
+    await userEvent.type(input, "Renamed");
+    await userEvent.click(screen.getByTestId("game-folder-name-save"));
+
+    expect(screen.getByTestId(`saved-games-folder-${ids.games}`)).toHaveTextContent(
+      "Renamed",
+    );
+  });
+
+  it("moves a folder via the dialog, never into its own subtree", async () => {
+    const ids = seedTree();
+    renderScreen();
+
+    // Move "Games" from the top: Endgames is offered, but e4 games — inside
+    // Games' own subtree — is never offered.
+    await userEvent.click(
+      screen.getByTestId(`saved-games-folder-move-${ids.games}`),
+    );
+    expect(
+      screen.getByTestId(`game-folder-picker-${ids.endgames}`),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByTestId(`game-folder-picker-${ids.e4}`),
+    ).not.toBeInTheDocument();
+    await userEvent.click(screen.getByTestId("game-folder-move-cancel"));
+    expect(findGameFolder(ids.games)?.parentId).toBeNull();
+
+    // Move "e4 games" (inside Games): Endgames is offered; e4 itself is not.
+    await userEvent.click(
+      screen.getByTestId(`saved-games-folder-open-${ids.games}`),
+    );
+    await userEvent.click(
+      screen.getByTestId(`saved-games-folder-move-${ids.e4}`),
+    );
+    expect(
+      screen.getByTestId(`game-folder-picker-${ids.endgames}`),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByTestId(`game-folder-picker-${ids.e4}`),
+    ).not.toBeInTheDocument();
+    await userEvent.click(
+      screen.getByTestId(`game-folder-picker-${ids.endgames}`),
+    );
+
+    expect(findGameFolder(ids.e4)?.parentId).toBe(ids.endgames);
+  });
+
+  it("files a game via the move control, and back out to Unfiled", async () => {
+    const ids = seedTree();
+    renderScreen();
+
+    // The Unfiled game carries the move control; the picker offers both roots.
+    await userEvent.click(screen.getByTestId("saved-games-move-loose"));
+    expect(
+      screen.getByTestId(`game-folder-picker-${ids.games}`),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId("game-folder-unfiled"),
+    ).toBeInTheDocument();
+    await userEvent.click(
+      screen.getByTestId(`game-folder-picker-${ids.endgames}`),
+    );
+
+    // Filed — it now shows inside Endgames, not at the top.
+    expect(
+      gameFoldersSnapshot().find((f) => f.id === ids.endgames),
+    ).toBeDefined();
+    expect(
+      savedGamesSnapshot().find((row) => row.id === "loose")?.folderId,
+    ).toBe(ids.endgames);
+
+    await userEvent.click(
+      screen.getByTestId(`saved-games-folder-open-${ids.endgames}`),
+    );
+    expect(screen.getByTestId("saved-games-item-loose")).toBeInTheDocument();
+
+    // And back out: Unfiled is the picker's "none" choice.
+    await userEvent.click(screen.getByTestId("saved-games-move-loose"));
+    await userEvent.click(screen.getByTestId("game-folder-unfiled"));
+    expect(
+      savedGamesSnapshot().find((row) => row.id === "loose")?.folderId,
+    ).toBeNull();
+  });
+
+  it("deletes an empty folder outright, without asking", async () => {
+    const empty = createGameFolder("Empty", null);
+    renderScreen();
+
+    await userEvent.click(
+      screen.getByTestId(`saved-games-folder-delete-${empty?.id}`),
+    );
+
+    expect(gameFoldersSnapshot()).toEqual([]);
+    expect(
+      screen.queryByTestId("game-folder-delete-confirm"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("asks before deleting a folder with contents, and keeps them", async () => {
+    const ids = seedTree();
+    renderScreen();
+
+    await userEvent.click(
+      screen.getByTestId(`saved-games-folder-delete-${ids.games}`),
+    );
+
+    // The dialog states the rule and what is behind the click — everything
+    // under Games, directly and not: two games (one in e4 games), one
+    // sub-folder.
+    expect(screen.getByTestId("game-folder-delete-counts")).toHaveTextContent(
+      "2 games",
+    );
+    expect(screen.getByTestId("game-folder-delete-counts")).toHaveTextContent(
+      "1 sub-folders",
+    );
+
+    await userEvent.click(screen.getByTestId("game-folder-delete-cancel"));
+    expect(findGameFolder(ids.games)).toBeDefined();
+
+    await userEvent.click(
+      screen.getByTestId(`saved-games-folder-delete-${ids.games}`),
+    );
+    await userEvent.click(screen.getByTestId("game-folder-delete-confirm"));
+
+    // The folder is gone; the tree closed up — e4 games re-parented to the
+    // top, its game still filed in it.
+    expect(findGameFolder(ids.games)).toBeUndefined();
+    expect(findGameFolder(ids.e4)?.parentId).toBeNull();
+    expect(
+      savedGamesSnapshot().find((row) => row.id === "nested")?.folderId,
+    ).toBe(ids.e4);
+  });
+
+  it("files games filed directly in a deleted folder back to Unfiled", async () => {
+    const only = createGameFolder("Only", null);
+    saveIn("direct", ["e4"], only?.id ?? null);
+    renderScreen();
+
+    await userEvent.click(
+      screen.getByTestId(`saved-games-folder-delete-${only?.id}`),
+    );
+    await userEvent.click(screen.getByTestId("game-folder-delete-confirm"));
+
+    // The game survives, unfiled — it shows at the top level again.
+    expect(
+      savedGamesSnapshot().find((row) => row.id === "direct")?.folderId,
+    ).toBeNull();
+    expect(screen.getByTestId("saved-games-item-direct")).toBeInTheDocument();
+  });
+});
+
+describe("Saved games — export with folders", () => {
+  beforeEach(() => {
+    downloadCalls.length = 0;
+  });
+
+  /** Two root folders, one game in each. */
+  const seedTwoFolders = () => {
+    const games = createGameFolder("Games", null);
+    const endgames = createGameFolder("Endgames", null);
+    saveIn("inGames", ["e4"], games?.id ?? null);
+    saveIn("inEndgames", ["d4"], endgames?.id ?? null);
+    return { games: games?.id, endgames: endgames?.id };
+  };
+
+  it("keeps the picks across folder navigation, and select-all in a folder adds to them", async () => {
+    const ids = seedTwoFolders();
+    renderScreen();
+
+    // Drill into Games and pick its one game.
+    await userEvent.click(screen.getByTestId(`saved-games-folder-open-${ids.games}`));
+    await userEvent.click(rowCheckbox("inGames"));
+    expect(screen.getByTestId("saved-games-selected-count")).toHaveTextContent(
+      "1 selected",
+    );
+
+    // Back out and into Endgames: the pick persists, the chip stays visible.
+    await userEvent.click(screen.getByTestId("saved-games-breadcrumb-root"));
+    await userEvent.click(
+      screen.getByTestId(`saved-games-folder-open-${ids.endgames}`),
+    );
+    expect(screen.getByTestId("saved-games-selected-count")).toHaveTextContent(
+      "1 selected",
+    );
+
+    // Select-all here adds Endgames' game to the picks, not replaces them.
+    await userEvent.click(selectAllInput());
+    expect(screen.getByTestId("saved-games-selected-count")).toHaveTextContent(
+      "2 selected",
+    );
+
+    // And the first pick is still ticked back in Games.
+    await userEvent.click(screen.getByTestId("saved-games-breadcrumb-root"));
+    await userEvent.click(screen.getByTestId(`saved-games-folder-open-${ids.games}`));
+    expect(rowCheckbox("inGames")).toBeChecked();
+    expect(screen.getByTestId("saved-games-selected-count")).toHaveTextContent(
+      "2 selected",
+    );
+  });
+
+  it("marks select-all indeterminate while only part of the folder is picked", async () => {
+    const games = createGameFolder("Games", null);
+    saveIn("a1", ["e4"], games?.id ?? null);
+    saveIn("a2", ["d4"], games?.id ?? null);
+
+    renderScreen();
+
+    await userEvent.click(
+      screen.getByTestId(`saved-games-folder-open-${games?.id}`),
+    );
+    await userEvent.click(rowCheckbox("a1"));
+
+    // One of this folder's two games is picked — the header box says so,
+    // without claiming that all of them are (MUI surfaces the tri-state as an
+    // attribute on the input rather than the `.indeterminate` property).
+    const selectAll = selectAllInput();
+    expect(selectAll).toHaveAttribute("data-indeterminate", "true");
+    expect(selectAll).not.toBeChecked();
+  });
+
+  it("exports one .pgn of everything under the folder, sub-folders included", async () => {
+    const games = createGameFolder("Games", null);
+    const e4 = createGameFolder("e4 games", games?.id ?? null);
+    const direct = save("direct", ["e4"]);
+    const nested = save("nested", ["d4"]);
+    saveGame(direct);
+    fileSavedGame("direct", games?.id ?? null);
+    saveGame(nested);
+    fileSavedGame("nested", e4?.id ?? null);
+    saveIn("loose", ["c4"], null);
+
+    renderScreen();
+
+    await userEvent.click(
+      screen.getByTestId(`saved-games-folder-download-${games?.id}`),
+    );
+
+    // One file, named from the folder, holding the subtree's games — the same
+    // set the folder's count stands for — and not the Unfiled one. The store
+    // is newest first, so the nested game (saved later) leads.
+    expect(downloadCalls).toHaveLength(1);
+    expect(downloadCalls[0].stem).toBe("games");
+    expect(downloadCalls[0].pgns).toEqual([nested.pgn, direct.pgn]);
+  });
+
+  it("falls back to a fixed stem for a folder whose name slugs to nothing", async () => {
+    // A folder named in Hebrew slugs to empty — `slugify` keeps [a-z0-9] only.
+    const hebrew = createGameFolder("משחקים", null);
+    saveIn("a1", ["e4"], hebrew?.id ?? null);
+
+    renderScreen();
+
+    await userEvent.click(
+      screen.getByTestId(`saved-games-folder-download-${hebrew?.id}`),
+    );
+
+    expect(downloadCalls).toHaveLength(1);
+    expect(downloadCalls[0].stem).toBe("saved-games");
+  });
+
+  it("disables a folder's download when it is empty, and enables one with contents", () => {
+    const empty = createGameFolder("Empty", null);
+    const full = createGameFolder("Full", null);
+    saveIn("a1", ["d4"], full?.id ?? null);
+
+    renderScreen();
+
+    expect(
+      screen.getByTestId(`saved-games-folder-download-${empty?.id}`),
+    ).toBeDisabled();
+    expect(
+      screen.getByTestId(`saved-games-folder-download-${full?.id}`),
+    ).toBeEnabled();
+  });
+
+  it("drops the selection when the view switches to boards", async () => {
+    saveIn("a1", ["e4"], null);
+
+    renderScreen();
+
+    await userEvent.click(rowCheckbox("a1"));
+    expect(screen.getByTestId("saved-games-selected-count")).toBeInTheDocument();
+
+    // The checkboxes only exist in the list view, and the selection drops with
+    // them.
+    await userEvent.click(screen.getByTestId("saved-games-view-compact"));
+    expect(screen.queryByTestId("saved-games-export")).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByTestId("saved-games-view-list"));
+    expect(screen.getByTestId("saved-games-download")).toBeDisabled();
+    expect(rowCheckbox("a1")).not.toBeChecked();
+  });
+
+  it("shows an empty folder's body once the reader has drilled in", async () => {
+    const empty = createGameFolder("Empty", null);
+    renderScreen();
+
+    await userEvent.click(
+      screen.getByTestId(`saved-games-folder-open-${empty?.id}`),
+    );
+
+    expect(screen.getByTestId("saved-games-folder-empty")).toHaveTextContent(
+      "This folder is empty.",
+    );
+    expect(screen.queryByTestId("saved-games-empty")).not.toBeInTheDocument();
   });
 });

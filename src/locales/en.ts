@@ -228,7 +228,7 @@ const en = {
     title: "Saved games",
     count: "Games: {{count}}",
     empty: "No saved games yet. Play a game against the engine and it appears here on its own.",
-    hint: "Every game you play against the engine is written down as you play it. Pick one up where you left it, or open it for study.",
+    hint: "Every game you play against the engine is written down as you play it. Pick one up where you left it, file it into a folder, or open it for study.",
     /** Said plainly: this is a browser, not a backup — as the Uploads screen does. */
     storage: "Saved games are kept in this browser only. Clearing site data removes them, and they do not follow you to another device.",
     /** The line that identifies a game: which side the reader had. */
@@ -277,6 +277,52 @@ const en = {
     selectAll: "Select all games",
     selected: "{{count}} selected",
     download: "Download selected as PGN",
+    /**
+     * A folder with no readable name — a half-broken store can produce one
+     * (`gameFolderFrom` normalises a broken name to empty rather than dropping
+     * the folder). The folders' CRUD refuses empty names; only a hand-edited
+     * store reaches this.
+     */
+    untitled: "Untitled folder",
+    /**
+     * The folder system (CTA-46), the savedOpenings block's `folder` below over
+     * the games' own store. Chrome only — a folder's name is the reader's own
+     * words, never a key.
+     */
+    folder: {
+      /** The breadcrumb's first crumb — standing at the top of the tree. */
+      root: "All games",
+      /** The top bar's create button. */
+      newFolder: "New folder",
+      renameFolder: "Rename folder",
+      moveFolder: "Move folder",
+      /** The per-game filing control — the one the openings do not have. */
+      moveGame: "Move game",
+      deleteFolder: "Delete folder",
+      /** The folder's own download — one .pgn of everything under it. */
+      download: "Download this folder as PGN",
+      /** The game move dialog's "none" choice — a game with no folder. */
+      unfiled: "Unfiled",
+      /** The folder move dialog's "none" row — the move's other destination. */
+      topLevel: "Top level",
+      /** Both the create and the rename dialog's field. */
+      name: "Folder name",
+      save: "Save",
+      cancel: "Cancel",
+      /**
+       * The delete confirmation for a non-empty folder: the contents stay —
+       * games become Unfiled, sub-folders re-parent up a level.
+       */
+      deleteConfirm:
+        "Deleting this folder keeps its contents: games filed in it become Unfiled, and its sub-folders move up one level.",
+      deleteCounts:
+        "This folder holds {{games}} games and {{subFolders}} sub-folders.",
+      /** A folder card's caption, counting everything under it. */
+      count_one: "{{count}} game",
+      count_other: "{{count}} games",
+      /** An empty folder's body, once the reader has drilled in. */
+      empty: "This folder is empty.",
+    },
   },
   /**
    * The **Saved analyses** screen — the boards the reader has worked on at the
