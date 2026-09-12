@@ -6,11 +6,17 @@ import { MemoryRouter, useLocation } from "react-router";
 import i18n from "../../../i18n";
 import AppThemeWithLang from "../../../theme/AppThemeWithLang";
 import { MOVE_ARROW_COLOR } from "../../../lib/gameNavigation";
+import { treeFromGame } from "../../../lib/gameTree";
+import { gameFromChess } from "../../../lib/gameModel";
 import {
   HOVERED_MOVE_ARROW_COLOR,
   KNOWN_MOVE_ARROW_COLOR,
 } from "../../../lib/openings";
-import { savedOpeningsSnapshot } from "../../../lib/savedOpeningStore";
+import {
+  newSavedOpeningId,
+  savedOpeningOf,
+} from "../../../lib/savedOpenings";
+import { saveOpening, savedOpeningsSnapshot } from "../../../lib/savedOpeningStore";
 import {
   createOpeningFolder,
   openingFoldersSnapshot,
@@ -57,6 +63,13 @@ const AFTER_D4 = "rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR b KQkq - 0 1";
 const offBookFen = () => {
   const chess = new Chess();
   for (const san of ["a3", "a6", "h3"]) chess.move(san);
+  return chess.fen();
+};
+
+/** After 1. e4 e5 2. f4 Nf6 — the book names it "King's Gambit Declined: Petrov's Defense". */
+const deepFen = () => {
+  const chess = new Chess();
+  for (const san of ["e4", "e5", "f4", "Nf6"]) chess.move(san);
   return chess.fen();
 };
 
@@ -419,6 +432,42 @@ describe("the Openings screen — arriving with a position", () => {
 });
 
 /*
+  A saved opening is reopened by the `?openings=` hand-off: the tree, the
+  orientation and the note arrive as initial state — and the board opens at the
+  end of the mainline, the position the reader goes on playing from.
+*/
+describe("the Openings screen — arriving with a saved opening", () => {
+  it("opens at the end of the mainline, not at ply 0", () => {
+    const chess = new Chess();
+    for (const san of ["e4", "e5", "f4"]) chess.move(san);
+    const record = savedOpeningOf(
+      newSavedOpeningId(),
+      treeFromGame(gameFromChess(chess)),
+      "white",
+      "My line",
+      null,
+    );
+    saveOpening(record);
+
+    renderScreen(`/openings?openings=${encodeURIComponent(record.id)}`);
+
+    expect(screen.getByTestId("board")).toHaveAttribute(
+      "data-position",
+      chess.fen(),
+    );
+  });
+
+  it("reopens an id that is not there as a fresh board", () => {
+    renderScreen("/openings?openings=no-such-id");
+
+    expect(screen.getByTestId("board")).toHaveAttribute(
+      "data-position",
+      START_FEN,
+    );
+  });
+});
+
+/*
   The store is *not* stubbed: it writes to the `localStorage` jsdom provides and
   `src/test/setup.ts` clears between tests, which is the behaviour under test —
   the same stand-in policy the Saved openings suite states.
@@ -520,6 +569,56 @@ describe("the Openings screen — saving", () => {
     );
     expect(created?.parentId).toBeNull();
     expect(savedOpeningsSnapshot()[0].folderId).toBe(created?.id);
+    // And the note defaults to the top-level name — no variation to take.
+    expect(savedOpeningsSnapshot()[0].note).toBe("King's Pawn Game");
+  });
+
+  it("files by the opening's top-level name when the book name is deep", async () => {
+    const user = userEvent.setup();
+    // After 1. e4 e5 2. f4 Nf6 — the book names it "King's Gambit Declined:
+    // Petrov's Defense"; the folder is the part before the first ":".
+    renderScreen(`/openings?fen=${encodeURIComponent(deepFen())}`);
+    await bookSettled();
+
+    await user.click(screen.getByTestId("openings-save"));
+    await user.click(screen.getByTestId("opening-note-save"));
+
+    // The family name, not the whole "Opening: Variation" convention.
+    const created = openingFoldersSnapshot().find(
+      (f) => f.name === "King's Gambit Declined",
+    );
+    expect(created).toBeDefined();
+    expect(created?.parentId).toBeNull();
+    expect(savedOpeningsSnapshot()[0].folderId).toBe(created?.id);
+    expect(
+      openingFoldersSnapshot().find(
+        (f) => f.name === "King's Gambit Declined: Petrov's Defense",
+      ),
+    ).toBeUndefined();
+  });
+
+  it("names a note-less save by the variation, falling back to the top level", async () => {
+    const user = userEvent.setup();
+    // "King's Gambit Declined: Petrov's Defense" — the variation is the name.
+    renderScreen(`/openings?fen=${encodeURIComponent(deepFen())}`);
+    await bookSettled();
+
+    await user.click(screen.getByTestId("openings-save"));
+    await user.click(screen.getByTestId("opening-note-save"));
+
+    expect(savedOpeningsSnapshot()[0].note).toBe("Petrov's Defense");
+  });
+
+  it("keeps a typed note over the default name", async () => {
+    const user = userEvent.setup();
+    renderScreen(`/openings?fen=${encodeURIComponent(deepFen())}`);
+    await bookSettled();
+
+    await user.click(screen.getByTestId("openings-save"));
+    await user.type(screen.getByTestId("opening-note-input"), "My line");
+    await user.click(screen.getByTestId("opening-note-save"));
+
+    expect(savedOpeningsSnapshot()[0].note).toBe("My line");
   });
 
   it("files an off-book position to Unfiled when no folder was chosen", async () => {

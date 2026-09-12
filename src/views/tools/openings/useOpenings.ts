@@ -8,11 +8,13 @@ import {
   getPositionBook,
   knownMoveOpenings,
   loadOpeningBook,
+  openingVariationName,
+  topLevelOpeningName,
   type KnownMoveOpening,
   type OpeningBook,
   type PositionBook,
 } from "../../../lib/openings";
-import { addMove, emptyTree, type GameTree } from "../../../lib/gameTree";
+import { addMove, emptyTree, mainline, type GameTree } from "../../../lib/gameTree";
 import {
   newSavedOpeningId,
   savedOpeningOf,
@@ -52,11 +54,13 @@ import { useTreeNavigation } from "../analysis/useTreeNavigation";
  * often than it is kept, and a reader who has to delete an autosave is a
  * reader who gives up on saving anything. {@link OpeningsStart.resume} reopens
  * one saved earlier: the tree (side lines and all), the orientation it was
- * viewed from, and its note, which is shown read-only — editing a note happens
- * on the Saved openings screen, not here. The save also names the folder the
- * opening is filed under — a choice from the save dialog, or the default rule
- * (an ECO-named position into a folder named after that opening) when the
- * reader leaves it unchosen.
+ * viewed from, its note, which is shown read-only — editing a note happens
+ * on the Saved openings screen, not here — and it opens at the **end of its
+ * mainline**, the position the reader goes on playing from. The save also
+ * names the folder the opening is filed under — a choice from the save dialog,
+ * or the default rule (a position the book names into a folder named after its
+ * top-level name, and an empty note by the variation, or the top level) when
+ * the reader leaves it unchosen.
  */
 
 /** A tree with nothing in it, taken once — plain data that nothing mutates. */
@@ -104,9 +108,10 @@ export const useOpenings = ({ fen: initialFen, resume }: OpeningsStart = {}) => 
   }, [resume]);
 
   /*
-    The position the screen was opened on. A reopened opening reopens at ply 0 —
-    the tree itself is the thing to explore — so its start position is what "New
-    game" returns to, exactly as a `?fen=` hand-off does.
+    The position the screen was opened on — what "New game" returns to, exactly
+    as a `?fen=` hand-off does. A reopened opening navigates to the end of its
+    mainline rather than staying here, but its start position is still what the
+    tree was grown from, so this is the reset either way.
   */
   const startFen = reopened?.tree.startFen ?? initialFen;
 
@@ -128,7 +133,17 @@ export const useOpenings = ({ fen: initialFen, resume }: OpeningsStart = {}) => 
   const [book, setBook] = useState<OpeningBook | null>(null);
   const [positionBook, setPositionBook] = useState<PositionBook | undefined>(undefined);
 
-  const navigation = useTreeNavigation(tree);
+  const navigation = useTreeNavigation(
+    tree,
+    /*
+      A reopened opening starts at the **end of its mainline** — the position
+      the reader goes on playing from — rather than at ply 0. The seed is a
+      mainline ply (the hook walks it to its node, and clamps to the last move
+      of a record saved with side lines), and 0 on an empty mainline — a record
+      saved with no moves — reads as ply 0, the root.
+    */
+    reopened !== undefined ? mainline(reopened.tree).length : undefined,
+  );
   const { fen, nodeId, goToNode } = navigation;
 
   // Loaded once per mount; `loadOpeningBook` itself caches across mounts, so a
@@ -299,25 +314,47 @@ export const useOpenings = ({ fen: initialFen, resume }: OpeningsStart = {}) => 
     store's idempotency is the guard against a double click stacking a
     duplicate; nothing here needs to remember a session id.
 
-    The folder: an explicit choice from the save dialog (a folder id, or `null`
-    for Unfiled) is taken as it is. `undefined` — the dialog opens with no
-    choice — is the **default rule's** cue, and this is where that rule lives:
-    a position the ECO book names saves into a folder named after that opening
-    (created at the top level if no such folder exists yet), and an off-book
-    position saves to Unfiled. The book lookup is of *the position on screen*
-    — the same one `CurrentOpening` names — because the reader is filing what
-    they are looking at, not the line it came from; and a book that has not
-    loaded yet is an off-book position, which is the honest answer either way.
+    The defaults: an explicit folder choice (a folder id, or `null` for
+    Unfiled) and a typed note are taken as they are. What the reader did not
+    provide is what this is the home of — and both defaults read the one book
+    lookup of *the position on screen* (the same one `CurrentOpening` names,
+    because the reader is filing what they are looking at, not the line it came
+    from); a book that has not loaded yet, or a position it does not know, is
+    an off-book position, which is the honest answer either way.
+
+    The folder: `undefined` — the dialog opens with no choice — is the
+    **default rule's** cue. A position the ECO book names saves into a folder
+    named after that opening's **top-level name** — the part of eco.json's
+    `"Opening: Variation, SubVariation"` convention before its first `":"`, so
+    a deep line like `"Petrov's Defense: Classical Attack"` files under
+    `"Petrov's Defense"` rather than a folder per variant (created at the top
+    level if no such folder exists yet), and an off-book position saves to
+    Unfiled.
+
+    The note: one left empty defaults to the **variation** the book names the
+    position with — the part after that first `":"` — or, when the name has no
+    variation, to the **top-level name** itself, so the record carries a real
+    name instead of the Saved openings screen's generic.
   */
   const saveOpening = useCallback(
     (note: string, folderChoice?: string | null) => {
+      const named = book !== null ? findOpening(book, fen, positionBook) : undefined;
+
       let folderId: string | null = folderChoice ?? null;
-      if (folderChoice === undefined && book !== null) {
-        const named = findOpening(book, fen, positionBook);
-        folderId = named === undefined ? null : (ensureOpeningFolder(named.name, null)?.id ?? null);
+      if (folderChoice === undefined) {
+        folderId =
+          named === undefined
+            ? null
+            : (ensureOpeningFolder(topLevelOpeningName(named.name), null)?.id ?? null);
       }
+
+      const savedNote =
+        note === "" && named !== undefined
+          ? openingVariationName(named.name) || topLevelOpeningName(named.name)
+          : note;
+
       persistOpening(
-        savedOpeningOf(newSavedOpeningId(), tree, orientation, note, folderId),
+        savedOpeningOf(newSavedOpeningId(), tree, orientation, savedNote, folderId),
       );
     },
     [book, fen, positionBook, tree, orientation],

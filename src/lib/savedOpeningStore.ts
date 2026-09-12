@@ -1,17 +1,20 @@
+import { recordStore } from "./recordStore";
 import {
   savedOpeningFrom,
   type SavedOpening,
 } from "./savedOpenings";
 
 /**
- * Where the reader's saved openings are kept: one `localStorage` key, holding a
- * JSON array of {@link SavedOpening}, newest first.
+ * Where the reader's saved openings are kept: one `localStorage` key, holding
+ * a JSON array of {@link SavedOpening}, newest first.
  *
  * The store half of [`savedOpenings.ts`](./savedOpenings.ts), and
- * [`savedAnalysisStore.ts`](./savedAnalysisStore.ts) again — a versioned key, a
- * revision stamp so a snapshot is cheap, non-throwing reads and writes, and a
- * cap. One thing is different, and it is the whole of what a saved opening does
- * that a saved analysis does not:
+ * [`savedAnalysisStore.ts`](./savedAnalysisStore.ts) again, built over the
+ * shared [`recordStore.ts`](./recordStore.ts) scaffolding — which owns the
+ * non-throwing read, the revision-stamped snapshot and the `storage`-event
+ * subscription, and carries the reasoning for all of it. One thing is
+ * different here, and it is the whole of what a saved opening does that a
+ * saved analysis does not:
  *
  * - **The note is edited in place.** A note is changed from the Saved openings
  *   screen *after* the record exists, so there is a write that must keep the
@@ -37,9 +40,6 @@ import {
 /** The `localStorage` key. Versioned, so a future shape change is a new key. */
 export const SAVED_OPENINGS_STORAGE_KEY = "chessapp.savedOpenings.v1";
 
-/** Where the revision is stamped — a few bytes, read on every snapshot. */
-export const SAVED_OPENINGS_REVISION_KEY = `${SAVED_OPENINGS_STORAGE_KEY}.rev`;
-
 /**
  * How many openings are kept.
  *
@@ -52,95 +52,19 @@ export const MAX_SAVED_OPENINGS = 50;
 /** What went wrong with a write. One case, but named rather than boolean. */
 export type SavedOpeningProblem = "storage";
 
-const EMPTY: readonly SavedOpening[] = [];
-
-const listeners = new Set<() => void>();
-
-/** Cached parse, and the revision it was read at. `undefined` = never read. */
-let lastRevision: string | null | undefined;
-let cached: readonly SavedOpening[] = EMPTY;
-
-const read = (key: string): string | null => {
-  try {
-    return localStorage.getItem(key);
-  } catch {
-    return null;
-  }
-};
-
-const parse = (raw: string | null): readonly SavedOpening[] => {
-  if (raw === null || raw.trim() === "") return EMPTY;
-  try {
-    const value: unknown = JSON.parse(raw);
-    if (!Array.isArray(value)) return EMPTY;
-    const rows = value
-      .map(savedOpeningFrom)
-      .filter((row): row is SavedOpening => row !== undefined);
-    return rows.length === 0 ? EMPTY : rows;
-  } catch {
-    return EMPTY;
-  }
-};
+const openings = recordStore<SavedOpening>(
+  SAVED_OPENINGS_STORAGE_KEY,
+  savedOpeningFrom,
+);
 
 /** The saved openings, newest first. Stable between changes. */
-export const savedOpeningsSnapshot = (): readonly SavedOpening[] => {
-  const revision = read(SAVED_OPENINGS_REVISION_KEY);
-  if (revision !== lastRevision) {
-    lastRevision = revision;
-    cached = parse(read(SAVED_OPENINGS_STORAGE_KEY));
-  }
-  return cached;
-};
-
-const emit = () => {
-  for (const listener of listeners) listener();
-};
-
-const onStorageEvent = (event: StorageEvent) => {
-  // `key === null` is a `clear()` from another tab, which affects us too.
-  if (
-    event.key === null ||
-    event.key === SAVED_OPENINGS_STORAGE_KEY ||
-    event.key === SAVED_OPENINGS_REVISION_KEY
-  ) {
-    emit();
-  }
-};
+export const savedOpeningsSnapshot = openings.snapshot;
 
 /** Subscribe to changes — this tab's writes, and other tabs' through `storage`. */
-export const subscribeSavedOpenings = (onChange: () => void): (() => void) => {
-  listeners.add(onChange);
+export const subscribeSavedOpenings = openings.subscribe;
 
-  if (listeners.size === 1 && typeof window !== "undefined") {
-    window.addEventListener("storage", onStorageEvent);
-  }
-
-  return () => {
-    listeners.delete(onChange);
-    if (listeners.size === 0 && typeof window !== "undefined") {
-      window.removeEventListener("storage", onStorageEvent);
-    }
-  };
-};
-
-/** Bumped on every write, so a snapshot can tell "changed" from "unchanged". */
-let writes = 0;
-
-/** Write the list, or say why it could not be written. Never throws. */
-const write = (
-  openings: readonly SavedOpening[],
-): SavedOpeningProblem | undefined => {
-  try {
-    localStorage.setItem(SAVED_OPENINGS_STORAGE_KEY, JSON.stringify(openings));
-    // After the data, so a revision never claims a write that did not land.
-    writes += 1;
-    localStorage.setItem(SAVED_OPENINGS_REVISION_KEY, `${Date.now()}-${writes}`);
-  } catch {
-    return "storage";
-  }
-  emit();
-  return undefined;
-};
+/** The store's write — every operation below funnels through it. */
+const write = openings.write;
 
 /** Whether two records would restore the same screen. */
 const unchanged = (a: SavedOpening, b: SavedOpening): boolean =>

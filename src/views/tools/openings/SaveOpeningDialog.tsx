@@ -28,9 +28,11 @@ import FolderPicker from "./FolderPicker";
  * - `null` — the reader picked **Unfiled**, the top level;
  * - `undefined` — the reader picked nothing, which is the state this dialog
  *   opens on, and the **default rule's** cue: a position the ECO book names
- *   saves into a folder named after that opening (created if absent), an
- *   off-book position saves to Unfiled. `useOpenings.saveOpening` owns that
- *   rule; the dialog only says whether a choice was made.
+ *   saves into a folder named after that opening's top-level name (the part
+ *   of eco.json's `"Opening: Variation, SubVariation"` convention before its
+ *   first `":"`; created if absent), an off-book position saves to Unfiled.
+ *   `useOpenings.saveOpening` owns that rule; the dialog only says whether a
+ *   choice was made.
  *
  * The inline "New folder" creates under the folder currently selected — root
  * when there is none — and selects what it just made, so a reader nesting a

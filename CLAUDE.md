@@ -47,7 +47,7 @@ change by whether it *adds* to that count, not by the exit code.
 | `src/theme/` | The look: `themePrimitives.ts` (tokens), `AppThemeWithLang.tsx` (the provider), `rtlCache.ts`, `ForceLTR.tsx`, and the two header controls. |
 | `src/views/main/` | The app shell — `Layout.tsx` (header + sidebar + board area; the nav rail and the right-hand panel are fixed-width, and the board square is what is left over), `rightPanel.tsx` (the route-fillable panel slot), `Sidebar.tsx`, the nav registries (`navItems.ts`, `navFolders.ts`, `navTree.ts`), and the XState `service.ts`. |
 | `src/views/home/` | The landing page at `/` — no board, just a card per screen built from `navTree()`. |
-| `src/views/shared/` | The panel pieces the game screens share: `MoveList.tsx`, `BoardControls.tsx`, `GameInfo.tsx` (a game's PGN tag pairs), `useGameNavigation.ts`, `EvalBar.tsx`, `BestVariations.tsx`, `PromotionPicker.tsx`, `OptionSlider.tsx`, `CopyableValue.tsx`, `CurrentOpening.tsx` (the live opening line every game screen's panel carries — the eco.json lookup at the position on screen, its ECO chip linking to `/tools/openings?fen=`; it replaced the per-screen "Open in Openings" buttons), and `EngineBoardSquare.tsx` (the eval bar + board + promotion picker the two engine-play screens both render). They take props and know nothing about which screen is rendering them, and their catalog keys are top-level (`moveList.*`, `variations.*`, `promotion.*`, `engineOption.*`, `board.*`, `copyable.*`, `masking.*`) rather than under any one screen's. |
+| `src/views/shared/` | The panel pieces the game screens share: `MoveList.tsx`, `BoardControls.tsx`, `GameInfo.tsx` (a game's PGN tag pairs), `useGameNavigation.ts`, `EvalBar.tsx`, `BestVariations.tsx`, `PromotionPicker.tsx`, `OptionSlider.tsx`, `CopyableValue.tsx`, `CurrentOpening.tsx` (the live opening line every game screen's panel carries — the eco.json lookup at the position on screen, its ECO chip linking to `/tools/openings?fen=`; it replaced the per-screen "Open in Openings" buttons), and `EngineBoardSquare.tsx` (the eval bar + board + promotion picker the two engine-play screens both render). Beside them, the **saved-list view machinery** the three saved screens consume: `savedList.ts` (the pure half — the `SavedListView` type, the board-view grid styles and the caption date/join helpers), `SavedListViewToggle.tsx` / `SavedListExportBar.tsx` / `SavedListRemoveButton.tsx` and `useOpeningBook.ts`. These take each screen's own catalog block (`labelKey`) and test-id prefix rather than keys of their own, because the screens' tests are the contract on the rendered words and ids — a deliberate difference from the pieces above, whose keys are top-level (`moveList.*`, `variations.*`, `promotion.*`, `engineOption.*`, `board.*`, `copyable.*`, `masking.*`). All of them take props and know nothing about which screen is rendering them. |
 | `src/views/engine/play/` | The Play with Engine screen. `PlayWithEngine.tsx` is layout (the shared `EngineBoardSquare`) and the `?fen=` arrival; **all the behaviour is in `usePlayWithEngine.ts`**; `EnginePanel.tsx` is the Game / Engine / Variations tab strip over the shared board controls, with `EngineSettings.tsx` under it. |
 | `src/views/engine/saved/` | The Saved games screen — the games played on the screen above, newest first, as a list **or** as preview boards (the library list screen's own two card sizes, through `views/library/cardSize.ts`). `SavedGames.tsx` is both views and the three hand-offs, `useSavedGames.ts` the `useSyncExternalStore` binding (so `src/lib/` stays free of React). No catalog to browse: these are this app's own output. |
 | `src/views/masked/play/` | The Masked Pieces screen — Play with Engine with the piece graphics in disguise. `MaskedPlay.tsx` owns the mask and renders the same `EngineBoardSquare`; **the behaviour is `usePlayWithEngine`, reused verbatim**; `MaskedPanel.tsx` adds a fourth tab over the same three, with `MaskEditor.tsx` under it. |
@@ -55,6 +55,7 @@ change by whether it *adds* to that count, not by the exit code.
 | `src/views/tools/editor/` | The Board Editor. `BoardEditor.tsx` is layout (the two palettes and the board, inside a `ChessboardProvider`), board options, the `?fen=` arrival and the PGN/FEN ingestion state; **the behaviour is in `useBoardEditor.ts`**; `EditorPanel.tsx` is the Position / FEN / PGN tab strip over the reset controls and the hand-off, with `PositionFields.tsx`, `FenSetup.tsx`, `PgnSetup.tsx` and `PiecePalette.tsx` under it. |
 | `src/views/tools/analysis/` | The Analysis Board. `AnalysisBoard.tsx` is layout (eval bar + board), board options, the PGN/FEN ingestion state and the three arrivals (`?fen=`, `?game=`, `?analysis=`); **the behaviour is in `useAnalysisBoard.ts`** — including the effect that writes the board down as it is worked on — the navigation in `useTreeNavigation.ts`; `AnalysisPanel.tsx` is the Moves / Engine / Variations / Position tab strip, with `VariationTree.tsx`, `AnalysisSettings.tsx` and `PositionSetup.tsx` under it. |
 | `src/views/tools/analysis/saved/` | The Saved analyses screen — the boards worked on above, newest first, as a list **or** as preview boards at the library's two card sizes. `SavedAnalyses.tsx` is both views and the three hand-offs, `useSavedAnalyses.ts` the `useSyncExternalStore` binding. `views/engine/saved/` again, and the header comment says only what is different. |
+| `src/views/tools/openings/` | The Openings screen — a regular board the reader plays through, with the book continuations from the position on screen listed explorer-style and a variation tree behind it all (the Analysis Board's tree, driven by `useOpenings.ts`; `OpeningsBoard.tsx` is layout). `OpeningsPanel.tsx` is the whole of the right-hand panel — the current opening, the explorer list, a tab strip over the variation tree and the board controls — with `SaveOpeningDialog.tsx` (the save prompt: the note and the folder choice), `NoteDialog.tsx` (the shared edit-note dialog) and `FolderPicker.tsx` under it. Takes `?fen=` (the arrival the three board screens share) and `?openings=<id>` (a saved opening to go on exploring). Its saved screens are `saved/SavedOpenings.tsx` — the Saved analyses screen again, over the same saved-list view machinery, split into `saved/useFolderBrowser.ts` (the folder browsing, a hook), `saved/SavedOpeningViews.tsx` / `saved/SavedFolderViews.tsx` (the rows and cards), `saved/SavedFolderBreadcrumb.tsx` and `saved/SavedOpeningsDialogs.tsx` (the breadcrumb and the dialog stack), with `saved/useSavedOpenings.ts` / `saved/useOpeningFolders.ts` the two `useSyncExternalStore` bindings. |
 | `src/lib/engineSettings.ts` | **The engine knobs a game is played under** — `EngineSettings`, its defaults, the `SETTING_UCI_OPTION` table and `approximateElo`, plus the non-throwing `engineSettingsFrom` a stored record is read back through. In `src/lib/` because a saved game records them; `usePlayWithEngine.ts` re-exports the lot, so that hook stays the one import a reader of the screen needs. |
 | `src/lib/analysisSettings.ts` | **The engine knobs an analysis is worked under** — `AnalysisSettings`, its defaults, `ANALYSIS_UCI_OPTION` and the non-throwing `analysisSettingsFrom`. The same move for the same reason as the file above: a saved analysis records them, and `useAnalysisBoard.ts` re-exports the lot. |
 | `src/lib/engine.ts` | The Stockfish worker wrapper: search, UCI option discovery, and the protocol discipline that keeps the engine alive (see the chessboard rules §4). |
@@ -75,6 +76,8 @@ change by whether it *adds* to that count, not by the exit code.
 | `src/lib/savedGames.ts` + `savedGameStore.ts` | **The reader's games against the engine** — what a saved game is (a PGN plus the `EngineSettings` it was played under), how it is written and read back, and `savedGameCatalogOf`, which presents the lot as a `LibraryCatalog` so `?game=` resolves against it; and the `localStorage` half, revision-stamped like the uploads store, with an idempotent `saveGame` because the writer is an effect. Non-throwing throughout. |
 | `src/lib/pgnUploads.ts` + `pgnUploadStore.ts` | **The reader's own `.pgn` files** — what an upload is, how it becomes a library under the `uploads` folder (through the same loader), whether a picked file is worth keeping; and the `localStorage` half, whose snapshot is checked against a revision stamp so a megabyte of PGN is not re-read per render. Non-throwing throughout. |
 | `src/lib/savedAnalyses.ts` + `savedAnalysisStore.ts` | **The reader's analysis boards** — what a saved analysis is (the whole tree as PGN, the `AnalysisSettings` it was worked under, where the reader was standing as SAN from the root, and which way the board faced), how it is written and read back, and `savedAnalysisCatalogOf` so `?game=` resolves against it; and the `localStorage` half. The pair above, deliberately, with two differences: `treeToPgn` / `parsePgnTree` rather than the linear writer, because side lines are the point, and a **place in the tree** as part of the record. Non-throwing throughout. |
+| `src/lib/savedOpenings.ts` + `savedOpeningFolders.ts` + the two stores | **The reader's saved openings, and the folders they are filed under** — what a saved opening is (the whole tree as PGN — side lines are the point — plus the orientation it was viewed from, the note it is named by and the folder it is filed under), how it is written and read back, and the folder entity: `OpeningFolder` is a name and a parent id, with the reads over a list of them (cycles cut, dangling parents read as top level). The `localStorage` halves: the openings' store, with an idempotent `saveOpening` and a note edited in place (`updateSavedOpeningNote` keeps the record's place in the list); and the folders' store, where the CRUD lives because every caller must mean the same thing — `moveOpeningFolder` refuses the folder's own subtree, and `removeOpeningFolder` re-parents sub-folders and files the openings back to Unfiled in one write-through. The saved openings are **not** a `LibraryCatalog`: nothing hands one on with `?game=` — reopening is `?openings=<id>`, and the position hand-off is `?fen=` at the end of the mainline. Non-throwing throughout. |
+| `src/lib/recordStore.ts` | **The shared localStorage record-store factory** — the snapshot/subscribe/write machinery every record store (`savedGameStore`, `savedAnalysisStore`, `savedOpeningStore`, `savedOpeningFolderStore`, `pgnUploadStore`) is built over: the try/catch read, the revision-stamped cached snapshot, the `storage`-event subscription, and the write that stamps the revision after the data. A row the normaliser (the `savedGameFrom`-style guard each store passes in) refuses is dropped, not rendered. Pure, non-throwing; one instance per store, each file keeping its own caps, idempotency comparisons and cross-store operations beside it. |
 | `src/lib/pgnExport.ts` | **Taking games out of the app** — `pgnFileOf` (several stored PGN records joined with a blank line, which is what `splitPgnGames` reads back) and `downloadTextFile` / `downloadPgn`, the blob-URL save. A join rather than a re-write: a saved game *is* PGN already, so nothing is re-parsed and a record this build cannot read still exports intact. |
 | `src/lib/gameReference.ts` | **The `?game=` carrier** — `library/<category path>/<id>` (the key was `pgn` before CTA-38; still resolves), formatted by `gameReferenceOf` and resolved by `resolveGameReference` through the same `resolveLibraryPath`. A game does not fit in a URL, so what travels is a reference into the catalog. |
 | `src/views/library/` | The section-agnostic screens a library section renders: `LibraryList.tsx` (a fixed top bar — the category's name and counts, the name search, the card-size toggle — over the only thing on the screen that scrolls, the card grid: this category's **sub-folders** first, as `LibraryFolderCard.tsx`, then its items as preview boards; its pure `librarySearch.ts` and `cardSize.ts` under it, and the folder's notes — or the hint, when it has none — in the right-hand panel), `LibraryDetail.tsx` (which resolves the URL, renders the miss, and dispatches on the item's kind — and on the `variationMode` flag the section passes for a repertoire line), `LibraryPositionDetail.tsx` (one position, read-only, facing the side to move, with the three `?fen=` hand-offs), `LibraryGameDetail.tsx` (the game replayed over the shared `MoveList` / `BoardControls` / `useGameNavigation`, with the `?game=` and `?fen=` hand-offs), `LibraryVariationDetail.tsx` (a repertoire line replayed with its **variation tree** — `parsePgnTree` + the shared `VariationTree` / `useTreeNavigation`), `LibraryCardFooter.tsx` and its pure `gameSummary.ts` (a card's footer, and the one branch the list screen makes on the item's kind), `BackToCategory.tsx`, `folderNotes.ts` / `pgnFolderNotes.ts` / `LibraryNotes.tsx` (a folder's authored MDX notes — the pure path lookup, the shipped `.mdx` glob, and the panel that styles and scrolls them), and `section.ts`, which is what tells one section from another — route base, catalog, chrome keys, test ids, `?game=` key, folder notes. |
@@ -583,10 +586,11 @@ this build cannot read still exports intact — which is why such a row is still
 selectable. The Saved analyses screen carries the same control over the same
 helper.
 
-The storage layer is the uploads store's, deliberately: a versioned key, a
-revision stamp so a snapshot is cheap, non-throwing reads and writes, and a
-`useSyncExternalStore` binding in the view layer — see `lib/pgnUploadStore.ts`
-for the reasoning, which is not repeated in `lib/savedGameStore.ts`. It caps the
+The storage layer is one shared factory (`lib/recordStore.ts`), built the way
+the uploads store first had it: a versioned key, a revision stamp so a snapshot
+is cheap, non-throwing reads and writes, and a `useSyncExternalStore` binding in
+the view layer — see `lib/recordStore.ts` for the scaffolding's reasoning, which
+is not repeated in the store files. It caps the
 list at `MAX_SAVED_GAMES`, because a game is written on every move and an
 unbounded list would fill the origin's quota over a few evenings.
 
@@ -641,6 +645,72 @@ board" drop the id, so the analysis being left stays in the list rather than
 being overwritten (a saved analysis, not an autosave slot); and the `?game=`
 hand-off cost one entry in `catalogsByKey` and nothing else, so Load PGN never
 learns this screen exists.
+
+## Saving an opening
+
+A position explored on `/openings` is written down **when the reader asks to
+keep it** — the save prompt names it with a note and files it under a folder —
+and `/openings/saved` lists what has been written, filed into the reader's tree
+of folders (CTA-40). It is the two sections above again — the same three-way
+split (`lib/savedOpenings.ts`, `lib/savedOpeningStore.ts`,
+`views/tools/openings/saved/useSavedOpenings.ts`), the same idempotent write,
+the same `useSyncExternalStore` binding, the same cap — and its list screen is
+the Saved analyses screen again over the shared view machinery
+(`views/shared/savedList.ts` and the three `SavedList*` components beside it).
+Only what is different is written out here; everything else is stated once, up
+there.
+
+```
+useOpenings ──tree + orientation + note + folder──▶ savedOpeningOf() ──▶ saveOpening()
+   (the save prompt's onSave)                       (lib/savedOpenings)        │
+        ▲                                                                      │
+        │                                                         useSavedOpenings()
+   ?openings=<id> ◀── SavedOpenings.tsx ◀───────────────────────────────────────┘
+   (reopen: tree + orientation + note + folder)   │
+                                                  └── ?fen= at the end of the mainline ─▶ Play with Engine
+```
+
+Four things are different, and they are the whole of it:
+
+- **The record is the whole tree as PGN, with a note and a folder beside it.**
+  Side lines are what an opening explorer keeps, so it is `treeToPgn` out and
+  `parsePgnTree` back — the saved analysis' record for the same reason. What it
+  does **not** carry is a place in the tree or engine settings: an opening
+  reopens at the **end of its mainline** — the position the reader goes on
+  playing from — and there is nothing else to restore but the orientation,
+  which rides along for the same reason it does on an analysis.
+- **The note is the name, and it is edited in place.** A position begun from an
+  empty board carries no players to name a row after, so the record carries the
+  reader's own one-line name instead — prompted at save time, changed afterward
+  on the Saved openings screen. `updateSavedOpeningNote` is that write, and it
+  keeps the record's place in the list rather than moving it to the top:
+  editing a name is not "working on" the opening.
+- **The folder is a second record in a second store.** `OpeningFolder`
+  (`lib/savedOpeningFolders.ts`) is a name and a parent id — not an opening,
+  which is the whole reason it is a separate record. What joins them is
+  `SavedOpening.folderId`, a plain id, `null` meaning **Unfiled** — the state a
+  pre-folder record is already in, which is why `folderId` arriving as anything
+  else reads as `null` and there is no version bump. The CRUD lives in
+  `savedOpeningFolderStore.ts` because every caller must mean the same thing: a
+  move can never make a cycle (the store refuses the folder's own subtree), and
+  a delete never orphans anything — `removeOpeningFolder` re-parents
+  sub-folders and files the openings back to Unfiled in one write-through.
+- **A pick persists across folder navigation.** The Saved openings list screen
+  is the shared machinery, and this is the one place it behaves differently
+  from the other two: its select-all works on the rows on screen and **adds**
+  them to the picks (unchecking removes just these), the chip counts the whole
+  picked set wherever the reader is standing, and each folder row and card
+  carries a download of the whole subtree — one `.pgn` of everything under
+  that folder, the same set its count stands for, named from the folder's own
+  name, slugified.
+
+**And there is no `?game=`.** The saved games and saved analyses are presented
+as `LibraryCatalog`s, so the reference hand-off already took them; a saved
+opening is not one, because nothing replays it. The Openings screen goes on
+exploring it, so what travels is the id (`?openings=<id>`) beside the position
+hand-off (`?fen=` at the end of the mainline, for Play with Engine). The
+Openings screen itself takes `?fen=` as its arrival the way the three board
+screens do, validated with `parseFen` and taken as initial state.
 
 ## A mask is a costume, never a rule
 
