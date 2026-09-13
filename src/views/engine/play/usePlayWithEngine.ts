@@ -221,7 +221,7 @@ export const usePlayWithEngine = ({
     — and it is the live position that this screen lets them move on from. Read
     once, as the navigation's seed.
   */
-  const { ply, lastPly, fen, arrows, goToPly } = useGameNavigation(
+  const { ply, lastPly, fen, squareStyles, goToPly } = useGameNavigation(
     game,
     arrival?.game.moves.length ?? 0,
   );
@@ -548,7 +548,7 @@ export const usePlayWithEngine = ({
     ply,
     lastPly,
     fen,
-    arrows,
+    squareStyles,
     goToPly,
     isLive,
     humanColor,

@@ -172,16 +172,17 @@ export const useOpenings = ({ fen: initialFen, resume }: OpeningsStart = {}) => 
   );
 
   /*
-    The whole arrow set for the position on screen: the last-move arrow the
-    navigation already computes, plus one arrow per known next move. Arrows
-    passed through `options.arrows` are external — the board never clears or
-    adds to them itself (`.claude/rules/chessboard.md` §3.4) — so this is the
-    complete set, recomputed whenever the position or the book changes.
+    The whole arrow set for the position on screen: one arrow per known next
+    move. The last move is not one of them — it is the translucent square
+    highlight the navigation already computes (`squareStyles`), which rides
+    beside these on the board. Arrows passed through `options.arrows` are
+    external — the board never clears or adds to them itself
+    (`.claude/rules/chessboard.md` §3.4) — so this is the complete set,
+    recomputed whenever the position or the book changes.
   */
   const arrows: Arrow[] = useMemo(
-    () => [
-      ...navigation.arrows,
-      ...nextMoves.map((move) => ({
+    () =>
+      nextMoves.map((move) => ({
         startSquare: move.from,
         endSquare: move.to,
         color:
@@ -189,8 +190,7 @@ export const useOpenings = ({ fen: initialFen, resume }: OpeningsStart = {}) => 
             ? HOVERED_MOVE_ARROW_COLOR
             : KNOWN_MOVE_ARROW_COLOR,
       })),
-    ],
-    [navigation.arrows, nextMoves, hoveredMove],
+    [nextMoves, hoveredMove],
   );
 
   /**

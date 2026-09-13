@@ -1,6 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import type { Arrow } from "react-chessboard";
-import { MOVE_ARROW_COLOR } from "../../../lib/gameNavigation";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type CSSProperties,
+} from "react";
+import { lastMoveSquareStyles } from "../../../lib/gameNavigation";
 import {
   fenAtNode,
   findNode,
@@ -13,8 +18,8 @@ import { isTextEntry } from "../../shared/useGameNavigation";
 
 /**
  * Where the analysis board is standing in a {@link GameTree}: which node is
- * selected, the position and arrow that follow from it, the line it sits on, and
- * the keyboard stepping that walks it.
+ * selected, the position and highlight that follow from it, the line it sits
+ * on, and the keyboard stepping that walks it.
  *
  * ## Why this is not `useGameNavigation`
  *
@@ -43,8 +48,8 @@ export type TreeNavigation = {
   lastPly: number;
   /** The FEN to hand `options.position`. */
   fen: string;
-  /** The whole arrow set for this position, to hand `options.arrows`. */
-  arrows: Arrow[];
+  /** The last-move highlight for this position, to hand `options.squareStyles`. */
+  squareStyles: Record<string, CSSProperties>;
   /** Select a node directly — how a click in the variation tree navigates. */
   goToNode: (id: string | null) => void;
   /** Select by position along the current line. Out-of-range values clamp. */
@@ -152,20 +157,12 @@ export const useTreeNavigation = (
     lastPly,
     fen: fenAtNode(tree, selected),
     /*
-      A fresh array every render, and the whole set for this position. Arrows
-      passed through `options.arrows` are external and the board never clears
-      them itself (`.claude/rules/chessboard.md` §3.4).
+      A fresh map every render, and the whole set for this position. Styles
+      passed through `options.squareStyles` are external and the board never
+      clears them itself (`.claude/rules/chessboard.md` §3.3).
     */
-    arrows:
-      current === null
-        ? []
-        : [
-            {
-              startSquare: current.from,
-              endSquare: current.to,
-              color: MOVE_ARROW_COLOR,
-            },
-          ],
+    squareStyles:
+      current === null ? {} : lastMoveSquareStyles(current.from, current.to),
     goToNode,
     goToPly,
   };

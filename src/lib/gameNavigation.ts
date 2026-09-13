@@ -1,8 +1,8 @@
-import type { Arrow } from "react-chessboard";
+import type { CSSProperties } from "react";
 import { gameTag, initialFenOf, type Game, type GameMove } from "./gameModel";
 
 /**
- * Walking a game: which position a ply shows, which arrow marks it, and how its
+ * Walking a game: which position a ply shows, which squares mark it, and how its
  * moves pair up into lichess-style numbered rows. A game parsed out of a PGN
  * and one growing under the engine screen are the same shape here, so both
  * screens navigate through this one module.
@@ -13,8 +13,8 @@ import { gameTag, initialFenOf, type Game, type GameMove } from "./gameModel";
  * move already carries. Nothing here re-simulates a game.
  */
 
-/** The colour of the arrow marking the move that produced the current position. */
-export const MOVE_ARROW_COLOR = "#ffaa00";
+/** The translucent fill over the squares of the move that produced the current position. */
+export const LAST_MOVE_HIGHLIGHT = "rgba(155, 199, 0, 0.41)";
 
 /** One numbered row of the move list: White's move and Black's reply. */
 export type MoveRow = {
@@ -77,23 +77,38 @@ export const fenAtPly = (game: Game, ply: number): string => {
 };
 
 /**
- * The board arrows for a ply: the single from→to arrow of the move that led
- * here, and nothing at ply 0.
+ * The `squareStyles` over one move's origin and destination squares — the
+ * lichess-style last-move highlight, a translucent fill on both. One place for
+ * the shape: the linear hook and the tree hook each read a move's `from`/`to`
+ * out of a different record, and two copies of the map would drift.
+ */
+export const lastMoveSquareStyles = (
+  from: string,
+  to: string,
+): Record<string, CSSProperties> => ({
+  [from]: { background: LAST_MOVE_HIGHLIGHT },
+  [to]: { background: LAST_MOVE_HIGHLIGHT },
+});
+
+/**
+ * The board square styles for a ply: the highlight over the origin and
+ * destination squares of the move that led here, and nothing at ply 0.
  *
- * A fresh array every call, on purpose. Arrows passed through `options.arrows`
- * are external and the board never clears them itself
- * (`.claude/rules/chessboard.md` §3.4) — the caller has to hand it the whole
+ * A fresh map every call, on purpose. Styles passed through
+ * `options.squareStyles` are external and the board never clears them itself
+ * (`.claude/rules/chessboard.md` §3.3) — the caller has to hand it the whole
  * set for the current ply, so this returns exactly that set rather than
  * something to append to.
  */
-export const arrowsAtPly = (game: Game, ply: number): Arrow[] => {
+export const squareStylesAtPly = (
+  game: Game,
+  ply: number,
+): Record<string, CSSProperties> => {
   const at = clampPly(game, ply);
-  if (at === 0) return [];
+  if (at === 0) return {};
 
   const move = game.moves[at - 1];
-  return [
-    { startSquare: move.from, endSquare: move.to, color: MOVE_ARROW_COLOR },
-  ];
+  return lastMoveSquareStyles(move.from, move.to);
 };
 
 /**

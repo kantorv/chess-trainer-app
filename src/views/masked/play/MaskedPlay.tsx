@@ -85,7 +85,7 @@ function MaskedPlay() {
         id="masked-play"
         position={state.fen}
         orientation={state.orientation}
-        arrows={state.arrows}
+        squareStyles={state.squareStyles}
         allowDragging={
           state.isLive && !state.isEngineThinking && state.promotion === null
         }

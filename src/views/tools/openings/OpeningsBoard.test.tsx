@@ -5,7 +5,7 @@ import { Chess } from "chess.js";
 import { MemoryRouter, useLocation } from "react-router";
 import i18n from "../../../i18n";
 import AppThemeWithLang from "../../../theme/AppThemeWithLang";
-import { MOVE_ARROW_COLOR } from "../../../lib/gameNavigation";
+import { LAST_MOVE_HIGHLIGHT } from "../../../lib/gameNavigation";
 import { treeFromGame } from "../../../lib/gameTree";
 import { gameFromChess } from "../../../lib/gameModel";
 import {
@@ -42,6 +42,7 @@ vi.mock("react-chessboard", () => ({
       position?: string;
       boardOrientation?: string;
       arrows?: BoardArrow[];
+      squareStyles?: Record<string, { background?: string }>;
     };
   }) => (
     <div
@@ -50,6 +51,7 @@ vi.mock("react-chessboard", () => ({
       data-position={options.position}
       data-orientation={options.boardOrientation}
       data-arrows={JSON.stringify(options.arrows ?? [])}
+      data-square-styles={JSON.stringify(options.squareStyles ?? {})}
     />
   ),
 }));
@@ -75,6 +77,12 @@ const deepFen = () => {
 
 const boardArrows = (): BoardArrow[] =>
   JSON.parse(screen.getByTestId("board").getAttribute("data-arrows") ?? "[]");
+
+type BoardSquareStyles = Record<string, { background?: string }>;
+const boardSquareStyles = (): BoardSquareStyles =>
+  JSON.parse(
+    screen.getByTestId("board").getAttribute("data-square-styles") ?? "{}",
+  );
 
 /*
   Where "Play from here" lands. The screen navigates to `/engine/play?fen=…`;
@@ -214,21 +222,20 @@ describe("the Openings screen", () => {
     );
   });
 
-  it("adds an amber last-move arrow once a move has been played", async () => {
+  it("highlights the last move's squares once a move has been played", async () => {
     const user = userEvent.setup();
     renderScreen();
     await bookSettled();
 
     await user.click(screen.getByTestId("openings-next-move-e4"));
 
-    const arrows = boardArrows();
-    expect(arrows).toHaveLength(21);
-    expect(
-      arrows.filter((arrow) => arrow.color === MOVE_ARROW_COLOR),
-    ).toEqual([{ startSquare: "e2", endSquare: "e4", color: MOVE_ARROW_COLOR }]);
-    expect(
-      arrows.filter((arrow) => arrow.color === KNOWN_MOVE_ARROW_COLOR),
-    ).toHaveLength(20);
+    // No arrow for the last move — the book continuations alone.
+    expect(boardArrows()).toHaveLength(20);
+    // The origin and destination squares carry the translucent highlight.
+    expect(boardSquareStyles()).toEqual({
+      e2: { background: LAST_MOVE_HIGHLIGHT },
+      e4: { background: LAST_MOVE_HIGHLIGHT },
+    });
   });
 
   it("branches the variation tree when a different book move is tried from an earlier ply", async () => {
@@ -325,7 +332,7 @@ describe("the Openings screen — hovering a next move", () => {
     ]);
   });
 
-  it("highlights on hover at a deeper ply, without disturbing the last-move arrow", async () => {
+  it("highlights on hover at a deeper ply, without disturbing the last-move highlight", async () => {
     const user = userEvent.setup();
     renderScreen();
     await bookSettled();
@@ -333,12 +340,13 @@ describe("the Openings screen — hovering a next move", () => {
     await user.click(screen.getByTestId("openings-next-move-e4"));
     await user.hover(screen.getByTestId("openings-next-move-e5"));
 
-    const arrows = boardArrows();
-    // amber last-move arrow untouched
-    expect(
-      arrows.filter((arrow) => arrow.color === MOVE_ARROW_COLOR),
-    ).toEqual([{ startSquare: "e2", endSquare: "e4", color: MOVE_ARROW_COLOR }]);
+    // last-move highlight untouched
+    expect(boardSquareStyles()).toEqual({
+      e2: { background: LAST_MOVE_HIGHLIGHT },
+      e4: { background: LAST_MOVE_HIGHLIGHT },
+    });
     // exactly the hovered continuation is red
+    const arrows = boardArrows();
     expect(
       arrows.filter((arrow) => arrow.color === HOVERED_MOVE_ARROW_COLOR),
     ).toEqual([

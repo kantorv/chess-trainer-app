@@ -104,7 +104,7 @@ function LoadPgn() {
     instance here on purpose — every ply already carries the FEN of the position
     after it (`lib/pgn.ts`), so nothing needs re-simulating.
   */
-  const { ply, lastPly, fen, arrows, goToPly } = useGameNavigation(
+  const { ply, lastPly, fen, squareStyles, goToPly } = useGameNavigation(
     current,
     initialPly,
   );
@@ -209,12 +209,12 @@ function LoadPgn() {
     position: fen,
     boardOrientation: orientation,
     /*
-      The move that produced this position. External arrows are never cleared
-      by the board itself (.claude/rules/chessboard.md §3.4), so this is the
-      whole set for the current ply, recomputed on every change — at ply 0 it
-      is empty.
+      The move that produced this position. External square styles are never
+      cleared by the board itself (.claude/rules/chessboard.md §3.3), so this
+      is the whole set for the current ply, recomputed on every change — at
+      ply 0 it is empty.
     */
-    arrows,
+    squareStyles,
     // Read-only: this screen shows a loaded game. Dragging a piece here would
     // desync the board from the PGN it is displaying.
     allowDragging: false,

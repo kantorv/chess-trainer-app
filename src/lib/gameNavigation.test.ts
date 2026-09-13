@@ -3,14 +3,14 @@ import { DEFAULT_POSITION } from "chess.js";
 import { parsePgnGames } from "./pgn";
 import type { Game } from "./gameModel";
 import {
-  MOVE_ARROW_COLOR,
-  arrowsAtPly,
+  LAST_MOVE_HIGHLIGHT,
   clampPly,
   fenAtPly,
   initialPlyOf,
   lastPlyOf,
   moveRowsOf,
   parseMoveParam,
+  squareStylesAtPly,
 } from "./gameNavigation";
 
 /** `1. e4 e5 2. Nf3 Nc6 3. Bb5` — five plies, so the last pair is half empty. */
@@ -72,28 +72,31 @@ describe("fenAtPly", () => {
   });
 });
 
-describe("arrowsAtPly", () => {
-  it("draws nothing at the starting position", () => {
-    expect(arrowsAtPly(game, 0)).toEqual([]);
+describe("squareStylesAtPly", () => {
+  it("marks nothing at the starting position", () => {
+    expect(squareStylesAtPly(game, 0)).toEqual({});
   });
 
-  it("draws exactly the move that produced the current position", () => {
-    expect(arrowsAtPly(game, 1)).toEqual([
-      { startSquare: "e2", endSquare: "e4", color: MOVE_ARROW_COLOR },
-    ]);
-    expect(arrowsAtPly(game, 3)).toEqual([
-      { startSquare: "g1", endSquare: "f3", color: MOVE_ARROW_COLOR },
-    ]);
+  it("marks exactly the squares of the move that produced the current position", () => {
+    expect(squareStylesAtPly(game, 1)).toEqual({
+      e2: { background: LAST_MOVE_HIGHLIGHT },
+      e4: { background: LAST_MOVE_HIGHLIGHT },
+    });
+    expect(squareStylesAtPly(game, 3)).toEqual({
+      g1: { background: LAST_MOVE_HIGHLIGHT },
+      f3: { background: LAST_MOVE_HIGHLIGHT },
+    });
   });
 
   it("returns the whole set for the ply, never an accumulation", () => {
-    // Walking the game must never grow the array: the board does not clear
-    // external arrows itself, so each ply hands it a complete replacement.
+    // Walking the game must never grow the map: the board does not clear
+    // external square styles itself, so each ply hands it a complete
+    // replacement.
     for (let ply = 1; ply <= lastPlyOf(game); ply += 1) {
-      expect(arrowsAtPly(game, ply)).toHaveLength(1);
+      expect(Object.keys(squareStylesAtPly(game, ply))).toHaveLength(2);
     }
-    // And a fresh array each call, so a caller cannot mutate the next one.
-    expect(arrowsAtPly(game, 2)).not.toBe(arrowsAtPly(game, 2));
+    // And a fresh map each call, so a caller cannot mutate the next one.
+    expect(squareStylesAtPly(game, 2)).not.toBe(squareStylesAtPly(game, 2));
   });
 });
 

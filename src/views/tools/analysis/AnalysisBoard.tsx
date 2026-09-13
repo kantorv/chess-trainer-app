@@ -299,11 +299,11 @@ function AnalysisBoard() {
     position: state.fen,
     boardOrientation: state.orientation,
     /*
-      The move that produced the position on screen. External arrows are never
-      cleared by the board itself (`.claude/rules/chessboard.md` §3.4), so this
-      is the whole set for the current position, recomputed on every change.
+      The move that produced the position on screen. External square styles are
+      never cleared by the board itself (`.claude/rules/chessboard.md` §3.3), so
+      this is the whole set for the current position, recomputed on every change.
     */
-    arrows: state.arrows,
+    squareStyles: state.squareStyles,
     onPieceDrop: ({ sourceSquare, targetSquare }: PieceDropHandlerArgs) =>
       state.onPieceDrop({ sourceSquare, targetSquare }),
     /*
