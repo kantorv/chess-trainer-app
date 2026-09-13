@@ -2,10 +2,16 @@ import { useMemo } from "react";
 import Box from "@mui/material/Box";
 import { createSearchParams, useNavigate, useSearchParams } from "react-router";
 import { Chessboard, type ChessboardOptions, type PieceDropHandlerArgs } from "react-chessboard";
+import { capturedSummaryOf, diffForSide } from "../../../lib/capturedPieces";
+import { pathTo } from "../../../lib/gameTree";
 import { FenParseError, parseFen } from "../../../lib/fen";
 import { findSavedOpening } from "../../../lib/savedOpeningStore";
 import { RightPanel } from "../../main/rightPanel";
 import PromotionPicker from "../../shared/PromotionPicker";
+import CapturedPieces, {
+  CAPTURED_STRIPS_TOTAL_PX,
+  CAPTURED_STRIP_GAP_PX,
+} from "../../shared/CapturedPieces";
 import OpeningsPanel from "./OpeningsPanel";
 import { useOpenings } from "./useOpenings";
 
@@ -74,6 +80,25 @@ function OpeningsBoard() {
 
   const state = useOpenings({ fen: initialFen, resume });
 
+  /*
+    The captured pieces for the position on screen, walked from the tree's own
+    start position — the study-friendly baseline, not the standard one. The
+    diff is the position on screen against that same start.
+  */
+  const captured = useMemo(
+    () =>
+      capturedSummaryOf(
+        pathTo(state.tree, state.nodeId),
+        state.tree.startFen,
+        state.fen,
+      ),
+    [state.tree, state.nodeId, state.fen],
+  );
+
+  // Each strip belongs to the side it is beside, whichever way the board faces.
+  const topColor = state.orientation === "white" ? "black" : "white";
+  const bottomColor = state.orientation === "white" ? "white" : "black";
+
   /**
    * "Play from here" — continue the position on screen against the engine. The
    * FEN travels to `/engine/play` as a query parameter, the same `?fen=` carrier
@@ -104,21 +129,59 @@ function OpeningsBoard() {
     <>
       <Box
         data-testid="openings-screen"
-        sx={{ width: "100%", height: "100%", position: "relative", borderRadius: 1 }}
+        sx={{
+          width: "100%",
+          height: "100%",
+          position: "relative",
+          borderRadius: 1,
+          display: "flex",
+          flexDirection: "column",
+        }}
       >
-        <Chessboard options={chessboardOptions} />
+        <CapturedPieces
+          testId="openings-captured"
+          color={topColor}
+          captured={captured.captured[topColor]}
+          diff={diffForSide(captured.materialDiff, topColor)}
+        />
 
-        {state.promotion && (
-          <PromotionPicker
-            targetSquare={state.promotion.to}
-            orientation={state.orientation}
-            // The side to move in the position on screen is the side pushing
-            // the pawn — the move has not been applied yet, so `state.fen`
-            // still describes the position it is being made from.
-            color={state.fen.split(" ")[1] === "b" ? "b" : "w"}
-            onSelect={state.resolvePromotion}
-          />
-        )}
+        {/*
+          The strips sit on the board's top and bottom edges, so the board
+          gives up their height — and, to stay square, the same amount of its
+          width. Both sides of this box are a calc of the same percentage base,
+          so it stays square.
+        */}
+        <Box
+          sx={{
+            position: "relative",
+            width: `calc(100% - ${CAPTURED_STRIPS_TOTAL_PX}px)`,
+            height: `calc(100% - ${CAPTURED_STRIPS_TOTAL_PX}px)`,
+            flexShrink: 0,
+            alignSelf: "center",
+            marginBlock: `${CAPTURED_STRIP_GAP_PX}px`,
+          }}
+        >
+          <Chessboard options={chessboardOptions} />
+
+          {state.promotion && (
+            <PromotionPicker
+              targetSquare={state.promotion.to}
+              orientation={state.orientation}
+              // The side to move in the position on screen is the side pushing
+              // the pawn — the move has not been applied yet, so `state.fen`
+              // still describes the position it is being made from.
+              color={state.fen.split(" ")[1] === "b" ? "b" : "w"}
+              onSelect={state.resolvePromotion}
+            />
+          )}
+        </Box>
+
+        <CapturedPieces
+          testId="openings-captured"
+          color={bottomColor}
+          captured={captured.captured[bottomColor]}
+          diff={diffForSide(captured.materialDiff, bottomColor)}
+        />
       </Box>
 
       <RightPanel>

@@ -73,6 +73,8 @@ const he: typeof en = {
   },
   board: {
     evalBar: "הערכה",
+    capturedByWhite: "נלקח על ידי הלבן",
+    capturedByBlack: "נלקח על ידי השחור",
   },
   variations: {
     title: "הווריאציות הטובות ביותר",

@@ -392,3 +392,48 @@ describe("Masked Pieces — the rest of the screen", () => {
     expect((boardOptions() as { id?: string }).id).toBe("masked-play");
   });
 });
+
+describe("Masked Pieces — the captured-pieces strips", () => {
+  it("draws a captured piece in its costume, pixel-identically to the board", () => {
+    renderScreen();
+    // The non-pawns preset: a captured rook must read as the pawn it wears.
+    drag("e2", "e4");
+    engineReplies("d7d5");
+    drag("e4", "d5");
+
+    // White took a black pawn; the pawn's costume is the pawn itself here.
+    const icon = screen.getByTestId("masked-play-captured-white-piece-0");
+    expect(icon).toContainElement(screen.getByTestId("piece-bP"));
+  });
+
+  it("hides the material diff while anything is masked", () => {
+    renderScreen();
+    drag("e2", "e4");
+    engineReplies("d7d5");
+    drag("e4", "d5");
+
+    // The diff is derived from the true types — a live "+1" beside a board
+    // of pawns is the leak the mask exists to prevent.
+    expect(screen.getByTestId("masked-play-captured-white")).not.toHaveAttribute(
+      "data-diff",
+    );
+    expect(
+      screen.getByTestId("masked-play-captured-white"),
+    ).not.toHaveTextContent("+");
+  });
+
+  it("shows the true types and the live diff on the identity preset", async () => {
+    renderScreen();
+    drag("e2", "e4");
+    engineReplies("d7d5");
+    drag("e4", "d5");
+
+    await openTab("masking");
+    await userEvent.click(screen.getByTestId("mask-preset-identity"));
+
+    const white = screen.getByTestId("masked-play-captured-white");
+    expect(white).toHaveAttribute("data-diff", "1");
+    expect(white).toHaveTextContent("+1");
+    expect(white).toContainElement(screen.getByTestId("piece-bP"));
+  });
+});

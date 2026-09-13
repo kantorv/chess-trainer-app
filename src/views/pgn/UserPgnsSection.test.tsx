@@ -51,6 +51,15 @@ vi.mock("react-chessboard", () => ({
       data-orientation={options.boardOrientation}
     />
   ),
+  // The captured-pieces strip reaches for this to draw its icons.
+  defaultPieces: Object.fromEntries(
+    ["w", "b"].flatMap((color) =>
+      ["K", "Q", "R", "B", "N", "P"].map((letter) => {
+        const type = `${color}${letter}`;
+        return [type, () => <svg data-testid={`piece-${type}`} />];
+      }),
+    ),
+  ),
 }));
 
 /** Where a hand-off lands: the route it opened, and what it carried. */
@@ -1015,5 +1024,35 @@ describe("the /pgn -> /library redirect (CTA-38 back-compat)", () => {
       "data-search",
       "?move=4",
     );
+  });
+});
+
+describe("the User PGNs section — the captured-pieces strips", () => {
+  it("shows the strips on the game detail, walked from the game's own start", async () => {
+    renderAt(`/library/${PLAYED}/${played.id}`);
+
+    // Ply 0: the game's start, where nothing is captured yet.
+    expect(screen.getByTestId("library-item-captured-white")).toBeInTheDocument();
+    expect(screen.getByTestId("library-item-captured-black")).toBeInTheDocument();
+    expect(screen.getByTestId("library-item-captured-white")).not.toHaveAttribute("data-diff");
+    expect(screen.getByTestId("library-item-captured-black")).not.toHaveAttribute("data-diff");
+
+    // The Capablanca game is not quiet — at its final position one of the
+    // strips is ahead of the line's own start.
+    await userEvent.click(
+      screen.getByRole("button", { name: i18n.t("gamePanel.controls.last") }),
+    );
+
+    const ahead =
+      screen
+        .getAllByTestId(/^library-item-captured-(white|black)$/)
+        .filter((strip) => strip.hasAttribute("data-diff"));
+    expect(ahead.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("is not on the list screen — previews are excluded", () => {
+    renderAt(`/library/${PLAYED}`);
+
+    expect(screen.queryByTestId(/^library-item-captured-/)).toBeNull();
   });
 });

@@ -158,10 +158,12 @@ vi.mock("react-chessboard", () => ({
       ? column.charCodeAt(0) - "a".charCodeAt(0)
       : 7 - (column.charCodeAt(0) - "a".charCodeAt(0)),
   defaultPieces: Object.fromEntries(
-    ["wQ", "wR", "wN", "wB", "bQ", "bR", "bN", "bB"].map((key) => [
-      key,
-      () => <svg data-testid={`piece-${key}`} />,
-    ]),
+    ["w", "b"].flatMap((color) =>
+      ["K", "Q", "R", "B", "N", "P"].map((letter) => {
+        const key = `${color}${letter}`;
+        return [key, () => <svg data-testid={`piece-${key}`} />];
+      }),
+    ),
   ),
 }));
 
@@ -1151,5 +1153,29 @@ describe("Analysis Board — reopening a saved analysis", () => {
     renderScreen("/tools/analysis?analysis=nope");
 
     expect(position()).toMatch(/^rnbqkbnr\/pppppppp/);
+  });
+});
+
+describe("Analysis Board — the captured-pieces strips", () => {
+  it("shows nothing on a position handed over, until something is taken", () => {
+    // A queen-vs-rook-and-pawn study position: nothing on it is "captured"
+    // relative to its own start, so the strips are empty.
+    const study = "6rk/7p/8/8/8/8/8/K6Q w - - 0 1";
+    renderScreen(`/tools/analysis?fen=${encodeURIComponent(study)}`);
+
+    const white = screen.getByTestId("analysis-captured-white");
+    const black = screen.getByTestId("analysis-captured-black");
+    expect(white).toBeInTheDocument();
+    expect(black).toBeInTheDocument();
+    expect(white).not.toHaveAttribute("data-diff");
+    expect(black).not.toHaveAttribute("data-diff");
+
+    // White takes the study's pawn: one point up of the line's own start.
+    drag("h1", "h7");
+
+    expect(white).toHaveAttribute("data-diff", "1");
+    expect(white).toHaveTextContent("+1");
+    expect(screen.getByTestId("piece-bP")).toBeInTheDocument();
+    expect(black).not.toHaveAttribute("data-diff");
   });
 });

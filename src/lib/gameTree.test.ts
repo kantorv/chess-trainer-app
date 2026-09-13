@@ -78,6 +78,29 @@ describe("addMove", () => {
     expect(fenAtNode(tree, null)).toBe(DEFAULT_POSITION);
   });
 
+  it("records the piece type a capture took, through the move param", () => {
+    // 1. e4 d5 2. exd5 — the capture rides with the move.
+    const chess = new Chess();
+    for (const san of ["e4", "d5", "exd5"]) chess.move(san);
+
+    let parentId: string | null = null;
+    let current = emptyTree();
+    for (const move of chess.history({ verbose: true })) {
+      const added = addMove(current, parentId, {
+        san: move.san,
+        from: move.from,
+        to: move.to,
+        fen: move.after,
+        captured: move.captured,
+      });
+      current = added.tree;
+      parentId = added.nodeId;
+    }
+
+    expect(findNode(current, parentId!)!.captured).toBe("p");
+    expect(mainline(current)[0].captured).toBeUndefined();
+  });
+
   it("branches when a different move is played from an earlier ply", () => {
     const { tree: line } = opening();
     // Step back to after 1. e4 and answer it differently.
@@ -193,6 +216,14 @@ describe("the linear reading", () => {
       headers: game.headers,
       moves: game.moves,
     });
+  });
+
+  it("carries a capture through the round trip, the same field both ways", () => {
+    const game = parsePgnGames("1. e4 d5 2. exd5 1-0")[0];
+    expect(game.moves[2].captured).toBe("p");
+
+    expect(mainlineGame(treeFromGame(game)).moves[2].captured).toBe("p");
+    expect(lineGame(treeFromGame(game), "n3").moves[2].captured).toBe("p");
   });
 
   it("reads one variation as its own line", () => {

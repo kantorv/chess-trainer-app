@@ -18,6 +18,8 @@ import { resolveGameReference } from "../../../lib/gameReference";
 import { findSavedAnalysis } from "../../../lib/savedAnalysisStore";
 import { initialPlyOf, parseMoveParam } from "../../../lib/gameNavigation";
 import type { GameTree } from "../../../lib/gameTree";
+import { capturedSummaryOf, diffForSide } from "../../../lib/capturedPieces";
+import { pathTo } from "../../../lib/gameTree";
 import {
   EmptyPgnError,
   PgnParseError,
@@ -30,6 +32,10 @@ import EvalBar, {
   EVAL_BAR_TOTAL_PX,
 } from "../../shared/EvalBar";
 import PromotionPicker from "../../shared/PromotionPicker";
+import CapturedPieces, {
+  CAPTURED_STRIPS_TOTAL_PX,
+  CAPTURED_STRIP_GAP_PX,
+} from "../../shared/CapturedPieces";
 import AnalysisPanel from "./AnalysisPanel";
 import PositionSetup from "./PositionSetup";
 import { useAnalysisBoard } from "./useAnalysisBoard";
@@ -185,6 +191,22 @@ function AnalysisBoard() {
 
   const topLine = state.analysis.lines.find((line) => line !== undefined);
 
+  /*
+    The captured pieces for the position on screen, walked from the tree's own
+    start position — the study-friendly baseline, not the standard one. The
+    diff is the position on screen against that same start, so a promotion
+    counts as a gain for the side that made it.
+  */
+  const captured = useMemo(
+    () =>
+      capturedSummaryOf(
+        pathTo(state.tree, state.nodeId),
+        state.tree.startFen,
+        state.fen,
+      ),
+    [state.tree, state.nodeId, state.fen],
+  );
+
   /** Turn a parse failure into a translated line; never let one escape. */
   const messageFor = (cause: unknown) => {
     if (cause instanceof EmptyPgnError) return t("analysis.position.errors.emptyPgn");
@@ -320,6 +342,13 @@ function AnalysisBoard() {
   const boardSide = state.showEvalBar
     ? `calc(100% - ${EVAL_BAR_TOTAL_PX}px)`
     : "100%";
+  // The strips sit on the board's top and bottom edges, so the board gives up
+  // their height — and, to stay square, the same amount of its width.
+  const boardInnerSide = `calc(100% - ${CAPTURED_STRIPS_TOTAL_PX}px)`;
+
+  // Each strip belongs to the side it is beside, whichever way the board faces.
+  const topColor = state.orientation === "white" ? "black" : "white";
+  const bottomColor = state.orientation === "white" ? "white" : "black";
 
   return (
     <>
@@ -357,33 +386,67 @@ function AnalysisBoard() {
         )}
 
         {/*
-          `position: relative` so the promotion picker, which is absolutely
-          positioned in percentages of the board, has this box to measure
-          against — it overlays the board exactly.
+          The board square is a column now: the captured-pieces strip above, the
+          board, the strip below. Both boxes keep their side a calc of the same
+          percentage base — the column's against the shell's square, the
+          board's against the column — so the board stays square.
         */}
         <Box
           data-testid="analysis-board-square"
           sx={{
-            position: "relative",
             width: boardSide,
             height: boardSide,
             // The width is already exact; never let flex shave a pixel off it,
             // which would make the board a rectangle.
             flexShrink: 0,
+            display: "flex",
+            flexDirection: "column",
           }}
         >
-          <Chessboard options={chessboardOptions} />
+          <CapturedPieces
+            testId="analysis-captured"
+            color={topColor}
+            captured={captured.captured[topColor]}
+            diff={diffForSide(captured.materialDiff, topColor)}
+          />
 
-          {state.promotion && (
-            <PromotionPicker
-              targetSquare={state.promotion.to}
-              orientation={state.orientation}
-              // The side promoting is the side to move in the position the pawn
-              // is being pushed from — both colours move here.
-              color={state.turn}
-              onSelect={state.resolvePromotion}
-            />
-          )}
+          {/*
+            `position: relative` so the promotion picker, which is absolutely
+            positioned in percentages of the board, has this box to measure
+            against — it overlays the board exactly.
+          */}
+          <Box
+            sx={{
+              position: "relative",
+              width: boardInnerSide,
+              height: boardInnerSide,
+              // The side is already exact; never let flex shave a pixel off
+              // it, which would make the board a rectangle.
+              flexShrink: 0,
+              alignSelf: "center",
+              marginBlock: `${CAPTURED_STRIP_GAP_PX}px`,
+            }}
+          >
+            <Chessboard options={chessboardOptions} />
+
+            {state.promotion && (
+              <PromotionPicker
+                targetSquare={state.promotion.to}
+                orientation={state.orientation}
+                // The side promoting is the side to move in the position the pawn
+                // is being pushed from — both colours move here.
+                color={state.turn}
+                onSelect={state.resolvePromotion}
+              />
+            )}
+          </Box>
+
+          <CapturedPieces
+            testId="analysis-captured"
+            color={bottomColor}
+            captured={captured.captured[bottomColor]}
+            diff={diffForSide(captured.materialDiff, bottomColor)}
+          />
         </Box>
       </Box>
 

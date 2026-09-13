@@ -55,6 +55,12 @@ export type VariationNode = {
   fen: string;
   /** 1-based half-move index from the tree's start position. */
   ply: number;
+  /**
+   * The piece type this move took, as `chess.js` writes it — `"p"`, `"q"`, …
+   * `undefined` when nothing was captured, which a promotion without a capture
+   * also is.
+   */
+  captured?: string;
   /** Continuations. `children[0]` is the mainline; the rest are variations. */
   children: VariationNode[];
 };
@@ -189,7 +195,14 @@ export const fenAtNode = (tree: GameTree, id: string | null): string =>
 export const addMove = (
   tree: GameTree,
   parentId: string | null,
-  move: { san: string; from: Square; to: Square; fen: string },
+  move: {
+    san: string;
+    from: Square;
+    to: Square;
+    fen: string;
+    /** The piece type this move took, as `chess.js` writes it. */
+    captured?: string;
+  },
 ): { tree: GameTree; nodeId: string } => {
   const parent = findNode(tree, parentId);
   if (parentId !== null && parent === null) {
@@ -237,6 +250,7 @@ export const treeFromGame = (game: Game): GameTree => {
     to: move.to,
     fen: move.fen,
     ply: index + 1,
+    captured: move.captured,
     children: [] as VariationNode[],
   }));
 
@@ -268,6 +282,7 @@ export const mainlineGame = (tree: GameTree): Game => ({
     to: node.to,
     fen: node.fen,
     ply: node.ply,
+    captured: node.captured,
   })),
 });
 
@@ -280,6 +295,7 @@ export const lineGame = (tree: GameTree, id: string | null): Game => ({
     to: node.to,
     fen: node.fen,
     ply: node.ply,
+    captured: node.captured,
   })),
 });
 

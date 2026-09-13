@@ -9,7 +9,7 @@ import {
   splitPgnGames,
 } from "./pgn";
 import { finalFenOf, gameTag, initialFenOf } from "./gameModel";
-import { mainline, treeToPgn } from "./gameTree";
+import { findNode, mainline, nodeAtSanPath, treeToPgn } from "./gameTree";
 
 const game = (white: string, black: string, moves: string, result = "1-0") =>
   [
@@ -84,6 +84,13 @@ describe("parsePgnGame", () => {
     expect(parsed.moves[0].fen).toContain("4P3");
     expect(parsed.moves.map((move) => move.ply)).toEqual([1, 2, 3]);
     expect(parsed.moves[2]).toMatchObject({ san: "Nf3", from: "g1", to: "f3" });
+  });
+
+  it("carries the piece type each capture took, as the live game does", () => {
+    const parsed = parsePgnGame(game("Alice", "Bob", "1. e4 d5 2. exd5"));
+
+    expect(parsed.moves[2].captured).toBe("p");
+    expect(parsed.moves[0].captured).toBeUndefined();
   });
 
   it("raises a PgnParseError rather than letting chess.js throw", () => {
@@ -203,6 +210,20 @@ describe("parsePgnTree — the variation-aware parser", () => {
       "Nf3",
       "d6",
     ]);
+  });
+
+  it("carries a capture through on both the mainline and a side line", () => {
+    const pgn = "1. e4 d5 (1... e5 2. Nf3 Nc6 3. Bb5 a6 4. Bxc6) 2. exd5";
+
+    const tree = parsePgnTree(pgn);
+
+    // The mainline capture...
+    expect(mainline(tree)[2].captured).toBe("p");
+    // ...and the side line's, replayed through chess.js by the parser.
+    // The side line is the e5 chain under 1. e4: e5 Nf3 Nc6 Bb5 a6 Bxc6.
+    expect(mainline(tree)[0].children[1].captured).toBeUndefined();
+    const bxc6 = nodeAtSanPath(tree, ["e4", "e5", "Nf3", "Nc6", "Bb5", "a6", "Bxc6"]);
+    expect(findNode(tree, bxc6)!.captured).toBe("n");
   });
 
   it("reads two variations of the same move as siblings, not as nesting", () => {

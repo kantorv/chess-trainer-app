@@ -10,13 +10,18 @@ import Box from "@mui/material/Box";
 import { useSearchParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import { Chessboard, type ChessboardOptions } from "react-chessboard";
+import { capturedSummaryOf, diffForSide } from "../../../lib/capturedPieces";
 import { resolveGameReference } from "../../../lib/gameReference";
 import { initialPlyOf, parseMoveParam } from "../../../lib/gameNavigation";
+import { initialFenOf, type Game } from "../../../lib/gameModel";
 import { EmptyPgnError, PgnParseError, parsePgnGames } from "../../../lib/pgn";
-import type { Game } from "../../../lib/gameModel";
 import { RightPanel } from "../../main/rightPanel";
 import GamePanel from "./GamePanel";
 import PgnIngest from "./PgnIngest";
+import CapturedPieces, {
+  CAPTURED_STRIPS_TOTAL_PX,
+  CAPTURED_STRIP_GAP_PX,
+} from "../../shared/CapturedPieces";
 import { useGameNavigation } from "../../shared/useGameNavigation";
 
 /**
@@ -108,6 +113,27 @@ function LoadPgn() {
     current,
     initialPly,
   );
+
+  /*
+    The captured pieces for the ply on screen, walked from the game's own start
+    position — the study-friendly baseline, not the standard one. The diff is
+    the position on screen against that same start.
+  */
+  const captured = useMemo(
+    () =>
+      current === undefined
+        ? undefined
+        : capturedSummaryOf(
+            current.moves.slice(0, ply),
+            initialFenOf(current),
+            fen,
+          ),
+    [current, ply, fen],
+  );
+
+  // Each strip belongs to the side it is beside, whichever way the board faces.
+  const topColor = orientation === "white" ? "black" : "white";
+  const bottomColor = orientation === "white" ? "white" : "black";
 
   /*
     A freshly loaded game opens on its final position — the most informative
@@ -230,10 +256,10 @@ function LoadPgn() {
   return (
     <>
       {/*
-        The shell's square, filled edge to edge by the board. The drag highlight
-        is an `outline`, not a `border`: an outline is painted outside the box
-        model, so switching it on does not shrink the board by its own width.
-        It takes its colour from `currentColor`.
+        The shell's square, filled edge to edge by the board square. The drag
+        highlight is an `outline`, not a `border`: an outline is painted
+        outside the box model, so switching it on does not shrink the board by
+        its own width. It takes its colour from `currentColor`.
       */}
       <Box
         data-testid="load-pgn-screen"
@@ -245,9 +271,45 @@ function LoadPgn() {
           outline: isDragOver ? "2px dashed" : "none",
           outlineOffset: "-2px",
           color: isDragOver ? "primary.main" : "inherit",
+          display: "flex",
+          flexDirection: "column",
         }}
       >
-        <Chessboard options={chessboardOptions} />
+        {captured !== undefined && (
+          <CapturedPieces
+            testId="load-pgn-captured"
+            color={topColor}
+            captured={captured.captured[topColor]}
+            diff={diffForSide(captured.materialDiff, topColor)}
+          />
+        )}
+
+        {/*
+          The strips sit on the board's top and bottom edges, so the board
+          gives up their height — and, to stay square, the same amount of its
+          width. Both sides of this box are a calc of the same percentage base,
+          so it stays square.
+        */}
+        <Box
+          sx={{
+            width: `calc(100% - ${CAPTURED_STRIPS_TOTAL_PX}px)`,
+            height: `calc(100% - ${CAPTURED_STRIPS_TOTAL_PX}px)`,
+            flexShrink: 0,
+            alignSelf: "center",
+            marginBlock: `${CAPTURED_STRIP_GAP_PX}px`,
+          }}
+        >
+          <Chessboard options={chessboardOptions} />
+        </Box>
+
+        {captured !== undefined && (
+          <CapturedPieces
+            testId="load-pgn-captured"
+            color={bottomColor}
+            captured={captured.captured[bottomColor]}
+            diff={diffForSide(captured.materialDiff, bottomColor)}
+          />
+        )}
       </Box>
 
       <RightPanel>
