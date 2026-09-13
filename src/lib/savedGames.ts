@@ -262,7 +262,7 @@ export const savedGameFrom = (value: unknown): SavedGame | undefined => {
 
 /** What a row shows about a game without opening it. Pure, so it is testable. */
 export type SavedGameSummary = {
-  /** How many half-moves have been played. */
+  /** How many full moves have been played — half-moves rounded up. */
   moves: number;
   /** The result terminator, or `undefined` while the game is still on. */
   result?: string;
@@ -279,7 +279,8 @@ export const savedGameSummary = (
   const result = game === undefined ? undefined : gameTag(game.headers, "Result");
 
   return {
-    moves: game?.moves.length ?? 0,
+    // Half-moves rounded up to full moves, the way the move list numbers them.
+    moves: Math.ceil((game?.moves.length ?? 0) / 2),
     ...(result === undefined ? {} : { result }),
     playAs: saved.settings.playAs,
     skillLevel: saved.settings.skillLevel,

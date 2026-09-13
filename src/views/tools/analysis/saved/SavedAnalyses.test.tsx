@@ -165,7 +165,7 @@ describe("Saved analyses — the list", () => {
     renderScreen();
 
     const row = screen.getByTestId("saved-analyses-item-a1");
-    expect(row).toHaveTextContent("3 moves");
+    expect(row).toHaveTextContent("2 moves");
     expect(row).toHaveTextContent("2 variations");
     expect(row).toHaveTextContent("at ply 2");
   });
@@ -176,7 +176,7 @@ describe("Saved analyses — the list", () => {
     renderScreen();
 
     const row = screen.getByTestId("saved-analyses-item-a1");
-    expect(row).toHaveTextContent("2 moves");
+    expect(row).toHaveTextContent("1 move");
     expect(row).not.toHaveTextContent("variation");
     // Ply 0 is not a place the reader stopped at, it is where a board opens.
     expect(row).not.toHaveTextContent("at ply");

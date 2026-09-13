@@ -43,7 +43,8 @@ describe("gameSummaryOf reads what an annotated game knows", () => {
 
   it("reports the result and the length", () => {
     expect(summary.result).toBe("1-0");
-    expect(summary.moves).toBe(4);
+    // "1. d4 e6 2. Nf3 f5" is four half-moves, numbered as two full moves.
+    expect(summary.moves).toBe(2);
   });
 
   it("pairs the event with the year off the date", () => {
@@ -78,6 +79,7 @@ describe("gameSummaryOf declines to print what would be noise", () => {
   });
 
   it("still knows how long the line is", () => {
+    // One half-move rounds up to one full move.
     expect(summary.moves).toBe(1);
   });
 

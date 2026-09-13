@@ -24,7 +24,7 @@ import { gameTag, type Game } from "../../lib/gameModel";
 export type GameSummary = {
   /** `"1-0"`, `"1/2-1/2"` — absent for a game that was never finished. */
   result?: string;
-  /** Half-moves, for the "N moves" line. */
+  /** Full moves — half-moves rounded up — for the "N moves" line. */
   moves: number;
   /** Where and when — `"New York, 1924"`. */
   occasion?: string;
@@ -55,7 +55,8 @@ export const gameSummaryOf = (game: Game, title: string): GameSummary => {
 
   return {
     result: gameTag(game.headers, "Result"),
-    moves: game.moves.length,
+    // Half-moves rounded up to full moves, the way the move list numbers them.
+    moves: Math.ceil(game.moves.length / 2),
     ...(occasion !== undefined ? { occasion } : {}),
     ...(gameTag(game.headers, "Opening") !== undefined
       ? { opening: gameTag(game.headers, "Opening") }

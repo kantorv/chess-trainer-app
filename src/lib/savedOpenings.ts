@@ -173,10 +173,12 @@ export const savedOpeningFen = (
 
 /** What a row shows about an opening without opening it. Pure, so it is testable. */
 export type SavedOpeningSummary = {
-  /** How many half-moves the mainline runs to. */
+  /** How many full moves the mainline runs to — half-moves rounded up. */
   moves: number;
   /** How many nodes there are in total — mainline plus every side line. */
   nodes: number;
+  /** How many nodes sit past the mainline — the "N variations" line's unit. */
+  variations: number;
 };
 
 /** Every node in a tree, counted — the mainline and every side line alike. */
@@ -189,10 +191,22 @@ const countNodes = (tree: GameTree): number => {
 export const savedOpeningSummary = (
   saved: SavedOpening,
   tree: GameTree | undefined,
-): SavedOpeningSummary => ({
-  moves: tree === undefined ? 0 : mainlineGame(tree).moves.length,
-  nodes: tree === undefined ? 0 : countNodes(tree),
-});
+): SavedOpeningSummary => {
+  if (tree === undefined) {
+    return { moves: 0, nodes: 0, variations: 0 };
+  }
+
+  const plies = mainlineGame(tree).moves.length;
+  const nodes = countNodes(tree);
+  return {
+    // Half-moves rounded up to full moves, the way the move list numbers them.
+    moves: Math.ceil(plies / 2),
+    nodes,
+    // Every node past the mainline. Counts nodes, not moves — `moves` is in a
+    // different unit, so the "N variations" line cannot derive from it.
+    variations: nodes - plies,
+  };
+};
 
 /** Whether a value parsed out of storage is a saved opening. Structural, on purpose. */
 export const isSavedOpening = (value: unknown): value is SavedOpening => {
