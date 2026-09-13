@@ -207,8 +207,10 @@ describe("savedAnalysisSummary — what a row says without opening it", () => {
     const saved = save(tree, ["e4", "c5"]);
 
     expect(savedAnalysisSummary(saved, tree)).toEqual({
-      moves: 3,
+      // Three half-moves numbered as two full moves; two nodes past the mainline.
+      moves: 2,
       nodes: 5,
+      variations: 2,
       ply: 2,
     });
   });
@@ -217,6 +219,7 @@ describe("savedAnalysisSummary — what a row says without opening it", () => {
     expect(savedAnalysisSummary(save(grow([])), undefined)).toEqual({
       moves: 0,
       nodes: 0,
+      variations: 0,
       ply: 0,
     });
   });

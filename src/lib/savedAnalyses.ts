@@ -227,10 +227,12 @@ export const savedAnalysisFrom = (value: unknown): SavedAnalysis | undefined => 
 
 /** What a row shows about an analysis without opening it. Pure, so it is testable. */
 export type SavedAnalysisSummary = {
-  /** How many half-moves the mainline runs to. */
+  /** How many full moves the mainline runs to — half-moves rounded up. */
   moves: number;
   /** How many nodes there are in total — mainline plus every side line. */
   nodes: number;
+  /** How many nodes sit past the mainline — the "N variations" line's unit. */
+  variations: number;
   /** How deep into the tree the reader was standing. */
   ply: number;
 };
@@ -245,11 +247,23 @@ const countNodes = (tree: GameTree): number => {
 export const savedAnalysisSummary = (
   saved: SavedAnalysis,
   tree: GameTree | undefined,
-): SavedAnalysisSummary => ({
-  moves: tree === undefined ? 0 : mainlineGame(tree).moves.length,
-  nodes: tree === undefined ? 0 : countNodes(tree),
-  ply: saved.path.length,
-});
+): SavedAnalysisSummary => {
+  if (tree === undefined) {
+    return { moves: 0, nodes: 0, variations: 0, ply: saved.path.length };
+  }
+
+  const plies = mainlineGame(tree).moves.length;
+  const nodes = countNodes(tree);
+  return {
+    // Half-moves rounded up to full moves, the way the move list numbers them.
+    moves: Math.ceil(plies / 2),
+    nodes,
+    // Every node past the mainline. Counts nodes, not moves — `moves` is in a
+    // different unit, so the "N variations" line cannot derive from it.
+    variations: nodes - plies,
+    ply: saved.path.length,
+  };
+};
 
 /**
  * The saved analyses as a **library catalog** — one category, one `LibraryGame`
