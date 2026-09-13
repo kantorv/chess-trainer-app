@@ -92,6 +92,7 @@ function OpeningsBoard() {
     position: state.fen,
     boardOrientation: state.orientation,
     arrows: state.arrows,
+    squareStyles: state.squareStyles,
     onPieceDrop: ({ sourceSquare, targetSquare }: PieceDropHandlerArgs) =>
       state.onPieceDrop({ sourceSquare, targetSquare }),
     // Dragging stays on at every ply: a drop from an earlier position branches

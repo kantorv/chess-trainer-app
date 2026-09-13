@@ -183,9 +183,13 @@ newSquares[move.to] = {
 
 Arrows **you pass in** via `options.arrows` are external / controlled: they are
 NOT auto-cleared on click or position change. Recompute the array yourself when
-the position changes — see the Analysis Board deriving its best-move arrow from
-the engine's PV. User-drawn (right-drag) arrows are separate and follow
-`clearArrowsOnClick` / `clearArrowsOnPositionChange`.
+the position changes — see the Openings screen's book-continuation arrows.
+User-drawn (right-drag) arrows are separate and follow `clearArrowsOnClick` /
+`clearArrowsOnPositionChange`. (The last move is not an arrow any more — CTA-48
+replaced it with a lichess-style highlight through `options.squareStyles`, built
+by `squareStylesAtPly` in `lib/gameNavigation.ts`, which obeys the same
+external-styles discipline: the board never clears them, so each ply hands it
+the whole set.)
 
 ### 3.5 Promotion
 

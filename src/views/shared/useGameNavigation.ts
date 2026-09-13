@@ -1,17 +1,17 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type CSSProperties } from "react";
 import { DEFAULT_POSITION } from "chess.js";
-import type { Arrow } from "react-chessboard";
 import {
-  arrowsAtPly,
   clampPly,
   fenAtPly,
   lastPlyOf,
+  squareStylesAtPly,
 } from "../../lib/gameNavigation";
 import type { Game } from "../../lib/gameModel";
 
 /**
  * Ply state for one screen: which half-move is selected, the position and the
- * board arrow that follow from it, and the keyboard stepping that moves it.
+ * last-move highlight that follow from it, and the keyboard stepping that
+ * moves it.
  *
  * The hook is the whole navigation surface — `MoveList` is presentational and
  * takes `currentPly` / `onSelectPly` as props, so both can be tested against a
@@ -40,8 +40,8 @@ export type GameNavigation = {
   lastPly: number;
   /** The FEN to hand `options.position`. */
   fen: string;
-  /** The whole arrow set for this ply, to hand `options.arrows`. */
-  arrows: Arrow[];
+  /** The last-move highlight for this ply, to hand `options.squareStyles`. */
+  squareStyles: Record<string, CSSProperties>;
   /** Jump to a ply. Out-of-range values are clamped, not rejected. */
   goToPly: (ply: number) => void;
 };
@@ -127,9 +127,9 @@ export const useGameNavigation = (
     ply,
     lastPly,
     fen: game === undefined ? DEFAULT_POSITION : fenAtPly(game, ply),
-    // Recomputed for every ply — see `arrowsAtPly` on why this is a whole set
-    // rather than an addition.
-    arrows: game === undefined ? [] : arrowsAtPly(game, ply),
+    // Recomputed for every ply — see `squareStylesAtPly` on why this is a
+    // whole set rather than an addition.
+    squareStyles: game === undefined ? {} : squareStylesAtPly(game, ply),
     goToPly,
   };
 };

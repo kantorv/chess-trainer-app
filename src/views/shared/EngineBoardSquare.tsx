@@ -1,8 +1,8 @@
 import Box from "@mui/material/Box";
 import { useTranslation } from "react-i18next";
+import type { CSSProperties } from "react";
 import {
   Chessboard,
-  type Arrow,
   type ChessboardOptions,
   type PieceDropHandlerArgs,
 } from "react-chessboard";
@@ -48,8 +48,8 @@ type EngineBoardSquareProps = {
   /** The position on screen — not necessarily the live one. */
   position: string;
   orientation: "white" | "black";
-  /** The whole arrow set for this ply; the board never clears external ones. */
-  arrows: Arrow[];
+  /** The last-move highlight for this ply; the board never clears external ones. */
+  squareStyles: Record<string, CSSProperties>;
   allowDragging: boolean;
   onPieceDrop: (args: {
     sourceSquare: string;
@@ -78,7 +78,7 @@ function EngineBoardSquare({
   id,
   position,
   orientation,
-  arrows,
+  squareStyles,
   allowDragging,
   onPieceDrop,
   boardOptions,
@@ -95,7 +95,7 @@ function EngineBoardSquare({
     id,
     position,
     boardOrientation: orientation,
-    arrows,
+    squareStyles,
     onPieceDrop: ({ sourceSquare, targetSquare }: PieceDropHandlerArgs) =>
       onPieceDrop({ sourceSquare, targetSquare }),
     allowDragging,

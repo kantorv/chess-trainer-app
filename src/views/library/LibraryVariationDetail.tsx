@@ -92,7 +92,7 @@ function LibraryVariationDetail({ section, category, item }: Props) {
     }
   }, [item.pgn]);
 
-  const { ply, lastPly, fen, arrows, nodeId, goToNode, goToPly } =
+  const { ply, lastPly, fen, squareStyles, nodeId, goToNode, goToPly } =
     useTreeNavigation(
       tree,
       parseMoveParam(searchParams.get("move")) ?? initialPlyOf(item.game),
@@ -123,7 +123,7 @@ function LibraryVariationDetail({ section, category, item }: Props) {
     id: `${section.itemTestId}-detail-${item.id}`,
     position: fen,
     boardOrientation: orientation,
-    arrows,
+    squareStyles,
     // Read-only: this page replays a line. Dragging here would desync the board
     // from the tree it is showing.
     allowDragging: false,

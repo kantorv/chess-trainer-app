@@ -219,9 +219,10 @@ export const knownMoveOpenings = (
   );
 
 /**
- * The colour of a known-next-move arrow — green, where the last-move arrow is
- * `MOVE_ARROW_COLOR`'s amber, so the two read as *what can follow* versus *what
- * was played* when both are on the board.
+ * The colour of a known-next-move arrow — solid green. The last move is not an
+ * arrow at all: it is the translucent square fill `LAST_MOVE_HIGHLIGHT` lays
+ * over its two squares, so the two read as *what can follow* (an arrow) versus
+ * *what was played* (a fill) when both are on the board.
  */
 export const KNOWN_MOVE_ARROW_COLOR = "#4caf50";
 

@@ -112,7 +112,7 @@ function LibraryGameDetail({ section, category, item }: Props) {
     game's own `StartPly` tag — the ply a puzzle chapter declares it opens on —
     and a game without one opens at ply 0, as it always has.
   */
-  const { ply, lastPly, fen, arrows, goToPly } = useGameNavigation(
+  const { ply, lastPly, fen, squareStyles, goToPly } = useGameNavigation(
     item.game,
     parseMoveParam(searchParams.get("move")) ?? initialPlyOf(item.game),
   );
@@ -172,11 +172,11 @@ function LibraryGameDetail({ section, category, item }: Props) {
     position: fen,
     boardOrientation: orientation,
     /*
-      The move that produced this position. External arrows are never cleared by
-      the board itself (`.claude/rules/chessboard.md` §3.4), so this is the whole
-      set for the current ply, recomputed on every change.
+      The move that produced this position. External square styles are never
+      cleared by the board itself (`.claude/rules/chessboard.md` §3.3), so this
+      is the whole set for the current ply, recomputed on every change.
     */
-    arrows,
+    squareStyles,
     // Read-only: this page replays a game. Dragging here would desync the board
     // from the PGN it is showing.
     allowDragging: false,

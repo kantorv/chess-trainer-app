@@ -87,12 +87,12 @@ function PlayWithEngine() {
         position={state.fen}
         orientation={state.orientation}
         /*
-          The move that produced the position on screen. External arrows are
-          never cleared by the board itself (`.claude/rules/chessboard.md` §3.4),
-          so this is the whole set for the current ply, recomputed on every
-          change.
+          The move that produced the position on screen. External square styles
+          are never cleared by the board itself (`.claude/rules/chessboard.md`
+          §3.3), so this is the whole set for the current ply, recomputed on
+          every change.
         */
-        arrows={state.arrows}
+        squareStyles={state.squareStyles}
         /*
           Draggable only on the live position, on the human's turn, with no
           promotion picker open. Off the live position the board is a review of
