@@ -69,6 +69,14 @@ const write = games.write;
  * A record identical to the one stored is a **no-op**, which is what keeps the
  * effect that calls this from re-ordering the list every time the screen
  * mounts — see the note on idempotence above.
+ *
+ * **The stored folder is carried forward** (CTA-46), as `savedAt` is: the
+ * record the autosave effect builds carries no folder knowledge — it cannot,
+ * the effect runs on Play with Engine and filing happens on /engine/saved — so
+ * the idempotent compare does not read `folderId` (comparing it would make
+ * every resume of a filed game a change and re-order the list) and the write
+ * keeps the stored one. {@link fileSavedGame} is the only write that changes a
+ * folder, so the store is the one place the rule lives.
  */
 export const saveGame = (
   game: SavedGame,
@@ -86,9 +94,14 @@ export const saveGame = (
 
   return write(
     [
-      // The date the game started is the stored one, not this write's: a game
-      // begun yesterday and continued today is still yesterday's game.
-      { ...game, savedAt: existing?.savedAt ?? game.savedAt },
+      // The date the game started and the folder it was filed under are the
+      // stored ones, not this write's: a game begun yesterday and continued
+      // today is still yesterday's game, in the folder the reader put it in.
+      {
+        ...game,
+        savedAt: existing?.savedAt ?? game.savedAt,
+        folderId: existing?.folderId ?? game.folderId,
+      },
       ...current.filter((row) => row.id !== game.id),
     ].slice(0, MAX_SAVED_GAMES),
   );
@@ -105,6 +118,57 @@ export const findSavedGame = (
 /** Forget one game. Unknown ids are a no-op, not an error. */
 export const removeSavedGame = (id: string): SavedGameProblem | undefined =>
   write(savedGamesSnapshot().filter((row) => row.id !== id));
+
+/**
+ * File one game under a folder — or to **Unfiled** with `null` — **in place**:
+ * the record keeps its position in the list rather than jumping to the top,
+ * because filing is organisation, not playing. A folder that has not actually
+ * changed is a no-op, and an unknown id is one too.
+ *
+ * The parent is not checked against the folders store: the one caller is the
+ * screen's move dialog, whose picker only offers folders that exist, and a
+ * stale id a hand edit did produce reads as Unfiled on every
+ * [`savedGameFolders.ts`](./savedGameFolders.ts) read anyway.
+ */
+export const fileSavedGame = (
+  id: string,
+  folderId: string | null,
+): SavedGameProblem | undefined => {
+  const current = savedGamesSnapshot();
+  const existing = current.find((row) => row.id === id);
+  if (existing === undefined || existing.folderId === folderId) return undefined;
+
+  return write(
+    current.map((row) =>
+      row.id === id ? { ...row, folderId } : row,
+    ),
+  );
+};
+
+/**
+ * File every game under a folder back to **Unfiled** — the games half of what
+ * deleting a folder does to its contents
+ * (`removeGameFolder` in [`savedGameFolderStore.ts`](./savedGameFolderStore.ts)).
+ *
+ * This is the one folder operation that changes *games*, which is why it lives
+ * in the games store rather than beside the folder CRUD: a folder's own moves
+ * (re-parenting sub-folders) are the folder store's to make, but the records
+ * whose `folderId` is being set are these. Only the games *directly* in the
+ * folder are unfiled — a sub-folder's games stay filed, because the sub-folder
+ * itself is re-parented, not deleted. An unknown id changes nothing.
+ */
+export const unfileGamesIn = (
+  folderId: string,
+): SavedGameProblem | undefined => {
+  const current = savedGamesSnapshot();
+  if (!current.some((row) => row.folderId === folderId)) return undefined;
+
+  return write(
+    current.map((row) =>
+      row.folderId === folderId ? { ...row, folderId: null } : row,
+    ),
+  );
+};
 
 /** Forget all of them. */
 export const clearSavedGames = (): SavedGameProblem | undefined => write([]);
