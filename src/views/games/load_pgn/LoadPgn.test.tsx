@@ -403,6 +403,17 @@ describe("the Load PGN screen — arriving with a game", () => {
 });
 
 describe("the Load PGN screen — the captured-pieces strips", () => {
+  it("renders two empty strips before a game is loaded", () => {
+    renderScreen();
+
+    // The strips always render — empty strips hold the board's size steady
+    // across a paste, the way they do on every other board.
+    expect(screen.getByTestId("load-pgn-captured-white")).toBeInTheDocument();
+    expect(screen.getByTestId("load-pgn-captured-black")).toBeInTheDocument();
+    expect(screen.getByTestId("load-pgn-captured-white")).not.toHaveAttribute("data-diff");
+    expect(screen.getByTestId("load-pgn-captured-black")).not.toHaveAttribute("data-diff");
+  });
+
   it("attributes a capture in the pasted game, relative to the game's own start", async () => {
     renderScreen();
     await pasteAndLoad('[Event "Club night"]\n\n1. e4 d5 2. exd5 1-0');

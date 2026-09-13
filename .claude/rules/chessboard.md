@@ -362,7 +362,7 @@ landing page. The vendored Storybook examples under
 `docs/vendor/react-chessboard/stories/` still carry those minimal patterns when
 you need the smallest version of one.
 
-**Two rules the Play with Engine screen is built on, worth reusing:**
+**Four rules the Play with Engine screen is built on, worth reusing:**
 
 - **Search the position on screen, not the live one.** The player can step back
   at any time. Everything shown — evaluation, variations, depth — describes the
@@ -386,6 +386,20 @@ you need the smallest version of one.
   [`views/shared/EngineBoardSquare.tsx`](../../src/views/shared/EngineBoardSquare.tsx),
   which both engine-play screens render. **A third screen with an eval bar
   renders that, rather than copying the `calc()`.**
+- **The captured-pieces strips are that arithmetic for height.** Two 20px strips
+  sit on the board's top and bottom edges, outside it, and the board gives up
+  their height — the eval bar's width discipline turned 90°. The strips' height
+  + gap must come to exactly the constant the board's side gives up
+  (`CAPTURED_STRIPS_TOTAL_PX`), the board box is a `calc` of it off **both**
+  width and height — one percentage base, so it stays square — and nothing
+  shrinks. The one-strip component and every constant live in
+  [`views/shared/CapturedPieces.tsx`](../../src/views/shared/CapturedPieces.tsx);
+  `EngineBoardSquare` composes the strips for the two engine screens, and every
+  other play/analysis board wraps its own two around its board. **A strip with
+  nothing in it still renders** — empty strips hold the board's size steady, so
+  a board does not resize when the first capture lands. The Board Editor and
+  the preview boards carry none: pieces are put and removed there, never
+  captured.
 
 **And three the library section adds:**
 
@@ -535,7 +549,11 @@ worked example.
 three exports, not one: the options go to `ChessboardProvider`, the palettes are
 `SparePiece`s, and `<Chessboard>` takes nothing — so the stub keeps the options
 from the *provider* and the board renders what it finds there.
-`views/tools/editor/BoardEditor.test.tsx` is that version.
+`views/tools/editor/BoardEditor.test.tsx` is that version. A screen with the
+captured-pieces strips reaches for one more: `defaultPieces`, which the strips
+draw their icons with — provide it in the mock (any renderer keyed by the
+twelve piece types; `views/games/load_pgn/LoadPgn.test.tsx` is the worked
+example).
 
 jsdom's CSS parser also drops properties it does not implement — `aspect-ratio`
 among them — so a `toHaveStyle` assertion on one silently fails. Assert the

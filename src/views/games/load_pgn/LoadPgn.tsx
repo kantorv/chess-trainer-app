@@ -122,7 +122,10 @@ function LoadPgn() {
   const captured = useMemo(
     () =>
       current === undefined
-        ? undefined
+        ? // No game yet: an empty line over the starting position. The strips
+          // still render — empty strips hold the board's size steady across a
+          // paste, the way they do on every other board.
+          capturedSummaryOf([], fen, fen)
         : capturedSummaryOf(
             current.moves.slice(0, ply),
             initialFenOf(current),
@@ -275,14 +278,12 @@ function LoadPgn() {
           flexDirection: "column",
         }}
       >
-        {captured !== undefined && (
-          <CapturedPieces
-            testId="load-pgn-captured"
-            color={topColor}
-            captured={captured.captured[topColor]}
-            diff={diffForSide(captured.materialDiff, topColor)}
-          />
-        )}
+        <CapturedPieces
+          testId="load-pgn-captured"
+          color={topColor}
+          captured={captured.captured[topColor]}
+          diff={diffForSide(captured.materialDiff, topColor)}
+        />
 
         {/*
           The strips sit on the board's top and bottom edges, so the board
@@ -302,14 +303,12 @@ function LoadPgn() {
           <Chessboard options={chessboardOptions} />
         </Box>
 
-        {captured !== undefined && (
-          <CapturedPieces
-            testId="load-pgn-captured"
-            color={bottomColor}
-            captured={captured.captured[bottomColor]}
-            diff={diffForSide(captured.materialDiff, bottomColor)}
-          />
-        )}
+        <CapturedPieces
+          testId="load-pgn-captured"
+          color={bottomColor}
+          captured={captured.captured[bottomColor]}
+          diff={diffForSide(captured.materialDiff, bottomColor)}
+        />
       </Box>
 
       <RightPanel>
