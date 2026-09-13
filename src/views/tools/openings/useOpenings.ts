@@ -205,6 +205,7 @@ export const useOpenings = ({ fen: initialFen, resume }: OpeningsStart = {}) => 
         from: move.from,
         to: move.to,
         fen: move.after,
+        captured: move.captured,
       });
       setTree(added.tree);
       goToNode(added.nodeId);

@@ -33,6 +33,12 @@ export type GameMove = {
   fen: string;
   /** 1-based half-move number: White's first move is 1, Black's reply 2. */
   ply: number;
+  /**
+   * The piece type this move took, as `chess.js` writes it — `"p"`, `"q"`, …
+   * `undefined` when nothing was captured, which a promotion without a capture
+   * also is: the promoted piece is a new man on the board, not a captured one.
+   */
+  captured?: string;
 };
 
 /** A single game: its tag pairs, and its moves in order. */
@@ -107,6 +113,7 @@ export const gameFromChess = (
       // position a move list wants to show when this ply is selected.
       fen: move.after,
       ply: index + 1,
+      captured: move.captured,
     })),
   };
 };

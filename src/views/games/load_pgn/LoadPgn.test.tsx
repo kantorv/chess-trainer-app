@@ -40,6 +40,15 @@ vi.mock("react-chessboard", () => ({
       data-position={options.position}
     />
   ),
+  // The captured-pieces strip reaches for this to draw its icons.
+  defaultPieces: Object.fromEntries(
+    ["w", "b"].flatMap((color) =>
+      ["K", "Q", "R", "B", "N", "P"].map((letter) => {
+        const type = `${color}${letter}`;
+        return [type, () => <svg data-testid={`piece-${type}`} />];
+      }),
+    ),
+  ),
 }));
 
 const singleGame = [
@@ -390,5 +399,40 @@ describe("the Load PGN screen — arriving with a game", () => {
         fenAtPly(tagged, 1),
       );
     });
+  });
+});
+
+describe("the Load PGN screen — the captured-pieces strips", () => {
+  it("renders two empty strips before a game is loaded", () => {
+    renderScreen();
+
+    // The strips always render — empty strips hold the board's size steady
+    // across a paste, the way they do on every other board.
+    expect(screen.getByTestId("load-pgn-captured-white")).toBeInTheDocument();
+    expect(screen.getByTestId("load-pgn-captured-black")).toBeInTheDocument();
+    expect(screen.getByTestId("load-pgn-captured-white")).not.toHaveAttribute("data-diff");
+    expect(screen.getByTestId("load-pgn-captured-black")).not.toHaveAttribute("data-diff");
+  });
+
+  it("attributes a capture in the pasted game, relative to the game's own start", async () => {
+    renderScreen();
+    await pasteAndLoad('[Event "Club night"]\n\n1. e4 d5 2. exd5 1-0');
+
+    // A pasted game opens at its final position, where White is one pawn up.
+    const white = screen.getByTestId("load-pgn-captured-white");
+    expect(white).toHaveAttribute("data-diff", "1");
+    expect(white).toHaveTextContent("+1");
+    expect(screen.getByTestId("piece-bP")).toBeInTheDocument();
+    expect(screen.getByTestId("load-pgn-captured-black")).not.toHaveAttribute("data-diff");
+  });
+
+  it("renders two empty strips for a quiet game", async () => {
+    renderScreen();
+    await pasteAndLoad(singleGame);
+
+    expect(screen.getByTestId("load-pgn-captured-white")).toBeInTheDocument();
+    expect(screen.getByTestId("load-pgn-captured-black")).toBeInTheDocument();
+    expect(screen.getByTestId("load-pgn-captured-white")).not.toHaveAttribute("data-diff");
+    expect(screen.getByTestId("load-pgn-captured-black")).not.toHaveAttribute("data-diff");
   });
 });

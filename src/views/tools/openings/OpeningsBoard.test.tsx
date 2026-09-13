@@ -641,3 +641,16 @@ describe("the Openings screen — saving", () => {
     expect(openingFoldersSnapshot()).toEqual([]);
   });
 });
+
+describe("Openings — the captured-pieces strips", () => {
+  it("renders two empty strips at the standard start, one beside each side", () => {
+    renderScreen();
+
+    // Nothing has been captured off the standard start, so both are empty —
+    // and both render, holding the board's size steady.
+    expect(screen.getByTestId("openings-captured-white")).toBeInTheDocument();
+    expect(screen.getByTestId("openings-captured-black")).toBeInTheDocument();
+    expect(screen.getByTestId("openings-captured-white")).not.toHaveAttribute("data-diff");
+    expect(screen.getByTestId("openings-captured-black")).not.toHaveAttribute("data-diff");
+  });
+});

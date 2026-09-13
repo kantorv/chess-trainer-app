@@ -90,9 +90,11 @@ const en = {
       termination: "Termination",
     },
   },
-  /** The evaluation bar — `views/shared/EvalBar.tsx`, on two screens. */
+  /** The evaluation bar and the captured-pieces strips — on every play/analysis board. */
   board: {
     evalBar: "Evaluation",
+    capturedByWhite: "Captured by White",
+    capturedByBlack: "Captured by Black",
   },
   /** The engine's lines — `views/shared/BestVariations.tsx`, on two screens. */
   variations: {

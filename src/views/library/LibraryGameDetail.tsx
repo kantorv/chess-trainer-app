@@ -16,6 +16,7 @@ import { useTranslation } from "react-i18next";
 import { Chessboard, type ChessboardOptions } from "react-chessboard";
 
 import { asAppLanguage } from "../../i18n";
+import { capturedSummaryOf, diffForSide } from "../../lib/capturedPieces";
 import { gameReferenceOf } from "../../lib/gameReference";
 import { initialFenOf } from "../../lib/gameModel";
 import {
@@ -30,6 +31,10 @@ import {
   type LibraryGame,
 } from "../../lib/libraryCatalog";
 import BoardControls from "../shared/BoardControls";
+import CapturedPieces, {
+  CAPTURED_STRIPS_TOTAL_PX,
+  CAPTURED_STRIP_GAP_PX,
+} from "../shared/CapturedPieces";
 import CopyableValue from "../shared/CopyableValue";
 import CurrentOpening from "../shared/CurrentOpening";
 import GameInfo from "../shared/GameInfo";
@@ -182,6 +187,25 @@ function LibraryGameDetail({ section, category, item }: Props) {
     allowDragging: false,
   };
 
+  /*
+    The captured pieces for the ply on screen, walked from the game's own start
+    position — the study-friendly baseline, not the standard one, so an
+    endgame study with no captures shows empty strips.
+  */
+  const captured = useMemo(
+    () =>
+      capturedSummaryOf(
+        item.game.moves.slice(0, ply),
+        initialFenOf(item.game),
+        fen,
+      ),
+    [item.game, ply, fen],
+  );
+
+  // Each strip belongs to the side it is beside, whichever way the board faces.
+  const topColor = orientation === "white" ? "black" : "white";
+  const bottomColor = orientation === "white" ? "white" : "black";
+
   /**
    * The game itself, to a screen that replays one. A reference rather than the
    * PGN: the destination resolves it through the same catalog.
@@ -209,8 +233,45 @@ function LibraryGameDetail({ section, category, item }: Props) {
     <>
       <LibrarySiblingNav section={section} category={category} activeId={item.id} />
 
-      <Box data-testid={`${section.itemTestId}-detail-board`} sx={{ height: "100%" }}>
-        <Chessboard options={boardOptions} />
+      <Box
+        data-testid={`${section.itemTestId}-detail-board`}
+        sx={{
+          height: "100%",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        <CapturedPieces
+          testId={`${section.itemTestId}-captured`}
+          color={topColor}
+          captured={captured.captured[topColor]}
+          diff={diffForSide(captured.materialDiff, topColor)}
+        />
+
+        {/*
+          The strips sit on the board's top and bottom edges, so the board
+          gives up their height — and, to stay square, the same amount of its
+          width. Both sides of this box are a calc of the same percentage base,
+          so it stays square.
+        */}
+        <Box
+          sx={{
+            width: `calc(100% - ${CAPTURED_STRIPS_TOTAL_PX}px)`,
+            height: `calc(100% - ${CAPTURED_STRIPS_TOTAL_PX}px)`,
+            flexShrink: 0,
+            alignSelf: "center",
+            marginBlock: `${CAPTURED_STRIP_GAP_PX}px`,
+          }}
+        >
+          <Chessboard options={boardOptions} />
+        </Box>
+
+        <CapturedPieces
+          testId={`${section.itemTestId}-captured`}
+          color={bottomColor}
+          captured={captured.captured[bottomColor]}
+          diff={diffForSide(captured.materialDiff, bottomColor)}
+        />
       </Box>
 
       <RightPanel>

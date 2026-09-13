@@ -247,6 +247,7 @@ export const parsePgnTree = (pgn: string, gameNumber?: number): GameTree => {
       from: move.from,
       to: move.to,
       fen: move.after,
+      captured: move.captured,
     });
     tree = added.tree;
 

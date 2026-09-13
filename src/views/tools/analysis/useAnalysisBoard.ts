@@ -422,6 +422,7 @@ export const useAnalysisBoard = ({
         from: move.from,
         to: move.to,
         fen: move.after,
+        captured: move.captured,
       });
 
       setTree(added.tree);

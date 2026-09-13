@@ -133,10 +133,12 @@ vi.mock("react-chessboard", () => ({
       ? column.charCodeAt(0) - "a".charCodeAt(0)
       : 7 - (column.charCodeAt(0) - "a".charCodeAt(0)),
   defaultPieces: Object.fromEntries(
-    ["wQ", "wR", "wN", "wB", "bQ", "bR", "bN", "bB"].map((key) => [
-      key,
-      () => <svg data-testid={`piece-${key}`} />,
-    ]),
+    ["w", "b"].flatMap((color) =>
+      ["K", "Q", "R", "B", "N", "P"].map((letter) => {
+        const key = `${color}${letter}`;
+        return [key, () => <svg data-testid={`piece-${key}`} />];
+      }),
+    ),
   ),
 }));
 
@@ -578,6 +580,75 @@ describe("Play with Engine — the panel", () => {
     unmount();
 
     expect(instance.terminated).toBe(true);
+  });
+});
+
+describe("Play with Engine — the captured-pieces strips", () => {
+  it("renders two empty strips for an untouched board", () => {
+    renderScreen();
+
+    // Empty strips hold the board's size steady — and show nothing.
+    const white = screen.getByTestId("play-with-engine-captured-white");
+    const black = screen.getByTestId("play-with-engine-captured-black");
+    expect(white).toBeInTheDocument();
+    expect(black).toBeInTheDocument();
+    expect(white).not.toHaveAttribute("data-diff");
+    expect(black).not.toHaveAttribute("data-diff");
+  });
+
+  it("attributes a capture to the side that made it, with the diff beside it", () => {
+    renderScreen();
+
+    drag("e2", "e4");
+    engineReplies("d7d5");
+    drag("e4", "d5");
+
+    // White took a black pawn: one point up, beside White's strip.
+    const white = screen.getByTestId("play-with-engine-captured-white");
+    expect(white).toHaveAttribute("data-diff", "1");
+    expect(white).toHaveTextContent("+1");
+    expect(screen.getByTestId("piece-bP")).toBeInTheDocument();
+    expect(screen.getByTestId("play-with-engine-captured-black")).not.toHaveAttribute(
+      "data-diff",
+    );
+  });
+
+  it("shows the top strip belonging to the side at the top of the board, and swaps on a flip", async () => {
+    renderScreen();
+    drag("e2", "e4");
+    engineReplies("d7d5");
+    drag("e4", "d5");
+
+    // Facing White: Black sits at the top, so Black's strip is the first.
+    const strips = () =>
+      screen
+        .getByTestId("play-with-engine-board")
+        .querySelectorAll("[data-testid^='play-with-engine-captured-'][role='img']");
+    expect(strips()[0]).toHaveAttribute(
+      "data-testid",
+      "play-with-engine-captured-black",
+    );
+    expect(strips()[1]).toHaveAttribute(
+      "data-testid",
+      "play-with-engine-captured-white",
+    );
+
+    await userEvent.click(screen.getByTestId("board-control-flip"));
+
+    // Facing Black now: the same two strips, sides swapped.
+    expect(strips()[0]).toHaveAttribute(
+      "data-testid",
+      "play-with-engine-captured-white",
+    );
+    expect(strips()[1]).toHaveAttribute(
+      "data-testid",
+      "play-with-engine-captured-black",
+    );
+    // The captures themselves are the game's, not the board's.
+    expect(screen.getByTestId("play-with-engine-captured-white")).toHaveAttribute(
+      "data-diff",
+      "1",
+    );
   });
 });
 
