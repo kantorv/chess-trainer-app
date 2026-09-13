@@ -142,7 +142,10 @@ describe("the User PGNs section", () => {
     const footer = screen.getByTestId(`library-item-footer-${played.id}`);
 
     expect(footer).toHaveTextContent("Jose Raul Capablanca - Savielly Tartakower");
-    expect(footer).toHaveTextContent(`1-0 · ${played.game.moves.length} moves`);
+    // Full moves — half-moves rounded up — as the move list numbers them.
+    expect(footer).toHaveTextContent(
+      `1-0 · ${Math.ceil(played.game.moves.length / 2)} moves`,
+    );
     expect(footer).toHaveTextContent("New York, 1924");
     expect(footer).toHaveTextContent("Horwitz Defense · A40");
   });

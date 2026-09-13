@@ -235,7 +235,8 @@ describe("savedGameSummary", () => {
     });
 
     expect(savedGameSummary(saved, savedGameToGame(saved))).toEqual({
-      moves: 7,
+      // The scholars' mate is seven half-moves, numbered as four full moves.
+      moves: 4,
       result: "1-0",
       playAs: "black",
       skillLevel: 7,

@@ -227,8 +227,10 @@ describe("savedOpeningSummary — what a row says without opening it", () => {
     const saved = save(tree);
 
     expect(savedOpeningSummary(saved, tree)).toEqual({
-      moves: 3,
+      // Three half-moves numbered as two full moves; two nodes past the mainline.
+      moves: 2,
       nodes: 5,
+      variations: 2,
     });
   });
 
@@ -236,6 +238,7 @@ describe("savedOpeningSummary — what a row says without opening it", () => {
     expect(savedOpeningSummary(save(grow([])), undefined)).toEqual({
       moves: 0,
       nodes: 0,
+      variations: 0,
     });
   });
 });

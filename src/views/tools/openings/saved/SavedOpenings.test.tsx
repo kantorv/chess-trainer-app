@@ -200,7 +200,7 @@ describe("Saved openings — the list", () => {
     renderScreen();
 
     const row = screen.getByTestId("saved-openings-item-a1");
-    expect(row).toHaveTextContent("3 moves");
+    expect(row).toHaveTextContent("2 moves");
     expect(row).toHaveTextContent("2 variations");
   });
 
@@ -210,7 +210,7 @@ describe("Saved openings — the list", () => {
     renderScreen();
 
     const row = screen.getByTestId("saved-openings-item-a1");
-    expect(row).toHaveTextContent("2 moves");
+    expect(row).toHaveTextContent("1 move");
     expect(row).not.toHaveTextContent("variation");
   });
 

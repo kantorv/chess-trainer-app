@@ -149,7 +149,7 @@ describe("Saved games — the list", () => {
 
     const row = screen.getByTestId("saved-games-item-g1");
     expect(row).toHaveTextContent("You played Black");
-    expect(row).toHaveTextContent("7 moves");
+    expect(row).toHaveTextContent("4 moves");
     expect(row).toHaveTextContent("White won");
     expect(row).toHaveTextContent("Level 7");
   });
@@ -161,7 +161,7 @@ describe("Saved games — the list", () => {
 
     const row = screen.getByTestId("saved-games-item-g1");
     expect(row).toHaveTextContent("In progress");
-    expect(row).toHaveTextContent("2 moves");
+    expect(row).toHaveTextContent("1 move");
   });
 
   it("says so in Hebrew too, without a key falling through", async () => {
@@ -391,7 +391,7 @@ describe("Saved games — the boards view", () => {
 
     const card = screen.getByTestId("saved-games-item-g1");
     expect(card).toHaveTextContent("You played Black");
-    expect(card).toHaveTextContent("2 moves");
+    expect(card).toHaveTextContent("1 move");
     expect(card).toHaveTextContent("In progress");
     expect(card).toHaveTextContent("Level 7");
   });

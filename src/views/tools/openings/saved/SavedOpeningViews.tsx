@@ -98,9 +98,9 @@ const useCaption = ({ saved, tree }: EntryProps) => {
             t("savedOpenings.moves", { count: summary.moves }),
             // Every node past the mainline is a move the reader tried and kept.
             // Zero of them is not a fact worth a slot on a two-line card.
-            summary.nodes > summary.moves
+            summary.variations > 0
               ? t("savedOpenings.variations", {
-                  count: summary.nodes - summary.moves,
+                  count: summary.variations,
                 })
               : "",
             when,
