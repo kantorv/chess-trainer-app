@@ -157,6 +157,8 @@ const he: typeof en = {
       reviewing: "צפייה במהלך קודם",
     },
     settings: {
+      /** המתג של המנוע מעל שורת הלשוניות — שם הלשונית עצמה. */
+      engineOn: "מנוע",
       strength: "עוצמה",
       strengthValue: "רמה {{level}} (בערך {{elo}} אלו)",
       depth: "עומק חיפוש",

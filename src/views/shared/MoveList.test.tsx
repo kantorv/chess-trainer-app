@@ -3,8 +3,9 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import i18n from "../../i18n";
 import AppThemeWithLang from "../../theme/AppThemeWithLang";
+import { type Score } from "../../lib/engineAnalysis";
 import { parsePgnGames } from "../../lib/pgn";
-import type { Game } from "../../lib/gameModel";
+import { initialFenOf, type Game } from "../../lib/gameModel";
 import MoveList from "./MoveList";
 
 /*
@@ -150,5 +151,50 @@ describe("the move list", () => {
       .join("");
 
     expect(inserted).toContain("padding-inline-start");
+  });
+});
+
+describe("the move list — evals beside the moves (CTA-50)", () => {
+  it("shows an eval beside a move whose position the engine has scored", () => {
+    render(
+      <AppThemeWithLang>
+        <MoveList
+          game={game}
+          currentPly={0}
+          onSelectPly={vi.fn()}
+          evalsByFen={new Map<string, Score>([
+            [game.moves[0].fen, { kind: "cp", value: 30 }],
+          ])}
+        />
+      </AppThemeWithLang>,
+    );
+
+    expect(screen.getByTestId("move-eval-1")).toHaveTextContent("+0.30");
+    // An unscored position prints nothing, not the no-data dash.
+    expect(screen.queryByTestId("move-eval-2")).toBeNull();
+    expect(cell(2)).not.toHaveTextContent("—");
+  });
+
+  it("shows the start-position eval at ply 0 when the game's start is scored", () => {
+    render(
+      <AppThemeWithLang>
+        <MoveList
+          game={game}
+          currentPly={0}
+          onSelectPly={vi.fn()}
+          evalsByFen={new Map<string, Score>([
+            [initialFenOf(game), { kind: "mate", value: 3 }],
+          ])}
+        />
+      </AppThemeWithLang>,
+    );
+
+    expect(screen.getByTestId("move-eval-0")).toHaveTextContent("M3");
+    expect(screen.queryByTestId("move-eval-1")).toBeNull();
+  });
+
+  it("renders no eval tokens when the prop is omitted", () => {
+    renderList(0);
+    expect(screen.queryByTestId(/^move-eval-/)).toBeNull();
   });
 });

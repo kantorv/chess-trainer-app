@@ -1,7 +1,14 @@
 import { Chess } from "chess.js";
 
+import { type Score } from "./engineAnalysis";
 import { engineSettingsFrom, type EngineSettings } from "./engineSettings";
-import { finalFenOf, gameTag, type Game, type GameHeaders } from "./gameModel";
+import {
+  finalFenOf,
+  gameTag,
+  initialFenOf,
+  type Game,
+  type GameHeaders,
+} from "./gameModel";
 import { gameToPgn } from "./gameTree";
 import {
   libraryCatalogOf,
@@ -74,6 +81,25 @@ export type SavedGame = {
    * across the saves the autosave effect makes.
    */
   folderId: string | null;
+  /**
+   * The scores the engine finished searching while the game was played, as a
+   * per-ply list beside the PGN (CTA-50) — each entry the evaluation of the
+   * position *after* its ply, ply 0 being the starting position. A per-ply list
+   * rather than `[%eval]` comments inside the PGN, which would touch the shared
+   * PGN writer (`gameToPgn`, also used by saved analyses) and need a comment
+   * parser on read-back. Absent until the first eval is learned; read back
+   * through `savedGameFrom`, which drops a malformed entry, never the game.
+   */
+  evals?: SavedGameEval[];
+};
+
+/** One stored eval: the score of the position after one ply. Plain JSON. */
+export type SavedGameEval = {
+  /** The half-move this is the evaluation *after*; 0 is the starting position. */
+  ply: number;
+  kind: Score["kind"];
+  /** Centipawns, or moves to mate, signed so that positive favours White. */
+  value: number;
 };
 
 /** The category path the saved games sit under, and their reference segment. */
@@ -159,6 +185,37 @@ export const savedGameHeaders = (
 });
 
 /**
+ * The evals a game carries, as the record's per-ply list (CTA-50).
+ *
+ * The engine reports scores keyed by the FEN they describe — that is how the
+ * screen accumulates them (`usePlayWithEngine`) — and this walks the game's own
+ * plies against that map, so only positions *this game* reaches are recorded
+ * and a score the session learned for some other position stays out. Each entry
+ * is the evaluation of the position *after* its ply, ply 0 being the starting
+ * position; a position reached twice (a repetition) is one entry per ply, all
+ * reading the same score.
+ */
+const evalsOf = (
+  game: Game,
+  evalsByFen: ReadonlyMap<string, Score> | undefined,
+): SavedGameEval[] => {
+  if (evalsByFen === undefined || evalsByFen.size === 0) return [];
+
+  const entries: SavedGameEval[] = [];
+  const start = evalsByFen.get(initialFenOf(game));
+  if (start !== undefined) {
+    entries.push({ ply: 0, kind: start.kind, value: start.value });
+  }
+  for (const move of game.moves) {
+    const score = evalsByFen.get(move.fen);
+    if (score !== undefined) {
+      entries.push({ ply: move.ply, kind: score.kind, value: score.value });
+    }
+  }
+  return entries;
+};
+
+/**
  * Write a game down: its moves as PGN, plus the settings to resume it under.
  *
  * `savedAt` is carried in rather than derived so that adding a move to a game
@@ -166,7 +223,10 @@ export const savedGameHeaders = (
  * which is what makes the id stable across a whole game. `folderId` is `null`
  * by default because the autosave effect — the one caller — cannot know where
  * the reader filed the game; the *store* carries the stored folder forward
- * (`saveGame`), so a record this writes never strips an assignment.
+ * (`saveGame`), so a record this writes never strips an assignment. The evals
+ * ride beside the PGN as a per-ply list ({@link SavedGame.evals}), and are
+ * left out entirely until the first one is learned, so an unevaluated game's
+ * record stays byte-identical to what a pre-eval build wrote.
  */
 export const savedGameOf = (
   id: string,
@@ -175,8 +235,10 @@ export const savedGameOf = (
   now: Date = new Date(),
   savedAt: string = now.toISOString(),
   folderId: string | null = null,
+  evalsByFen?: ReadonlyMap<string, Score>,
 ): SavedGame => {
   const result = resultOfFen(finalFenOf(game));
+  const evals = evalsOf(game, evalsByFen);
 
   return {
     id,
@@ -190,7 +252,52 @@ export const savedGameOf = (
     savedAt,
     updatedAt: now.toISOString(),
     folderId,
+    ...(evals.length > 0 ? { evals } : {}),
   };
+};
+
+/**
+ * The evals a stored record carries, read back into the FEN-keyed map the move
+ * list looks a ply's score up in. Each entry names the ply it is the
+ * evaluation *after*; this walks the resumed game to turn those plies back
+ * into the FENs the engine reported them under. A ply the game does not have —
+ * a record written for a longer game, or a hand-edited one — is skipped, never
+ * thrown on.
+ */
+export const savedGameEvalsMap = (
+  evals: SavedGameEval[] | undefined,
+  game: Game,
+): Map<string, Score> => {
+  const map = new Map<string, Score>();
+  if (evals === undefined) return map;
+
+  for (const entry of evals) {
+    const fen =
+      entry.ply === 0 ? initialFenOf(game) : game.moves[entry.ply - 1]?.fen;
+    if (fen !== undefined) {
+      map.set(fen, { kind: entry.kind, value: entry.value });
+    }
+  }
+  return map;
+};
+
+/** Whether two records' evals would read back identically. */
+export const sameSavedGameEvals = (
+  a: SavedGameEval[] | undefined,
+  b: SavedGameEval[] | undefined,
+): boolean => {
+  const left = a ?? [];
+  const right = b ?? [];
+  if (left.length !== right.length) return false;
+
+  return left.every((entry, index) => {
+    const other = right[index];
+    return (
+      entry.ply === other.ply &&
+      entry.kind === other.kind &&
+      entry.value === other.value
+    );
+  });
 };
 
 /** The moves of a saved game, or `undefined` for a record that will not parse. */
@@ -232,6 +339,26 @@ export const isSavedGame = (value: unknown): value is SavedGame => {
   );
 };
 
+/** One eval entry read back out of storage, or `undefined` for a malformed one. */
+const savedGameEvalFrom = (value: unknown): SavedGameEval | undefined => {
+  if (typeof value !== "object" || value === null) return undefined;
+  const row = value as Record<string, unknown>;
+
+  if (
+    typeof row.ply !== "number" ||
+    !Number.isInteger(row.ply) ||
+    row.ply < 0
+  ) {
+    return undefined;
+  }
+  if (row.kind !== "cp" && row.kind !== "mate") return undefined;
+  if (typeof row.value !== "number" || !Number.isFinite(row.value)) {
+    return undefined;
+  }
+
+  return { ply: row.ply, kind: row.kind, value: row.value };
+};
+
 /**
  * One stored row, normalised — the settings filled in from the defaults for
  * anything the record does not have, so an older or hand-edited entry resumes
@@ -242,6 +369,11 @@ export const isSavedGame = (value: unknown): value is SavedGame => {
  * absent, non-string, empty — reads as `null`, Unfiled. Every pre-folder record
  * is already Unfiled, so the normalisation is not a migration, it is the same
  * default the field has always had.
+ *
+ * The evals (CTA-50) are read the same way, per entry: a malformed one is
+ * dropped, never the game. A record with no evals — every pre-CTA-50 one —
+ * reads as absent, so the field stays out of the normalised row and an old
+ * record round-trips unchanged.
  */
 export const savedGameFrom = (value: unknown): SavedGame | undefined => {
   if (!isSavedGame(value)) return undefined;
@@ -250,6 +382,10 @@ export const savedGameFrom = (value: unknown): SavedGame | undefined => {
   // taken on trust.
   const row: Record<string, unknown> = { ...value };
 
+  const evals = Array.isArray(row.evals)
+    ? row.evals.map(savedGameEvalFrom).filter((entry) => entry !== undefined)
+    : [];
+
   return {
     ...value,
     settings: engineSettingsFrom(value.settings),
@@ -257,6 +393,9 @@ export const savedGameFrom = (value: unknown): SavedGame | undefined => {
       typeof row.folderId === "string" && row.folderId !== ""
         ? row.folderId
         : null,
+    // `undefined`, not a conditional spread: the raw `evals` the spread above
+    // carried must be neutralised when none of its entries survived.
+    evals: evals.length > 0 ? evals : undefined,
   };
 };
 

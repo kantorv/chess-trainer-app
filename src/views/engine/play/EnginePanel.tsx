@@ -1,6 +1,8 @@
 import { useState } from "react";
 import Box from "@mui/material/Box";
 import Chip from "@mui/material/Chip";
+import FormControlLabel from "@mui/material/FormControlLabel";
+import Switch from "@mui/material/Switch";
 import Tab from "@mui/material/Tab";
 import Tabs from "@mui/material/Tabs";
 import Typography from "@mui/material/Typography";
@@ -14,21 +16,22 @@ import EngineSettings from "./EngineSettings";
 import type { PlayWithEngineState } from "./usePlayWithEngine";
 
 /**
- * The Play with Engine screen's whole right-hand panel: the live opening line,
- * a tab strip, the tab's content, and the board controls pinned to the foot —
- * the same three-region column the Load PGN panel uses, because it is the same
- * shell aside and the same non-scrolling flex column (`Layout.tsx`).
+ * The Play with Engine screen's whole right-hand panel: the live opening line
+ * with the engine's on/off switch beside it, a tab strip, the tab's content,
+ * and the board controls pinned to the foot — the same three-region column the
+ * Load PGN panel uses, because it is the same shell aside and the same
+ * non-scrolling flex column (`Layout.tsx`).
  *
  * ```
- * ┌──────────────────────────┐
- * │ King's Pawn Game    B00  │  current opening — fixed
- * ├──────────────────────────┤
- * │ Game │ Engine │ Lines    │  tab strip — fixed
- * ├──────────────────────────┤
- * │ the active tab           │  scrolls
- * ├──────────────────────────┤
- * │ |◀ ◀ ▶ ▶|          flip  │  controls — fixed
- * └──────────────────────────┘
+ * ┌──────────────────────────────┐
+ * │ King's Pawn Game  B00  [≡]   │  current opening + engine switch — fixed
+ * ├──────────────────────────────┤
+ * │ Game │ Engine │ Lines        │  tab strip — fixed
+ * ├──────────────────────────────┤
+ * │ the active tab               │  scrolls
+ * ├──────────────────────────────┤
+ * │ |◀ ◀ ▶ ▶|              flip  │  controls — fixed
+ * └──────────────────────────────┘
  * ```
  *
  * One tab is rendered at a time rather than three with two hidden: the move list
@@ -61,8 +64,36 @@ function EnginePanel({ state }: { state: PlayWithEngineState }) {
         gap: 1,
       }}
     >
-      {/* The opening at the ply on screen — it steps back with the board. */}
-      <CurrentOpening fen={state.fen} testId="engine-current-opening" />
+      {/*
+        The row above the tab strip: the opening at the ply on screen — it steps
+        back with the board — and the engine's switch at the right. The opening
+        sits in a shrinking flex slot so a long name truncates rather than
+        pushing the switch out of the panel.
+      */}
+      <Box
+        sx={{
+          flexShrink: 0,
+          display: "flex",
+          alignItems: "center",
+          gap: 1,
+          minWidth: 0,
+        }}
+      >
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <CurrentOpening fen={state.fen} testId="engine-current-opening" />
+        </Box>
+        <FormControlLabel
+          sx={{ flexShrink: 0 }}
+          control={
+            <Switch
+              checked={state.engineOn}
+              data-testid="engine-setting-engine"
+              onChange={(event) => state.setEngineOn(event.target.checked)}
+            />
+          }
+          label={t("playEngine.settings.engineOn")}
+        />
+      </Box>
 
       <Tabs
         value={tab}
@@ -128,6 +159,7 @@ function EnginePanel({ state }: { state: PlayWithEngineState }) {
             game={state.game}
             currentPly={state.ply}
             onSelectPly={state.goToPly}
+            evalsByFen={state.evalsByFen}
           />
         )}
         {tab === "engine" && (

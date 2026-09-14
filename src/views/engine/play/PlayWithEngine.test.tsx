@@ -5,6 +5,7 @@ import { MemoryRouter } from "react-router";
 import { Chess } from "chess.js";
 import i18n from "../../../i18n";
 import AppThemeWithLang from "../../../theme/AppThemeWithLang";
+import type { Score } from "../../../lib/engineAnalysis";
 import {
   DEFAULT_ENGINE_SETTINGS,
   type EngineSettings,
@@ -760,6 +761,124 @@ describe("Play with Engine — saving the game", () => {
   });
 });
 
+describe("Play with Engine — the engine switch", () => {
+  /** The switch lives above the tab strip, in the panel's first row. */
+  const switchInput = () =>
+    screen.getByTestId("engine-setting-engine").querySelector("input")!;
+
+  it("renders the switch above the tab strip, on by default", () => {
+    renderScreen();
+
+    expect(switchInput()).toBeChecked();
+    expect(screen.getByTestId("engine-current-opening")).toBeInTheDocument();
+    expect(
+      screen
+        .getByTestId("engine-setting-engine")
+        .compareDocumentPosition(screen.getByTestId("engine-panel-tab-game")) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("stops searching and lets the reader play both sides while off", async () => {
+    renderScreen();
+    const searchesBefore = engine().searches.length;
+
+    await userEvent.click(switchInput());
+
+    drag("e2", "e4");
+    expect(engine().searches).toHaveLength(searchesBefore);
+    // Black is the engine's side, but the engine is off: the reader plays it.
+    expect(drag("e7", "e5")).toBe(true);
+    expect(position()).toContain("4p3");
+  });
+
+  it("shows the score chip at its no-data state and no stale lines while off", async () => {
+    renderScreen();
+    engineReports({ depth: 18, multipv: 1, cp: 120, pv: "e2e4 e7e5" });
+    expect(screen.getByTestId("engine-status-score")).toHaveTextContent("+1.20");
+
+    await userEvent.click(switchInput());
+
+    expect(screen.getByTestId("engine-status-score")).toHaveTextContent("—");
+    // No stale lines: the variations fall to their empty state.
+    await userEvent.click(screen.getByTestId("engine-panel-tab-lines"));
+    expect(screen.queryByTestId("variation-1")).not.toBeInTheDocument();
+    expect(screen.getByTestId("best-variations")).toHaveTextContent(
+      "Waiting for the engine…",
+    );
+  });
+
+  it("resumes searching and the engine replies when switched back on", async () => {
+    renderScreen();
+
+    await userEvent.click(switchInput());
+    drag("e2", "e4");
+    expect(engine().lastSearch).not.toBe(position());
+
+    await userEvent.click(switchInput());
+    expect(engine().lastSearch).toBe(position());
+    engineReplies("e7e5");
+    expect(screen.getByTestId("move-ply-2")).toHaveTextContent("e5");
+  });
+
+  it("keeps already-collected move-list evals while off", async () => {
+    renderScreen();
+    drag("e2", "e4");
+    engineReports({ depth: 18, multipv: 1, cp: 120, pv: "e7e5" });
+    engineReplies("e7e5");
+    expect(screen.getByTestId("move-eval-1")).toBeInTheDocument();
+
+    await userEvent.click(switchInput());
+
+    expect(screen.getByTestId("move-eval-1")).toBeInTheDocument();
+  });
+});
+
+describe("Play with Engine — move-list evals", () => {
+  it("records a position's score when its search completes, not on a streamed line", () => {
+    renderScreen();
+    drag("e2", "e4");
+    // The engine is searching the position after e4, where Black is to move:
+    // +120 for the side to move is Black's, so White's perspective is −1.20.
+    engineReports({ depth: 18, multipv: 1, cp: 120, pv: "e7e5" });
+    // A streamed line is not a score yet.
+    expect(screen.queryByTestId("move-eval-1")).not.toBeInTheDocument();
+
+    engineReplies("e7e5");
+    expect(screen.getByTestId("move-eval-1")).toHaveTextContent("−1.20");
+  });
+
+  it("shows the start-position eval at ply 0", () => {
+    renderScreen();
+    engineReports({ depth: 14, multipv: 1, cp: 30, pv: "e2e4" });
+    // The start search completes; the position is the human's to move, so the
+    // reply is not played — but the score is recorded.
+    engineReplies("e2e4");
+
+    expect(screen.queryByTestId("move-ply-1")).not.toBeInTheDocument();
+    expect(screen.getByTestId("move-eval-0")).toHaveTextContent("+0.30");
+  });
+
+  it("keeps only the top line's score", () => {
+    renderScreen();
+    drag("e2", "e4");
+    engineReports({ depth: 18, multipv: 2, cp: 50, pv: "e7e5" });
+    engineReplies("e7e5");
+
+    expect(screen.queryByTestId("move-eval-1")).not.toBeInTheDocument();
+  });
+
+  it("shows nothing, not a dash, for a position that has not been searched", () => {
+    renderScreen();
+    drag("e2", "e4");
+    engineReports({ depth: 18, multipv: 1, cp: 120, pv: "e7e5" });
+    engineReplies("e7e5");
+    // Only ply 1's position has been searched through to a bestmove.
+    expect(screen.getByTestId("move-eval-1")).toBeInTheDocument();
+    expect(screen.queryByTestId("move-eval-2")).not.toBeInTheDocument();
+  });
+});
+
 describe("Play with Engine — resuming a saved game", () => {
   /** A game already in the store, as the Saved games screen would link to it. */
   const storeGame = (
@@ -842,5 +961,29 @@ describe("Play with Engine — resuming a saved game", () => {
 
     expect(position()).toMatch(/^rnbqkbnr\/pppppppp/);
     expect(screen.queryByTestId("move-ply-1")).not.toBeInTheDocument();
+  });
+
+  it("shows the evals the game learned while it was played", () => {
+    const chess = new Chess();
+    chess.move("e4");
+    chess.move("e5");
+    const game = gameFromChess(chess);
+    saveGame(
+      savedGameOf(
+        "g-evals",
+        game,
+        DEFAULT_ENGINE_SETTINGS,
+        undefined,
+        undefined,
+        undefined,
+        new Map<string, Score>([[game.moves[0].fen, { kind: "cp", value: 30 }]]),
+      ),
+    );
+
+    renderScreen("/engine/play?saved=g-evals");
+
+    expect(screen.getByTestId("move-eval-1")).toHaveTextContent("+0.30");
+    // Only the ply the record learned is filled in.
+    expect(screen.queryByTestId("move-eval-2")).not.toBeInTheDocument();
   });
 });

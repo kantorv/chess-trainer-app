@@ -135,6 +135,29 @@ describe("the saved-games store", () => {
     expect(savedGamesSnapshot()[0].settings.skillLevel).toBe(20);
   });
 
+  it("does write when an eval arrived, and no-ops when the evals match", () => {
+    /*
+      Unlike `folderId`, the evals ARE in the idempotent compare (CTA-50): a
+      resumed game grows its record as each new position's search finishes, so
+      an eval arriving after the move is a real change worth writing.
+    */
+    saveGame(save("g1", ["e4"]));
+    const withEval: SavedGame = {
+      ...save("g1", ["e4"]),
+      evals: [{ ply: 1, kind: "cp", value: 30 }],
+    };
+
+    expect(saveGame(withEval)).toBe(undefined);
+    expect(savedGamesSnapshot()[0].evals).toEqual([
+      { ply: 1, kind: "cp", value: 30 },
+    ]);
+
+    // The same evals again: a no-op, so the list is not re-ordered.
+    const before = savedGamesSnapshot();
+    saveGame(withEval);
+    expect(savedGamesSnapshot()).toBe(before);
+  });
+
   it("carries the stored folder forward when the effect writes over a filed game", () => {
     /*
       The autosave trap (CTA-46): the record `usePlayWithEngine` builds carries

@@ -38,10 +38,11 @@ import { useTreeNavigation } from "./useTreeNavigation";
  * ## Why this is not `usePlayWithEngine` with a flag
  *
  * That hook plays the engine's `bestmove` whenever the search that produced it
- * was for the live position, restricts dragging to one colour, and searches
- * unconditionally. An analysis board is the opposite on all three counts: it
- * must **never** move a piece by itself, it accepts moves for both sides, and it
- * stops searching when the engine is switched off. Those are not modes of one
+ * was for the live position and restricts dragging to one colour. An analysis
+ * board is the opposite on both counts: it must **never** move a piece by
+ * itself, and it accepts moves for both sides. (Both engines are switchable —
+ * CTA-50 gave the play screen the same `engineOn` switch this hook has always
+ * had — so searching is no longer a difference.) Those are not modes of one
  * behaviour — the `bestmove` branch simply does not exist here — so the genuinely
  * common parts were extracted (`lib/engineAnalysis.ts`'s `Analysis` and
  * `withEngineLine`, `views/shared/`'s panel pieces) and the two hooks stayed

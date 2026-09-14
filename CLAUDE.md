@@ -74,7 +74,7 @@ change by whether it *adds* to that count, not by the exit code.
 | `src/lib/pgnLibrary.ts` | **The second producer of a `LibraryCatalog`** — `loadPgnLibrary` turns `path -> PGN text` plus that manifest into categories and `LibraryGame` items, naming each from the file's `StudyName` / a game's `ChapterName` / its players. A file carrying **more than one `StudyName`** splits into a folder of study sub-folders (`studyGroupsOf`); one with a single one, or none, is untouched. Non-throwing: a broken game, an empty file, a manifest naming a file that is not there all land in `problems`. Pure — it takes its files as a parameter. |
 | `src/lib/pgnCatalog.ts` | That loader over the shipped files, once: an eager `import.meta.glob('../data/pgn/*.pgn', { query: '?raw' })`, so Vite inlines the text at build time and the sidebar can be built from the result at module scope. Exports the shipped catalog and its `pgnKinds`, plus **`userPgnsLibrary()`** — that catalog with the reader's uploads folded in, memoised on them, which is what every screen in the section actually reads. |
 | `src/lib/pgnKind.ts` | **The PGN taxonomy** — `study`, `collection`, `repertoire`, `shelf`, `games`, `uploads`, what each is recognised by, what screen each gets, and how to add the next one (`variations`). Types and a lookup only; the recognition is in `pgnLibrary.ts` and the dispatch in `views/pgn/UserPgnsSection.tsx`. |
-| `src/lib/savedGames.ts` + `savedGameStore.ts` | **The reader's games against the engine** — what a saved game is (a PGN plus the `EngineSettings` it was played under, and since CTA-46 the `folderId` it is filed under), how it is written and read back, and `savedGameCatalogOf`, which presents the lot as a `LibraryCatalog` so `?game=` resolves against it; and the `localStorage` half, revision-stamped like the uploads store, with an idempotent `saveGame` because the writer is an effect. The store's two own rules: `saveGame` **carries the stored `folderId` forward** (as `savedAt`), because the record the autosave effect builds carries no folder knowledge — the idempotent compare must not read it — and `fileSavedGame` / `unfileGamesIn` are the writes that change a folder, in place. Non-throwing throughout. |
+| `src/lib/savedGames.ts` + `savedGameStore.ts` | **The reader's games against the engine** — what a saved game is (a PGN plus the `EngineSettings` it was played under, since CTA-46 the `folderId` it is filed under, and since CTA-50 the per-ply `evals` the engine learned while it was played — the evaluation of the position after each ply, beside the PGN, not `[%eval]` comments inside it), how it is written and read back, and `savedGameCatalogOf`, which presents the lot as a `LibraryCatalog` so `?game=` resolves against it; and the `localStorage` half, revision-stamped like the uploads store, with an idempotent `saveGame` because the writer is an effect. The store's own rules: `saveGame` **carries the stored `folderId` forward** (as `savedAt`), because the record the autosave effect builds carries no folder knowledge — the idempotent compare must not read it — while the compare **does** read the evals, the opposite for the same reason in reverse (an eval arriving is a real change worth writing); `savedGameFrom` drops a malformed eval entry, never the game; and `fileSavedGame` / `unfileGamesIn` are the writes that change a folder, in place. Non-throwing throughout. |
 | `src/lib/savedGameFolders.ts` + `savedGameFolderStore.ts` | **The reader's saved-game folders, and the tree they nest into** — `GameFolder` is a name and a parent id, with the reads over a list of them (cycles cut, dangling parents read as top level), and the CRUD over the shared recordStore: `create` (hands back what it made), `rename`, `moveGameFolder` (refuses the folder's own subtree), `removeGameFolder` (re-parents sub-folders and files the games back to Unfiled in one write-through). [`savedOpeningFolders.ts`](src/lib/savedOpeningFolders.ts) again, and for the same reason — the one difference is the autosave trap, which the games store owns. Non-throwing throughout. |
 | `src/lib/pgnUploads.ts` + `pgnUploadStore.ts` | **The reader's own `.pgn` files** — what an upload is, how it becomes a library under the `uploads` folder (through the same loader), whether a picked file is worth keeping; and the `localStorage` half, whose snapshot is checked against a revision stamp so a megabyte of PGN is not re-read per render. Non-throwing throughout. |
 | `src/lib/savedAnalyses.ts` + `savedAnalysisStore.ts` | **The reader's analysis boards** — what a saved analysis is (the whole tree as PGN, the `AnalysisSettings` it was worked under, where the reader was standing as SAN from the root, and which way the board faced), how it is written and read back, and `savedAnalysisCatalogOf` so `?game=` resolves against it; and the `localStorage` half. The pair above, deliberately, with two differences: `treeToPgn` / `parsePgnTree` rather than the linear writer, because side lines are the point, and a **place in the tree** as part of the record. Non-throwing throughout. |
@@ -539,7 +539,15 @@ Five decisions hold it together:
   of the numbering rules. The **settings ride beside** the PGN because resuming
   has to put the *engine* back: a game played at Skill Level 3 from the Black
   side is not the same game once it continues at level 20 on White. A tag pair
-  says what the game was; these say how the next move gets made.
+  says what the game was; these say how the next move gets made. **So do the
+  evals** (CTA-50): the scores the engine finished searching while the game was
+  played, as a per-ply list beside the PGN — each entry the evaluation of the
+  position *after* its ply, ply 0 being the start. A per-ply list rather than
+  `[%eval]` comments inside the PGN, which would touch the shared PGN writer and
+  need a comment parser on read-back; the screen accumulates them keyed by FEN
+  (`usePlayWithEngine`), which is what makes a position repetition read one
+  score twice, and the move list looks a ply's eval up through the FEN the move
+  already carries.
 - **A saved game is a `LibraryCatalog`, so `?game=` already worked.** Handing one
   to the Analysis Board or Load PGN is the reference hand-off those screens take
   (`?game=engine/saved/<id>`), and the only cost was one entry in
@@ -556,8 +564,13 @@ Five decisions hold it together:
 - **The write is idempotent, because the writer is an effect.** Mounting a
   resumed game re-saves it, and the settings clamp fires again once the engine's
   option handshake lands; `saveGame` compares against what is stored and does
-  nothing when the PGN and the settings both match, so opening a game does not
-  re-order a list sorted by when each was last played.
+  nothing when the PGN, the settings and the evals all match, so opening a game
+  does not re-order a list sorted by when each was last played. The evals are
+  the one field the compare *does* read — `folderId`, which the record the
+  autosave effect builds carries no knowledge of, is the one it must not —
+  because an eval arriving after the move is a real change worth writing, and
+  with the score recorded once per finished search the churn is one save per
+  evaluated position, not per streamed line.
 - **A saved game's card previews where it was left, not where it began.** This
   is the one place the screen parts company with `LibraryList`, whose cards read
   `libraryItemFen` — a game's *first* position, because that is where a replay
