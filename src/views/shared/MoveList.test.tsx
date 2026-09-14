@@ -173,9 +173,22 @@ describe("the move list — evals beside the moves (CTA-50)", () => {
     // An unscored position prints nothing, not the no-data dash.
     expect(screen.queryByTestId("move-eval-2")).toBeNull();
     expect(cell(2)).not.toHaveTextContent("—");
+
+    /*
+      The score sits at the row's far edge via a *logical* auto margin. jsdom
+      resolves no logical properties through `getComputedStyle`, so read what
+      emotion actually inserted instead — the same read the indentation test
+      makes. A physical `margin-left` would be flipped by the RTL cache, and
+      inside this LTR-pinned row would push the score to the wrong edge.
+    */
+    const inserted = Array.from(document.querySelectorAll("style"))
+      .map((tag) => tag.textContent ?? "")
+      .join("");
+
+    expect(inserted).toContain("margin-inline-start");
   });
 
-  it("shows the start-position eval at ply 0 when the game's start is scored", () => {
+  it("prints nothing at ply 0, even when the game's start is scored", () => {
     render(
       <AppThemeWithLang>
         <MoveList
@@ -189,8 +202,7 @@ describe("the move list — evals beside the moves (CTA-50)", () => {
       </AppThemeWithLang>,
     );
 
-    expect(screen.getByTestId("move-eval-0")).toHaveTextContent("M3");
-    expect(screen.queryByTestId("move-eval-1")).toBeNull();
+    expect(screen.queryByTestId("move-eval-0")).toBeNull();
   });
 
   it("renders no eval tokens when the prop is omitted", () => {

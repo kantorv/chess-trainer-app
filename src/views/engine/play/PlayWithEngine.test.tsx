@@ -848,15 +848,15 @@ describe("Play with Engine — move-list evals", () => {
     expect(screen.getByTestId("move-eval-1")).toHaveTextContent("−1.20");
   });
 
-  it("shows the start-position eval at ply 0", () => {
+  it("prints nothing at ply 0 even when the start search completed", () => {
     renderScreen();
     engineReports({ depth: 14, multipv: 1, cp: 30, pv: "e2e4" });
     // The start search completes; the position is the human's to move, so the
-    // reply is not played — but the score is recorded.
+    // reply is not played — and the move list prints no eval for ply 0.
     engineReplies("e2e4");
 
     expect(screen.queryByTestId("move-ply-1")).not.toBeInTheDocument();
-    expect(screen.getByTestId("move-eval-0")).toHaveTextContent("+0.30");
+    expect(screen.queryByTestId("move-eval-0")).not.toBeInTheDocument();
   });
 
   it("keeps only the top line's score", () => {

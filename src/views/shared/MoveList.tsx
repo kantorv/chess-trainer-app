@@ -43,12 +43,12 @@ type MoveListProps = {
   /**
    * The engine's scores for the positions it has finished searching, keyed by
    * the FEN they describe (CTA-50) — Play with Engine's live accumulation, and
-   * what the list prints beside each move lichess-style. Each move already
-   * carries the FEN after it, so a ply's eval is a lookup; ply 0 looks up the
-   * game's starting position. A position the map does not know prints nothing —
-   * not the no-data dash, which is the *chip's* empty state, not a move's.
-   * Without the prop nothing changes, which is why every other consumer passes
-   * none.
+   * what the list prints beside each move lichess-style: the SAN leads, the
+   * score sits at the row's far edge. Each move already carries the FEN after
+   * it, so a ply's eval is a lookup. A position the map does not know prints
+   * nothing — not the no-data dash, which is the *chip's* empty state, not a
+   * move's. Without the prop nothing changes, which is why every other consumer
+   * passes none.
    */
   evalsByFen?: ReadonlyMap<string, Score>;
 };
@@ -93,11 +93,17 @@ const selectedCellSx = {
 
 /**
  * The eval printed beside a move: small and dimmed, so the SAN stays the thing
- * the eye reads first. It inherits the row's colour rather than taking a fixed
- * one — the selected row repaints its text, and a hard `text.secondary` here
- * would sit dark-on-primary.
+ * the eye reads first, and pushed to the row's far edge — the SAN leads, the
+ * score trails. The auto margin is the *logical* one, not `marginLeft`: under
+ * Hebrew these styles go through the RTL emotion cache, which flips physical
+ * margins — inside this LTR-pinned row (`dir="ltr"`) that would push the score
+ * to the wrong edge. The logical property is untouched by the plugin and
+ * resolves against the row's own direction in both caches. It inherits the
+ * row's colour rather than taking a fixed one — the selected row repaints its
+ * text, and a hard `text.secondary` here would sit dark-on-primary.
  */
 const evalTokenSx = {
+  marginInlineStart: "auto",
   fontSize: "0.6875rem",
   opacity: 0.75,
   minWidth: 0,
@@ -149,6 +155,13 @@ function MoveCell({
       }}
     >
       {text}
+      {hasComment && (
+        <ChatBubbleOutlineRoundedIcon
+          aria-hidden
+          data-testid={`move-comment-icon-${move.ply}`}
+          sx={{ fontSize: "0.75rem", opacity: 0.7, flexShrink: 0 }}
+        />
+      )}
       {evalText !== undefined && (
         <Typography
           component="span"
@@ -157,13 +170,6 @@ function MoveCell({
         >
           {evalText}
         </Typography>
-      )}
-      {hasComment && (
-        <ChatBubbleOutlineRoundedIcon
-          aria-hidden
-          data-testid={`move-comment-icon-${move.ply}`}
-          sx={{ fontSize: "0.75rem", opacity: 0.7, flexShrink: 0 }}
-        />
       )}
     </ButtonBase>
   );
@@ -245,15 +251,6 @@ function MoveList({
         }}
       >
         {t("moveList.startPosition")}
-        {evalsByFen?.has(initialFenOf(game)) && (
-          <Typography
-            component="span"
-            data-testid="move-eval-0"
-            sx={evalTokenSx}
-          >
-            {formatScore(evalsByFen.get(initialFenOf(game))!)}
-          </Typography>
-        )}
       </ButtonBase>
 
       {rows.length === 0 ? (
