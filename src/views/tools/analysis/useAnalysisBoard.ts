@@ -12,6 +12,7 @@ import {
   scoreFromUci,
   withEngineLine,
   type Analysis,
+  type Score,
   type Turn,
 } from "../../../lib/engineAnalysis";
 import { parseFen } from "../../../lib/fen";
@@ -58,7 +59,11 @@ import { useTreeNavigation } from "./useTreeNavigation";
  * **2. The engine is optional.** With it off nothing is searched and no lines are
  * shown; switching it back on searches the position on screen. What reaches the
  * screen is only ever an analysis whose FEN matches that position, so a set left
- * over from the previous one is never rendered under a new board.
+ * over from the previous one is never rendered under a new board. Beside the
+ * lines, the scores each completed search finished with accumulate per FEN
+ * (`evalsByFen`, CTA-51) — what the move list prints beside each move, the play
+ * screen's CTA-50 accumulation, and deliberately not cleared by a `loadTree`,
+ * because a map keyed by FEN gives the same position the same eval.
  *
  * **3. An initial position — a whole game, or a saved analysis — can come from
  * outside.** The Board Editor hands a position over as a query parameter on this
@@ -200,6 +205,16 @@ export const useAnalysisBoard = ({
   );
   const [analysis, setAnalysis] = useState<Analysis>(EMPTY_ANALYSIS);
   const [engineOn, setEngineOn] = useState(true);
+  /*
+    The scores the engine has finished searching, keyed by the FEN they describe
+    (CTA-51) — what the move list prints beside each move, lichess-style. A tree
+    node carries the FEN after its move, so a ply's eval is a lookup, and a
+    position reached twice reads the same score twice. Not seeded from a
+    reopened analysis — the saved record does not carry evals — and deliberately
+    not cleared by `loadTree`: a map keyed by FEN gives the same position the
+    same eval, whatever board it is reached from.
+  */
+  const [evals, setEvals] = useState<ReadonlyMap<string, Score>>(() => new Map());
   const [showEvalBar, setShowEvalBar] = useState(true);
   // Facing the side to move in the position this screen opened on — see
   // `loadFen` for why a position you are handed turns the board and a game you
@@ -266,24 +281,69 @@ export const useAnalysisBoard = ({
   );
   const { fen, nodeId, goToNode } = navigation;
 
+  /*
+    The final score of the search the engine is working on, remembered from the
+    last top-line `info` and written down when that search's `bestmove` lands —
+    a position's score is recorded when the search for it *completes*, not on
+    every streamed line (each is shallower than the last). The same fold the
+    play screen runs (CTA-50); the difference here is only what the bestmove
+    *also* does — nothing, since an analysis board never moves a piece.
+  */
+  const latestScoreRef = useRef<{ fen: string; score: Score } | null>(null);
+
   // Subscribe once per Engine instance. Declared first: on a StrictMode remount
   // this is the effect that rebuilds the worker, before the search effect below
   // asks it for anything.
   useEffect(() => {
     const unsubscribe = getEngine().onMessage((message) => {
-      const { fen: searchedFen, pv, depth, multipv } = message;
-      // `bestMove` is read by the *other* engine screen. Here it is deliberately
-      // ignored: an analysis board never plays a move of its own.
-      if (!searchedFen || !pv || !depth) return;
+      const { fen: searchedFen, pv, depth, multipv, bestMove } = message;
+      // `bestMove` is played by the *other* engine screen. Here it is only the
+      // end-of-search marker: an analysis board never moves a piece of its own.
+      if (!searchedFen) return;
 
-      setAnalysis((previous) =>
-        withEngineLine(previous, searchedFen, {
-          multipv: multipv ?? 1,
-          score: scoreFromUci(message, turnOf(searchedFen)),
-          depth,
-          san: pvToSan(searchedFen, pv),
-        }),
-      );
+      if (pv && depth) {
+        const score = scoreFromUci(message, turnOf(searchedFen));
+        const rank = multipv ?? 1;
+
+        if (rank === 1 && score !== null) {
+          latestScoreRef.current = { fen: searchedFen, score };
+        }
+
+        setAnalysis((previous) =>
+          withEngineLine(previous, searchedFen, {
+            multipv: rank,
+            score,
+            depth,
+            san: pvToSan(searchedFen, pv),
+          }),
+        );
+      }
+
+      if (!bestMove) return;
+
+      /*
+        The search for this position is over: its final score is what the move
+        list keeps, keyed by FEN — every ply whose position it is reads it. A
+        search the switch interrupted still finished, so its score is recorded
+        even with the engine off.
+      */
+      const final = latestScoreRef.current;
+      latestScoreRef.current = null;
+      if (final !== null && final.fen === searchedFen) {
+        setEvals((previous) => {
+          const existing = previous.get(searchedFen);
+          if (
+            existing !== undefined &&
+            existing.kind === final.score.kind &&
+            existing.value === final.score.value
+          ) {
+            return previous;
+          }
+          const next = new Map(previous);
+          next.set(searchedFen, final.score);
+          return next;
+        });
+      }
     });
 
     return unsubscribe;
@@ -569,6 +629,8 @@ export const useAnalysisBoard = ({
     engineOn,
     setEngineOn,
     analysis: currentAnalysis,
+    /** The scores the engine has finished searching, keyed by the FEN they describe. */
+    evalsByFen: evals,
     showEvalBar,
     setShowEvalBar,
     promotion,
