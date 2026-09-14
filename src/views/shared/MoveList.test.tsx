@@ -188,7 +188,7 @@ describe("the move list — evals beside the moves (CTA-50)", () => {
     expect(inserted).toContain("margin-inline-start");
   });
 
-  it("prints nothing at ply 0, even when the game's start is scored", () => {
+  it("shows the start-position eval at ply 0 when the game's start is scored", () => {
     render(
       <AppThemeWithLang>
         <MoveList
@@ -202,7 +202,12 @@ describe("the move list — evals beside the moves (CTA-50)", () => {
       </AppThemeWithLang>,
     );
 
-    expect(screen.queryByTestId("move-eval-0")).toBeNull();
+    expect(screen.getByTestId("move-eval-0")).toHaveTextContent("M3");
+    expect(screen.queryByTestId("move-eval-1")).toBeNull();
+    // The starting-position row is chrome, not SAN — it is not dir-pinned, so
+    // the token carries the attribute itself: a signed score in an RTL flow
+    // has its sign migrate across the number.
+    expect(screen.getByTestId("move-eval-0")).toHaveAttribute("dir", "ltr");
   });
 
   it("renders no eval tokens when the prop is omitted", () => {

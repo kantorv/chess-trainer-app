@@ -45,7 +45,8 @@ type MoveListProps = {
    * the FEN they describe (CTA-50) — Play with Engine's live accumulation, and
    * what the list prints beside each move lichess-style: the SAN leads, the
    * score sits at the row's far edge. Each move already carries the FEN after
-   * it, so a ply's eval is a lookup. A position the map does not know prints
+   * it, so a ply's eval is a lookup; ply 0 looks up the game's starting
+   * position. A position the map does not know prints
    * nothing — not the no-data dash, which is the *chip's* empty state, not a
    * move's. Without the prop nothing changes, which is why every other consumer
    * passes none.
@@ -251,6 +252,23 @@ function MoveList({
         }}
       >
         {t("moveList.startPosition")}
+        {/*
+          The score carries `dir="ltr"` itself: this row is chrome and mirrors
+          under Hebrew, and a signed score in an RTL flow has its sign migrate
+          across the number. The move cells' tokens lean on their row's pin,
+          which this row does not have — see the header note above for why the
+          treatment is the attribute, not a CSS declaration.
+        */}
+        {evalsByFen?.has(initialFenOf(game)) && (
+          <Typography
+            component="span"
+            dir="ltr"
+            data-testid="move-eval-0"
+            sx={evalTokenSx}
+          >
+            {formatScore(evalsByFen.get(initialFenOf(game))!)}
+          </Typography>
+        )}
       </ButtonBase>
 
       {rows.length === 0 ? (
