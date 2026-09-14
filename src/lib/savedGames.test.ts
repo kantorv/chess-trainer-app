@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { Chess } from "chess.js";
 
+import { type Score } from "./engineAnalysis";
 import { DEFAULT_ENGINE_SETTINGS } from "./engineSettings";
 import { gameFromChess, initialFenOf, type Game } from "./gameModel";
 import { gameToPgn } from "./gameTree";
@@ -10,12 +11,15 @@ import {
   newSavedGameId,
   resultOfFen,
   SAVED_GAMES_PATH,
+  sameSavedGameEvals,
   savedGameCatalogOf,
+  savedGameEvalsMap,
   savedGameFrom,
   savedGameOf,
   savedGameSummary,
   savedGameToGame,
   type SavedGame,
+  type SavedGameEval,
 } from "./savedGames";
 
 /** A game built by playing SAN moves, the way the engine screen grows one. */
@@ -140,6 +144,137 @@ describe("savedGameOf — writing a game down", () => {
 
   it("writes a game as Unfiled — the folder rides beside it, not in it", () => {
     expect(save(playedGame(["e4"])).folderId).toBeNull();
+  });
+});
+
+describe("the evals a record carries (CTA-50)", () => {
+  const game = playedGame(["e4", "e5"]);
+
+  it("leaves the evals out of a record nothing was evaluated in", () => {
+    expect(save(playedGame(["e4"])).evals).toBeUndefined();
+  });
+
+  it("writes the scores beside the PGN as a per-ply list, ply 0 included", () => {
+    const saved = savedGameOf(
+      "g1",
+      game,
+      DEFAULT_ENGINE_SETTINGS,
+      undefined,
+      undefined,
+      undefined,
+      new Map<string, Score>([
+        [initialFenOf(game), { kind: "cp", value: 20 }],
+        [game.moves[0].fen, { kind: "cp", value: 30 }],
+      ]),
+    );
+
+    // Ply 0 is the starting position; ply 1 the position after 1. e4.
+    expect(saved.evals).toEqual([
+      { ply: 0, kind: "cp", value: 20 },
+      { ply: 1, kind: "cp", value: 30 },
+    ]);
+  });
+
+  it("keeps scores learned for positions this game does not reach out of the record", () => {
+    const saved = savedGameOf(
+      "g1",
+      playedGame(["e4"]),
+      DEFAULT_ENGINE_SETTINGS,
+      undefined,
+      undefined,
+      undefined,
+      new Map<string, Score>([["8/8/8/8/8/8/8/8 w - - 0 1", { kind: "cp", value: 0 }]]),
+    );
+
+    expect(saved.evals).toBeUndefined();
+  });
+
+  it("reads the evals back into the FEN-keyed map the move list looks up", () => {
+    const saved = savedGameOf(
+      "g1",
+      game,
+      DEFAULT_ENGINE_SETTINGS,
+      undefined,
+      undefined,
+      undefined,
+      new Map<string, Score>([[game.moves[1].fen, { kind: "mate", value: -3 }]]),
+    );
+
+    const map = savedGameEvalsMap(saved.evals, game);
+
+    expect(map.get(game.moves[1].fen)).toEqual({ kind: "mate", value: -3 });
+    expect(map.size).toBe(1);
+  });
+
+  it("skips an eval for a ply the game does not have", () => {
+    const map = savedGameEvalsMap(
+      [{ ply: 9, kind: "cp", value: 30 }],
+      playedGame(["e4"]),
+    );
+
+    expect(map.size).toBe(0);
+  });
+
+  it("treats two records with the same evals as identical, and different evals as not", () => {
+    const withEval: SavedGameEval[] = [{ ply: 1, kind: "cp", value: 30 }];
+
+    expect(
+      sameSavedGameEvals(withEval, [{ ply: 1, kind: "cp", value: 30 }]),
+    ).toBe(true);
+    // Absent and empty are the same answer.
+    expect(sameSavedGameEvals(undefined, [])).toBe(true);
+    expect(sameSavedGameEvals(withEval, undefined)).toBe(false);
+    expect(sameSavedGameEvals(withEval, [{ ply: 1, kind: "cp", value: 31 }])).toBe(
+      false,
+    );
+    expect(
+      sameSavedGameEvals(withEval, [{ ply: 1, kind: "mate", value: 3 }]),
+    ).toBe(false);
+    expect(sameSavedGameEvals(withEval, [{ ply: 2, kind: "cp", value: 30 }])).toBe(
+      false,
+    );
+  });
+});
+
+describe("savedGameFrom — the evals a stored row carries", () => {
+  it("reads a record stored before evals with the field absent — no version bump", () => {
+    const row = savedGameFrom({
+      id: "g1",
+      pgn: "1. e4 *",
+      savedAt: "x",
+      updatedAt: "x",
+    });
+
+    expect(row?.evals).toBeUndefined();
+  });
+
+  it("keeps the evals it does have", () => {
+    const row = savedGameFrom({
+      id: "g1",
+      pgn: "1. e4 *",
+      savedAt: "x",
+      updatedAt: "x",
+      evals: [{ ply: 1, kind: "cp", value: 30 }],
+    });
+
+    expect(row?.evals).toEqual([{ ply: 1, kind: "cp", value: 30 }]);
+  });
+
+  it("drops a malformed eval entry, never the game", () => {
+    const row = savedGameFrom({
+      id: "g1",
+      pgn: "1. e4 *",
+      savedAt: "x",
+      updatedAt: "x",
+      evals: [
+        { ply: "one" },
+        { ply: 1, kind: "cp", value: 30 },
+        "nonsense",
+        { ply: -1, kind: "cp", value: 1 },
+      ],
+    });
+
+    expect(row?.evals).toEqual([{ ply: 1, kind: "cp", value: 30 }]);
   });
 });
 

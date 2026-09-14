@@ -203,6 +203,8 @@ const en = {
       reviewing: "Reviewing an earlier move",
     },
     settings: {
+      /** The engine's on/off switch above the tab strip — the tab's own name. */
+      engineOn: "Engine",
       strength: "Strength",
       /** The engine has no ELO setting, so the figure is named as an estimate. */
       strengthValue: "Level {{level}} (≈{{elo}} Elo)",

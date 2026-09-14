@@ -7,6 +7,7 @@ import {
   scoreFromUci,
   withEngineLine,
   type Analysis,
+  type Score,
   type Turn,
 } from "../../../lib/engineAnalysis";
 import {
@@ -18,6 +19,7 @@ import { gameFromChess, initialFenOf, type Game } from "../../../lib/gameModel";
 import {
   chessFromSavedGame,
   newSavedGameId,
+  savedGameEvalsMap,
   savedGameOf,
   type SavedGame,
 } from "../../../lib/savedGames";
@@ -67,6 +69,16 @@ import { useGameNavigation } from "../../shared/useGameNavigation";
  * writing is one effect, and it is `persist` that turns it on: Masked Pieces
  * runs this hook verbatim and must not fill the list with games whose costume
  * cannot be restored.
+ *
+ * **The engine is a switch, not a constant.** `engineOn` (CTA-50) gates both
+ * things the engine does on this screen — searching the position on screen, and
+ * playing its reply. Off, the reader plays both sides; the panel falls to its
+ * empty states rather than showing a stale set. It defaults to on, which is what
+ * keeps Masked Pieces — this hook run verbatim — unchanged. Beside it, the
+ * scores the engine finishes searching accumulate per FEN (`evalsByFen`) and are
+ * what the move list prints beside each move, lichess-style; a resumed game is
+ * seeded from its record, and the record grows as each new position is
+ * searched.
  */
 
 /** The engine knobs the settings tab drives. Defined in `lib/engineSettings.ts` */
@@ -181,6 +193,26 @@ export const usePlayWithEngine = ({
   });
   const [analysis, setAnalysis] = useState<Analysis>(EMPTY_ANALYSIS);
   const [showEvalBar, setShowEvalBar] = useState(true);
+  /*
+    The engine's switch (CTA-50): off, it neither searches the position on
+    screen nor plays its reply, and the reader plays both sides. On, both
+    resume — the search effect below fires on the switch as well as on the fen.
+    Defaults to on, which is what keeps Masked Pieces — this hook run verbatim —
+    unchanged.
+  */
+  const [engineOn, setEngineOn] = useState(true);
+  /*
+    The scores the engine has finished searching, keyed by the FEN they describe
+    (CTA-50) — what the move list prints beside each move, lichess-style. Each
+    move already carries the FEN after it, so a ply's eval is a lookup, and a
+    position reached twice reads the same score twice. A resumed game is seeded
+    from its record's per-ply list; the map grows in the subscribe effect below,
+    when each search's bestmove lands.
+  */
+  const [evals, setEvals] = useState<ReadonlyMap<string, Score>>(() => {
+    if (arrival === undefined) return new Map();
+    return savedGameEvalsMap(resume?.evals, arrival.game);
+  });
   // Facing the side the human is playing — otherwise a game handed over with
   // Black to move opens from behind the opponent's pieces.
   const [orientation, setOrientation] = useState<"white" | "black">(() => {
@@ -234,6 +266,14 @@ export const usePlayWithEngine = ({
   */
   const isLive = ply === lastPly;
 
+  /*
+    The final score of the search the engine is working on, remembered from the
+    last top-line `info` and written down when that search's `bestmove` lands —
+    a position's score is recorded when the search for it *completes*, not on
+    every streamed line (each is shallower than the last).
+  */
+  const latestScoreRef = useRef<{ fen: string; score: Score } | null>(null);
+
   // Subscribe once per Engine instance. Declared first: on a StrictMode remount
   // this is the effect that rebuilds the worker, before the search effect below
   // asks it for anything.
@@ -245,6 +285,10 @@ export const usePlayWithEngine = ({
       if (pv && depth) {
         const score = scoreFromUci(message, turnOf(searchedFen));
         const rank = multipv ?? 1;
+
+        if (rank === 1 && score !== null) {
+          latestScoreRef.current = { fen: searchedFen, score };
+        }
 
         setAnalysis((previous) =>
           withEngineLine(previous, searchedFen, {
@@ -259,10 +303,38 @@ export const usePlayWithEngine = ({
       if (!bestMove) return;
 
       /*
+        The search for this position is over: its final score is what the move
+        list keeps, keyed by FEN — every ply whose position it is reads it. A
+        search the switch interrupted still finished, so its score is recorded
+        even with the engine off.
+      */
+      const final = latestScoreRef.current;
+      latestScoreRef.current = null;
+      if (final !== null && final.fen === searchedFen) {
+        setEvals((previous) => {
+          const existing = previous.get(searchedFen);
+          if (
+            existing !== undefined &&
+            existing.kind === final.score.kind &&
+            existing.value === final.score.value
+          ) {
+            return previous;
+          }
+          const next = new Map(previous);
+          next.set(searchedFen, final.score);
+          return next;
+        });
+      }
+
+      /*
         Play it only if this search was for the position the game is actually
         at. A result for any other position — one the player stepped back to,
-        or one already superseded — is analysis and nothing more.
+        or one already superseded — is analysis and nothing more. And only
+        while the engine is switched on: off, the reader plays both sides and
+        the reply is not played.
       */
+      if (!engineOn) return;
+
       const chessGame = chessGameRef.current;
       if (
         searchedFen !== chessGame.fen() ||
@@ -292,11 +364,12 @@ export const usePlayWithEngine = ({
 
     return unsubscribe;
     /*
-      `humanColor` is a dependency rather than a ref read: re-subscribing costs
-      one Set entry — no worker is rebuilt — and the alternative is writing a ref
-      during render, which `react-hooks/refs` rejects.
+      `humanColor` and `engineOn` are dependencies rather than ref reads:
+      re-subscribing costs one Set entry — no worker is rebuilt — and the
+      alternative is writing a ref during render, which `react-hooks/refs`
+      rejects.
     */
-  }, [getEngine, goToPly, humanColor]);
+  }, [getEngine, goToPly, humanColor, engineOn]);
 
   // Tear the worker down on unmount (and on StrictMode remount).
   useEffect(() => {
@@ -372,11 +445,23 @@ export const usePlayWithEngine = ({
   ]);
 
   /*
-    Search the position *on screen*, not the live one. Every settings change is a
-    dependency, so a new setting restarts the search and is reflected in the
-    lines immediately instead of waiting for the next move.
+    Search the position *on screen*, not the live one — and only while the
+    engine is switched on. Every settings change is a dependency, so a new
+    setting restarts the search and is reflected in the lines immediately
+    instead of waiting for the next move.
+
+    Switching it off stops the running search rather than letting it finish
+    quietly in the background: the worker shares the tab with the UI, and a
+    switch labelled "off" that leaves a search running is a lie. The engine is
+    not *created* to be stopped, though, so an engine that was never built stays
+    unbuilt.
   */
   useEffect(() => {
+    if (!engineOn) {
+      engineRef.current?.stop();
+      return;
+    }
+
     /*
       Nothing to think about in a finished position, so it is not searched. No
       state has to be cleared for that: `currentAnalysis` below only hands the
@@ -391,6 +476,7 @@ export const usePlayWithEngine = ({
     });
   }, [
     getEngine,
+    engineOn,
     fen,
     settings.depth,
     settings.moveTimeMs,
@@ -425,8 +511,13 @@ export const usePlayWithEngine = ({
   */
   useEffect(() => {
     if (!persist || game.moves.length === 0) return;
-    saveGame(savedGameOf(getSavedId(), game, settings));
-  }, [persist, game, settings, getSavedId]);
+    saveGame(
+      // The evals ride beside the PGN as a per-ply list (`lib/savedGames.ts`):
+      // the record grows as each position's search finishes, and the idempotent
+      // compare reads them, so one write per evaluated position.
+      savedGameOf(getSavedId(), game, settings, undefined, undefined, undefined, evals),
+    );
+  }, [persist, game, settings, evals, getSavedId]);
 
   /** Apply a human move that has already been checked for legality. */
   const applyHumanMove = useCallback(
@@ -463,13 +554,10 @@ export const usePlayWithEngine = ({
       if (!targetSquare) return false;
 
       const chessGame = chessGameRef.current;
-      if (
-        !isLive ||
-        chessGame.turn() !== humanColor ||
-        chessGame.isGameOver()
-      ) {
-        return false;
-      }
+      // With the engine off the reader plays both sides, so only that screen
+      // state refuses the engine's turn — never the drop handler on its own.
+      if (!isLive || chessGame.isGameOver()) return false;
+      if (engineOn && chessGame.turn() !== humanColor) return false;
 
       // Ask `chess.js` which of this square's legal moves land on the target;
       // a promotion is the one that comes back carrying a `promotion` field.
@@ -489,7 +577,7 @@ export const usePlayWithEngine = ({
 
       return applyHumanMove(sourceSquare as Square, targetSquare as Square);
     },
-    [applyHumanMove, humanColor, isLive],
+    [applyHumanMove, engineOn, humanColor, isLive],
   );
 
   /** Answer the promotion picker with a piece, or dismiss it with `null`. */
@@ -536,12 +624,13 @@ export const usePlayWithEngine = ({
 
   /*
     The lines only describe the position on screen once a result for it has come
-    back. Until then the previous position's lines are still in state, and
-    showing them under a new board would be a lie — so the screen sees an empty
-    analysis rather than a stale one.
+    back, and only while the engine is switched on. Until then the previous
+    position's lines are still in state, and showing them under a new board
+    would be a lie — so the screen sees an empty analysis rather than a stale
+    one, and with the engine off it sees no lines at all.
   */
   const currentAnalysis: Analysis =
-    analysis.fen === fen ? analysis : { fen, depth: 0, lines: [] };
+    engineOn && analysis.fen === fen ? analysis : { fen, depth: 0, lines: [] };
 
   return {
     game,
@@ -557,15 +646,24 @@ export const usePlayWithEngine = ({
     settings,
     updateSettings,
     engineOptions,
+    engineOn,
+    setEngineOn,
     analysis: currentAnalysis,
+    /** The scores the engine has finished searching, keyed by the FEN they describe. */
+    evalsByFen: evals,
     showEvalBar,
     setShowEvalBar,
     promotion,
     resolvePromotion,
     onPieceDrop,
     newGame,
-    /** True while it is the engine's turn at the live position and the game is on. */
-    isEngineThinking: isLive && !isTerminal(fen) && turnOf(fen) !== humanColor,
+    /**
+     * True while it is the engine's turn at the live position and the game is
+     * on — the board locks on it. Off, the reader plays both sides, so the
+     * engine is never "thinking".
+     */
+    isEngineThinking:
+      engineOn && isLive && !isTerminal(fen) && turnOf(fen) !== humanColor,
   };
 };
 

@@ -4,6 +4,7 @@ import ButtonBase from "@mui/material/ButtonBase";
 import Typography from "@mui/material/Typography";
 import ChatBubbleOutlineRoundedIcon from "@mui/icons-material/ChatBubbleOutlineRounded";
 import { useTranslation } from "react-i18next";
+import { formatScore, type Score } from "../../lib/engineAnalysis";
 import { moveRowsOf } from "../../lib/gameNavigation";
 import { initialFenOf, type Game, type GameMove } from "../../lib/gameModel";
 import { maskSanLine, type PieceMask } from "../../lib/pieceMask";
@@ -39,6 +40,18 @@ type MoveListProps = {
    * screen passes nothing and renders exactly as before.
    */
   annotatedPlies?: ReadonlySet<number>;
+  /**
+   * The engine's scores for the positions it has finished searching, keyed by
+   * the FEN they describe (CTA-50) — Play with Engine's live accumulation, and
+   * what the list prints beside each move lichess-style: the SAN leads, the
+   * score sits at the row's far edge. Each move already carries the FEN after
+   * it, so a ply's eval is a lookup; ply 0 looks up the game's starting
+   * position. A position the map does not know prints
+   * nothing — not the no-data dash, which is the *chip's* empty state, not a
+   * move's. Without the prop nothing changes, which is why every other consumer
+   * passes none.
+   */
+  evalsByFen?: ReadonlyMap<string, Score>;
 };
 
 /**
@@ -79,12 +92,35 @@ const selectedCellSx = {
   fontWeight: 700,
 } as const;
 
+/**
+ * The eval printed beside a move: small and dimmed, so the SAN stays the thing
+ * the eye reads first, and pushed to the row's far edge — the SAN leads, the
+ * score trails. The auto margin is the *logical* one, not `marginLeft`: under
+ * Hebrew these styles go through the RTL emotion cache, which flips physical
+ * margins — inside this LTR-pinned row (`dir="ltr"`) that would push the score
+ * to the wrong edge. The logical property is untouched by the plugin and
+ * resolves against the row's own direction in both caches. It inherits the
+ * row's colour rather than taking a fixed one — the selected row repaints its
+ * text, and a hard `text.secondary` here would sit dark-on-primary.
+ */
+const evalTokenSx = {
+  marginInlineStart: "auto",
+  fontSize: "0.6875rem",
+  opacity: 0.75,
+  minWidth: 0,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+  flexShrink: 1,
+} as const;
+
 /** One clickable SAN cell, or an empty slot when that half of the pair is absent. */
 function MoveCell({
   move,
   text,
   isCurrent,
   hasComment,
+  evalText,
   onSelect,
   activeRef,
 }: {
@@ -94,6 +130,8 @@ function MoveCell({
   isCurrent: boolean;
   /** Whether the PGN carries an annotation for this move (see `annotatedPlies`). */
   hasComment: boolean;
+  /** The eval of the position after this move, or `undefined` when not scored. */
+  evalText?: string;
   onSelect: (ply: number) => void;
   activeRef: Ref<HTMLButtonElement>;
 }) {
@@ -125,6 +163,15 @@ function MoveCell({
           sx={{ fontSize: "0.75rem", opacity: 0.7, flexShrink: 0 }}
         />
       )}
+      {evalText !== undefined && (
+        <Typography
+          component="span"
+          data-testid={`move-eval-${move.ply}`}
+          sx={evalTokenSx}
+        >
+          {evalText}
+        </Typography>
+      )}
     </ButtonBase>
   );
 }
@@ -135,9 +182,20 @@ function MoveList({
   onSelectPly,
   mask,
   annotatedPlies,
+  evalsByFen,
 }: MoveListProps) {
   const { t } = useTranslation();
   const rows = moveRowsOf(game);
+
+  /*
+    The eval of a position the engine has scored, as it is printed — or
+    `undefined` for one it has not, which is the case that must print *nothing*:
+    every unevaluated move showing the no-data dash would drown the list.
+  */
+  const evalTextOf = (fen: string): string | undefined => {
+    const score = evalsByFen?.get(fen);
+    return score === undefined ? undefined : formatScore(score);
+  };
 
   /*
     The whole list's text, rewritten in one pass. `maskSanLine` replays the game
@@ -194,6 +252,23 @@ function MoveList({
         }}
       >
         {t("moveList.startPosition")}
+        {/*
+          The score carries `dir="ltr"` itself: this row is chrome and mirrors
+          under Hebrew, and a signed score in an RTL flow has its sign migrate
+          across the number. The move cells' tokens lean on their row's pin,
+          which this row does not have — see the header note above for why the
+          treatment is the attribute, not a CSS declaration.
+        */}
+        {evalsByFen?.has(initialFenOf(game)) && (
+          <Typography
+            component="span"
+            dir="ltr"
+            data-testid="move-eval-0"
+            sx={evalTokenSx}
+          >
+            {formatScore(evalsByFen.get(initialFenOf(game))!)}
+          </Typography>
+        )}
       </ButtonBase>
 
       {rows.length === 0 ? (
@@ -234,6 +309,7 @@ function MoveList({
                   row.white != null &&
                   (annotatedPlies?.has(row.white.ply) ?? false)
                 }
+                evalText={row.white === null ? undefined : evalTextOf(row.white.fen)}
                 onSelect={onSelectPly}
                 activeRef={activeRef}
               />
@@ -245,6 +321,7 @@ function MoveList({
                   row.black != null &&
                   (annotatedPlies?.has(row.black.ply) ?? false)
                 }
+                evalText={row.black === null ? undefined : evalTextOf(row.black.fen)}
                 onSelect={onSelectPly}
                 activeRef={activeRef}
               />

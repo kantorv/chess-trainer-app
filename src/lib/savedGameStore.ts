@@ -2,6 +2,7 @@ import { sameEngineSettings } from "./engineSettings";
 import type { LibraryCatalog } from "./libraryCatalog";
 import { recordStore } from "./recordStore";
 import {
+  sameSavedGameEvals,
   savedGameCatalogOf,
   savedGameFrom,
   type SavedGame,
@@ -77,6 +78,13 @@ const write = games.write;
  * every resume of a filed game a change and re-order the list) and the write
  * keeps the stored one. {@link fileSavedGame} is the only write that changes a
  * folder, so the store is the one place the rule lives.
+ *
+ * The compare **does** read the evals (CTA-50), the opposite of `folderId` for
+ * the same reason in reverse: an eval arriving after the move is a real change
+ * worth writing — a resumed game grows its record as each new position is
+ * searched — so two records whose evals differ are not the same game. With the
+ * score recorded once per finished search (not per streamed line), the churn
+ * this buys is one save per evaluated position.
  */
 export const saveGame = (
   game: SavedGame,
@@ -87,7 +95,8 @@ export const saveGame = (
   if (
     existing !== undefined &&
     existing.pgn === game.pgn &&
-    sameEngineSettings(existing.settings, game.settings)
+    sameEngineSettings(existing.settings, game.settings) &&
+    sameSavedGameEvals(existing.evals, game.evals)
   ) {
     return undefined;
   }

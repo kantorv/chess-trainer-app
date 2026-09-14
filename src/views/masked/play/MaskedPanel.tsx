@@ -1,6 +1,8 @@
 import { useState } from "react";
 import Box from "@mui/material/Box";
 import Chip from "@mui/material/Chip";
+import FormControlLabel from "@mui/material/FormControlLabel";
+import Switch from "@mui/material/Switch";
 import Tab from "@mui/material/Tab";
 import Tabs from "@mui/material/Tabs";
 import Typography from "@mui/material/Typography";
@@ -21,7 +23,7 @@ import MaskEditor from "./MaskEditor";
  *
  * ```
  * ┌──────────────────────────────────┐
- * │ King's Pawn Game           B00   │  current opening — fixed
+ * │ King's Pawn Game  B00      [≡]   │  current opening + engine switch — fixed
  * ├──────────────────────────────────┤
  * │ Game │ Engine │ Lines │ Masking  │  tab strip — fixed
  * ├──────────────────────────────────┤
@@ -85,10 +87,35 @@ function MaskedPanel({
       }}
     >
       {/*
-        The opening at the ply on screen. It names the *real* line — the mask
-        disguises how pieces are drawn, never what the game is.
+        The opening at the ply on screen, and the engine's switch beside it —
+        the same row above the tab strip the unmasked panel has, for the same
+        hook state. The opening names the *real* line — the mask disguises how
+        pieces are drawn, never what the game is.
       */}
-      <CurrentOpening fen={state.fen} testId="masked-current-opening" />
+      <Box
+        sx={{
+          flexShrink: 0,
+          display: "flex",
+          alignItems: "center",
+          gap: 1,
+          minWidth: 0,
+        }}
+      >
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <CurrentOpening fen={state.fen} testId="masked-current-opening" />
+        </Box>
+        <FormControlLabel
+          sx={{ flexShrink: 0 }}
+          control={
+            <Switch
+              checked={state.engineOn}
+              data-testid="masked-setting-engine"
+              onChange={(event) => state.setEngineOn(event.target.checked)}
+            />
+          }
+          label={t("playEngine.settings.engineOn")}
+        />
+      </Box>
 
       <Tabs
         value={tab}
@@ -162,6 +189,7 @@ function MaskedPanel({
             currentPly={state.ply}
             onSelectPly={state.goToPly}
             mask={notationMask}
+            evalsByFen={state.evalsByFen}
           />
         )}
         {tab === "engine" && (

@@ -446,8 +446,10 @@ you need the smallest version of one.
   ignores `bestmove` entirely — the branch that plays one does not exist in
   `useAnalysisBoard`. That is why it is a separate hook rather than
   `usePlayWithEngine` with a mode flag: the two differ on whether the engine
-  moves, whether both colours are draggable, and whether searching is
-  unconditional, which is all of the behaviour there is.
+  moves and whether both colours are draggable — since CTA-50 both engines are
+  switchable (`engineOn` gates searching and, on the play screen, the reply),
+  so searching is no longer a difference. That is all of the behaviour there
+  is.
 - **A screen that can branch navigates by node, not by ply.** See the root
   `CLAUDE.md` on the tree; the shared `BoardControls` still take a ply, and
   `useTreeNavigation` derives one from the line the reader is standing on.
