@@ -331,7 +331,6 @@ const he: typeof en = {
     },
     playFromHere: "שחקו מכאן",
     tree: {
-      title: "מהלכים ווריאציות",
       empty: "שחקו מהלך, או הגדירו עמדה בלשונית העמדה.",
       variation: "וריאציה",
     },
