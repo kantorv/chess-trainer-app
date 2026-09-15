@@ -403,6 +403,111 @@ describe("Analysis Board — variations", () => {
   });
 });
 
+describe("Analysis Board — the move list", () => {
+  it("shows the mainline as the shared numbered-pairs list, with the tree below it", () => {
+    renderScreen();
+
+    drag("e2", "e4");
+    drag("e7", "e5");
+
+    // The same list the linear screens use: numbered pairs over the mainline,
+    // each move a jump target.
+    expect(screen.getByTestId("move-list")).toBeInTheDocument();
+    expect(screen.getByTestId("move-ply-1")).toHaveTextContent("e4");
+    expect(screen.getByTestId("move-ply-2")).toHaveTextContent("e5");
+    // And the variation tree stays in the Moves tab, below the list — side
+    // lines are the point of the screen, so no new tab for them.
+    expect(screen.getByTestId("variation-tree")).toBeInTheDocument();
+  });
+
+  it("prints an eval beside each scored move, and nothing beside the rest", () => {
+    renderScreen();
+
+    // The start position is searched on arrival; a finished search records its
+    // score against the FEN it describes.
+    engineReports({ depth: 14, multipv: 1, cp: 40, pv: "e2e4 e7e5" });
+    act(() => {
+      engine().say({
+        fen: engine().lastSearch,
+        bestMove: "e2e4",
+        uciMessage: "bestmove e2e4",
+      });
+    });
+    expect(screen.getByTestId("move-eval-0")).toHaveTextContent("+0.40");
+
+    // Black to move after 1. e4: the engine's number is from Black's side, so
+    // −0.30 is White +0.30.
+    drag("e2", "e4");
+    engineReports({ depth: 12, multipv: 1, cp: -30, pv: "e7e5" });
+    act(() => {
+      engine().say({
+        fen: engine().lastSearch,
+        bestMove: "e7e5",
+        uciMessage: "bestmove e7e5",
+      });
+    });
+    expect(screen.getByTestId("move-eval-1")).toHaveTextContent("+0.30");
+
+    // 1… e5 has not been searched — it prints nothing, not the no-data dash.
+    expect(screen.queryByTestId("move-eval-2")).not.toBeInTheDocument();
+  });
+
+  it("reads the eval back by FEN, so returning to a position finds it again", async () => {
+    renderScreen();
+
+    engineReports({ depth: 14, multipv: 1, cp: 40, pv: "e2e4 e7e5" });
+    act(() => {
+      engine().say({
+        fen: engine().lastSearch,
+        bestMove: "e2e4",
+        uciMessage: "bestmove e2e4",
+      });
+    });
+
+    drag("e2", "e4");
+    // Back to the start through the list itself.
+    await userEvent.click(screen.getByTestId("move-ply-0"));
+
+    // The map is keyed by FEN and not cleared by navigating, so the start
+    // position reads the same score twice.
+    expect(screen.getByTestId("move-eval-0")).toHaveTextContent("+0.40");
+    expect(screen.getByTestId("move-ply-0")).toHaveAttribute(
+      "aria-current",
+      "true",
+    );
+  });
+
+  it("highlights the mainline move the selection names, and nothing while inside a side line", async () => {
+    renderScreen();
+
+    drag("e2", "e4");
+    drag("e7", "e5");
+    drag("g1", "f3");
+
+    // Step back to after 1. e4 and answer it differently, then walk deeper
+    // into the Sicilian: the selection is no ply of the mainline there.
+    await userEvent.click(screen.getByTestId("board-control-first"));
+    await userEvent.click(screen.getByTestId("board-control-next"));
+    drag("c7", "c5");
+    drag("b1", "c3");
+
+    const highlighted = screen
+      .queryAllByTestId(/^move-ply-/)
+      .filter((element) => element.getAttribute("aria-current") === "true");
+    expect(highlighted).toHaveLength(0);
+
+    // A click on mainline move 2 walks out of the side line to that node.
+    await userEvent.click(screen.getByTestId("move-ply-2"));
+    expect(position()).toContain("4p3");
+
+    const tree = screen.getByTestId("variation-tree");
+    const current = within(tree)
+      .queryAllByTestId(/^tree-move-n/)
+      .find((element) => element.getAttribute("aria-current") === "true");
+    expect(current).toHaveAttribute("data-san", "e5");
+  });
+});
+
 describe("Analysis Board — the Position tab", () => {
   it("sets a position up from a pasted FEN, numbering from that FEN", async () => {
     const fen = "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 12";
@@ -613,7 +718,8 @@ describe("Analysis Board — the two switches", () => {
     await openTab("lines");
     expect(screen.getByTestId("best-variations")).toHaveTextContent("+0.40");
 
-    await openTab("engine");
+    // The switch sits above the tab strip — it is clicked from the Lines tab,
+    // without opening Engine.
     await userEvent.click(screen.getByTestId("analysis-setting-engine"));
 
     // The running search is stopped rather than left to finish in the tab.
@@ -631,8 +737,8 @@ describe("Analysis Board — the two switches", () => {
 
   it("searches the position on screen again when it is switched back on", async () => {
     renderScreen();
-    await openTab("engine");
 
+    // The switch is above the tab strip — the Moves tab is simply showing.
     await userEvent.click(screen.getByTestId("analysis-setting-engine"));
     drag("e2", "e4");
     await userEvent.click(screen.getByTestId("analysis-setting-engine"));
@@ -658,6 +764,14 @@ describe("Analysis Board — the two switches", () => {
     expect(screen.getByTestId("eval-bar")).toBeInTheDocument();
 
     await openTab("engine");
+
+    // The engine switch is no longer in this tab — it lives above the strip.
+    expect(
+      screen
+        .getByTestId("analysis-setting-engine")
+        .closest('[data-testid="analysis-settings"]'),
+    ).toBeNull();
+
     await userEvent.click(screen.getByTestId("analysis-setting-evalbar"));
     expect(screen.queryByTestId("eval-bar")).not.toBeInTheDocument();
 
