@@ -509,9 +509,7 @@ const en = {
     },
     /** Hand the position on screen to Play with Engine — the Board Editor's wording. */
     playFromHere: "Play from here",
-    /** The variation tree, where a move list has to say more than "Moves". */
     tree: {
-      title: "Moves and variations",
       empty: "Play a move, or set a position up from the Position tab.",
       /** Read by a screen reader before a side line's moves. */
       variation: "Variation",

@@ -192,10 +192,6 @@ function VariationTree({ tree, currentId, onSelectNode, emptyText }: VariationTr
 
   return (
     <Box data-testid="variation-tree">
-      <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-        {t("analysis.tree.title")}
-      </Typography>
-
       <ButtonBase
         ref={currentId === null ? activeRef : undefined}
         data-testid="tree-move-start"
