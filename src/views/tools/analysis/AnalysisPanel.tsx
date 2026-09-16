@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useMemo, type ReactNode } from "react";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
@@ -11,7 +11,6 @@ import SportsEsportsRoundedIcon from "@mui/icons-material/SportsEsportsRounded";
 import { useTranslation } from "react-i18next";
 import { formatScore } from "../../../lib/engineAnalysis";
 import {
-  findNode,
   mainline,
   mainlineGame,
   type VariationNode,
@@ -82,18 +81,35 @@ import type { AnalysisBoardState } from "./useAnalysisBoard";
  * so the board, the highlight and the stepping follow one exactly as they
  * follow the other.
  *
+ * The bar has a board-side half: one arrow per continuation, and the hovered
+ * move's arrow changes colour — the green→red language of
+ * `nextMoveArrows.ts`, the same one the Openings screen's explorer arrows
+ * speak. The arrows are drawn from the board options `AnalysisBoard` builds,
+ * so the open tab, the continuations and the hovered move all arrive here as
+ * props: the screen owns the state, this panel renders the strip that reports
+ * the pointer to it.
+ *
  * The Position tab arrives as a prop rather than being built here: it is bound
  * to the screen's ingestion state and its drop handling, which belong with the
  * screen (`AnalysisBoard.tsx`), not with a tab strip.
  */
 
 const TAB_IDS = ["moves", "engine", "lines", "position"] as const;
-type TabId = (typeof TAB_IDS)[number];
+/**
+ * The tab strip's ids. The type is exported because the *state* lives in the
+ * screen (CTA-54 — the board draws the next-moves bar's arrows, so it needs
+ * to know the tab), while the strip that renders the ids stays here.
+ */
+export type AnalysisTabId = (typeof TAB_IDS)[number];
 
 function AnalysisPanel({
   state,
   position,
   onPlayFromHere,
+  tab,
+  onTabChange,
+  continuations,
+  onHoverNextMove,
 }: {
   state: AnalysisBoardState;
   /** The Position tab's content — see the note above on why it comes in. */
@@ -104,9 +120,22 @@ function AnalysisPanel({
    * against the engine is a thing the reader may want from any tab.
    */
   onPlayFromHere: () => void;
+  /** The open tab — the screen's state; see the next-moves bar section above. */
+  tab: AnalysisTabId;
+  /** Open a tab — the screen's state, handed back down for the same reason. */
+  onTabChange: (tab: AnalysisTabId) => void;
+  /**
+   * The continuations of the position on screen — the pinned bar's moves
+   * (CTA-54). Built in the screen, which draws the same moves as arrows.
+   */
+  continuations: readonly VariationNode[];
+  /**
+   * Report the bar move the pointer is over — `null` when it leaves — for the
+   * board to recolour that move's arrow.
+   */
+  onHoverNextMove: (node: VariationNode | null) => void;
 }) {
   const { t } = useTranslation();
-  const [tab, setTab] = useState<TabId>("moves");
 
   const topLine = state.analysis.lines.find((line) => line !== undefined);
 
@@ -137,22 +166,6 @@ function AnalysisPanel({
     }
     return map;
   }, [state.tree, mainlineNodes]);
-
-  /*
-    The continuations of the position on screen (CTA-54) — what the pinned bar
-    under the moves list offers. The children of the node the reader stands on,
-    or the tree's own first moves at the start position; the tree's invariant
-    orders them — `children[0]` is the mainline at every level — and two or
-    more of them is the fork the bar appears at. Re-reading them on every step
-    is what makes the bar re-offer the choices of wherever a click lands.
-  */
-  const continuations = useMemo(
-    () =>
-      state.nodeId === null
-        ? state.tree.moves
-        : (findNode(state.tree, state.nodeId)?.children ?? []),
-    [state.tree, state.nodeId],
-  );
 
   /*
     The ply↔node seam (CTA-51). The move list speaks plies over the mainline;
@@ -250,7 +263,7 @@ function AnalysisPanel({
 
       <Tabs
         value={tab}
-        onChange={(_event, next: TabId) => setTab(next)}
+        onChange={(_event, next: AnalysisTabId) => onTabChange(next)}
         variant="fullWidth"
         sx={{
           flexShrink: 0,
@@ -369,10 +382,16 @@ function AnalysisPanel({
       {/*
         The pinned next-moves bar (CTA-54): a sibling of the scrolling region
         above, not a child of it, so it stays under the moves list instead of
-        scrolling with them — and a Moves-tab piece only.
+        scrolling with them — and a Moves-tab piece only. Its moves arrive as
+        a prop and its hover goes out as one, because the board draws the
+        same moves as arrows.
       */}
       {tab === "moves" && (
-        <NextMovesBar nodes={continuations} onSelect={state.goToNode} />
+        <NextMovesBar
+          nodes={continuations}
+          onSelect={state.goToNode}
+          onHover={onHoverNextMove}
+        />
       )}
 
       <BoardControls

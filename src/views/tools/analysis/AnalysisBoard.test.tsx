@@ -25,6 +25,10 @@ import {
 } from "../../../lib/savedAnalysisStore";
 import { RightPanelOutlet, RightPanelProvider } from "../../main/rightPanel";
 import AnalysisBoard from "./AnalysisBoard";
+import {
+  HOVERED_NEXT_MOVE_ARROW_COLOR,
+  NEXT_MOVE_ARROW_COLOR,
+} from "./nextMoveArrows";
 
 /*
   The same two stand-ins the Play with Engine suite needs, and for the same
@@ -178,6 +182,7 @@ const boardOptions = () => {
   const options = harness.board.options as {
     position?: string;
     allowDragging?: boolean;
+    arrows?: { startSquare: string; endSquare: string; color: string }[];
     onPieceDrop?: (args: {
       sourceSquare: string;
       targetSquare: string | null;
@@ -455,12 +460,17 @@ describe("Analysis Board — the pinned next-moves bar", () => {
     // The start position (one first move)…
     await userEvent.click(screen.getByTestId("board-control-first"));
     expect(screen.queryByTestId("analysis-next-moves")).not.toBeInTheDocument();
+    expect(boardOptions().arrows).toEqual([]);
     // …a mid-line position with exactly one continuation…
     await userEvent.click(screen.getByTestId("board-control-next"));
     expect(screen.queryByTestId("analysis-next-moves")).not.toBeInTheDocument();
-    // …and the end of the line. One continuation or none is not a fork.
+    expect(boardOptions().arrows).toEqual([]);
+    // …and the end of the line. One continuation or none is not a fork — and
+    // the board's half of the feature vanishes with the bar's, never one
+    // without the other.
     await userEvent.click(screen.getByTestId("board-control-last"));
     expect(screen.queryByTestId("analysis-next-moves")).not.toBeInTheDocument();
+    expect(boardOptions().arrows).toEqual([]);
   });
 
   it("counts the start position as its own fork when the tree has two first moves", async () => {
@@ -472,6 +482,12 @@ describe("Analysis Board — the pinned next-moves bar", () => {
     await userEvent.click(screen.getByTestId("board-control-first"));
 
     expect(barTokens()).toEqual(["e4", "d4"]);
+    // The fork the bar counts at the start is the one the board draws arrows
+    // for: one per first move, each a move on offer.
+    expect(boardOptions().arrows).toEqual([
+      { startSquare: "e2", endSquare: "e4", color: NEXT_MOVE_ARROW_COLOR },
+      { startSquare: "d2", endSquare: "d4", color: NEXT_MOVE_ARROW_COLOR },
+    ]);
   });
 
   it("reads a fork inside a side line, that line's own continuation first", async () => {
@@ -522,6 +538,48 @@ describe("Analysis Board — the pinned next-moves bar", () => {
     expect(barTokens()).toEqual(["e5", "c5"]);
   });
 
+  it("puts an arrow on the board for every continuation, recoloured by hover", async () => {
+    renderScreen();
+
+    drag("e2", "e4");
+    drag("e7", "e5");
+    await userEvent.click(screen.getByTestId("board-control-previous"));
+    drag("c7", "c5");
+    await userEvent.click(screen.getByTestId("board-control-previous"));
+
+    /*
+      The bar's board-side half: one arrow per continuation of the fork — e5
+      the mainline, c5 the variation — in the green of a move on offer, the
+      same language the Openings screen's explorer arrows speak.
+    */
+    expect(boardOptions().arrows).toEqual([
+      { startSquare: "e7", endSquare: "e5", color: NEXT_MOVE_ARROW_COLOR },
+      { startSquare: "c7", endSquare: "c5", color: NEXT_MOVE_ARROW_COLOR },
+    ]);
+
+    // The token the pointer is over is the move a click will play: its arrow
+    // alone turns red, and no other…
+    const [toSicilian] = screen
+      .getAllByTestId(/^next-move-n/)
+      .filter((element) => element.dataset.san === "c5");
+    await userEvent.hover(toSicilian);
+    expect(boardOptions().arrows).toEqual([
+      { startSquare: "e7", endSquare: "e5", color: NEXT_MOVE_ARROW_COLOR },
+      {
+        startSquare: "c7",
+        endSquare: "c5",
+        color: HOVERED_NEXT_MOVE_ARROW_COLOR,
+      },
+    ]);
+
+    // …and the offer is back to green once the pointer leaves.
+    await userEvent.unhover(toSicilian);
+    expect(boardOptions().arrows).toEqual([
+      { startSquare: "e7", endSquare: "e5", color: NEXT_MOVE_ARROW_COLOR },
+      { startSquare: "c7", endSquare: "c5", color: NEXT_MOVE_ARROW_COLOR },
+    ]);
+  });
+
   it("belongs to the Moves tab alone", async () => {
     renderScreen();
 
@@ -531,18 +589,24 @@ describe("Analysis Board — the pinned next-moves bar", () => {
     drag("c7", "c5");
     await userEvent.click(screen.getByTestId("board-control-previous"));
     expect(screen.getByTestId("analysis-next-moves")).toBeInTheDocument();
+    expect(boardOptions().arrows).toHaveLength(2);
 
-    // The bar is part of the moves UI: the other tabs do not carry it.
+    // The bar is part of the moves UI: the other tabs carry neither half of
+    // it — the strip, or the arrows on the board.
     await openTab("engine");
     expect(screen.queryByTestId("analysis-next-moves")).not.toBeInTheDocument();
+    expect(boardOptions().arrows).toEqual([]);
     await openTab("lines");
     expect(screen.queryByTestId("analysis-next-moves")).not.toBeInTheDocument();
+    expect(boardOptions().arrows).toEqual([]);
     await openTab("position");
     expect(screen.queryByTestId("analysis-next-moves")).not.toBeInTheDocument();
+    expect(boardOptions().arrows).toEqual([]);
 
-    // …and it is back with the moves when the tab returns.
+    // …and both halves are back with the moves when the tab returns.
     await openTab("moves");
     expect(barTokens()).toEqual(["e5", "c5"]);
+    expect(boardOptions().arrows).toHaveLength(2);
   });
 });
 
