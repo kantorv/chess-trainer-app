@@ -328,7 +328,6 @@ const he: typeof en = {
     tabs: {
       moves: "מהלכים",
       engine: "מנוע",
-      lines: "וריאציות",
       position: "עמדה",
     },
     playFromHere: "שחקו מכאן",

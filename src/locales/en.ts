@@ -506,7 +506,6 @@ const en = {
     tabs: {
       moves: "Moves",
       engine: "Engine",
-      lines: "Variations",
       position: "Position",
     },
     /** Hand the position on screen to Play with Engine — the Board Editor's wording. */
