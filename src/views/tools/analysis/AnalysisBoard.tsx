@@ -57,7 +57,8 @@ import { useAnalysisBoard } from "./useAnalysisBoard";
  *
  * - the **board square** holds the evaluation bar and the board, side by side;
  * - the **right-hand panel** (`<RightPanel>`) holds `AnalysisPanel` — the
- *   Moves / Engine / Variations / Position tabs over the board controls.
+ *   engine's lines pinned above the Moves / Engine / Position tabs, over the
+ *   board controls.
  *
  * ### Arriving with a position, or with a game
  *

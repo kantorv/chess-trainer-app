@@ -219,34 +219,41 @@ export const pvToSan = (fen: string, pv: string): string[] => {
 };
 
 /**
- * Where a SAN line's moves sit in the game's numbering, so a variation can be
- * printed the way a book prints one: `23. Nf3 Qe7 24. Rd1`, and `23... Qe7`
- * when the line starts on Black's move.
+ * Where a SAN line's moves sit in the game's numbering, as one prefix per
+ * move: `"23. "` on White's, `"23... "` on Black's move when it is the
+ * line's first — the ellipsis is how a book says the line opens on Black's
+ * answer — and `""` after that, since the alternation makes the side obvious.
  *
- * `fen` is the position the line starts from — its move number and side to move
- * are the whole input, which is why this works for a variation off any ply.
+ * One prefix per move rather than one string for the whole line, because a
+ * variation is printed one token per move (`views/shared/BestVariations.tsx`)
+ * and the number travels inside the token, the way the tree viewer's tokens
+ * carry theirs (`views/shared/VariationLine.tsx`). Each prefix carries its
+ * trailing space, so a plain `" "` between tokens reads the line the way a
+ * book prints it: `23. Nf3 Qe7 24. Rd1`.
+ *
+ * `fen` is the position the line starts from — its move number and side to
+ * move are the whole input, which is why this works for a variation off any
+ * ply.
  */
-export const numberedVariation = (fen: string, san: string[]): string => {
+export const variationNumbering = (fen: string, moves: number): string[] => {
   const [, turn, , , , fullmove] = fen.split(/\s+/);
   const parsed = Number.parseInt(fullmove ?? "", 10);
   let number = Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
   let whiteToMove = turn !== "b";
 
-  return san
-    .map((move, index) => {
-      let prefix = "";
-      if (whiteToMove) {
-        prefix = `${number}. `;
-      } else if (index === 0) {
-        // Only the first move needs the ellipsis; after that the alternation
-        // makes the side obvious.
-        prefix = `${number}... `;
-      }
+  return Array.from({ length: moves }, (_, index) => {
+    let prefix = "";
+    if (whiteToMove) {
+      prefix = `${number}. `;
+    } else if (index === 0) {
+      // Only the first move needs the ellipsis; after that the alternation
+      // makes the side obvious.
+      prefix = `${number}... `;
+    }
 
-      if (!whiteToMove) number += 1;
-      whiteToMove = !whiteToMove;
+    if (!whiteToMove) number += 1;
+    whiteToMove = !whiteToMove;
 
-      return `${prefix}${move}`;
-    })
-    .join(" ");
+    return prefix;
+  });
 };

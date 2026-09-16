@@ -553,6 +553,69 @@ export const useAnalysisBoard = ({
     [applyMove, promotion],
   );
 
+  /**
+   * Play a line the engine suggested, from the position on screen (CTA-55): the
+   * SAN prefix a click on the pinned variations block hands over
+   * (`BestVariations` above the tabs), replayed one move at a time under the
+   * node the reader is standing on — lichess analysis behaviour, where clicking
+   * the third move of a line plays all three, and the board ends on the move
+   * the click named.
+   *
+   * The replay is this function's own loop rather than one call to `applyMove`
+   * per move, because a replay cannot go through state: `applyMove` reads the
+   * position and the node out of the closure, and neither moves until the
+   * re-render this synchronous run must not wait for. `addMove` still makes
+   * each step *follow* a line the tree already holds rather than duplicating
+   * it — so clicking a line that exists just walks it — and only a replay that
+   * actually grew the tree marks the board dirty, the same rule `applyMove`
+   * follows.
+   *
+   * A SAN that will not play stops the replay silently, keeping what played:
+   * the lines only describe the position on screen while that position is on
+   * screen, so one that has gone stale is not an error worth showing — half a
+   * line is better than a thrown error, the same answer `pvToSan` gives a
+   * stale PV.
+   */
+  const playVariation = useCallback(
+    (sans: readonly string[]) => {
+      const chess = chessAt(fen);
+
+      let currentTree = tree;
+      let currentNodeId = nodeId;
+
+      for (const san of sans) {
+        let move;
+        try {
+          move = chess.move(san);
+        } catch {
+          break;
+        }
+
+        const added = addMove(currentTree, currentNodeId, {
+          san: move.san,
+          from: move.from,
+          to: move.to,
+          fen: move.after,
+          captured: move.captured,
+        });
+        currentTree = added.tree;
+        currentNodeId = added.nodeId;
+      }
+
+      /*
+        `addMove` returns the *same tree by reference* when the move was
+        already there, so a replay that only followed lines the tree held is
+        not the reader's own work — the same rule `applyMove` follows.
+      */
+      if (currentTree !== tree) {
+        setTree(currentTree);
+        setDirty(true);
+      }
+      goToNode(currentNodeId);
+    },
+    [chessAt, fen, goToNode, nodeId, tree],
+  );
+
   /** Replace the whole game — what loading a PGN or a FEN does. */
   const loadTree = useCallback(
     (next: GameTree) => {
@@ -636,6 +699,8 @@ export const useAnalysisBoard = ({
     promotion,
     resolvePromotion,
     onPieceDrop,
+    /** Play an engine line's SAN prefix from the position on screen — the pinned variations block's clicks (CTA-55). */
+    playVariation,
     loadTree,
     loadFen,
     clearBoard,

@@ -24,16 +24,18 @@ import NextMovesBar from "./NextMovesBar";
 import type { AnalysisBoardState } from "./useAnalysisBoard";
 
 /**
- * The Analysis Board's whole right-hand panel: the row above the tabs, a tab
- * strip, the tab's content, and the board controls pinned to the foot — the
- * same three-region column the other two screens use, because it is the same
- * shell aside and the same non-scrolling flex column (`Layout.tsx`).
+ * The Analysis Board's whole right-hand panel: the row above the tabs, the
+ * engine's lines pinned under it, a tab strip, the tab's content, and the board
+ * controls pinned to the foot — the same non-scrolling flex column the other
+ * two screens' panels use, because it is the same shell aside (`Layout.tsx`).
  *
  * ```
  * ┌──────────────────────────────────┐
  * │ King's Pawn Game  B00  [≡] ▶ Play│  opening + switch + hand-off — fixed
  * ├──────────────────────────────────┤
- * │ Moves │ Engine │ Lines │ Position│  tab strip — fixed
+ * │ Variations  ⌕12  +1.2 Nf3 Qe7 …  │  engine's best lines — pinned (CTA-55)
+ * ├──────────────────────────────────┤
+ * │ Moves │ Engine │ Position        │  tab strip — fixed
  * ├──────────────────────────────────┤
  * │ the active tab                   │  scrolls
  * ├──────────────────────────────────┤
@@ -43,13 +45,26 @@ import type { AnalysisBoardState } from "./useAnalysisBoard";
  * └──────────────────────────────────┘
  * ```
  *
- * One tab is rendered at a time rather than four with three hidden: the move
+ * One tab is rendered at a time rather than three with two hidden: the move
  * list scrolls the selection into view, and a hidden copy would be scrolling a
  * zero-height box on every move.
  *
  * The board controls step along **the line the reader is standing on**, which
  * inside a side line is that side line and not the mainline — `useTreeNavigation`
  * derives the ply from the node, so the controls need no notion of a tree.
+ *
+ * ## The pinned lines
+ *
+ * The engine's best variations sit between the opening row and the tab strip
+ * (CTA-55), on screen whichever tab is open — lichess analysis behaviour — and
+ * each of their moves is a click that plays the line's prefix up to it, through
+ * `state.playVariation`. The same `BestVariations` renders the two engine
+ * screens' Variations tab as plain text; the callback is the whole difference
+ * between a list to read and a list to play. The block renders nothing while
+ * the engine is off, because the status row below already says so honestly —
+ * "waiting for the engine" would be a lie about a switch the reader turned off
+ * themselves. It is capped and scrolls inside itself, because a wide `MultiPV`
+ * is ten lines in a narrow panel.
  *
  * ## The Moves tab, and the ply↔node seam
  *
@@ -94,7 +109,7 @@ import type { AnalysisBoardState } from "./useAnalysisBoard";
  * screen (`AnalysisBoard.tsx`), not with a tab strip.
  */
 
-const TAB_IDS = ["moves", "engine", "lines", "position"] as const;
+const TAB_IDS = ["moves", "engine", "position"] as const;
 /**
  * The tab strip's ids. The type is exported because the *state* lives in the
  * screen (CTA-54 — the board draws the next-moves bar's arrows, so it needs
@@ -261,6 +276,42 @@ function AnalysisPanel({
         />
       </Box>
 
+      {/*
+        The engine's best lines, pinned above the tab strip (CTA-55) so they
+        are on screen whichever tab is open — lichess analysis behaviour. Each
+        move is a click that plays the line's prefix up to it
+        (`state.playVariation`); the same `BestVariations` renders the two
+        engine screens' Variations tab plain, and the callback is the whole
+        difference. A raised strip like the next-moves bar below, capped and
+        scrolling inside itself — a wide MultiPV is ten lines in a narrow
+        panel. Nothing at all while the engine is off: the status row already
+        says so honestly, and "waiting for the engine" would be a lie about a
+        switch the reader turned off themselves.
+      */}
+      {state.engineOn && (
+        <Box
+          data-testid="analysis-variations"
+          sx={{
+            flexShrink: 0,
+            maxHeight: "40%",
+            overflowY: "auto",
+            bgcolor: "background.paper",
+            border: "1px solid",
+            borderColor: "divider",
+            borderRadius: 1,
+            px: 1,
+            pt: 0.75,
+            pb: 0.5,
+          }}
+        >
+          <BestVariations
+            analysis={state.analysis}
+            requested={state.settings.multiPv}
+            onSelectMove={state.playVariation}
+          />
+        </Box>
+      )}
+
       <Tabs
         value={tab}
         onChange={(_event, next: AnalysisTabId) => onTabChange(next)}
@@ -356,26 +407,6 @@ function AnalysisPanel({
             onClear={state.clearBoard}
           />
         )}
-        {tab === "lines" &&
-          (state.engineOn ? (
-            <BestVariations
-              analysis={state.analysis}
-              requested={state.settings.multiPv}
-            />
-          ) : (
-            /*
-              Not `BestVariations` with an empty set: "waiting for the engine"
-              would be a lie about a switch the reader turned off themselves, and
-              showing the last lines it produced would be a worse one.
-            */
-            <Typography
-              variant="body2"
-              data-testid="analysis-engine-off"
-              sx={{ color: "text.secondary" }}
-            >
-              {t("analysis.settings.engineOff")}
-            </Typography>
-          ))}
         {tab === "position" && position}
       </Box>
 

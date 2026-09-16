@@ -1,11 +1,14 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { DEFAULT_POSITION } from "chess.js";
 import i18n from "../../i18n";
 import AppThemeWithLang from "../../theme/AppThemeWithLang";
 import { pvToSan } from "../../lib/engineAnalysis";
+import { MASK_PRESETS } from "../../lib/pieceMask";
 import BestVariations from "./BestVariations";
 import type { Analysis, EngineLine } from "../../lib/engineAnalysis";
+import type { PieceMask } from "../../lib/pieceMask";
 
 const line = (
   multipv: number,
@@ -19,10 +22,29 @@ const line = (
   san: pvToSan(DEFAULT_POSITION, pv),
 });
 
-const renderVariations = (analysis: Analysis, requested = 3) =>
+/*
+  What only the Analysis Board passes (CTA-55): a mask is Masked Pieces'
+  business, and the click handler is what turns a line the reader reads into
+  one they play.
+*/
+type PlayableProps = {
+  mask?: PieceMask;
+  onSelectMove?: (san: readonly string[]) => void;
+};
+
+const renderVariations = (
+  analysis: Analysis,
+  requested = 3,
+  { mask, onSelectMove }: PlayableProps = {},
+) =>
   render(
     <AppThemeWithLang>
-      <BestVariations analysis={analysis} requested={requested} />
+      <BestVariations
+        analysis={analysis}
+        requested={requested}
+        mask={mask}
+        onSelectMove={onSelectMove}
+      />
     </AppThemeWithLang>,
   );
 
@@ -165,5 +187,62 @@ describe("the best variations view", () => {
 
     expect(screen.getByTestId("variation-1-line")).toHaveAttribute("dir", "ltr");
     expect(screen.getByTestId("variation-1-score")).toHaveAttribute("dir", "ltr");
+  });
+
+  it("hands a click the prefix up to the move clicked, when a click handler is given", async () => {
+    // lichess analysis behaviour (CTA-55): clicking the third move of a line
+    // plays all three, so the click carries the first three SANs — and the
+    // first move's click carries one, which is the same rule at the smallest
+    // size.
+    const onSelectMove = vi.fn();
+    renderVariations(
+      { fen: DEFAULT_POSITION, depth: 18, lines: [line(1, 32, "e2e4 e7e5 g1f3")] },
+      3,
+      { onSelectMove },
+    );
+
+    const user = userEvent.setup();
+    await user.click(screen.getByTestId("variation-1-move-1"));
+    expect(onSelectMove).toHaveBeenLastCalledWith(["e4"]);
+    await user.click(screen.getByTestId("variation-1-move-3"));
+    expect(onSelectMove).toHaveBeenLastCalledWith(["e4", "e5", "Nf3"]);
+  });
+
+  it("prints plain text with no buttons when no click handler is given", () => {
+    // The two engine screens' Variations tab: a move there is a thing to read
+    // while playing one of one's own, and the DOM is the text it always was.
+    renderVariations({
+      fen: DEFAULT_POSITION,
+      depth: 18,
+      lines: [line(1, 32, "e2e4 e7e5")],
+    });
+
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    expect(screen.getByTestId("variation-1-line")).toHaveTextContent(
+      "1. e4 e5",
+    );
+  });
+
+  it("prints a masked line in coordinates but the click carries the true SAN", async () => {
+    // The mask is a costume, never a rule (`lib/pieceMask.ts`): what a move
+    // prints is disguised, what it reports is not — the Analysis Board's lines
+    // play on the real board.
+    const onSelectMove = vi.fn();
+    renderVariations(
+      { fen: DEFAULT_POSITION, depth: 18, lines: [line(1, 0, "g1f3 g8f6")] },
+      3,
+      { mask: MASK_PRESETS.nonPawns, onSelectMove },
+    );
+
+    // The printed line is coordinates — a knight is drawn as a pawn.
+    expect(screen.getByTestId("variation-1-line")).toHaveTextContent(
+      "1. g1f3 g8f6",
+    );
+
+    const user = userEvent.setup();
+    const move = screen.getByTestId("variation-1-move-1");
+    expect(move).toHaveAttribute("data-san", "Nf3");
+    await user.click(move);
+    expect(onSelectMove).toHaveBeenCalledWith(["Nf3"]);
   });
 });

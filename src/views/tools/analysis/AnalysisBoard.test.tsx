@@ -275,7 +275,7 @@ const moveTokens = () =>
 const barTokens = () =>
   screen.getAllByTestId(/^next-move-n/).map((element) => element.dataset.san);
 
-const openTab = (tab: "moves" | "engine" | "lines" | "position") =>
+const openTab = (tab: "moves" | "engine" | "position") =>
   userEvent.click(screen.getByTestId(`analysis-panel-tab-${tab}`));
 
 /*
@@ -594,9 +594,6 @@ describe("Analysis Board — the pinned next-moves bar", () => {
     // The bar is part of the moves UI: the other tabs carry neither half of
     // it — the strip, or the arrows on the board.
     await openTab("engine");
-    expect(screen.queryByTestId("analysis-next-moves")).not.toBeInTheDocument();
-    expect(boardOptions().arrows).toEqual([]);
-    await openTab("lines");
     expect(screen.queryByTestId("analysis-next-moves")).not.toBeInTheDocument();
     expect(boardOptions().arrows).toEqual([]);
     await openTab("position");
@@ -995,24 +992,28 @@ describe("Analysis Board — the two switches", () => {
     renderScreen();
     engineReports({ depth: 14, multipv: 1, cp: 40, pv: "e2e4 e7e5" });
 
-    await openTab("lines");
-    expect(screen.getByTestId("best-variations")).toHaveTextContent("+0.40");
+    // The lines sit above the tab strip (CTA-55), so the engine's number is
+    // on screen without opening any tab — the Moves tab is simply the default.
+    expect(screen.getByTestId("analysis-variations")).toHaveTextContent(
+      "+0.40",
+    );
 
-    // The switch sits above the tab strip — it is clicked from the Lines tab,
-    // without opening Engine.
+    // The switch sits beside them — it is clicked from wherever the reader is.
     await userEvent.click(screen.getByTestId("analysis-setting-engine"));
 
-    // The running search is stopped rather than left to finish in the tab.
+    // The running search is stopped rather than left to finish on its own.
     expect(engine().stops).toBeGreaterThan(0);
 
     const searchesWhenOff = engine().searches.length;
     drag("e2", "e4");
     expect(engine().searches).toHaveLength(searchesWhenOff);
 
-    // And the tab says the engine is off rather than showing the stale line.
-    await openTab("lines");
-    expect(screen.getByTestId("analysis-engine-off")).toBeInTheDocument();
-    expect(screen.queryByTestId("best-variations")).not.toBeInTheDocument();
+    // The pinned block is gone rather than showing the stale line, and the
+    // status row says the engine is off — honestly, not "waiting".
+    expect(screen.queryByTestId("analysis-variations")).not.toBeInTheDocument();
+    expect(screen.getByTestId("analysis-status")).toHaveTextContent(
+      "The engine is off",
+    );
   });
 
   it("searches the position on screen again when it is switched back on", async () => {
@@ -1095,6 +1096,109 @@ describe("Analysis Board — the two switches", () => {
       "data-score",
       "−1.00",
     );
+  });
+});
+
+describe("Analysis Board — the pinned lines", () => {
+  /*
+    CTA-55: lichess analysis behaviour. The engine's best lines sit above the
+    tab strip on every tab, and each of their moves is a click that plays the
+    line's prefix up to it — landing the reader on the move the click named.
+  */
+
+  it("has no Lines tab — the lines are the block above the strip", () => {
+    renderScreen();
+
+    expect(
+      screen.queryByTestId("analysis-panel-tab-lines"),
+    ).not.toBeInTheDocument();
+    // The strip that is left.
+    for (const id of ["moves", "engine", "position"] as const) {
+      expect(
+        screen.getByTestId(`analysis-panel-tab-${id}`),
+      ).toBeInTheDocument();
+    }
+  });
+
+  it("pins the lines above the tab strip, whichever tab is open", async () => {
+    renderScreen();
+    engineReports({ depth: 14, multipv: 1, cp: 40, pv: "e2e4 e7e5" });
+
+    const block = screen.getByTestId("analysis-variations");
+    expect(block).toHaveTextContent("1. e4 e5");
+
+    // Above every tab is a DOM fact, not only a layout one: the strip follows
+    // the block in document order.
+    const strip = screen.getByTestId("analysis-panel-tab-moves");
+    expect(
+      block.compareDocumentPosition(strip) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+
+    // …and the block stays on screen through the other tabs and back.
+    await openTab("engine");
+    expect(screen.getByTestId("analysis-variations")).toBeInTheDocument();
+    await openTab("position");
+    expect(screen.getByTestId("analysis-variations")).toBeInTheDocument();
+    await openTab("moves");
+    expect(screen.getByTestId("analysis-variations")).toBeInTheDocument();
+  });
+
+  it("plays a line's prefix up to the move clicked", async () => {
+    renderScreen();
+    engineReports({ depth: 14, multipv: 1, cp: 20, pv: "e2e4 e7e5 g1f3" });
+
+    // Clicking the third move plays all three, and the board ends on the move
+    // the click named — no second or third click needed.
+    await userEvent.click(screen.getByTestId("variation-1-move-3"));
+
+    const played = new Chess();
+    played.move("e4");
+    played.move("e5");
+    played.move("Nf3");
+    expect(position()).toBe(played.fen());
+    expect(screen.getByTestId("move-ply-3")).toHaveTextContent("Nf3");
+  });
+
+  it("follows a line the tree already holds when the same prefix is clicked again", async () => {
+    renderScreen();
+    engineReports({ depth: 14, multipv: 1, cp: 30, pv: "e2e4 e7e5" });
+
+    await userEvent.click(screen.getByTestId("variation-1-move-2"));
+    expect(screen.getByTestId("move-ply-2")).toHaveTextContent("e5");
+
+    // Back at the start, the engine offers the same line again. Clicking it
+    // must walk the moves that already exist…
+    await userEvent.click(screen.getByTestId("board-control-first"));
+    engineReports({ depth: 14, multipv: 1, cp: 30, pv: "e2e4 e7e5" });
+    await userEvent.click(screen.getByTestId("variation-1-move-2"));
+
+    // …rather than forking the mainline into a duplicate of itself: no side
+    // line hangs under the list, and the game is still two moves long.
+    expect(screen.queryAllByTestId(/^tree-move-n/)).toHaveLength(0);
+    expect(screen.queryByTestId("move-ply-3")).toBeNull();
+  });
+
+  it("plays a line as a side line when the reader is standing on an earlier node", async () => {
+    renderScreen();
+    engineReports({ depth: 14, multipv: 1, cp: 30, pv: "e2e4 e7e5" });
+    await userEvent.click(screen.getByTestId("variation-1-move-2"));
+
+    // Back at the start, the engine offers a different line…
+    await userEvent.click(screen.getByTestId("board-control-first"));
+    engineReports({ depth: 14, multipv: 1, cp: 20, pv: "d2d4 d7d5" });
+
+    // …and playing it forks the game rather than rewriting the mainline: the
+    // new run hangs under the first move as a side line, and the board ends on
+    // the move the click named.
+    await userEvent.click(screen.getByTestId("variation-1-move-2"));
+    expect(moveTokens()).toEqual(["d4", "d5"]);
+    expect(screen.getByTestId("move-ply-1")).toHaveTextContent("e4");
+    expect(screen.getByTestId("move-ply-2")).toHaveTextContent("e5");
+
+    const forked = new Chess();
+    forked.move("d4");
+    forked.move("d5");
+    expect(position()).toBe(forked.fen());
   });
 });
 
