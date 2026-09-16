@@ -332,6 +332,7 @@ const he: typeof en = {
       position: "עמדה",
     },
     playFromHere: "שחקו מכאן",
+    nextMoves: "המהלכים הבאים",
     tree: {
       empty: "שחקו מהלך, או הגדירו עמדה בלשונית העמדה.",
     },

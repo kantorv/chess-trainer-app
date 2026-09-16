@@ -266,6 +266,10 @@ const position = () => screen.getByTestId("board").getAttribute("data-position")
 const moveTokens = () =>
   screen.getAllByTestId(/^tree-move-n/).map((element) => element.dataset.san);
 
+/** The SAN of every next-moves bar token, in render order. */
+const barTokens = () =>
+  screen.getAllByTestId(/^next-move-n/).map((element) => element.dataset.san);
+
 const openTab = (tab: "moves" | "engine" | "lines" | "position") =>
   userEvent.click(screen.getByTestId(`analysis-panel-tab-${tab}`));
 
@@ -412,6 +416,133 @@ describe("Analysis Board — variations", () => {
     expect(screen.getByTestId("move-ply-2")).toHaveTextContent("e5");
     expect(screen.getByTestId("move-ply-3")).toHaveTextContent("Nf3");
     expect(moveTokens()).toEqual(["c5", "Nc3"]);
+  });
+});
+
+describe("Analysis Board — the pinned next-moves bar", () => {
+  it("pins the continuations of the position on screen above the controls, mainline first", async () => {
+    renderScreen();
+
+    // A fork after 1. e4: e5 the mainline reply, c5 the variation.
+    drag("e2", "e4");
+    drag("e7", "e5");
+    await userEvent.click(screen.getByTestId("board-control-previous"));
+    drag("c7", "c5");
+    // Playing the variation navigated to it; step back to the fork it hangs off.
+    await userEvent.click(screen.getByTestId("board-control-previous"));
+
+    const bar = screen.getByTestId("analysis-next-moves");
+    expect(barTokens()).toEqual(["e5", "c5"]);
+    /*
+      Pinned, not scrolled: a sibling of the tab's scrolling region (a child of
+      it would scroll with the list), sitting above the step controls.
+    */
+    expect(
+      bar.closest('[data-testid="analysis-panel-content-moves"]'),
+    ).toBeNull();
+    expect(
+      bar.compareDocumentPosition(screen.getByTestId("board-controls")),
+    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
+
+  it("is nothing at all with one continuation, and at the end of a line", async () => {
+    renderScreen();
+
+    drag("e2", "e4");
+    drag("e7", "e5");
+    drag("g1", "f3");
+
+    // The start position (one first move)…
+    await userEvent.click(screen.getByTestId("board-control-first"));
+    expect(screen.queryByTestId("analysis-next-moves")).not.toBeInTheDocument();
+    // …a mid-line position with exactly one continuation…
+    await userEvent.click(screen.getByTestId("board-control-next"));
+    expect(screen.queryByTestId("analysis-next-moves")).not.toBeInTheDocument();
+    // …and the end of the line. One continuation or none is not a fork.
+    await userEvent.click(screen.getByTestId("board-control-last"));
+    expect(screen.queryByTestId("analysis-next-moves")).not.toBeInTheDocument();
+  });
+
+  it("counts the start position as its own fork when the tree has two first moves", async () => {
+    renderScreen();
+
+    drag("e2", "e4");
+    await userEvent.click(screen.getByTestId("board-control-first"));
+    drag("d2", "d4");
+    await userEvent.click(screen.getByTestId("board-control-first"));
+
+    expect(barTokens()).toEqual(["e4", "d4"]);
+  });
+
+  it("reads a fork inside a side line, that line's own continuation first", async () => {
+    renderScreen();
+
+    // The side line's own second move is a fork: 2. Nc3 the continuation the
+    // reader stands on (`children[0]` there), 2. Nf3 the alternative off it.
+    drag("e2", "e4");
+    drag("e7", "e5");
+    await userEvent.click(screen.getByTestId("board-control-previous"));
+    drag("c7", "c5");
+    drag("b1", "c3");
+    await userEvent.click(screen.getByTestId("board-control-previous"));
+    drag("g1", "f3");
+    await userEvent.click(screen.getByTestId("board-control-previous"));
+
+    expect(barTokens()).toEqual(["Nc3", "Nf3"]);
+  });
+
+  it("advances on a click, and re-reads the continuations of where it lands", async () => {
+    renderScreen();
+
+    drag("e2", "e4");
+    drag("e7", "e5");
+    await userEvent.click(screen.getByTestId("board-control-previous"));
+    drag("c7", "c5");
+    await userEvent.click(screen.getByTestId("board-control-previous"));
+
+    const [toSicilian] = screen
+      .getAllByTestId(/^next-move-n/)
+      .filter((element) => element.dataset.san === "c5");
+    await userEvent.click(toSicilian);
+
+    /*
+      The same selection a side-line token in the list makes: the board shows
+      the position after the move, the list highlights it there, and the bar —
+      at the end of that line, with nothing to follow — is gone.
+    */
+    expect(position()).toContain("2p5");
+    const standing = screen
+      .getAllByTestId(/^tree-move-n/)
+      .find((element) => element.getAttribute("aria-current") === "true");
+    expect(standing).toHaveAttribute("data-san", "c5");
+    expect(screen.queryByTestId("analysis-next-moves")).not.toBeInTheDocument();
+
+    // Back at the fork, the choices are on offer again.
+    await userEvent.click(screen.getByTestId("board-control-previous"));
+    expect(barTokens()).toEqual(["e5", "c5"]);
+  });
+
+  it("belongs to the Moves tab alone", async () => {
+    renderScreen();
+
+    drag("e2", "e4");
+    drag("e7", "e5");
+    await userEvent.click(screen.getByTestId("board-control-previous"));
+    drag("c7", "c5");
+    await userEvent.click(screen.getByTestId("board-control-previous"));
+    expect(screen.getByTestId("analysis-next-moves")).toBeInTheDocument();
+
+    // The bar is part of the moves UI: the other tabs do not carry it.
+    await openTab("engine");
+    expect(screen.queryByTestId("analysis-next-moves")).not.toBeInTheDocument();
+    await openTab("lines");
+    expect(screen.queryByTestId("analysis-next-moves")).not.toBeInTheDocument();
+    await openTab("position");
+    expect(screen.queryByTestId("analysis-next-moves")).not.toBeInTheDocument();
+
+    // …and it is back with the moves when the tab returns.
+    await openTab("moves");
+    expect(barTokens()).toEqual(["e5", "c5"]);
   });
 });
 

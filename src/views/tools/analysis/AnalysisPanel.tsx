@@ -11,6 +11,7 @@ import SportsEsportsRoundedIcon from "@mui/icons-material/SportsEsportsRounded";
 import { useTranslation } from "react-i18next";
 import { formatScore } from "../../../lib/engineAnalysis";
 import {
+  findNode,
   mainline,
   mainlineGame,
   type VariationNode,
@@ -20,6 +21,7 @@ import BoardControls from "../../shared/BoardControls";
 import CurrentOpening from "../../shared/CurrentOpening";
 import MoveList from "../../shared/MoveList";
 import AnalysisSettings from "./AnalysisSettings";
+import NextMovesBar from "./NextMovesBar";
 import type { AnalysisBoardState } from "./useAnalysisBoard";
 
 /**
@@ -35,6 +37,8 @@ import type { AnalysisBoardState } from "./useAnalysisBoard";
  * │ Moves │ Engine │ Lines │ Position│  tab strip — fixed
  * ├──────────────────────────────────┤
  * │ the active tab                   │  scrolls
+ * ├──────────────────────────────────┤
+ * │ next moves                       │  pinned — a fork's choices (CTA-54)
  * ├──────────────────────────────────┤
  * │ |◀ ◀ ▶ ▶|                  flip  │  controls — fixed
  * └──────────────────────────────────┘
@@ -66,6 +70,17 @@ import type { AnalysisBoardState } from "./useAnalysisBoard";
  * so no row of the list highlights. The board controls, which also speak
  * plies, go the other way — through `state.goToPly`, which walks the line the
  * reader is standing on.
+ *
+ * ## The pinned next-moves bar
+ *
+ * The Moves tab carries one more piece (CTA-54): the continuations of the
+ * position on screen, two per row with the mainline first, pinned between the
+ * scrolling list and the board controls — a sibling of the tab's scrolling
+ * region rather than a child of it, so it stays put while the list scrolls,
+ * and nothing at all unless the position is a fork (`NextMovesBar.tsx`). Its
+ * clicks are node selections, the same call the list's side-line tokens make,
+ * so the board, the highlight and the stepping follow one exactly as they
+ * follow the other.
  *
  * The Position tab arrives as a prop rather than being built here: it is bound
  * to the screen's ingestion state and its drop handling, which belong with the
@@ -122,6 +137,22 @@ function AnalysisPanel({
     }
     return map;
   }, [state.tree, mainlineNodes]);
+
+  /*
+    The continuations of the position on screen (CTA-54) — what the pinned bar
+    under the moves list offers. The children of the node the reader stands on,
+    or the tree's own first moves at the start position; the tree's invariant
+    orders them — `children[0]` is the mainline at every level — and two or
+    more of them is the fork the bar appears at. Re-reading them on every step
+    is what makes the bar re-offer the choices of wherever a click lands.
+  */
+  const continuations = useMemo(
+    () =>
+      state.nodeId === null
+        ? state.tree.moves
+        : (findNode(state.tree, state.nodeId)?.children ?? []),
+    [state.tree, state.nodeId],
+  );
 
   /*
     The ply↔node seam (CTA-51). The move list speaks plies over the mainline;
@@ -334,6 +365,15 @@ function AnalysisPanel({
           ))}
         {tab === "position" && position}
       </Box>
+
+      {/*
+        The pinned next-moves bar (CTA-54): a sibling of the scrolling region
+        above, not a child of it, so it stays under the moves list instead of
+        scrolling with them — and a Moves-tab piece only.
+      */}
+      {tab === "moves" && (
+        <NextMovesBar nodes={continuations} onSelect={state.goToNode} />
+      )}
 
       <BoardControls
         ply={state.ply}

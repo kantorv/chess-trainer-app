@@ -511,6 +511,8 @@ const en = {
     },
     /** Hand the position on screen to Play with Engine — the Board Editor's wording. */
     playFromHere: "Play from here",
+    /** The pinned next-moves bar under the moves list — a fork's choices (CTA-54). */
+    nextMoves: "Next moves",
     /** The empty-tree hint of the flowing tree view (the Openings explorer, a Library repertoire line). */
     tree: {
       empty: "Play a move, or set a position up from the Position tab.",
