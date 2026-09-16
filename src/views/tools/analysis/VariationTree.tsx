@@ -1,33 +1,34 @@
-import { useEffect, useRef, type Ref } from "react";
+import { useEffect, useRef } from "react";
 import Box from "@mui/material/Box";
 import ButtonBase from "@mui/material/ButtonBase";
 import Typography from "@mui/material/Typography";
 import { useTranslation } from "react-i18next";
-import { plyLabel, type GameTree, type VariationNode } from "../../../lib/gameTree";
+import type { GameTree } from "../../../lib/gameTree";
+import { moveSx, selectedTokenSx } from "../../shared/moveTokenSx";
+import { VariationLine } from "../../shared/VariationLine";
 
 /**
- * The move list for a game that branches: the mainline as a run of numbered
- * moves, and every side line indented under the move it answers.
+ * The flowing move list for a game that branches: the mainline as a run of
+ * numbered moves, and every side line indented under the move it answers —
+ * the way a book or lichess prints a variation.
  *
- * ## Why this is not `MoveList`
- *
- * The shared list renders a game as a three-column grid — number, White, Black —
- * which works because a linear game has exactly one move per half-move slot. A
- * variation has nowhere to go in that grid: it is not a third column, it is a
- * *branch off one cell*. So this list flows moves inline instead, the way a book
- * or lichess prints them, and a side line becomes an indented block after the
- * move it replaces. `MoveList` is untouched and still serves the two linear
- * screens.
+ * The Analysis Board no longer renders this (CTA-53): its Moves tab is one
+ * merged list — the shared `MoveList`, with each side line hanging under the
+ * mainline move it branches from. The two screens that read a *flowing* line
+ * still do: the Openings explorer and the Library repertoire viewer, where
+ * the whole tree is the content and there is no numbered-pairs grid beside it.
+ * The move pieces themselves live in `views/shared/VariationLine.tsx`, shared
+ * with `MoveList`, so the two renderings cannot drift apart.
  *
  * Presentational, like its sibling: the selected node comes in as a prop and
  * goes out through `onSelectNode`, so `useTreeNavigation` owns the state and
- * this renders against a fixture tree.
+ * this renders against a fixture tree in tests.
  *
- * SAN is Latin text in a panel that mirrors under Hebrew, so every token carries
- * `dir="ltr"` — an **attribute**, never a CSS declaration, which the RTL emotion
- * cache would flip into the bug it is meant to prevent (see the root
- * `CLAUDE.md`). The indentation is `paddingInlineStart`, which follows the
- * reading direction on its own.
+ * SAN is Latin text in a panel that mirrors under Hebrew, so every token
+ * carries `dir="ltr"` — an **attribute**, never a CSS declaration, which the
+ * RTL emotion cache would flip into the bug it is meant to prevent (see the
+ * root `CLAUDE.md`). The indentation is `paddingInlineStart`, which follows
+ * the reading direction on its own.
  */
 
 type VariationTreeProps = {
@@ -42,143 +43,6 @@ type VariationTreeProps = {
    */
   emptyText?: string;
 };
-
-const sanTokenSx = {
-  unicodeBidi: "isolate",
-  fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
-  fontSize: "0.8125rem",
-} as const;
-
-const moveSx = {
-  paddingInline: 0.5,
-  paddingBlock: 0.125,
-  borderRadius: 0.5,
-  minWidth: 0,
-} as const;
-
-const selectedMoveSx = {
-  bgcolor: "primary.main",
-  color: "primary.contrastText",
-  fontWeight: 700,
-} as const;
-
-/** One clickable move, with its number when the numbering has to be restated. */
-function MoveToken({
-  node,
-  startFen,
-  forceNumber,
-  isCurrent,
-  onSelect,
-  activeRef,
-}: {
-  node: VariationNode;
-  startFen: string;
-  forceNumber: boolean;
-  isCurrent: boolean;
-  onSelect: (id: string) => void;
-  activeRef: Ref<HTMLButtonElement>;
-}) {
-  const { number, isWhiteMove } = plyLabel(startFen, node.ply);
-  // White's move always carries its number; Black's carries one only at the head
-  // of a line, or where a side line has just interrupted the reader's place.
-  const prefix = isWhiteMove
-    ? `${number}. `
-    : forceNumber
-      ? `${number}… `
-      : "";
-
-  return (
-    <ButtonBase
-      ref={isCurrent ? activeRef : undefined}
-      dir="ltr"
-      data-testid={`tree-move-${node.id}`}
-      data-san={node.san}
-      aria-current={isCurrent ? "true" : undefined}
-      onClick={() => onSelect(node.id)}
-      sx={{ ...moveSx, ...sanTokenSx, ...(isCurrent ? selectedMoveSx : {}) }}
-    >
-      {`${prefix}${node.san}`}
-    </ButtonBase>
-  );
-}
-
-/**
- * One run of alternatives: the first is the line, the rest are side lines drawn
- * under it. The same shape `treeToPgn` writes, and for the same reason — it is
- * how a branch reads.
- */
-function Line({
-  nodes,
-  startFen,
-  forceNumber,
-  currentId,
-  onSelectNode,
-  activeRef,
-}: {
-  nodes: readonly VariationNode[];
-  startFen: string;
-  forceNumber: boolean;
-  currentId: string | null;
-  onSelectNode: (id: string) => void;
-  activeRef: Ref<HTMLButtonElement>;
-}) {
-  const { t } = useTranslation();
-  const [main, ...alternatives] = nodes;
-  if (main === undefined) return null;
-
-  return (
-    <>
-      <MoveToken
-        node={main}
-        startFen={startFen}
-        forceNumber={forceNumber}
-        isCurrent={main.id === currentId}
-        onSelect={onSelectNode}
-        activeRef={activeRef}
-      />
-
-      {alternatives.map((alternative) => (
-        <Box
-          key={alternative.id}
-          data-testid={`tree-variation-${alternative.id}`}
-          role="group"
-          aria-label={t("analysis.tree.variation")}
-          sx={{
-            // A block in the middle of an inline flow: the side line gets its
-            // own row, indented from the line it branches off.
-            width: "100%",
-            paddingInlineStart: 1.5,
-            marginBlock: 0.25,
-            borderInlineStart: "2px solid",
-            borderColor: "divider",
-            color: "text.secondary",
-          }}
-        >
-          {/* A side line is a line of its own, so it restates its number. */}
-          <Line
-            nodes={[alternative]}
-            startFen={startFen}
-            forceNumber
-            currentId={currentId}
-            onSelectNode={onSelectNode}
-            activeRef={activeRef}
-          />
-        </Box>
-      ))}
-
-      <Line
-        nodes={main.children}
-        startFen={startFen}
-        // A side line between two moves breaks the reader's place, so the move
-        // after it restates its number.
-        forceNumber={alternatives.length > 0}
-        currentId={currentId}
-        onSelectNode={onSelectNode}
-        activeRef={activeRef}
-      />
-    </>
-  );
-}
 
 function VariationTree({ tree, currentId, onSelectNode, emptyText }: VariationTreeProps) {
   const { t } = useTranslation();
@@ -203,7 +67,7 @@ function VariationTree({ tree, currentId, onSelectNode, emptyText }: VariationTr
           width: "100%",
           my: 0.5,
           fontSize: "0.8125rem",
-          ...(currentId === null ? selectedMoveSx : {}),
+          ...(currentId === null ? selectedTokenSx : {}),
         }}
       >
         {t("moveList.startPosition")}
@@ -223,7 +87,7 @@ function VariationTree({ tree, currentId, onSelectNode, emptyText }: VariationTr
             rowGap: 0.25,
           }}
         >
-          <Line
+          <VariationLine
             nodes={tree.moves}
             startFen={tree.startFen}
             forceNumber

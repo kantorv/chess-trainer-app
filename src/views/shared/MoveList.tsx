@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, type Ref } from "react";
+import { Fragment, useEffect, useMemo, useRef, type Ref } from "react";
 import Box from "@mui/material/Box";
 import ButtonBase from "@mui/material/ButtonBase";
 import Typography from "@mui/material/Typography";
@@ -7,11 +7,21 @@ import { useTranslation } from "react-i18next";
 import { formatScore, type Score } from "../../lib/engineAnalysis";
 import { moveRowsOf } from "../../lib/gameNavigation";
 import { initialFenOf, type Game, type GameMove } from "../../lib/gameModel";
+import type { VariationNode } from "../../lib/gameTree";
 import { maskSanLine, type PieceMask } from "../../lib/pieceMask";
+import { VariationBlock } from "./VariationLine";
 
 /**
  * The lichess-style move list: numbered pairs, the current ply highlighted,
  * every move a jump target.
+ *
+ * A branching game renders here too (CTA-53): its side lines arrive as the
+ * optional `branches` prop and hang as indented runs under the mainline move
+ * each branches from, inside this list — which is how the Analysis Board's
+ * Moves tab shows one list instead of printing the mainline twice, once here
+ * and once in the tree that used to sit below it. The props are optional on
+ * purpose: a linear game renders exactly as before, so every other consumer
+ * passes none.
  *
  * Presentational on purpose — the selected ply comes in as a prop and goes out
  * through `onSelectPly`, so `useGameNavigation` owns the state and this renders
@@ -52,6 +62,31 @@ type MoveListProps = {
    * passes none.
    */
   evalsByFen?: ReadonlyMap<string, Score>;
+  /**
+   * The side lines of a branching game (CTA-53), keyed by the mainline ply each
+   * branches from — the ply of the mainline move the side line answers, 0
+   * naming the start position, for a side line that branches before any
+   * mainline move. Each is rendered as an indented run inside this list,
+   * directly under the row holding that ply. Without the prop nothing changes,
+   * which is why the linear consumers pass none — the Analysis Board's Moves
+   * tab is the one consumer.
+   */
+  branches?: ReadonlyMap<number, readonly VariationNode[]>;
+  /**
+   * The selected node of the game the side lines belong to; it highlights the
+   * side-line token the selection is on, and must not collide with the ply
+   * highlight — a consumer standing inside a side line passes `currentPly: -1`
+   * so no numbered row lights up. `null` — the default — highlights none of
+   * the side-line tokens.
+   */
+  currentNodeId?: string | null;
+  /**
+   * A click on a side-line move, reported with the node it names: a click
+   * inside a side line changes *which line is current*, which a ply cannot say
+   * (`useTreeNavigation`). Without it the side-line tokens render but do not
+   * navigate.
+   */
+  onSelectNode?: (id: string) => void;
 };
 
 /**
@@ -183,9 +218,15 @@ function MoveList({
   mask,
   annotatedPlies,
   evalsByFen,
+  branches,
+  currentNodeId,
+  onSelectNode,
 }: MoveListProps) {
   const { t } = useTranslation();
   const rows = moveRowsOf(game);
+  // The position the list starts from — what ply 0 selects, what the side
+  // lines number their first move from, and what the start row's eval looks up.
+  const startFen = initialFenOf(game);
 
   /*
     The eval of a position the engine has scored, as it is printed — or
@@ -212,14 +253,32 @@ function MoveList({
         ? null
         : maskSanLine(
             mask,
-            initialFenOf(game),
+            startFen,
             game.moves.map((move) => move.san),
           ),
-    [mask, game],
+    [mask, game, startFen],
   );
   const textOf = (move: GameMove) => maskedSan?.[move.ply - 1] ?? move.san;
 
   const activeRef = useRef<HTMLButtonElement | null>(null);
+
+  /*
+    The side lines branching from one mainline ply, as indented runs under the
+    row that ply sits in. Ply 0 is the start position's own branch point: its
+    runs hang under the start row, above the grid, rather than in it.
+  */
+  const branchBlocksAt = (ply: number) =>
+    branches?.get(ply)?.map((node) => (
+      <VariationBlock
+        key={node.id}
+        node={node}
+        startFen={startFen}
+        currentId={currentNodeId ?? null}
+        onSelectNode={onSelectNode}
+        activeRef={activeRef}
+        evalTextOf={evalTextOf}
+      />
+    ));
 
   useEffect(() => {
     /*
@@ -231,7 +290,7 @@ function MoveList({
       leaves `scrollIntoView` undefined.
     */
     activeRef.current?.scrollIntoView?.({ block: "nearest" });
-  }, [currentPly]);
+  }, [currentPly, currentNodeId]);
 
   return (
     <Box data-testid="move-list">
@@ -259,17 +318,25 @@ function MoveList({
           which this row does not have — see the header note above for why the
           treatment is the attribute, not a CSS declaration.
         */}
-        {evalsByFen?.has(initialFenOf(game)) && (
+        {evalsByFen?.has(startFen) && (
           <Typography
             component="span"
             dir="ltr"
             data-testid="move-eval-0"
             sx={evalTokenSx}
           >
-            {formatScore(evalsByFen.get(initialFenOf(game))!)}
+            {formatScore(evalsByFen.get(startFen)!)}
           </Typography>
         )}
       </ButtonBase>
+
+      {/*
+        Side lines that branch from the start position itself hang under the
+        start row, exactly as the others hang under their pair. A start-position
+        side line implies a mainline exists, so when there are no rows there are
+        none of these either.
+      */}
+      {branchBlocksAt(0)}
 
       {rows.length === 0 ? (
         <Typography variant="body2" sx={{ color: "text.secondary" }}>
@@ -280,52 +347,64 @@ function MoveList({
           sx={{
             display: "grid",
             // Number, White, Black — the pair wraps into two columns rather
-            // than giving every half-move its own row.
+            // than giving every half-move its own row. A side-line run spans
+            // all three (`gridColumn: "1 / -1"` in `VariationBlock`), which
+            // makes it a row of this grid in its own right, in DOM order
+            // directly under the pair it answers.
             gridTemplateColumns: "auto 1fr 1fr",
             alignItems: "center",
             columnGap: 0.5,
           }}
         >
           {rows.map((row) => (
-            <Box key={row.number} sx={{ display: "contents" }}>
-              <Typography
-                component="span"
-                dir="ltr"
-                data-testid={`move-number-${row.number}`}
-                sx={{
-                  ...sanTokenSx,
-                  color: "text.secondary",
-                  paddingInlineEnd: 0.5,
-                  textAlign: "end",
-                }}
-              >
-                {row.number}.
-              </Typography>
-              <MoveCell
-                move={row.white}
-                text={row.white === null ? "" : textOf(row.white)}
-                isCurrent={row.white?.ply === currentPly}
-                hasComment={
-                  row.white != null &&
-                  (annotatedPlies?.has(row.white.ply) ?? false)
-                }
-                evalText={row.white === null ? undefined : evalTextOf(row.white.fen)}
-                onSelect={onSelectPly}
-                activeRef={activeRef}
-              />
-              <MoveCell
-                move={row.black}
-                text={row.black === null ? "" : textOf(row.black)}
-                isCurrent={row.black?.ply === currentPly}
-                hasComment={
-                  row.black != null &&
-                  (annotatedPlies?.has(row.black.ply) ?? false)
-                }
-                evalText={row.black === null ? undefined : evalTextOf(row.black.fen)}
-                onSelect={onSelectPly}
-                activeRef={activeRef}
-              />
-            </Box>
+            <Fragment key={row.number}>
+              <Box sx={{ display: "contents" }}>
+                <Typography
+                  component="span"
+                  dir="ltr"
+                  data-testid={`move-number-${row.number}`}
+                  sx={{
+                    ...sanTokenSx,
+                    color: "text.secondary",
+                    paddingInlineEnd: 0.5,
+                    textAlign: "end",
+                  }}
+                >
+                  {row.number}.
+                </Typography>
+                <MoveCell
+                  move={row.white}
+                  text={row.white === null ? "" : textOf(row.white)}
+                  isCurrent={row.white?.ply === currentPly}
+                  hasComment={
+                    row.white != null &&
+                    (annotatedPlies?.has(row.white.ply) ?? false)
+                  }
+                  evalText={row.white === null ? undefined : evalTextOf(row.white.fen)}
+                  onSelect={onSelectPly}
+                  activeRef={activeRef}
+                />
+                <MoveCell
+                  move={row.black}
+                  text={row.black === null ? "" : textOf(row.black)}
+                  isCurrent={row.black?.ply === currentPly}
+                  hasComment={
+                    row.black != null &&
+                    (annotatedPlies?.has(row.black.ply) ?? false)
+                  }
+                  evalText={row.black === null ? undefined : evalTextOf(row.black.fen)}
+                  onSelect={onSelectPly}
+                  activeRef={activeRef}
+                />
+              </Box>
+              {/*
+                The side lines branching from this row's moves, under the row
+                that holds the move they answer — White's first, Black's after,
+                the order they branch in.
+              */}
+              {row.white !== null && branchBlocksAt(row.white.ply)}
+              {row.black !== null && branchBlocksAt(row.black.ply)}
+            </Fragment>
           ))}
         </Box>
       )}

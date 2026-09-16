@@ -125,8 +125,10 @@ const he: typeof en = {
   },
   moveList: {
     title: "מהלכים",
+    /** Ply 0, a selectable entry of its own. */
     startPosition: "עמדת הפתיחה",
     noMoves: "אין מהלכים במשחק הזה.",
+    variation: "וריאציה",
   },
   loadPgn: {
     dropHint: "גררו לכאן קובץ PGN",
@@ -332,7 +334,6 @@ const he: typeof en = {
     playFromHere: "שחקו מכאן",
     tree: {
       empty: "שחקו מהלך, או הגדירו עמדה בלשונית העמדה.",
-      variation: "וריאציה",
     },
     settings: {
       title: "ניתוח",

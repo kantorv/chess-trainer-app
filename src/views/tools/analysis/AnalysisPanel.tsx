@@ -10,13 +10,16 @@ import Typography from "@mui/material/Typography";
 import SportsEsportsRoundedIcon from "@mui/icons-material/SportsEsportsRounded";
 import { useTranslation } from "react-i18next";
 import { formatScore } from "../../../lib/engineAnalysis";
-import { mainline, mainlineGame } from "../../../lib/gameTree";
+import {
+  mainline,
+  mainlineGame,
+  type VariationNode,
+} from "../../../lib/gameTree";
 import BestVariations from "../../shared/BestVariations";
 import BoardControls from "../../shared/BoardControls";
 import CurrentOpening from "../../shared/CurrentOpening";
 import MoveList from "../../shared/MoveList";
 import AnalysisSettings from "./AnalysisSettings";
-import VariationTree from "./VariationTree";
 import type { AnalysisBoardState } from "./useAnalysisBoard";
 
 /**
@@ -47,20 +50,22 @@ import type { AnalysisBoardState } from "./useAnalysisBoard";
  *
  * ## The Moves tab, and the ply↔node seam
  *
- * The tab is the shared `MoveList` over the **mainline** — the same
- * numbered-pairs list the linear screens use, with the engine's evals beside
- * each scored move (CTA-51) — and the variation tree **stays below it, in the
- * same scrolling region**: side lines are the one thing this screen is for, so
- * they stay visible and navigable under the list rather than moving to a tab
- * of their own.
+ * The tab is **one list** (CTA-53): the shared `MoveList` over the mainline —
+ * the same numbered-pairs list the linear screens use, with the engine's
+ * evals beside each scored move (CTA-51) — with each side line hanging as an
+ * indented run directly under the mainline move it branches from, inside the
+ * list. The mainline is no longer printed twice, the way it was when the tree
+ * sat below the list; the flowing tree view remains where a flowing line is
+ * the content — the Openings explorer and the Library repertoire viewer.
  *
  * The list speaks plies and the navigation state is a node id (a click inside
  * a side line changes *which line is current* — a number cannot say that, see
  * `useTreeNavigation`), so this panel is where the two meet. A click on a ply
- * translates to the mainline node it names; a selection inside a side line is
- * no ply at all, so no row of the list highlights. The board controls, which
- * also speak plies, go the other way — through `state.goToPly`, which walks
- * the line the reader is standing on.
+ * translates to the mainline node it names; a click on a side-line move goes
+ * out as the node it names; a selection inside a side line is no ply at all,
+ * so no row of the list highlights. The board controls, which also speak
+ * plies, go the other way — through `state.goToPly`, which walks the line the
+ * reader is standing on.
  *
  * The Position tab arrives as a prop rather than being built here: it is bound
  * to the screen's ingestion state and its drop handling, which belong with the
@@ -91,14 +96,32 @@ function AnalysisPanel({
   const topLine = state.analysis.lines.find((line) => line !== undefined);
 
   /*
-    The Moves tab is the shared `MoveList` over the mainline, so both shapes it
-    needs are derived here from the tree — the one-line `Game` the list renders,
-    and the mainline nodes a ply has to translate back into. Memoised on the
-    tree: each walk reads the whole line, and a move landing in a side line
-    re-renders the panel without touching either.
+    The Moves tab is the shared `MoveList` over the mainline, so every shape it
+    needs is derived here from the tree — the one-line `Game` the list renders,
+    the mainline nodes a ply has to translate back into, and the side lines to
+    hang under the moves they branch from. Memoised on the tree: each walk
+    reads the whole line, and stepping around inside a side line re-renders
+    the panel without touching them.
   */
   const mainlineNodes = useMemo(() => mainline(state.tree), [state.tree]);
   const game = useMemo(() => mainlineGame(state.tree), [state.tree]);
+
+  /*
+    The side lines the merged list hangs under the mainline (CTA-53), keyed by
+    the mainline ply each branches from — the ply of the move its first move
+    answers, 0 naming the start position. `children[0]` is the mainline at
+    every level, so everything after it is a side line.
+  */
+  const branches = useMemo(() => {
+    const map = new Map<number, readonly VariationNode[]>();
+    const rootAlternatives = state.tree.moves.slice(1);
+    if (rootAlternatives.length > 0) map.set(0, rootAlternatives);
+    for (const node of mainlineNodes) {
+      const alternatives = node.children.slice(1);
+      if (alternatives.length > 0) map.set(node.ply, alternatives);
+    }
+    return map;
+  }, [state.tree, mainlineNodes]);
 
   /*
     The ply↔node seam (CTA-51). The move list speaks plies over the mainline;
@@ -259,22 +282,21 @@ function AnalysisPanel({
         {tab === "moves" && (
           <>
             {/*
-              The mainline as the shared numbered-pairs list — the linear
-              reading of this tree, with the engine's evals beside each scored
-              move (CTA-51) — and, still the point of the screen, the variation
-              tree below it in the same scroll region. A click on the list
-              selects the mainline node the ply names; the tree below navigates
-              the branches.
+              One list (CTA-53): the mainline as the shared numbered-pairs list
+              with the engine's evals beside each scored move (CTA-51), and
+              every side line as an indented run under the mainline move it
+              branches from — the tree that used to sit below the list is gone,
+              taking its duplicate print of the mainline with it. The numbered
+              rows click out as plies; the side-line runs as the nodes they
+              name.
             */}
             <MoveList
               game={game}
               currentPly={mainlinePly}
               onSelectPly={selectPly}
               evalsByFen={state.evalsByFen}
-            />
-            <VariationTree
-              tree={state.tree}
-              currentId={state.nodeId}
+              branches={branches}
+              currentNodeId={state.nodeId}
               onSelectNode={state.goToNode}
             />
           </>

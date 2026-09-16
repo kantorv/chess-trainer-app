@@ -262,7 +262,7 @@ const handOffFen = () =>
 
 const position = () => screen.getByTestId("board").getAttribute("data-position");
 
-/** The SAN of every move in the tree view, in render order. */
+/** The SAN of every side-line move of the merged list, in render order. */
 const moveTokens = () =>
   screen.getAllByTestId(/^tree-move-n/).map((element) => element.dataset.san);
 
@@ -308,10 +308,11 @@ describe("Analysis Board — moving pieces", () => {
         uciMessage: "bestmove e7e5",
       });
     });
-    expect(moveTokens()).toEqual(["e4"]);
+    expect(screen.getByTestId("move-ply-1")).toHaveTextContent("e4");
+    expect(screen.queryByTestId("move-ply-2")).toBeNull();
 
     expect(drag("e7", "e5")).toBe(true);
-    expect(moveTokens()).toEqual(["e4", "e5"]);
+    expect(screen.getByTestId("move-ply-2")).toHaveTextContent("e5");
   });
 
   it("rejects an illegal drag and leaves the position alone", () => {
@@ -349,7 +350,10 @@ describe("Analysis Board — variations", () => {
     drag("c7", "c5");
 
     // Both replies are in the list, and the mainline is untouched.
-    expect(moveTokens()).toEqual(["e4", "e5", "c5", "Nf3"]);
+    expect(screen.getByTestId("move-ply-1")).toHaveTextContent("e4");
+    expect(screen.getByTestId("move-ply-2")).toHaveTextContent("e5");
+    expect(screen.getByTestId("move-ply-3")).toHaveTextContent("Nf3");
+    expect(moveTokens()).toEqual(["c5"]);
     expect(position()).toContain("2p5");
   });
 
@@ -362,11 +366,14 @@ describe("Analysis Board — variations", () => {
     drag("c7", "c5");
 
     const sicilian = position();
-    const [, mainReply, variation] = screen.getAllByTestId(/^tree-move-n/);
+    const [variation] = screen.getAllByTestId(/^tree-move-n/);
+    expect(variation).toHaveAttribute("data-san", "c5");
 
-    await userEvent.click(mainReply);
+    // The numbered rows click out as mainline plies…
+    await userEvent.click(screen.getByTestId("move-ply-2"));
     expect(position()).toContain("4p3");
 
+    // …and the side-line run as the node it names.
     await userEvent.click(variation);
     expect(position()).toBe(sicilian);
   });
@@ -380,7 +387,9 @@ describe("Analysis Board — variations", () => {
 
     // Replaying the move that is already there is not a new variation.
     drag("e7", "e5");
-    expect(moveTokens()).toEqual(["e4", "e5"]);
+    expect(screen.getByTestId("move-ply-1")).toHaveTextContent("e4");
+    expect(screen.getByTestId("move-ply-2")).toHaveTextContent("e5");
+    expect(screen.queryAllByTestId(/^tree-move-n/)).toHaveLength(0);
   });
 
   it("steps along the variation it is standing in, not the mainline", async () => {
@@ -399,12 +408,15 @@ describe("Analysis Board — variations", () => {
     expect(position()).toContain("2p5");
     // …and "end" returns to the end of it rather than to the mainline's.
     await userEvent.click(screen.getByTestId("board-control-last"));
-    expect(moveTokens()).toEqual(["e4", "e5", "c5", "Nc3", "Nf3"]);
+    expect(screen.getByTestId("move-ply-1")).toHaveTextContent("e4");
+    expect(screen.getByTestId("move-ply-2")).toHaveTextContent("e5");
+    expect(screen.getByTestId("move-ply-3")).toHaveTextContent("Nf3");
+    expect(moveTokens()).toEqual(["c5", "Nc3"]);
   });
 });
 
 describe("Analysis Board — the move list", () => {
-  it("shows the mainline as the shared numbered-pairs list, with the tree below it", () => {
+  it("shows the mainline as the shared numbered-pairs list, and no second print of it", () => {
     renderScreen();
 
     drag("e2", "e4");
@@ -415,9 +427,14 @@ describe("Analysis Board — the move list", () => {
     expect(screen.getByTestId("move-list")).toBeInTheDocument();
     expect(screen.getByTestId("move-ply-1")).toHaveTextContent("e4");
     expect(screen.getByTestId("move-ply-2")).toHaveTextContent("e5");
-    // And the variation tree stays in the Moves tab, below the list — side
-    // lines are the point of the screen, so no new tab for them.
-    expect(screen.getByTestId("variation-tree")).toBeInTheDocument();
+    /*
+      …and nothing else (CTA-53): the flowing tree that reprinted the mainline
+      below the list is gone from the tab, so with no side lines there is no
+      variation section at all.
+    */
+    expect(screen.queryByTestId("variation-tree")).not.toBeInTheDocument();
+    expect(screen.queryAllByTestId(/^tree-move-n/)).toHaveLength(0);
+    expect(screen.queryAllByTestId(/^tree-variation-/)).toHaveLength(0);
   });
 
   it("prints an eval beside each scored move, and nothing beside the rest", () => {
@@ -495,16 +512,78 @@ describe("Analysis Board — the move list", () => {
       .queryAllByTestId(/^move-ply-/)
       .filter((element) => element.getAttribute("aria-current") === "true");
     expect(highlighted).toHaveLength(0);
+    // …but the run the reader is standing in knows where they are: its token
+    // is the highlighted one, inside the same list.
+    const currentInSideLine = screen
+      .getAllByTestId(/^tree-move-n/)
+      .find((element) => element.getAttribute("aria-current") === "true");
+    expect(currentInSideLine).toHaveAttribute("data-san", "Nc3");
 
     // A click on mainline move 2 walks out of the side line to that node.
     await userEvent.click(screen.getByTestId("move-ply-2"));
     expect(position()).toContain("4p3");
-
-    const tree = screen.getByTestId("variation-tree");
-    const current = within(tree)
+    expect(screen.getByTestId("move-ply-2")).toHaveAttribute(
+      "aria-current",
+      "true",
+    );
+    const currentInVariation = screen
       .queryAllByTestId(/^tree-move-n/)
       .find((element) => element.getAttribute("aria-current") === "true");
-    expect(current).toHaveAttribute("data-san", "e5");
+    expect(currentInVariation).toBeUndefined();
+  });
+
+  it("hangs a side line directly under the pair it answers, inside the list", async () => {
+    renderScreen();
+
+    drag("e2", "e4");
+    drag("e7", "e5");
+    drag("g1", "f3");
+    await userEvent.click(screen.getByTestId("board-control-first"));
+    await userEvent.click(screen.getByTestId("board-control-next"));
+    drag("c7", "c5");
+
+    /*
+      DOM order is the layout here: the run sits between the row holding the
+      move it answers (1. e4 e5) and the row after it (2. Nf3).
+    */
+    const layout = screen
+      .getAllByTestId(/^move-ply-\d|^tree-variation-/)
+      .map((element) => element.getAttribute("data-testid"));
+    expect(layout).toEqual([
+      "move-ply-0",
+      "move-ply-1",
+      "move-ply-2",
+      expect.stringMatching(/^tree-variation-/),
+      "move-ply-3",
+    ]);
+  });
+
+  it("prints an eval beside a side-line move whose position the engine has scored", async () => {
+    renderScreen();
+
+    drag("e2", "e4");
+    drag("e7", "e5");
+    await userEvent.click(screen.getByTestId("board-control-previous"));
+    drag("c7", "c5");
+
+    // Standing in the side line, the engine searches the Sicilian position.
+    const sicilian = position();
+    expect(engine().lastSearch).toBe(sicilian);
+    // Nothing is printed before a finished search records the score.
+    expect(screen.queryAllByTestId(/^tree-eval-/)).toHaveLength(0);
+
+    engineReports({ depth: 12, multipv: 1, cp: 20, pv: "b1c3" });
+    act(() => {
+      engine().say({
+        fen: engine().lastSearch,
+        bestMove: "b1c3",
+        uciMessage: "bestmove b1c3",
+      });
+    });
+
+    const [c5] = screen.getAllByTestId(/^tree-move-n/);
+    const id = c5.getAttribute("data-testid")!.slice("tree-move-".length);
+    expect(screen.getByTestId(`tree-eval-${id}`)).toHaveTextContent("+0.20");
   });
 });
 
@@ -522,7 +601,8 @@ describe("Analysis Board — the Position tab", () => {
     // The move numbering follows the FEN rather than restarting at move 1.
     drag("g8", "f6");
     await openTab("moves");
-    expect(screen.getByTestId("variation-tree")).toHaveTextContent("12… Nf6");
+    expect(screen.getByTestId("move-number-12")).toHaveTextContent("12.");
+    expect(screen.getByTestId("move-ply-1")).toHaveTextContent("Nf6");
   });
 
   it("turns the board to the side to move in a pasted FEN", async () => {
@@ -579,8 +659,12 @@ describe("Analysis Board — the Position tab", () => {
     await userEvent.click(screen.getByRole("button", { name: "Load PGN" }));
 
     await openTab("moves");
+    expect(screen.getByTestId("move-ply-1")).toHaveTextContent("e4");
+    expect(screen.getByTestId("move-ply-2")).toHaveTextContent("e5");
+    expect(screen.getByTestId("move-ply-3")).toHaveTextContent("Nf3");
+    expect(screen.getByTestId("move-ply-4")).toHaveTextContent("Nc6");
     // The side line survived the load — `parsePgnGames` would have dropped it.
-    expect(moveTokens()).toEqual(["e4", "e5", "c5", "Nf3", "Nf3", "Nc6"]);
+    expect(moveTokens()).toEqual(["c5", "Nf3"]);
     // A load opens on the start position.
     expect(position()).toMatch(/^rnbqkbnr\/pppppppp/);
   });
@@ -612,7 +696,8 @@ describe("Analysis Board — the Position tab", () => {
 
     await userEvent.click(within(picker).getByText("Carol vs Dan"));
     await openTab("moves");
-    expect(moveTokens()).toEqual(["d4", "d5"]);
+    expect(screen.getByTestId("move-ply-1")).toHaveTextContent("d4");
+    expect(screen.getByTestId("move-ply-2")).toHaveTextContent("d5");
   });
 
   it("reports which game in a file failed", async () => {
@@ -875,7 +960,7 @@ describe("Analysis Board — arriving from the Board Editor", () => {
     // about it, and a move played from it is the first of the line.
     expect(engine().lastSearch).toBe(edited);
     drag("e2", "e7");
-    expect(moveTokens()).toEqual(["Qe7+"]);
+    expect(screen.getByTestId("move-ply-1")).toHaveTextContent("Qe7+");
   });
 
   it("faces the side to move in the position it was handed", () => {
@@ -924,7 +1009,9 @@ describe("Analysis Board — arriving with a whole game", () => {
       "data-orientation",
       "white",
     );
-    expect(moveTokens()).toContain(withVariations.game.moves[0].san);
+    expect(screen.getByTestId("move-ply-1")).toHaveTextContent(
+      withVariations.game.moves[0].san,
+    );
   });
 
   it("keeps the game's side lines, which the catalog's mainline does not have", async () => {
@@ -937,11 +1024,13 @@ describe("Analysis Board — arriving with a whole game", () => {
     /*
       `chess.js` `loadPgn` discards `( … )`, so the `Game` the catalog holds is
       the mainline alone. This screen parses the PGN text again with
-      `parsePgnTree`, so the tree it shows is strictly larger.
+      `parsePgnTree`, so the list it shows is strictly larger: the same numbered
+      rows, plus the side lines hanging under them.
     */
-    expect(moveTokens().length).toBeGreaterThan(
-      withVariations.game.moves.length,
-    );
+    expect(
+      screen.getByTestId(`move-ply-${withVariations.game.moves.length}`),
+    ).toBeInTheDocument();
+    expect(moveTokens().length).toBeGreaterThan(0);
   });
 
   it("ignores a reference that names nothing, rather than throwing on the link", () => {
@@ -1031,6 +1120,7 @@ describe("Analysis Board — the shell around it", () => {
     expect(position()).toMatch(/^rnbqkbnr\/pppppppp/);
     await openTab("moves");
     expect(screen.queryAllByTestId(/^tree-move-n/)).toHaveLength(0);
+    expect(screen.queryByTestId("move-ply-1")).toBeNull();
   });
 
   it("flips the board without touching the game", async () => {
@@ -1043,7 +1133,7 @@ describe("Analysis Board — the shell around it", () => {
       "data-orientation",
       "black",
     );
-    expect(moveTokens()).toEqual(["e4"]);
+    expect(screen.getByTestId("move-ply-1")).toHaveTextContent("e4");
   });
 
   it("terminates the worker when the screen goes away", () => {
@@ -1220,9 +1310,16 @@ describe("Analysis Board — reopening a saved analysis", () => {
     expect(position()).toBe(fenAtNode(tree, nodeAtSanPath(tree, ["e4", "c5"])));
 
     await openTab("moves");
-    expect(moveTokens()).toEqual(
-      expect.arrayContaining(["e4", "e5", "Nf3", "c5"]),
-    );
+    expect(screen.getByTestId("move-ply-1")).toHaveTextContent("e4");
+    expect(screen.getByTestId("move-ply-2")).toHaveTextContent("e5");
+    expect(screen.getByTestId("move-ply-3")).toHaveTextContent("Nf3");
+    // The side line is back, hanging under the move it answers.
+    expect(moveTokens()).toEqual(["c5"]);
+    // …and the reader reopens standing inside it, not on the mainline.
+    const standing = screen
+      .getAllByTestId(/^tree-move-n/)
+      .find((element) => element.getAttribute("aria-current") === "true");
+    expect(standing).toHaveAttribute("data-san", "c5");
   });
 
   it("comes back facing the way it was left, and at its own settings", () => {
