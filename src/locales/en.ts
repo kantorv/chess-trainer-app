@@ -163,6 +163,8 @@ const en = {
     /** Ply 0, a selectable entry of its own. */
     startPosition: "Start position",
     noMoves: "This game has no moves.",
+    /** Read by a screen reader before a side line's moves. */
+    variation: "Variation",
   },
   /** The Load PGN screen: the four ingestion controls, the picker, its errors. */
   loadPgn: {
@@ -509,10 +511,9 @@ const en = {
     },
     /** Hand the position on screen to Play with Engine — the Board Editor's wording. */
     playFromHere: "Play from here",
+    /** The empty-tree hint of the flowing tree view (the Openings explorer, a Library repertoire line). */
     tree: {
       empty: "Play a move, or set a position up from the Position tab.",
-      /** Read by a screen reader before a side line's moves. */
-      variation: "Variation",
     },
     settings: {
       title: "Analysis",
