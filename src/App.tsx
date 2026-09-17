@@ -1,5 +1,6 @@
 //import * as Sentry from "@sentry/react";
-import { createBrowserRouter, Navigate, RouterProvider, useLocation } from "react-router";
+import { lazy, Suspense, type ReactNode } from "react";
+import { createBrowserRouter, Navigate, RouterProvider, useLocation, type RouteObject } from "react-router";
 
 import { DefaultLayout } from './views/main/Layout';
 import { default as HomeScreen  } from './views/home/Main'
@@ -37,6 +38,43 @@ export function ToolsOpeningsRedirect() {
   const location = useLocation();
   return <Navigate to={`/openings${location.search}${location.hash}`} replace />;
 }
+
+/**
+ * The **Development** section's routes (CTA-60) — the five boards composed from
+ * the unified board core (`.claude/rules/chessboard-v2.md`).
+ *
+ * Dev-only, and this array is the whole of the gate. Two things make it
+ * provable rather than hopeful:
+ *
+ * - `import.meta.env.DEV` is replaced by the literal `false` in a production
+ *   build, so the conditional below is dead code;
+ * - every screen is reached through `lazy(() => import(…))` rather than a
+ *   static import at the top of this file, so with the branch dead there is no
+ *   reference to `views/dev/` left for rollup to keep — no dev chunk is
+ *   emitted at all, where a static import would have been bundled whether the
+ *   route existed or not.
+ *
+ * `Suspense` is required by `lazy`, and a board screen resolves from the same
+ * dev server in a frame, so the fallback is deliberately nothing.
+ */
+const devScreen = (load: Parameters<typeof lazy>[0]): ReactNode => {
+  const Screen = lazy(load);
+  return (
+    <Suspense fallback={null}>
+      <Screen />
+    </Suspense>
+  );
+};
+
+const devRoutes: RouteObject[] = import.meta.env.DEV
+  ? [
+      { path: "/dev/analysis", element: devScreen(() => import("./views/dev/analysis/Main")) },
+      { path: "/dev/play", element: devScreen(() => import("./views/dev/play/Main")) },
+      { path: "/dev/masked", element: devScreen(() => import("./views/dev/masked/Main")) },
+      { path: "/dev/openings", element: devScreen(() => import("./views/dev/openings/Main")) },
+      { path: "/dev/repertoire", element: devScreen(() => import("./views/dev/repertoire/Main")) },
+    ]
+  : [];
 
 const routes = createBrowserRouter(
 
@@ -119,7 +157,9 @@ const routes = createBrowserRouter(
         {
           path: "/pgn/*",
           element: <LegacyPgnRedirect />
-        }
+        },
+        // The Development section — dev-only; see `devRoutes` above.
+        ...devRoutes
 
       ]
     }

@@ -68,8 +68,12 @@ regression. The realization is composition:
 
 **The propagation guarantee** is the whole point: the pinned best-variations
 block and the panel skeleton exist in **one component**, so changing that
-component changes all five boards. That is asserted by a test
-(`src/views/dev/devBoards.test.tsx`), not left to inspection.
+component changes all five boards. That is asserted by **two** tests rather
+than left to inspection: `devPanelPropagation.test.tsx` replaces `BoardPanel`
+with a sentinel and renders all five boards, so a screen that grew a panel of
+its own fails — which is the failure a reviewer cannot catch by reading, since
+`<MyOwnPanel>` looks perfectly reasonable in isolation. `devBoards.test.tsx`
+keeps the real panel and asserts what is inside it on each of the five.
 
 ---
 
@@ -474,7 +478,20 @@ what a screen gains:
 - **The Development section never ships.** Everything under `/dev/*` is gated
   on `import.meta.env.DEV`, in `navFolders()`, `navItems()` and `App.tsx`, and
   the routes are `React.lazy` dynamic imports inside the dead branch so the
-  production bundle carries no dev chunk at all.
+  production bundle carries no dev chunk at all. Verified by grepping `dist/`
+  after a build: no `/dev/*` path, no `dev-*` test id, no `chessapp.dev.*`
+  storage key, no `BoardPanel`, and no extra chunk.
+
+  **The one residue, and why it stays.** The `dev.*` strings in
+  `src/locales/en.ts` and `he.ts` *do* ship — a few hundred bytes of text that
+  nothing in a production build reads. A locale catalog is one plain object, so
+  a property cannot be tree-shaken out of it, and gating the block would give
+  up the two guarantees the catalogs exist for: `he: typeof en` making a
+  missing translation a compile error, and `locales.test.ts` asserting that
+  every key the nav returns resolves in both languages — which is how a
+  dev-only label, the one kind nobody would ever notice missing, is covered at
+  all. Dead text in the bundle is the cheaper of the two prices. Nothing
+  *executable*, addressable or persistent leaks, which is what the gate is for.
 
 ---
 
@@ -491,4 +508,7 @@ what a screen gains:
 | `src/views/dev/core/BoardPanel.tsx` | §3.2 — **the** panel skeleton and the pinned variations block. |
 | `src/views/dev/analysis/` · `play/` · `masked/` · `openings/` · `repertoire/` | §4 — the five derived boards. |
 | `src/views/dev/devNav.ts` | The dev-gated sidebar folder and its entries. |
-| `src/views/dev/devBoards.test.tsx` | The propagation assertion of §0. |
+| `src/views/dev/devBoards.test.tsx` | The five boards rendered for real: the shared square, the shared skeleton, and the one thing each board keeps as its own. |
+| `src/views/dev/devPanelPropagation.test.tsx` | The propagation assertion of §0 — `BoardPanel` replaced by a sentinel. |
+| `src/views/dev/core/devStores.test.ts` | The dev/shipped key isolation of §2.4, in both directions. |
+| `src/views/dev/devTestHarness.tsx` | The `Engine` and `<Chessboard>` stand-ins §8 of `chessboard.md` requires, written once for five boards. |

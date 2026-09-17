@@ -830,6 +830,72 @@ const en = {
     /** Label on the link out to the project's source repository. */
     source: "Source",
   },
+  /**
+   * The **Development** section (CTA-60) — the five boards composed from the
+   * unified board core (`.claude/rules/chessboard-v2.md`). Dev-only: the
+   * sidebar folder and the routes are behind `import.meta.env.DEV`, so no
+   * Development screen, route, test id or storage key reaches the deployed
+   * build.
+   *
+   * **These strings are the one exception, deliberately.** A catalog is one
+   * plain object, so a property cannot be tree-shaken out of it; gating the
+   * block would give up `he: typeof en` (a missing translation as a compile
+   * error) and `locales.test.ts`'s assertion that every nav label resolves in
+   * both languages — which is the only thing covering a dev-only label, the
+   * kind nobody would notice missing. A few hundred bytes of dead text is the
+   * cheaper price. `.claude/rules/chessboard-v2.md` §6 carries the reasoning.
+   *
+   * It is a block of its own and a thin one on purpose. Everything a v2 board
+   * says that a shipped board already says is read from that screen's block —
+   * `analysis.*` for the engine settings and the position tab, `masking.*` for
+   * the mask editor, `openings.*` for the explorer, and the shared
+   * `moveList.*` / `variations.*` / `promotion.*` / `board.*` for the pieces
+   * every board renders. A derived board that needed a locale block of its own
+   * would not be derived.
+   */
+  dev: {
+    folder: "Development",
+    /** The five boards, in the order the spec derives them. */
+    screens: {
+      analysis: "Analysis v2",
+      play: "Play with Engine v2",
+      masked: "Masked Pieces v2",
+      openings: "Openings v2",
+      repertoire: "Repertoire v2",
+    },
+    /**
+     * The panel's tab strip. Named here rather than read from five screens'
+     * blocks because the strip is the shared skeleton's, and a tab that means
+     * the same thing on five boards should not be five keys.
+     */
+    tabs: {
+      moves: "Moves",
+      engine: "Engine",
+      position: "Position",
+      mask: "Mask",
+      tree: "Tree",
+      info: "Info",
+    },
+    /** The header slot's controls, where a v2 board's differ from a shipped one's. */
+    controls: {
+      newGame: "New game",
+      newBoard: "New board",
+      save: "Save",
+      saved: "Saved",
+    },
+    /** Openings v2's explorer footer — the book's continuations from here. */
+    book: {
+      title: "Book continuations",
+      empty: "No known continuations from here.",
+    },
+    /** Repertoire v2, whose line comes out of the shipped `.pgn` catalog. */
+    repertoire: {
+      /** No `?game=` arrived and the catalog offered nothing to fall back to. */
+      missing: "No repertoire line loaded.",
+      /** Above the line's name: where it came from. */
+      source: "From the library",
+    },
+  },
 };
 
 export default en;
