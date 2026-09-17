@@ -4,9 +4,11 @@ import {
 } from "./analysisSettings";
 import { gameTag, type Game, type GameHeaders } from "./gameModel";
 import {
+  countVariations,
   fenAtNode,
   mainlineGame,
   nodeAtSanPath,
+  pathTo,
   treeToPgn,
   type GameTree,
   type VariationNode,
@@ -231,9 +233,18 @@ export type SavedAnalysisSummary = {
   moves: number;
   /** How many nodes there are in total — mainline plus every side line. */
   nodes: number;
-  /** How many nodes sit past the mainline — the "N variations" line's unit. */
+  /**
+   * How many distinct side lines branch off the tree — the "N variations"
+   * line's unit. A single side line counts once however many moves it runs
+   * to; see {@link countVariations}.
+   */
   variations: number;
-  /** How deep into the tree the reader was standing. */
+  /**
+   * How deep into the tree the reader was standing — resolved against `tree`,
+   * not read off `saved.path` directly, so a path left stale by an edit since
+   * the record was written cannot claim a depth deeper than where the record
+   * actually reopens (`nodeAtSanPath` stops at the last SAN it still matches).
+   */
   ply: number;
 };
 
@@ -258,10 +269,11 @@ export const savedAnalysisSummary = (
     // Half-moves rounded up to full moves, the way the move list numbers them.
     moves: Math.ceil(plies / 2),
     nodes,
-    // Every node past the mainline. Counts nodes, not moves — `moves` is in a
-    // different unit, so the "N variations" line cannot derive from it.
-    variations: nodes - plies,
-    ply: saved.path.length,
+    variations: countVariations(tree),
+    // The path resolved against the tree, so a stale record (edited since it
+    // was saved) reports the depth it actually reopens at rather than the
+    // length of a path it can no longer fully walk.
+    ply: pathTo(tree, nodeAtSanPath(tree, saved.path)).length,
   };
 };
 

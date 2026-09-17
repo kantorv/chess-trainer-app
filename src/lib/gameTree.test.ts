@@ -4,6 +4,7 @@ import { parsePgnGames, parsePgnTree } from "./pgn";
 import { moveRowsOf } from "./gameNavigation";
 import {
   addMove,
+  countVariations,
   emptyTree,
   fenAtNode,
   findNode,
@@ -353,5 +354,50 @@ describe("sanPathTo / nodeAtSanPath — a portable place in a tree", () => {
     const found = nodeAtSanPath(tree, ["e4", "c5", "Nc3", "d6"]);
 
     expect(sanPathTo(tree, found)).toEqual(["e4", "c5"]);
+  });
+});
+
+describe("countVariations", () => {
+  it("is zero for a tree with only one line", () => {
+    expect(countVariations(opening().tree)).toBe(0);
+  });
+
+  it("counts a side line once, however many moves it runs to", () => {
+    const short = play(opening().tree, null, "e4");
+    const branchedShort = play(short.tree, short.nodeId, "c5").tree;
+    expect(countVariations(branchedShort)).toBe(1);
+
+    const long = play(opening().tree, null, "e4");
+    const branchedLong = play(
+      long.tree,
+      long.nodeId,
+      "c5",
+      "Nc3",
+      "a6",
+      "Bc4",
+      "e6",
+      "Qf3",
+    ).tree;
+    expect(countVariations(branchedLong)).toBe(1);
+  });
+
+  it("counts a branch at the very first half-move, not only deeper ones", () => {
+    const tree = play(emptyTree(), null, "e4").tree;
+    const branched = play(emptyTree(), null, "d4").tree;
+    // Two alternatives at ply 1, "d4" appended beside the existing "e4" tree.
+    const merged: GameTree = { ...tree, moves: [...tree.moves, ...branched.moves] };
+
+    expect(countVariations(merged)).toBe(1);
+  });
+
+  it("counts every branch point, not just one", () => {
+    // Mainline e4 e5 Nf3 Nc6, plus a side line off e4 and another off e5.
+    const { tree: t1, nodeId: e4 } = play(emptyTree(), null, "e4");
+    const { tree: t2, nodeId: e5 } = play(t1, e4, "e5");
+    const t3 = play(t2, e5, "Nf3").tree;
+    const t4 = play(t3, e4, "c5").tree;
+    const t5 = play(t4, e5, "Nc3").tree;
+
+    expect(countVariations(t5)).toBe(2);
   });
 });

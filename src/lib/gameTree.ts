@@ -148,6 +148,29 @@ export const nodeAtSanPath = (
   return found;
 };
 
+/**
+ * How many side lines branch off the tree — not how many moves are in them.
+ *
+ * `children[0]` is the mainline continuation at every node (the module note
+ * above), so every alternative past it is one side line, however many moves
+ * long it runs. Counted at every point that can branch, including the very
+ * first half-move (`tree.moves` is the alternatives there, the way a deeper
+ * node's `children` is everywhere else) — so the total is the sum over every
+ * point in the tree of `max(0, alternatives.length - 1)`.
+ *
+ * The shared home for a count `savedAnalyses.ts` and `savedOpenings.ts` both
+ * need for their "N variations" caption: a single 18-move side line is one
+ * variation, not eighteen.
+ */
+export const countVariations = (tree: GameTree): number => {
+  const walk = (nodes: readonly VariationNode[]): number =>
+    nodes.reduce(
+      (total, node) => total + walk(node.children),
+      Math.max(0, nodes.length - 1),
+    );
+  return walk(tree.moves);
+};
+
 /** The first-child chain from a starting list — the mainline of that subtree. */
 const firstChildChain = (from: VariationNode[]): VariationNode[] => {
   const chain: VariationNode[] = [];

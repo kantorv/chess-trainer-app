@@ -201,7 +201,22 @@ describe("Saved openings — the list", () => {
 
     const row = screen.getByTestId("saved-openings-item-a1");
     expect(row).toHaveTextContent("2 moves");
-    expect(row).toHaveTextContent("2 variations");
+    expect(row).toHaveTextContent("1 variation");
+  });
+
+  it("counts a side line once no matter how many moves it runs to", () => {
+    saveOpening(
+      save("a1", [
+        [[], ["e4", "e5", "Nf3"]],
+        [["e4"], ["c5", "Nc3", "a6", "Bc4", "e6", "Qf3"]],
+      ]),
+    );
+
+    renderScreen();
+
+    expect(screen.getByTestId("saved-openings-item-a1")).toHaveTextContent(
+      "1 variation",
+    );
   });
 
   it("says nothing about variations for an opening with only one line", () => {

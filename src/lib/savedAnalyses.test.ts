@@ -199,7 +199,7 @@ describe("savedAnalysisFrom — a row out of storage", () => {
 });
 
 describe("savedAnalysisSummary — what a row says without opening it", () => {
-  it("counts the mainline, every node, and how far in the reader was", () => {
+  it("counts the mainline, its one side line, and how far in the reader was", () => {
     const tree = grow([
       [[], ["e4", "e5", "Nf3"]],
       [["e4"], ["c5", "Nf3"]],
@@ -207,12 +207,36 @@ describe("savedAnalysisSummary — what a row says without opening it", () => {
     const saved = save(tree, ["e4", "c5"]);
 
     expect(savedAnalysisSummary(saved, tree)).toEqual({
-      // Three half-moves numbered as two full moves; two nodes past the mainline.
+      // Three half-moves numbered as two full moves; five nodes in all, but
+      // only one branch point — the c5 side line, whatever it runs to.
       moves: 2,
       nodes: 5,
-      variations: 2,
+      variations: 1,
       ply: 2,
     });
+  });
+
+  it("counts one variation whether it runs two moves or many", () => {
+    const short = grow([
+      [[], ["e4", "e5", "Nf3"]],
+      [["e4"], ["c5"]],
+    ]);
+    const long = grow([
+      [[], ["e4", "e5", "Nf3"]],
+      [["e4"], ["c5", "Nc3", "a6", "Bc4", "e6", "Qf3"]],
+    ]);
+
+    expect(savedAnalysisSummary(save(short), short).variations).toBe(1);
+    expect(savedAnalysisSummary(save(long), long).variations).toBe(1);
+  });
+
+  it("resolves the standing-ply against the tree, not a stale stored path", () => {
+    const tree = grow([[[], ["e4", "e5"]]]);
+    // A path naming a move this tree no longer has past "e4" — as if the
+    // record were written against a tree that has since been edited.
+    const saved = save(tree, ["e4", "d5"]);
+
+    expect(savedAnalysisSummary(saved, tree).ply).toBe(1);
   });
 
   it("reads as empty for a record that will not parse", () => {
