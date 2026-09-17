@@ -77,7 +77,7 @@ const he: typeof en = {
     capturedByBlack: "נלקח על ידי השחור",
   },
   variations: {
-    title: "הווריאציות הטובות ביותר",
+    title: "וריאציות",
     depth: "עומק {{depth}}",
     thinking: "ממתינים למנוע…",
     partial: "{{shown}} מתוך {{requested}} וריאציות עד כה.",

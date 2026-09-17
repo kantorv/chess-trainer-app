@@ -98,7 +98,11 @@ const en = {
   },
   /** The engine's lines — `views/shared/BestVariations.tsx`, on three screens. */
   variations: {
-    title: "Best variations",
+    /**
+     * The header checkbox's label (CTA-56) — the checkbox is the block's own
+     * control: clearing it hides the lines, for analysing on one's own.
+     */
+    title: "Variations",
     depth: "Depth {{depth}}",
     thinking: "Waiting for the engine…",
     partial: "{{shown}} of {{requested}} lines so far.",

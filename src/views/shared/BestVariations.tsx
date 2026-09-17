@@ -1,7 +1,9 @@
 import { Fragment, useState } from "react";
 import Box from "@mui/material/Box";
 import ButtonBase from "@mui/material/ButtonBase";
+import Checkbox from "@mui/material/Checkbox";
 import Chip from "@mui/material/Chip";
+import FormControlLabel from "@mui/material/FormControlLabel";
 import Typography from "@mui/material/Typography";
 import ExpandMoreRoundedIcon from "@mui/icons-material/ExpandMoreRounded";
 import { useTranslation } from "react-i18next";
@@ -40,6 +42,14 @@ import { moveSx, sanTokenSx } from "./moveTokenSx";
  * belongs to the position it was made on: the same position's
  * search deepening (same FEN) keeps it, a new analysed position starts every
  * row collapsed.
+ *
+ * The header is the block's own control (CTA-56): a small checkbox where a
+ * plain title used to sit — checked by default. Clearing it hides the lines
+ * and the waiting line both, the checkbox and the depth chip staying behind
+ * as the way back: the reader analysing a position on their own gets the
+ * engine's suggestions out of sight without giving up the search itself. It
+ * is a working mode rather than an expansion, so it is *not* keyed to the
+ * FEN — a new analysed position does not bring the lines back.
  *
  * Whether a *move* is clickable is decided by `onSelectMove` alone — the
  * score's toggle is there either way:
@@ -111,6 +121,14 @@ function BestVariations({
 }: BestVariationsProps) {
   const { t } = useTranslation();
 
+  /*
+    Whether the lines show at all — the header's checkbox (CTA-56). A working
+    mode rather than an expansion: hiding the lines is about the reader, not
+    the position, so unlike the expansion set below it is *not* keyed to the
+    FEN — a new analysed position must not bring back what they put away.
+  */
+  const [showLines, setShowLines] = useState(true);
+
   const [expansion, setExpansion] = useState<Expansion>(() => ({
     fen: analysis.fen,
     ranks: new Set(),
@@ -170,9 +188,28 @@ function BestVariations({
           mb: 1,
         }}
       >
-        <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-          {t("variations.title")}
-        </Typography>
+        {/*
+          The header is the block's own control (CTA-56): a small checkbox
+          where the plain title was, checked by default. Clearing it puts the
+          lines away — analysing a position on one's own means not having the
+          engine's suggestions in the corner of the eye — while the row itself
+          stays, the checkbox being the way back. The depth chip stays beside
+          it: the search keeps running, lines or no lines.
+        */}
+        <FormControlLabel
+          control={
+            <Checkbox
+              size="small"
+              checked={showLines}
+              data-testid="variations-toggle"
+              onChange={(event) => setShowLines(event.target.checked)}
+            />
+          }
+          slotProps={{
+            typography: { variant: "subtitle2", sx: { fontWeight: 700 } },
+          }}
+          label={t("variations.title")}
+        />
         <Chip
           size="small"
           variant="outlined"
@@ -181,11 +218,17 @@ function BestVariations({
         />
       </Box>
 
-      {lines.length === 0 ? (
+      {/*
+        The checkbox's gate (CTA-56): cleared, only the header renders —
+        the waiting line too, not just the lines, because what the reader
+        put away is the engine's talk, whatever shape it is in.
+      */}
+      {showLines && lines.length === 0 && (
         <Typography variant="body2" sx={{ color: "text.secondary" }}>
           {t("variations.thinking")}
         </Typography>
-      ) : (
+      )}
+      {showLines && lines.length > 0 && (
         <Box
           component="ol"
           sx={{
@@ -357,7 +400,7 @@ function BestVariations({
         </Box>
       )}
 
-      {lines.length > 0 && lines.length < requested && (
+      {showLines && lines.length > 0 && lines.length < requested && (
         <Typography
           variant="caption"
           data-testid="variations-partial"

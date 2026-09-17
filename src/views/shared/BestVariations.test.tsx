@@ -382,6 +382,76 @@ describe("the best variations view", () => {
     );
   });
 
+  it("hides the lines behind the header's checkbox, and brings them back", async () => {
+    // CTA-56: the header's checkbox is the block's own control — clearing it
+    // puts the engine's lines away entirely, for the reader analysing a
+    // position on their own. The row itself stays: the checkbox is the way
+    // back, and it speaks its own name.
+    renderVariations({
+      fen: DEFAULT_POSITION,
+      depth: 18,
+      lines: [line(1, 32, "e2e4 e7e5 g1f3"), line(2, 18, "d2d4 d7d5")],
+    });
+
+    // The testid lands on the MUI Checkbox's root, not its input, so the
+    // input is found by its role — and the name in the query asserts the
+    // label with it, the way the saved-list tests find their checkboxes.
+    const toggle = screen.getByRole("checkbox", { name: "Variations" });
+    expect(toggle).toBeChecked();
+
+    const user = userEvent.setup();
+    await user.click(toggle);
+
+    expect(toggle).not.toBeChecked();
+    expect(screen.queryByTestId("variation-1")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("variation-2")).not.toBeInTheDocument();
+    // The block stays on screen — only its contents are gone.
+    expect(screen.getByTestId("best-variations")).toBeInTheDocument();
+
+    await user.click(toggle);
+
+    expect(toggle).toBeChecked();
+    expect(screen.getByTestId("variation-1")).toBeInTheDocument();
+    expect(screen.getByTestId("variation-2")).toBeInTheDocument();
+  });
+
+  it("keeps the lines hidden across a new analysed position", async () => {
+    // Hiding the lines is a working mode, not an expansion: it is about the
+    // reader, not the position, so — unlike the expansion set — a new FEN
+    // must not bring back what was put away.
+    const afterE4 = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1";
+    const movedOn: Analysis = {
+      fen: afterE4,
+      depth: 15,
+      lines: [
+        {
+          multipv: 1,
+          score: { kind: "cp", value: 20 },
+          depth: 15,
+          san: pvToSan(afterE4, "g8f6 g1f3"),
+        },
+      ],
+    };
+
+    const view = renderVariations({
+      fen: DEFAULT_POSITION,
+      depth: 18,
+      lines: [line(1, 32, "e2e4 e7e5 g1f3")],
+    });
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("checkbox", { name: "Variations" }));
+
+    view.rerender(
+      <AppThemeWithLang>
+        <BestVariations analysis={movedOn} requested={3} />
+      </AppThemeWithLang>,
+    );
+
+    expect(screen.getByRole("checkbox", { name: "Variations" })).not.toBeChecked();
+    expect(view.queryByTestId("variation-1")).not.toBeInTheDocument();
+  });
+
   it("prints a masked line in coordinates but the click carries the true SAN", async () => {
     // The mask is a costume, never a rule (`lib/pieceMask.ts`): what a move
     // prints is disguised, what it reports is not — the Analysis Board's lines
