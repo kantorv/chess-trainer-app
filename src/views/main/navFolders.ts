@@ -1,4 +1,5 @@
 import type { SvgIconComponent } from "@mui/icons-material";
+import AccountTreeRoundedIcon from "@mui/icons-material/AccountTreeRounded";
 import FolderSpecialRoundedIcon from "@mui/icons-material/FolderSpecialRounded";
 import HandymanRoundedIcon from "@mui/icons-material/HandymanRounded";
 import MemoryRoundedIcon from "@mui/icons-material/MemoryRounded";
@@ -90,6 +91,16 @@ export const navFolders = (): readonly NavFolder[] => [
     id: "tools",
     labelKey: "nav.folders.tools",
     icon: HandymanRoundedIcon,
+  },
+  {
+    id: "analysis",
+    labelKey: "nav.folders.analysisBoard",
+    icon: AccountTreeRoundedIcon,
+    // One destination (CTA-58, mirroring CTA-42's Openings folder): the
+    // saved list is the screen worth reaching for, so the folder renders as
+    // one clickable row to it and the board view leaves the sidebar
+    // entirely — it is the saved list's New button.
+    singleEntry: true,
   },
   {
     id: "openings",

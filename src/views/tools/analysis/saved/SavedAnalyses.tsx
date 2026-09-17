@@ -9,6 +9,7 @@ import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
+import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import ArticleRounded from "@mui/icons-material/ArticleRounded";
 import SportsEsportsRounded from "@mui/icons-material/SportsEsportsRounded";
 import { Link as RouterLink } from "react-router";
@@ -568,6 +569,23 @@ function SavedAnalyses() {
               {t("savedAnalyses.count", { count: analyses.length })}
             </Typography>
           </Box>
+
+          {/*
+            The board this screen's sidebar entry hides (CTA-58, mirroring
+            CTA-42's Openings folder): the Analysis folder is a single entry
+            to *this* screen, so a fresh board is reached from here. No query
+            params — the arrival is a blank Analysis Board.
+          */}
+          <Button
+            size="small"
+            variant="outlined"
+            component={RouterLink}
+            to="/tools/analysis"
+            startIcon={<AddRoundedIcon fontSize="small" />}
+            data-testid="saved-analyses-new"
+          >
+            {t("savedAnalyses.new")}
+          </Button>
 
           {/*
             The export controls, and only beside the view that has the
