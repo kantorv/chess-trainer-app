@@ -208,19 +208,248 @@ describe("the best variations view", () => {
     expect(onSelectMove).toHaveBeenLastCalledWith(["e4", "e5", "Nf3"]);
   });
 
-  it("prints plain text with no buttons when no click handler is given", () => {
+  it("hands a move click the same prefix in both states", async () => {
+    // CTA-56: the chevron may expand the row, but a move is a move wherever
+    // it shows — a visible move is a playable one, collapsed or expanded.
+    const onSelectMove = vi.fn();
+    renderVariations(
+      { fen: DEFAULT_POSITION, depth: 18, lines: [line(1, 32, "e2e4 e7e5 g1f3")] },
+      3,
+      { onSelectMove },
+    );
+
+    const user = userEvent.setup();
+    await user.click(screen.getByTestId("variation-1-move-2"));
+    expect(onSelectMove).toHaveBeenLastCalledWith(["e4", "e5"]);
+
+    await user.click(screen.getByTestId("variation-1-toggle"));
+    await user.click(screen.getByTestId("variation-1-move-3"));
+    expect(onSelectMove).toHaveBeenLastCalledWith(["e4", "e5", "Nf3"]);
+  });
+
+  it("prints the moves as plain text when no click handler is given", () => {
     // The two engine screens' Variations tab: a move there is a thing to read
-    // while playing one of one's own, and the DOM is the text it always was.
+    // while playing one of one's own, so no move is a button — the row's
+    // chevron is the one button the tab has (CTA-56).
     renderVariations({
       fen: DEFAULT_POSITION,
       depth: 18,
       lines: [line(1, 32, "e2e4 e7e5")],
     });
 
-    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("variation-1-move-1")).not.toBeInTheDocument();
     expect(screen.getByTestId("variation-1-line")).toHaveTextContent(
       "1. e4 e5",
     );
+    // The score is plain text again — the toggle moved to the row's chevron.
+    expect(screen.getByTestId("variation-1-score").tagName).toBe("SPAN");
+    expect(screen.getByTestId("variation-1-toggle").tagName).toBe("BUTTON");
+  });
+
+  it("collapses each variation to one line, every move still in the DOM", () => {
+    // CTA-56: collapsed, the row is one line — the moves that fit, the cut
+    // marked by an ellipsis — and the cutting is CSS on the span, so every
+    // move still renders and only the clipping differs. jsdom has no line
+    // boxes, so what a test can read is the span's markers, not the
+    // truncation itself.
+    renderVariations({
+      fen: DEFAULT_POSITION,
+      depth: 18,
+      lines: [line(1, 32, "e2e4 e7e5 g1f3 b8c6 f1c4 g8f6 e1g1")],
+    });
+
+    expect(screen.getByTestId("variation-1-toggle")).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+    expect(screen.getByTestId("variation-1-line")).toHaveAttribute(
+      "data-expanded",
+      "false",
+    );
+    // Nothing is cut out of the DOM — the CSS clips, the moves all render.
+    expect(screen.getByTestId("variation-1-line")).toHaveTextContent(
+      "1. e4 e5 2. Nf3 Nc6 3. Bc4 Nf6 4. O-O",
+    );
+  });
+
+  it("expands a row through its chevron and collapses it the same way", async () => {
+    // Plain mode — no click handler — is where the toggle has to work on its
+    // own: the two engine screens' tab has nothing else clickable. The label
+    // flips with the state and names the variation, the score and the action,
+    // because an icon's aria-label replaces its content for a screen reader
+    // and the icon alone says none of the three.
+    renderVariations({
+      fen: DEFAULT_POSITION,
+      depth: 18,
+      lines: [line(1, 32, "e2e4 e7e5 g1f3"), line(2, 18, "d2d4 d7d5")],
+    });
+
+    const user = userEvent.setup();
+    await user.click(screen.getByTestId("variation-1-toggle"));
+
+    expect(screen.getByTestId("variation-1-toggle")).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+    expect(screen.getByTestId("variation-1-line")).toHaveAttribute(
+      "data-expanded",
+      "true",
+    );
+    expect(screen.getByTestId("variation-1-toggle")).toHaveAccessibleName(
+      "Variation 1, +0.32 — collapse the line",
+    );
+    // Rows are independent — each chevron speaks for its own line alone.
+    expect(screen.getByTestId("variation-2-toggle")).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+
+    await user.click(screen.getByTestId("variation-1-toggle"));
+
+    expect(screen.getByTestId("variation-1-toggle")).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+    expect(screen.getByTestId("variation-1-line")).toHaveAttribute(
+      "data-expanded",
+      "false",
+    );
+    expect(screen.getByTestId("variation-1-toggle")).toHaveAccessibleName(
+      "Variation 1, +0.32 — show the full line",
+    );
+  });
+
+  it("keeps an expansion through the same position deepening, and drops it on a new one", async () => {
+    // An expansion belongs to the position it was made on (CTA-56): the
+    // search streaming deeper results for the same FEN keeps it — the row
+    // re-renders its longer line — and the next position starts every row
+    // collapsed.
+    const afterE4 = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1";
+    const before: Analysis = {
+      fen: DEFAULT_POSITION,
+      depth: 18,
+      lines: [line(1, 32, "e2e4 e7e5 g1f3")],
+    };
+    const deeper: Analysis = {
+      fen: DEFAULT_POSITION,
+      depth: 21,
+      lines: [line(1, 32, "e2e4 e7e5 g1f3 b8c6 f1b5", 21)],
+    };
+    const movedOn: Analysis = {
+      fen: afterE4,
+      depth: 15,
+      lines: [
+        {
+          multipv: 1,
+          score: { kind: "cp", value: 20 },
+          depth: 15,
+          san: pvToSan(afterE4, "g8f6 g1f3"),
+        },
+      ],
+    };
+
+    const view = renderVariations(before);
+    const user = userEvent.setup();
+    await user.click(view.getByTestId("variation-1-toggle"));
+
+    // Same FEN, deeper search — the row stays open and grows its line.
+    view.rerender(
+      <AppThemeWithLang>
+        <BestVariations analysis={deeper} requested={3} />
+      </AppThemeWithLang>,
+    );
+    expect(view.getByTestId("variation-1-toggle")).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+    expect(view.getByTestId("variation-1-line")).toHaveTextContent(
+      "1. e4 e5 2. Nf3 Nc6 3. Bb5",
+    );
+
+    // New FEN — every row starts collapsed.
+    view.rerender(
+      <AppThemeWithLang>
+        <BestVariations analysis={movedOn} requested={3} />
+      </AppThemeWithLang>,
+    );
+    expect(view.getByTestId("variation-1-toggle")).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+    expect(view.getByTestId("variation-1-line")).toHaveAttribute(
+      "data-expanded",
+      "false",
+    );
+  });
+
+  it("hides the lines behind the header's checkbox, and brings them back", async () => {
+    // CTA-56: the header's checkbox is the block's own control — clearing it
+    // puts the engine's lines away entirely, for the reader analysing a
+    // position on their own. The row itself stays: the checkbox is the way
+    // back, and it speaks its own name.
+    renderVariations({
+      fen: DEFAULT_POSITION,
+      depth: 18,
+      lines: [line(1, 32, "e2e4 e7e5 g1f3"), line(2, 18, "d2d4 d7d5")],
+    });
+
+    // The testid lands on the MUI Checkbox's root, not its input, so the
+    // input is found by its role — and the name in the query asserts the
+    // label with it, the way the saved-list tests find their checkboxes.
+    const toggle = screen.getByRole("checkbox", { name: "Variations" });
+    expect(toggle).toBeChecked();
+
+    const user = userEvent.setup();
+    await user.click(toggle);
+
+    expect(toggle).not.toBeChecked();
+    expect(screen.queryByTestId("variation-1")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("variation-2")).not.toBeInTheDocument();
+    // The block stays on screen — only its contents are gone.
+    expect(screen.getByTestId("best-variations")).toBeInTheDocument();
+
+    await user.click(toggle);
+
+    expect(toggle).toBeChecked();
+    expect(screen.getByTestId("variation-1")).toBeInTheDocument();
+    expect(screen.getByTestId("variation-2")).toBeInTheDocument();
+  });
+
+  it("keeps the lines hidden across a new analysed position", async () => {
+    // Hiding the lines is a working mode, not an expansion: it is about the
+    // reader, not the position, so — unlike the expansion set — a new FEN
+    // must not bring back what was put away.
+    const afterE4 = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1";
+    const movedOn: Analysis = {
+      fen: afterE4,
+      depth: 15,
+      lines: [
+        {
+          multipv: 1,
+          score: { kind: "cp", value: 20 },
+          depth: 15,
+          san: pvToSan(afterE4, "g8f6 g1f3"),
+        },
+      ],
+    };
+
+    const view = renderVariations({
+      fen: DEFAULT_POSITION,
+      depth: 18,
+      lines: [line(1, 32, "e2e4 e7e5 g1f3")],
+    });
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("checkbox", { name: "Variations" }));
+
+    view.rerender(
+      <AppThemeWithLang>
+        <BestVariations analysis={movedOn} requested={3} />
+      </AppThemeWithLang>,
+    );
+
+    expect(screen.getByRole("checkbox", { name: "Variations" })).not.toBeChecked();
+    expect(view.queryByTestId("variation-1")).not.toBeInTheDocument();
   });
 
   it("prints a masked line in coordinates but the click carries the true SAN", async () => {
@@ -244,5 +473,32 @@ describe("the best variations view", () => {
     expect(move).toHaveAttribute("data-san", "Nf3");
     await user.click(move);
     expect(onSelectMove).toHaveBeenCalledWith(["Nf3"]);
+  });
+
+  it("expands a masked row without unmasking it", async () => {
+    // The costume covers both states (CTA-56): the expanded line prints the
+    // same coordinates the collapsed one did, and a click still carries the
+    // true SANs — the mask is never a rule (`lib/pieceMask.ts`).
+    const onSelectMove = vi.fn();
+    renderVariations(
+      { fen: DEFAULT_POSITION, depth: 18, lines: [line(1, 0, "g1f3 g8f6 b1c3")] },
+      3,
+      { mask: MASK_PRESETS.nonPawns, onSelectMove },
+    );
+
+    const user = userEvent.setup();
+    await user.click(screen.getByTestId("variation-1-toggle"));
+    expect(screen.getByTestId("variation-1-line")).toHaveAttribute(
+      "data-expanded",
+      "true",
+    );
+    expect(screen.getByTestId("variation-1-line")).toHaveTextContent(
+      "1. g1f3 g8f6 2. b1c3",
+    );
+
+    const move = screen.getByTestId("variation-1-move-3");
+    expect(move).toHaveAttribute("data-san", "Nc3");
+    await user.click(move);
+    expect(onSelectMove).toHaveBeenLastCalledWith(["Nf3", "Nf6", "Nc3"]);
   });
 });

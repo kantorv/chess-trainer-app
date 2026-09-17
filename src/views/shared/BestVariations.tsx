@@ -1,8 +1,11 @@
-import { Fragment } from "react";
+import { Fragment, useState } from "react";
 import Box from "@mui/material/Box";
 import ButtonBase from "@mui/material/ButtonBase";
+import Checkbox from "@mui/material/Checkbox";
 import Chip from "@mui/material/Chip";
+import FormControlLabel from "@mui/material/FormControlLabel";
 import Typography from "@mui/material/Typography";
+import ExpandMoreRoundedIcon from "@mui/icons-material/ExpandMoreRounded";
 import { useTranslation } from "react-i18next";
 import {
   formatScore,
@@ -27,24 +30,49 @@ import { moveSx, sanTokenSx } from "./moveTokenSx";
  *
  * A variation is printed one token per move, the move's number inside the token
  * the way the tree viewer's tokens carry theirs (`VariationLine.tsx`) and a
- * plain space between, so the line reads `23. Nf3 Qe7 24. Rd1` and wraps at
- * the panel's edge rather than overflowing it. Whether a move is clickable is
- * decided by `onSelectMove` alone:
+ * plain space between, so the line reads `23. Nf3 Qe7 24. Rd1`. Collapsed —
+ * the default — the row is one line: the score plus as many moves as fit, cut
+ * at the edge with an ellipsis by CSS (`white-space: nowrap` +
+ * `overflow: hidden` + `text-overflow: ellipsis`), never by counting moves,
+ * which would mean measuring the panel (CTA-56, lichess the reference).
+ * A chevron at the row's end expands that row to the whole PV, wrapping
+ * again; clicking it once more collapses it — lichess's disclosure arrow,
+ * so the toggle is an explicit control beside the moves and the score stays
+ * the plain text it always was. Rows expand independently, and an expansion
+ * belongs to the position it was made on: the same position's
+ * search deepening (same FEN) keeps it, a new analysed position starts every
+ * row collapsed.
+ *
+ * The header is the block's own control (CTA-56): a small checkbox where a
+ * plain title used to sit — checked by default. Clearing it hides the lines
+ * and the waiting line both, the checkbox and the depth chip staying behind
+ * as the way back: the reader analysing a position on their own gets the
+ * engine's suggestions out of sight without giving up the search itself. It
+ * is a working mode rather than an expansion, so it is *not* keyed to the
+ * FEN — a new analysed position does not bring the lines back.
+ *
+ * Whether a *move* is clickable is decided by `onSelectMove` alone — the
+ * score's toggle is there either way:
  *
  * - **without it** the moves render as plain text — the two engine screens'
  *   tab, which the reader reads while playing their own moves beside it.
- *   Nothing is clickable, and the DOM is the text it always was.
+ *   The moves are the DOM text they always were; the row's chevron is still
+ *   the expand/collapse button.
  * - **with it** each move is a button, and a click hands over the SAN prefix
  *   up to and including the move clicked — the lichess analysis behaviour:
  *   clicking the third move of a line plays all three. The prefix carries the
  *   *true* SANs even under a mask, because the click is behaviour and the
  *   mask never touches that (`lib/pieceMask.ts`); what the token *prints* is
- *   what is disguised.
+ *   what is disguised. This holds in both states: a move visible is a move
+ *   playable, collapsed or expanded.
  *
  * SAN and the scores are Latin text in a panel that mirrors under Hebrew, so
  * every token carries `dir="ltr"` — an **attribute**, never a CSS declaration,
  * which the RTL emotion cache would flip into the bug it is meant to prevent
- * (see the root `CLAUDE.md`).
+ * (see the root `CLAUDE.md`). The truncation cuts at the line span's own
+ * inline end — the panel's outer edge in English, the side next to the score
+ * under Hebrew — which is where the line's LTR span has to clip; the
+ * alternative would be mirroring the SAN, and that never happens.
  */
 
 type BestVariationsProps = {
@@ -77,6 +105,14 @@ const sanSx = {
   fontSize: "0.8125rem",
 } as const;
 
+/**
+ * Which rows the reader has expanded (CTA-56), keyed by `MultiPV` rank and
+ * stamped with the FEN they were expanded on — the stamp is what makes an
+ * expansion about *that position's* line, so a new analysed position can
+ * drop the lot in one write.
+ */
+type Expansion = { fen: string; ranks: ReadonlySet<number> };
+
 function BestVariations({
   analysis,
   requested,
@@ -84,6 +120,47 @@ function BestVariations({
   onSelectMove,
 }: BestVariationsProps) {
   const { t } = useTranslation();
+
+  /*
+    Whether the lines show at all — the header's checkbox (CTA-56). A working
+    mode rather than an expansion: hiding the lines is about the reader, not
+    the position, so unlike the expansion set below it is *not* keyed to the
+    FEN — a new analysed position must not bring back what they put away.
+  */
+  const [showLines, setShowLines] = useState(true);
+
+  const [expansion, setExpansion] = useState<Expansion>(() => ({
+    fen: analysis.fen,
+    ranks: new Set(),
+  }));
+
+  /*
+    An expansion was about *that position's* line, so a new analysed position
+    starts every row collapsed. Adjusted during render against the previous
+    FEN — React's own answer to "reset state when a value changes", the same
+    move `Sidebar.tsx` makes for its open chain — so the new position never
+    paints with the old one's expansions, the way it would for the one render
+    before an effect fires. The same FEN deepening is not a change: the search
+    streaming deeper results for the one position keeps what the reader
+    opened, and the rows re-render with the longer lines.
+  */
+  if (expansion.fen !== analysis.fen) {
+    setExpansion({ fen: analysis.fen, ranks: new Set() });
+  }
+
+  /*
+    The toggle, built off the fen-matched view so a click can only ever see
+    the same set the rows are rendering from — never a rank carried over from
+    a position that has already gone.
+  */
+  const toggleExpanded = (rank: number) => {
+    const ranks = new Set(
+      expansion.fen === analysis.fen ? expansion.ranks : [],
+    );
+    if (ranks.has(rank)) ranks.delete(rank);
+    else ranks.add(rank);
+    setExpansion({ fen: analysis.fen, ranks });
+  };
 
   /*
     The array is indexed by MultiPV rank, which leaves two kinds of entry that
@@ -111,9 +188,28 @@ function BestVariations({
           mb: 1,
         }}
       >
-        <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-          {t("variations.title")}
-        </Typography>
+        {/*
+          The header is the block's own control (CTA-56): a small checkbox
+          where the plain title was, checked by default. Clearing it puts the
+          lines away — analysing a position on one's own means not having the
+          engine's suggestions in the corner of the eye — while the row itself
+          stays, the checkbox being the way back. The depth chip stays beside
+          it: the search keeps running, lines or no lines.
+        */}
+        <FormControlLabel
+          control={
+            <Checkbox
+              size="small"
+              checked={showLines}
+              data-testid="variations-toggle"
+              onChange={(event) => setShowLines(event.target.checked)}
+            />
+          }
+          slotProps={{
+            typography: { variant: "subtitle2", sx: { fontWeight: 700 } },
+          }}
+          label={t("variations.title")}
+        />
         <Chip
           size="small"
           variant="outlined"
@@ -122,15 +218,39 @@ function BestVariations({
         />
       </Box>
 
-      {lines.length === 0 ? (
+      {/*
+        The checkbox's gate (CTA-56): cleared, only the header renders —
+        the waiting line too, not just the lines, because what the reader
+        put away is the engine's talk, whatever shape it is in.
+      */}
+      {showLines && lines.length === 0 && (
         <Typography variant="body2" sx={{ color: "text.secondary" }}>
           {t("variations.thinking")}
         </Typography>
-      ) : (
+      )}
+      {showLines && lines.length > 0 && (
         <Box
           component="ol"
-          sx={{ listStyle: "none", m: 0, p: 0, display: "grid", gap: 0.75 }}
+          sx={{
+            listStyle: "none",
+            m: 0,
+            p: 0,
+            display: "grid",
+            gridTemplateColumns: "minmax(0, 1fr)",
+            gap: 0.75,
+          }}
         >
+          {/*
+            One column, floored at zero: a plain implicit `auto` track sizes
+            to the rows' content, and a collapsed row's content is a nowrap
+            line whose min-content is its own full width — the track would
+            blow out past the panel and put a scrollbar under the rows
+            instead of an ellipsis in them, which is the thing lichess does
+            not have. `minmax(0, 1fr)` holds the track to the panel, which
+            is what makes the CSS clipping below reachable at all, and keeps
+            an expansion from re-laying the grid out — only the one row
+            changes.
+          */}
           {lines.map((line) => {
             /*
               What the tokens print: the true SANs, disguised when a mask is in
@@ -144,6 +264,9 @@ function BestVariations({
                 ? line.san
                 : maskSanLine(mask, analysis.fen, line.san);
             const prefixes = variationNumbering(analysis.fen, display.length);
+            const isExpanded =
+              expansion.fen === analysis.fen &&
+              expansion.ranks.has(line.multipv);
 
             return (
               <Box
@@ -172,11 +295,37 @@ function BestVariations({
                 >
                   {formatScore(line.score)}
                 </Typography>
+                {/*
+                  Collapsed, the span truncates — one line, the moves that
+                  fit, the cut marked by an ellipsis; CSS does the cutting,
+                  so it follows the panel for free. Expanded, it wraps as it
+                  always did. It also grows to fill whatever of the row the
+                  score and the chevron leave, which is what holds the
+                  chevron at the row's end in every row — a short line
+                  stretches out to it instead of stranding the chevron beside
+                  its last move, so the arrows stand in one column. Every
+                  move renders in both states, only the clipping differs, so
+                  `data-expanded` is the state a test can read: jsdom has no
+                  line boxes to observe truncation with.
+                */}
                 <Typography
                   component="span"
                   dir="ltr"
                   data-testid={`variation-${line.multipv}-line`}
-                  sx={{ ...sanSx, color: "text.secondary", minWidth: 0 }}
+                  data-expanded={isExpanded}
+                  sx={{
+                    ...sanSx,
+                    color: "text.secondary",
+                    minWidth: 0,
+                    flexGrow: 1,
+                    ...(isExpanded
+                      ? {}
+                      : {
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }),
+                  }}
                 >
                   {display.map((san, index) => (
                     <Fragment key={index}>
@@ -203,13 +352,55 @@ function BestVariations({
                     </Fragment>
                   ))}
                 </Typography>
+                {/*
+                  The disclosure arrow (CTA-56): lichess's expand icon, sitting
+                  at the row's end so the toggle is an explicit control beside
+                  the moves and the score stays the plain text it always was —
+                  nothing about the row reads as clickable but its controls.
+                  Pinned to the row's top rather than centred on it, so a row
+                  grown tall keeps its chevron beside the first move instead
+                  of floating at the middle — `flex-start` rather than the
+                  row's baseline, which would perch the icon on the text's
+                  baseline with nothing under it. The line span beside it
+                  grows to fill the row (below), which is what holds every
+                  row's chevron at the row's end, a short line no less than a
+                  clipped one. Kept from shrinking, so the clipped line stops
+                  short of it, never under it. The label names the variation,
+                  the score and the action, because an icon says none of them
+                  to a screen reader on its own.
+                */}
+                <ButtonBase
+                  aria-label={t(
+                    isExpanded ? "variations.collapse" : "variations.expand",
+                    { rank: line.multipv, score: formatScore(line.score) },
+                  )}
+                  aria-expanded={isExpanded}
+                  data-testid={`variation-${line.multipv}-toggle`}
+                  onClick={() => toggleExpanded(line.multipv)}
+                  sx={{
+                    flexShrink: 0,
+                    alignSelf: "flex-start",
+                    p: 0.25,
+                    borderRadius: 0.5,
+                    color: "text.secondary",
+                    "&:hover": { bgcolor: "action.selected" },
+                  }}
+                >
+                  <ExpandMoreRoundedIcon
+                    sx={{
+                      fontSize: "1.125rem",
+                      transition: "transform 150ms",
+                      ...(isExpanded ? { transform: "rotate(180deg)" } : {}),
+                    }}
+                  />
+                </ButtonBase>
               </Box>
             );
           })}
         </Box>
       )}
 
-      {lines.length > 0 && lines.length < requested && (
+      {showLines && lines.length > 0 && lines.length < requested && (
         <Typography
           variant="caption"
           data-testid="variations-partial"

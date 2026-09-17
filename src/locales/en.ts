@@ -96,12 +96,23 @@ const en = {
     capturedByWhite: "Captured by White",
     capturedByBlack: "Captured by Black",
   },
-  /** The engine's lines — `views/shared/BestVariations.tsx`, on two screens. */
+  /** The engine's lines — `views/shared/BestVariations.tsx`, on three screens. */
   variations: {
-    title: "Best variations",
+    /**
+     * The header checkbox's label (CTA-56) — the checkbox is the block's own
+     * control: clearing it hides the lines, for analysing on one's own.
+     */
+    title: "Variations",
     depth: "Depth {{depth}}",
     thinking: "Waiting for the engine…",
     partial: "{{shown}} of {{requested}} lines so far.",
+    /**
+     * The row's chevron's spoken label (CTA-56) — an `aria-label` over an
+     * icon, which says none of this on its own, so it has to carry the
+     * variation and the score itself.
+     */
+    expand: "Variation {{rank}}, {{score}} — show the full line",
+    collapse: "Variation {{rank}}, {{score}} — collapse the line",
   },
   /** The promotion picker — `views/shared/PromotionPicker.tsx`, on two screens. */
   promotion: {
