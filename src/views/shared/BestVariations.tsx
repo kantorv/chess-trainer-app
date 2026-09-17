@@ -1,4 +1,4 @@
-import { Fragment } from "react";
+import { Fragment, useState } from "react";
 import Box from "@mui/material/Box";
 import ButtonBase from "@mui/material/ButtonBase";
 import Chip from "@mui/material/Chip";
@@ -27,24 +27,40 @@ import { moveSx, sanTokenSx } from "./moveTokenSx";
  *
  * A variation is printed one token per move, the move's number inside the token
  * the way the tree viewer's tokens carry theirs (`VariationLine.tsx`) and a
- * plain space between, so the line reads `23. Nf3 Qe7 24. Rd1` and wraps at
- * the panel's edge rather than overflowing it. Whether a move is clickable is
- * decided by `onSelectMove` alone:
+ * plain space between, so the line reads `23. Nf3 Qe7 24. Rd1`. Collapsed —
+ * the default — the row is one line: the score plus as many moves as fit, cut
+ * at the edge with an ellipsis by CSS (`white-space: nowrap` +
+ * `overflow: hidden` + `text-overflow: ellipsis`), never by counting moves,
+ * which would mean measuring the panel (CTA-56, lichess the reference).
+ * Clicking the score expands that row to the whole PV, wrapping again;
+ * clicking it once more collapses it — and the score is the toggle because it
+ * is the one part of the row that is not a move. Rows expand independently,
+ * and an expansion belongs to the position it was made on: the same position's
+ * search deepening (same FEN) keeps it, a new analysed position starts every
+ * row collapsed.
+ *
+ * Whether a *move* is clickable is decided by `onSelectMove` alone — the
+ * score's toggle is there either way:
  *
  * - **without it** the moves render as plain text — the two engine screens'
  *   tab, which the reader reads while playing their own moves beside it.
- *   Nothing is clickable, and the DOM is the text it always was.
+ *   The moves are the DOM text they always were; the score is still the
+ *   expand/collapse button.
  * - **with it** each move is a button, and a click hands over the SAN prefix
  *   up to and including the move clicked — the lichess analysis behaviour:
  *   clicking the third move of a line plays all three. The prefix carries the
  *   *true* SANs even under a mask, because the click is behaviour and the
  *   mask never touches that (`lib/pieceMask.ts`); what the token *prints* is
- *   what is disguised.
+ *   what is disguised. This holds in both states: a move visible is a move
+ *   playable, collapsed or expanded.
  *
  * SAN and the scores are Latin text in a panel that mirrors under Hebrew, so
  * every token carries `dir="ltr"` — an **attribute**, never a CSS declaration,
  * which the RTL emotion cache would flip into the bug it is meant to prevent
- * (see the root `CLAUDE.md`).
+ * (see the root `CLAUDE.md`). The truncation cuts at the line span's own
+ * inline end — the panel's outer edge in English, the side next to the score
+ * under Hebrew — which is where the line's LTR span has to clip; the
+ * alternative would be mirroring the SAN, and that never happens.
  */
 
 type BestVariationsProps = {
@@ -77,6 +93,14 @@ const sanSx = {
   fontSize: "0.8125rem",
 } as const;
 
+/**
+ * Which rows the reader has expanded (CTA-56), keyed by `MultiPV` rank and
+ * stamped with the FEN they were expanded on — the stamp is what makes an
+ * expansion about *that position's* line, so a new analysed position can
+ * drop the lot in one write.
+ */
+type Expansion = { fen: string; ranks: ReadonlySet<number> };
+
 function BestVariations({
   analysis,
   requested,
@@ -84,6 +108,39 @@ function BestVariations({
   onSelectMove,
 }: BestVariationsProps) {
   const { t } = useTranslation();
+
+  const [expansion, setExpansion] = useState<Expansion>(() => ({
+    fen: analysis.fen,
+    ranks: new Set(),
+  }));
+
+  /*
+    An expansion was about *that position's* line, so a new analysed position
+    starts every row collapsed. Adjusted during render against the previous
+    FEN — React's own answer to "reset state when a value changes", the same
+    move `Sidebar.tsx` makes for its open chain — so the new position never
+    paints with the old one's expansions, the way it would for the one render
+    before an effect fires. The same FEN deepening is not a change: the search
+    streaming deeper results for the one position keeps what the reader
+    opened, and the rows re-render with the longer lines.
+  */
+  if (expansion.fen !== analysis.fen) {
+    setExpansion({ fen: analysis.fen, ranks: new Set() });
+  }
+
+  /*
+    The toggle, built off the fen-matched view so a click can only ever see
+    the same set the rows are rendering from — never a rank carried over from
+    a position that has already gone.
+  */
+  const toggleExpanded = (rank: number) => {
+    const ranks = new Set(
+      expansion.fen === analysis.fen ? expansion.ranks : [],
+    );
+    if (ranks.has(rank)) ranks.delete(rank);
+    else ranks.add(rank);
+    setExpansion({ fen: analysis.fen, ranks });
+  };
 
   /*
     The array is indexed by MultiPV rank, which leaves two kinds of entry that
@@ -144,6 +201,9 @@ function BestVariations({
                 ? line.san
                 : maskSanLine(mask, analysis.fen, line.san);
             const prefixes = variationNumbering(analysis.fen, display.length);
+            const isExpanded =
+              expansion.fen === analysis.fen &&
+              expansion.ranks.has(line.multipv);
 
             return (
               <Box
@@ -159,24 +219,69 @@ function BestVariations({
                   bgcolor: "action.hover",
                 }}
               >
-                <Typography
+                {/*
+                  The score's column stays the plain span it always was —
+                  `flexShrink 0` + `minWidth` are the row's layout, and a
+                  button filling that slot would flex-centre the scores off
+                  the edge they start from today. The button inside is
+                  content-sized, so it keeps that start alignment for free,
+                  and takes the same box model every clickable token in this
+                  row already has (`moveSx`) plus the hover treatment —
+                  `cursor: pointer` comes with `ButtonBase` itself. The
+                  label names the variation, the score and the action,
+                  because an `aria-label` replaces the text for a screen
+                  reader and the score is the thing being labelled.
+                */}
+                <Box
                   component="span"
                   dir="ltr"
-                  data-testid={`variation-${line.multipv}-score`}
-                  sx={{
-                    ...sanSx,
-                    fontWeight: 700,
-                    flexShrink: 0,
-                    minWidth: "3.5rem",
-                  }}
+                  sx={{ flexShrink: 0, minWidth: "3.5rem" }}
                 >
-                  {formatScore(line.score)}
-                </Typography>
+                  <ButtonBase
+                    dir="ltr"
+                    data-testid={`variation-${line.multipv}-score`}
+                    aria-expanded={isExpanded}
+                    aria-label={t(
+                      isExpanded ? "variations.collapse" : "variations.expand",
+                      { rank: line.multipv, score: formatScore(line.score) },
+                    )}
+                    onClick={() => toggleExpanded(line.multipv)}
+                    sx={{
+                      ...moveSx,
+                      ...sanSx,
+                      fontWeight: 700,
+                      "&:hover": { bgcolor: "action.hover" },
+                    }}
+                  >
+                    {formatScore(line.score)}
+                  </ButtonBase>
+                </Box>
+                {/*
+                  Collapsed, the span truncates — one line, the moves that
+                  fit, the cut marked by an ellipsis; CSS does the cutting,
+                  so it follows the panel for free. Expanded, it wraps as it
+                  always did. Every move renders in both states, only the
+                  clipping differs, so `data-expanded` is the state a test
+                  can read: jsdom has no line boxes to observe truncation
+                  with.
+                */}
                 <Typography
                   component="span"
                   dir="ltr"
                   data-testid={`variation-${line.multipv}-line`}
-                  sx={{ ...sanSx, color: "text.secondary", minWidth: 0 }}
+                  data-expanded={isExpanded}
+                  sx={{
+                    ...sanSx,
+                    color: "text.secondary",
+                    minWidth: 0,
+                    ...(isExpanded
+                      ? {}
+                      : {
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }),
+                  }}
                 >
                   {display.map((san, index) => (
                     <Fragment key={index}>

@@ -96,12 +96,18 @@ const en = {
     capturedByWhite: "Captured by White",
     capturedByBlack: "Captured by Black",
   },
-  /** The engine's lines — `views/shared/BestVariations.tsx`, on two screens. */
+  /** The engine's lines — `views/shared/BestVariations.tsx`, on three screens. */
   variations: {
     title: "Best variations",
     depth: "Depth {{depth}}",
     thinking: "Waiting for the engine…",
     partial: "{{shown}} of {{requested}} lines so far.",
+    /**
+     * The score toggle's spoken label (CTA-56) — an `aria-label`, so it
+     * replaces the score for a screen reader and has to repeat it.
+     */
+    expand: "Variation {{rank}}, {{score}} — show the full line",
+    collapse: "Variation {{rank}}, {{score}} — collapse the line",
   },
   /** The promotion picker — `views/shared/PromotionPicker.tsx`, on two screens. */
   promotion: {

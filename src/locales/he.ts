@@ -81,6 +81,8 @@ const he: typeof en = {
     depth: "עומק {{depth}}",
     thinking: "ממתינים למנוע…",
     partial: "{{shown}} מתוך {{requested}} וריאציות עד כה.",
+    expand: "וריאציה {{rank}}, {{score}} — להצגת הווריאציה במלואה",
+    collapse: "וריאציה {{rank}}, {{score}} — לצמצום הווריאציה",
   },
   promotion: {
     title: "בחרו כלי",
