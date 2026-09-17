@@ -103,8 +103,9 @@ const en = {
     thinking: "Waiting for the engine…",
     partial: "{{shown}} of {{requested}} lines so far.",
     /**
-     * The score toggle's spoken label (CTA-56) — an `aria-label`, so it
-     * replaces the score for a screen reader and has to repeat it.
+     * The row's chevron's spoken label (CTA-56) — an `aria-label` over an
+     * icon, which says none of this on its own, so it has to carry the
+     * variation and the score itself.
      */
     expand: "Variation {{rank}}, {{score}} — show the full line",
     collapse: "Variation {{rank}}, {{score}} — collapse the line",

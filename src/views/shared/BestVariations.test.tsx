@@ -209,8 +209,8 @@ describe("the best variations view", () => {
   });
 
   it("hands a move click the same prefix in both states", async () => {
-    // CTA-56: the score may expand the row, but a move is a move wherever it
-    // shows — a visible move is a playable one, collapsed or expanded.
+    // CTA-56: the chevron may expand the row, but a move is a move wherever
+    // it shows — a visible move is a playable one, collapsed or expanded.
     const onSelectMove = vi.fn();
     renderVariations(
       { fen: DEFAULT_POSITION, depth: 18, lines: [line(1, 32, "e2e4 e7e5 g1f3")] },
@@ -222,16 +222,15 @@ describe("the best variations view", () => {
     await user.click(screen.getByTestId("variation-1-move-2"));
     expect(onSelectMove).toHaveBeenLastCalledWith(["e4", "e5"]);
 
-    await user.click(screen.getByTestId("variation-1-score"));
+    await user.click(screen.getByTestId("variation-1-toggle"));
     await user.click(screen.getByTestId("variation-1-move-3"));
     expect(onSelectMove).toHaveBeenLastCalledWith(["e4", "e5", "Nf3"]);
   });
 
   it("prints the moves as plain text when no click handler is given", () => {
     // The two engine screens' Variations tab: a move there is a thing to read
-    // while playing one of one's own, so no move is a button — but the
-    // score's expand/collapse arrived with the one-line rows (CTA-56), so
-    // the score is the one button the tab now has.
+    // while playing one of one's own, so no move is a button — the row's
+    // chevron is the one button the tab has (CTA-56).
     renderVariations({
       fen: DEFAULT_POSITION,
       depth: 18,
@@ -242,7 +241,9 @@ describe("the best variations view", () => {
     expect(screen.getByTestId("variation-1-line")).toHaveTextContent(
       "1. e4 e5",
     );
-    expect(screen.getByTestId("variation-1-score").tagName).toBe("BUTTON");
+    // The score is plain text again — the toggle moved to the row's chevron.
+    expect(screen.getByTestId("variation-1-score").tagName).toBe("SPAN");
+    expect(screen.getByTestId("variation-1-toggle").tagName).toBe("BUTTON");
   });
 
   it("collapses each variation to one line, every move still in the DOM", () => {
@@ -257,7 +258,7 @@ describe("the best variations view", () => {
       lines: [line(1, 32, "e2e4 e7e5 g1f3 b8c6 f1c4 g8f6 e1g1")],
     });
 
-    expect(screen.getByTestId("variation-1-score")).toHaveAttribute(
+    expect(screen.getByTestId("variation-1-toggle")).toHaveAttribute(
       "aria-expanded",
       "false",
     );
@@ -271,12 +272,12 @@ describe("the best variations view", () => {
     );
   });
 
-  it("expands a row through its score and collapses it the same way", async () => {
+  it("expands a row through its chevron and collapses it the same way", async () => {
     // Plain mode — no click handler — is where the toggle has to work on its
     // own: the two engine screens' tab has nothing else clickable. The label
     // flips with the state and names the variation, the score and the action,
-    // because an aria-label replaces the text for a screen reader, so it has
-    // to carry the score itself.
+    // because an icon's aria-label replaces its content for a screen reader
+    // and the icon alone says none of the three.
     renderVariations({
       fen: DEFAULT_POSITION,
       depth: 18,
@@ -284,9 +285,9 @@ describe("the best variations view", () => {
     });
 
     const user = userEvent.setup();
-    await user.click(screen.getByTestId("variation-1-score"));
+    await user.click(screen.getByTestId("variation-1-toggle"));
 
-    expect(screen.getByTestId("variation-1-score")).toHaveAttribute(
+    expect(screen.getByTestId("variation-1-toggle")).toHaveAttribute(
       "aria-expanded",
       "true",
     );
@@ -294,18 +295,18 @@ describe("the best variations view", () => {
       "data-expanded",
       "true",
     );
-    expect(screen.getByTestId("variation-1-score")).toHaveAccessibleName(
+    expect(screen.getByTestId("variation-1-toggle")).toHaveAccessibleName(
       "Variation 1, +0.32 — collapse the line",
     );
-    // Rows are independent — each score speaks for its own line alone.
-    expect(screen.getByTestId("variation-2-score")).toHaveAttribute(
+    // Rows are independent — each chevron speaks for its own line alone.
+    expect(screen.getByTestId("variation-2-toggle")).toHaveAttribute(
       "aria-expanded",
       "false",
     );
 
-    await user.click(screen.getByTestId("variation-1-score"));
+    await user.click(screen.getByTestId("variation-1-toggle"));
 
-    expect(screen.getByTestId("variation-1-score")).toHaveAttribute(
+    expect(screen.getByTestId("variation-1-toggle")).toHaveAttribute(
       "aria-expanded",
       "false",
     );
@@ -313,7 +314,7 @@ describe("the best variations view", () => {
       "data-expanded",
       "false",
     );
-    expect(screen.getByTestId("variation-1-score")).toHaveAccessibleName(
+    expect(screen.getByTestId("variation-1-toggle")).toHaveAccessibleName(
       "Variation 1, +0.32 — show the full line",
     );
   });
@@ -349,7 +350,7 @@ describe("the best variations view", () => {
 
     const view = renderVariations(before);
     const user = userEvent.setup();
-    await user.click(view.getByTestId("variation-1-score"));
+    await user.click(view.getByTestId("variation-1-toggle"));
 
     // Same FEN, deeper search — the row stays open and grows its line.
     view.rerender(
@@ -357,7 +358,7 @@ describe("the best variations view", () => {
         <BestVariations analysis={deeper} requested={3} />
       </AppThemeWithLang>,
     );
-    expect(view.getByTestId("variation-1-score")).toHaveAttribute(
+    expect(view.getByTestId("variation-1-toggle")).toHaveAttribute(
       "aria-expanded",
       "true",
     );
@@ -371,7 +372,7 @@ describe("the best variations view", () => {
         <BestVariations analysis={movedOn} requested={3} />
       </AppThemeWithLang>,
     );
-    expect(view.getByTestId("variation-1-score")).toHaveAttribute(
+    expect(view.getByTestId("variation-1-toggle")).toHaveAttribute(
       "aria-expanded",
       "false",
     );
@@ -416,7 +417,7 @@ describe("the best variations view", () => {
     );
 
     const user = userEvent.setup();
-    await user.click(screen.getByTestId("variation-1-score"));
+    await user.click(screen.getByTestId("variation-1-toggle"));
     expect(screen.getByTestId("variation-1-line")).toHaveAttribute(
       "data-expanded",
       "true",

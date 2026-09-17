@@ -3,6 +3,7 @@ import Box from "@mui/material/Box";
 import ButtonBase from "@mui/material/ButtonBase";
 import Chip from "@mui/material/Chip";
 import Typography from "@mui/material/Typography";
+import ExpandMoreRoundedIcon from "@mui/icons-material/ExpandMoreRounded";
 import { useTranslation } from "react-i18next";
 import {
   formatScore,
@@ -32,10 +33,11 @@ import { moveSx, sanTokenSx } from "./moveTokenSx";
  * at the edge with an ellipsis by CSS (`white-space: nowrap` +
  * `overflow: hidden` + `text-overflow: ellipsis`), never by counting moves,
  * which would mean measuring the panel (CTA-56, lichess the reference).
- * Clicking the score expands that row to the whole PV, wrapping again;
- * clicking it once more collapses it — and the score is the toggle because it
- * is the one part of the row that is not a move. Rows expand independently,
- * and an expansion belongs to the position it was made on: the same position's
+ * A chevron at the row's end expands that row to the whole PV, wrapping
+ * again; clicking it once more collapses it — lichess's disclosure arrow,
+ * so the toggle is an explicit control beside the moves and the score stays
+ * the plain text it always was. Rows expand independently, and an expansion
+ * belongs to the position it was made on: the same position's
  * search deepening (same FEN) keeps it, a new analysed position starts every
  * row collapsed.
  *
@@ -44,8 +46,8 @@ import { moveSx, sanTokenSx } from "./moveTokenSx";
  *
  * - **without it** the moves render as plain text — the two engine screens'
  *   tab, which the reader reads while playing their own moves beside it.
- *   The moves are the DOM text they always were; the score is still the
- *   expand/collapse button.
+ *   The moves are the DOM text they always were; the row's chevron is still
+ *   the expand/collapse button.
  * - **with it** each move is a button, and a click hands over the SAN prefix
  *   up to and including the move clicked — the lichess analysis behaviour:
  *   clicking the third move of a line plays all three. The prefix carries the
@@ -186,8 +188,26 @@ function BestVariations({
       ) : (
         <Box
           component="ol"
-          sx={{ listStyle: "none", m: 0, p: 0, display: "grid", gap: 0.75 }}
+          sx={{
+            listStyle: "none",
+            m: 0,
+            p: 0,
+            display: "grid",
+            gridTemplateColumns: "minmax(0, 1fr)",
+            gap: 0.75,
+          }}
         >
+          {/*
+            One column, floored at zero: a plain implicit `auto` track sizes
+            to the rows' content, and a collapsed row's content is a nowrap
+            line whose min-content is its own full width — the track would
+            blow out past the panel and put a scrollbar under the rows
+            instead of an ellipsis in them, which is the thing lichess does
+            not have. `minmax(0, 1fr)` holds the track to the panel, which
+            is what makes the CSS clipping below reachable at all, and keeps
+            an expansion from re-laying the grid out — only the one row
+            changes.
+          */}
           {lines.map((line) => {
             /*
               What the tokens print: the true SANs, disguised when a mask is in
@@ -219,43 +239,19 @@ function BestVariations({
                   bgcolor: "action.hover",
                 }}
               >
-                {/*
-                  The score's column stays the plain span it always was —
-                  `flexShrink 0` + `minWidth` are the row's layout, and a
-                  button filling that slot would flex-centre the scores off
-                  the edge they start from today. The button inside is
-                  content-sized, so it keeps that start alignment for free,
-                  and takes the same box model every clickable token in this
-                  row already has (`moveSx`) plus the hover treatment —
-                  `cursor: pointer` comes with `ButtonBase` itself. The
-                  label names the variation, the score and the action,
-                  because an `aria-label` replaces the text for a screen
-                  reader and the score is the thing being labelled.
-                */}
-                <Box
+                <Typography
                   component="span"
                   dir="ltr"
-                  sx={{ flexShrink: 0, minWidth: "3.5rem" }}
+                  data-testid={`variation-${line.multipv}-score`}
+                  sx={{
+                    ...sanSx,
+                    fontWeight: 700,
+                    flexShrink: 0,
+                    minWidth: "3.5rem",
+                  }}
                 >
-                  <ButtonBase
-                    dir="ltr"
-                    data-testid={`variation-${line.multipv}-score`}
-                    aria-expanded={isExpanded}
-                    aria-label={t(
-                      isExpanded ? "variations.collapse" : "variations.expand",
-                      { rank: line.multipv, score: formatScore(line.score) },
-                    )}
-                    onClick={() => toggleExpanded(line.multipv)}
-                    sx={{
-                      ...moveSx,
-                      ...sanSx,
-                      fontWeight: 700,
-                      "&:hover": { bgcolor: "action.hover" },
-                    }}
-                  >
-                    {formatScore(line.score)}
-                  </ButtonBase>
-                </Box>
+                  {formatScore(line.score)}
+                </Typography>
                 {/*
                   Collapsed, the span truncates — one line, the moves that
                   fit, the cut marked by an ellipsis; CSS does the cutting,
@@ -308,6 +304,42 @@ function BestVariations({
                     </Fragment>
                   ))}
                 </Typography>
+                {/*
+                  The disclosure arrow (CTA-56): lichess's expand icon, sitting
+                  at the row's end so the toggle is an explicit control beside
+                  the moves and the score stays the plain text it always was —
+                  nothing about the row reads as clickable but its controls.
+                  Centred on the row rather than sharing the baseline, because
+                  an icon has no text baseline, and kept from shrinking so the
+                  clipped line stops short of it, never under it. The label
+                  names the variation, the score and the action, because an
+                  icon says none of them to a screen reader on its own.
+                */}
+                <ButtonBase
+                  aria-label={t(
+                    isExpanded ? "variations.collapse" : "variations.expand",
+                    { rank: line.multipv, score: formatScore(line.score) },
+                  )}
+                  aria-expanded={isExpanded}
+                  data-testid={`variation-${line.multipv}-toggle`}
+                  onClick={() => toggleExpanded(line.multipv)}
+                  sx={{
+                    flexShrink: 0,
+                    alignSelf: "center",
+                    p: 0.25,
+                    borderRadius: 0.5,
+                    color: "text.secondary",
+                    "&:hover": { bgcolor: "action.selected" },
+                  }}
+                >
+                  <ExpandMoreRoundedIcon
+                    sx={{
+                      fontSize: "1.125rem",
+                      transition: "transform 150ms",
+                      ...(isExpanded ? { transform: "rotate(180deg)" } : {}),
+                    }}
+                  />
+                </ButtonBase>
               </Box>
             );
           })}
