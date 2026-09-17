@@ -192,8 +192,9 @@ const useCaption = ({ saved, tree, item }: EntryProps) => {
         ? t("savedAnalyses.unreadable")
         : savedListLine([
             t("savedAnalyses.moves", { count: summary.moves }),
-            // Every node past the mainline is a move the reader tried and kept.
-            // Zero of them is not a fact worth a slot on a two-line card.
+            // Every distinct side line the reader tried and kept, however long
+            // each one runs. Zero of them is not a fact worth a slot on a
+            // two-line card.
             summary.variations > 0
               ? t("savedAnalyses.variations", {
                   count: summary.variations,

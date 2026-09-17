@@ -1,5 +1,11 @@
 import { finalFenOf, type GameHeaders } from "./gameModel";
-import { mainlineGame, treeToPgn, type GameTree, type VariationNode } from "./gameTree";
+import {
+  countVariations,
+  mainlineGame,
+  treeToPgn,
+  type GameTree,
+  type VariationNode,
+} from "./gameTree";
 import { parsePgnTree } from "./pgn";
 
 /**
@@ -177,7 +183,11 @@ export type SavedOpeningSummary = {
   moves: number;
   /** How many nodes there are in total — mainline plus every side line. */
   nodes: number;
-  /** How many nodes sit past the mainline — the "N variations" line's unit. */
+  /**
+   * How many distinct side lines branch off the tree — the "N variations"
+   * line's unit. A single side line counts once however many moves it runs
+   * to; see {@link countVariations}.
+   */
   variations: number;
 };
 
@@ -202,9 +212,7 @@ export const savedOpeningSummary = (
     // Half-moves rounded up to full moves, the way the move list numbers them.
     moves: Math.ceil(plies / 2),
     nodes,
-    // Every node past the mainline. Counts nodes, not moves — `moves` is in a
-    // different unit, so the "N variations" line cannot derive from it.
-    variations: nodes - plies,
+    variations: countVariations(tree),
   };
 };
 

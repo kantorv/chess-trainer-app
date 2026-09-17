@@ -219,7 +219,7 @@ describe("savedOpeningFrom — a row out of storage", () => {
 });
 
 describe("savedOpeningSummary — what a row says without opening it", () => {
-  it("counts the mainline and every node", () => {
+  it("counts the mainline and every node, but its side lines by line, not by move", () => {
     const tree = grow([
       [[], ["e4", "e5", "Nf3"]],
       [["e4"], ["c5", "Nf3"]],
@@ -227,11 +227,26 @@ describe("savedOpeningSummary — what a row says without opening it", () => {
     const saved = save(tree);
 
     expect(savedOpeningSummary(saved, tree)).toEqual({
-      // Three half-moves numbered as two full moves; two nodes past the mainline.
+      // Three half-moves numbered as two full moves; five nodes in all, but
+      // only one branch point — the c5 side line, whatever it runs to.
       moves: 2,
       nodes: 5,
-      variations: 2,
+      variations: 1,
     });
+  });
+
+  it("counts one variation whether it runs two moves or many", () => {
+    const short = grow([
+      [[], ["e4", "e5", "Nf3"]],
+      [["e4"], ["c5"]],
+    ]);
+    const long = grow([
+      [[], ["e4", "e5", "Nf3"]],
+      [["e4"], ["c5", "Nc3", "a6", "Bc4", "e6", "Qf3"]],
+    ]);
+
+    expect(savedOpeningSummary(save(short), short).variations).toBe(1);
+    expect(savedOpeningSummary(save(long), long).variations).toBe(1);
   });
 
   it("reads as empty for a record that will not parse", () => {
