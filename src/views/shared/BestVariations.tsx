@@ -256,10 +256,14 @@ function BestVariations({
                   Collapsed, the span truncates — one line, the moves that
                   fit, the cut marked by an ellipsis; CSS does the cutting,
                   so it follows the panel for free. Expanded, it wraps as it
-                  always did. Every move renders in both states, only the
-                  clipping differs, so `data-expanded` is the state a test
-                  can read: jsdom has no line boxes to observe truncation
-                  with.
+                  always did. It also grows to fill whatever of the row the
+                  score and the chevron leave, which is what holds the
+                  chevron at the row's end in every row — a short line
+                  stretches out to it instead of stranding the chevron beside
+                  its last move, so the arrows stand in one column. Every
+                  move renders in both states, only the clipping differs, so
+                  `data-expanded` is the state a test can read: jsdom has no
+                  line boxes to observe truncation with.
                 */}
                 <Typography
                   component="span"
@@ -270,6 +274,7 @@ function BestVariations({
                     ...sanSx,
                     color: "text.secondary",
                     minWidth: 0,
+                    flexGrow: 1,
                     ...(isExpanded
                       ? {}
                       : {
@@ -309,11 +314,17 @@ function BestVariations({
                   at the row's end so the toggle is an explicit control beside
                   the moves and the score stays the plain text it always was —
                   nothing about the row reads as clickable but its controls.
-                  Centred on the row rather than sharing the baseline, because
-                  an icon has no text baseline, and kept from shrinking so the
-                  clipped line stops short of it, never under it. The label
-                  names the variation, the score and the action, because an
-                  icon says none of them to a screen reader on its own.
+                  Pinned to the row's top rather than centred on it, so a row
+                  grown tall keeps its chevron beside the first move instead
+                  of floating at the middle — `flex-start` rather than the
+                  row's baseline, which would perch the icon on the text's
+                  baseline with nothing under it. The line span beside it
+                  grows to fill the row (below), which is what holds every
+                  row's chevron at the row's end, a short line no less than a
+                  clipped one. Kept from shrinking, so the clipped line stops
+                  short of it, never under it. The label names the variation,
+                  the score and the action, because an icon says none of them
+                  to a screen reader on its own.
                 */}
                 <ButtonBase
                   aria-label={t(
@@ -325,7 +336,7 @@ function BestVariations({
                   onClick={() => toggleExpanded(line.multipv)}
                   sx={{
                     flexShrink: 0,
-                    alignSelf: "center",
+                    alignSelf: "flex-start",
                     p: 0.25,
                     borderRadius: 0.5,
                     color: "text.secondary",
