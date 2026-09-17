@@ -2,7 +2,6 @@ import type { SvgIconComponent } from "@mui/icons-material";
 import HistoryRoundedIcon from "@mui/icons-material/HistoryRounded";
 import SportsEsportsRoundedIcon from "@mui/icons-material/SportsEsportsRounded";
 import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
-import AccountTreeRoundedIcon from "@mui/icons-material/AccountTreeRounded";
 import DashboardCustomizeRoundedIcon from "@mui/icons-material/DashboardCustomizeRounded";
 import VisibilityOffRoundedIcon from "@mui/icons-material/VisibilityOffRounded";
 
@@ -64,22 +63,23 @@ export const navItems = (): readonly NavItem[] => [
   },
   ...userPgnsNavItems(),
   {
-    to: "/tools/analysis",
-    labelKey: "nav.analysisBoard",
-    icon: AccountTreeRoundedIcon,
-    folder: "tools",
-  },
-  {
-    to: "/tools/analysis/saved",
-    labelKey: "nav.savedAnalyses",
-    icon: HistoryRoundedIcon,
-    folder: "tools",
-  },
-  {
     to: "/tools/editor",
     labelKey: "nav.boardEditor",
     icon: DashboardCustomizeRoundedIcon,
     folder: "tools",
+  },
+  /*
+    The Analysis Board has no nav entry (CTA-58, mirroring CTA-42's Openings
+    folder): the top-level Analysis folder is a single entry (`navFolders.ts`)
+    that renders as the screen below, and the board is reached from the saved
+    list's New button. The `/tools/analysis` route stays — every `?fen=`,
+    `?game=` and `?analysis=` hand-off still lands there.
+  */
+  {
+    to: "/tools/analysis/saved",
+    labelKey: "nav.savedAnalyses",
+    icon: HistoryRoundedIcon,
+    folder: "analysis",
   },
   /*
     The Openings board has no nav entry (CTA-42): the top-level Openings folder

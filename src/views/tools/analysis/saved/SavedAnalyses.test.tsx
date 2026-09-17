@@ -282,6 +282,16 @@ describe("Saved analyses — where a row goes", () => {
     expect(screen.queryByTestId("saved-analyses-item-a1")).not.toBeInTheDocument();
     expect(screen.getByTestId("saved-analyses-empty")).toBeInTheDocument();
   });
+
+  it("offers a New button to the plain board view, with no query params", () => {
+    renderScreen();
+
+    // The board left the sidebar (CTA-58) — this button is how it is reached.
+    expect(screen.getByTestId("saved-analyses-new")).toHaveAttribute(
+      "href",
+      "/tools/analysis",
+    );
+  });
 });
 
 describe("Saved analyses — a record that will not read", () => {

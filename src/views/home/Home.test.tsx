@@ -35,17 +35,33 @@ describe("the landing page", () => {
     );
   });
 
+  it("shows one Analysis Board card linking to the saved list, and none to the board", () => {
+    renderHome();
+
+    // The single entry — the same one the sidebar shows, under the same name
+    // (CTA-58, mirroring CTA-42's Openings folder).
+    const analysis = screen.getAllByRole("link", { name: "Analysis Board" });
+    expect(analysis).toHaveLength(1);
+    expect(analysis[0]).toHaveAttribute("href", "/tools/analysis/saved");
+
+    // The board view has no card: it is the saved list's New button.
+    const cards = screen.getAllByRole("link");
+    expect(cards.map((link) => link.getAttribute("href"))).not.toContain(
+      "/tools/analysis",
+    );
+  });
+
   it("still shows a card per screen of every other section", () => {
     renderHome();
 
-    // The nav shape changed for one folder only; every other screen keeps its
+    // The nav shape changed for two folders only; every other screen keeps its
     // card. A PGN section's screens are generated, so the exact set is the
     // nav's own — one card per screen node in the tree.
     const cards = screen.getAllByRole("link").map((link) =>
       link.getAttribute("href"),
     );
     expect(cards).toContain("/engine/play");
-    expect(cards).toContain("/tools/analysis");
+    expect(cards).toContain("/tools/editor");
     expect(cards.some((href) => href?.startsWith("/library"))).toBe(true);
   });
 });

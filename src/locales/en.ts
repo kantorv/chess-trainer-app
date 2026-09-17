@@ -32,6 +32,7 @@ const en = {
       maskedPieces: "Masked Pieces",
       games: "Games",
       tools: "Tools",
+      analysisBoard: "Analysis Board",
       openings: "Openings",
       /**
        * The Library section's root (was "User PGNs" before CTA-38). Its
@@ -387,6 +388,11 @@ const en = {
     openInLoadPgn: "PGN viewer",
     play: "Play from here",
     remove: "Delete this analysis",
+    /**
+     * The top-bar button to the Analysis Board — the screen the sidebar's
+     * single Analysis entry hides (CTA-58), so the board is reached from here.
+     */
+    new: "New",
     /** Picking analyses and taking them out as one `.pgn`, side lines and all. */
     select: "Select this analysis",
     selectAll: "Select all analyses",
