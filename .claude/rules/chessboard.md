@@ -25,6 +25,15 @@ these instead.
 | [`react-chessboard-options-api.md`](./react-chessboard-options-api.md) | **every `options.*` key** — type, default, purpose. All 43 of them. |
 | [`react-chessboard-types-and-helpers.md`](./react-chessboard-types-and-helpers.md) | exported helpers (`generateBoard`, `fenStringToPositionObject`, `chessColumnToColumnIndex`, `getRelativeCoords`, …) and every handler-arg / data type (`PieceDropHandlerArgs`, `SquareHandlerArgs`, `PieceRenderObject`, `FenPieceString`, …) |
 
+**Also on disk, and the one to read before building a *new* board screen** —
+[`chessboard-v2.md`](./chessboard-v2.md) (CTA-60): the **unified board core**
+the `/dev/*` Development screens are composed from. A base hook, optional
+capability modules (engine, opening book, persistence), and one slotted
+shell/panel layer, plus a derivation table for the five boards and a recipe for
+adding a sixth. Nothing there overrides this file — it says who *owns* which of
+these rules once five screens share one implementation. The five shipped board
+screens of §5 below are untouched by it and stay the reference.
+
 **On disk, read on demand** — [`docs/vendor/react-chessboard/`](../../docs/vendor/react-chessboard/),
 routed by its [`INDEX.md`](../../docs/vendor/react-chessboard/INDEX.md):
 

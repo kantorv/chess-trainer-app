@@ -13,6 +13,14 @@ under [`docs/vendor/react-chessboard/`](docs/vendor/react-chessboard/) for
 on-demand reading. **Never read `node_modules` source or web-search for a
 react-chessboard question** — it is already on disk.
 
+A **new** board screen is not written from scratch any more: it is composed
+from the unified board core specified in
+[`.claude/rules/chessboard-v2.md`](.claude/rules/chessboard-v2.md) (CTA-60) —
+a base hook, optional capability modules, and one slotted shell/panel layer,
+developed behind the dev-only Development section at `/dev/*`. The five shipped
+board screens below are untouched by it and stay the reference until v2 is
+polished; replacing them is a separate issue.
+
 ## Commands
 
 Node comes from `fnm`, so run these from a shell where it is on `PATH`.
