@@ -875,7 +875,10 @@ RepertoireGame.tsx ──┴─▶ RepertoirePlayer.tsx ── download: treeToP
   the next-move arrows and the engine's switch. The Engine tab is the other
   boards' own and is **disabled while the engine is off** (`BoardPanel`'s
   per-tab `disabled`). Moves stays mounted while another tab shows. The
-  header keeps the opening line, the description, the Games menu, Restart
+  header keeps the opening line, the description, the Games menu, **Play**
+  (CTA-65: a second control over the Autoplay setting — pressed and primary
+  while it is on, and switching on answers at once when it is the trainer's
+  turn, the Settings switch's own `changeAutoplay`; a game has none), Restart
   (back to the start, extensions kept), the download and the settings link.
 - **Arrows are the reader's call**: the player opens as the repertoire's
   `showArrows` setting says (on by default), a game without them, and the
