@@ -158,23 +158,35 @@ const splitTags = (pgn: string): { headers: GameHeaders; movetext: string } => {
 export const readPgnTags = (pgn: string): GameHeaders => splitTags(pgn).headers;
 
 /**
- * Cut movetext into the tokens the walk below cares about: moves, `(`, `)` and
- * results. Everything PGN allows between them is dropped first —
- * `{ ... }` and `; ...` comments, `< ... >` reserved sections, `$12` NAGs, the
- * `!?`-style suffixes, and the move numbers themselves, which carry no
- * information a ply counter does not already have.
+ * One token of movetext, in a single left-to-right pass (CTA-69 — before, the
+ * annotations were stripped out ahead of the walk and lost):
+ *
+ * 1. a `{ ... }` comment, 2. a `; ...` comment to the end of the line,
+ * 3. a `$12` NAG, 4. `(` or `)`, 5. a move or a result, its `!?`-style suffix
+ * split off in 6, and 7. a suffix written apart from its move (`e4 !?`).
+ *
+ * What the walk has no use for is matched and skipped: `< ... >` reserved
+ * sections and the move numbers — `"12."`, `"12..."`, and the spaced
+ * `"12. .."` a few writers emit — which carry nothing a ply counter does not.
  */
-const tokenizeMovetext = (movetext: string): string[] =>
-  movetext
-    .replace(/\{[^}]*\}/g, " ")
-    .replace(/<[^>]*>/g, " ")
-    .replace(/;[^\n]*/g, " ")
-    .replace(/\$\d+/g, " ")
-    // Move numbers: "12.", "12...", and the spaced "12. .." a few writers emit.
-    .replace(/\b\d+\s*\.(\s*\.\.)?/g, " ")
-    .replace(/[()]/g, (bracket) => ` ${bracket} `)
-    .split(/\s+/)
-    .filter((token) => token !== "");
+const MOVETEXT_TOKEN =
+  /\{([^}]*)\}|;([^\n]*)|\$(\d+)|([()])|<[^>]*>|\d+\s*\.(?:\s*\.)*|([^\s{};$()<!?]+)([!?]*)|([!?]+)/g;
+
+/** The move-quality suffixes, as the NAGs PGN numbers them. */
+const SUFFIX_NAGS: Readonly<Record<string, number>> = {
+  "!": 1,
+  "?": 2,
+  "!!": 3,
+  "??": 4,
+  "!?": 5,
+  "?!": 6,
+};
+
+/** A comment's text as the tree keeps it — trimmed; `undefined` when empty. */
+const commentText = (raw: string): string | undefined => {
+  const text = raw.trim();
+  return text === "" ? undefined : text;
+};
 
 /**
  * Parse one game *with its variations* into a {@link GameTree}.
@@ -185,6 +197,11 @@ const tokenizeMovetext = (movetext: string): string[] =>
  * where the outer line had got to — including *which* move it was last at, so a
  * second `( ... )` in a row is another alternative to the same move rather than
  * to the first alternative.
+ *
+ * Annotations are kept (CTA-69): a comment, NAG or `!?` mark belongs to the
+ * move before it; a comment before a variation's first move is that move's
+ * `preComments`, and one before the game's first move the tree's `comments`.
+ * The scan is one regex pass, so reading them costs the walk nothing.
  *
  * Throws {@link PgnParseError} on the first move that will not play, naming it,
  * because "illegal move in a variation" is otherwise indistinguishable from a
@@ -227,12 +244,12 @@ export const parsePgnTree = (pgn: string, gameNumber?: number): GameTree => {
   const add = (
     parentId: string | null,
     move: Omit<VariationNode, "id" | "ply" | "children">,
-  ): string => {
+  ): VariationNode => {
     const parent = parentId === null ? undefined : byId.get(parentId);
     const siblings = parent === undefined ? moves : parent.children;
     // SAN identifies a move uniquely within one position — `addMove`'s own test.
     const existing = siblings.find((node) => node.san === move.san);
-    if (existing !== undefined) return existing.id;
+    if (existing !== undefined) return existing;
 
     const node: VariationNode = {
       id: `n${nextId}`,
@@ -243,7 +260,7 @@ export const parsePgnTree = (pgn: string, gameNumber?: number): GameTree => {
     nextId += 1;
     siblings.push(node);
     byId.set(node.id, node);
-    return node.id;
+    return node;
   };
 
   /** Where the next move goes: under `parentId`, played from `fen`. */
@@ -255,31 +272,86 @@ export const parsePgnTree = (pgn: string, gameNumber?: number): GameTree => {
   let loadedFen = startFen;
   /** The cursor as it stood *before* the last move — what `(` rewinds to. */
   let previous: Cursor | null = null;
-  const stack: { cursor: Cursor; previous: Cursor | null }[] = [];
+  /**
+   * The move the annotations that follow belong to: the last one played in
+   * this variation, `null` before its first. A comment there is not after any
+   * move of the variation, so it waits in `pending` for the move it opens —
+   * or, before the game's first move, is the game's own.
+   */
+  let annotated: VariationNode | null = null;
+  let pending: string[] = [];
+  const gameComments: string[] = [];
+  const stack: {
+    cursor: Cursor;
+    previous: Cursor | null;
+    annotated: VariationNode | null;
+  }[] = [];
 
-  for (const token of tokenizeMovetext(movetext)) {
-    if (token === "(") {
+  const addComment = (raw: string) => {
+    const text = commentText(raw);
+    if (text === undefined) return;
+    if (annotated !== null) (annotated.comments ??= []).push(text);
+    else if (stack.length === 0) gameComments.push(text);
+    else pending.push(text);
+  };
+
+  const addNag = (nag: number | undefined) => {
+    if (annotated === null || nag === undefined) return;
+    const nags = (annotated.nags ??= []);
+    if (!nags.includes(nag)) nags.push(nag);
+  };
+
+  MOVETEXT_TOKEN.lastIndex = 0;
+  for (let match = MOVETEXT_TOKEN.exec(movetext); match !== null; match = MOVETEXT_TOKEN.exec(movetext)) {
+    const [, braced, lineComment, nag, bracket, san, suffix, looseSuffix] = match;
+
+    if (braced !== undefined || lineComment !== undefined) {
+      addComment(braced ?? lineComment);
+      continue;
+    }
+    if (nag !== undefined) {
+      addNag(Number(nag));
+      continue;
+    }
+    if (looseSuffix !== undefined) {
+      addNag(SUFFIX_NAGS[looseSuffix]);
+      continue;
+    }
+
+    if (bracket === "(") {
       if (previous === null) {
         throw new PgnParseError(
           "A variation opened before any move was played.",
           gameNumber,
         );
       }
-      stack.push({ cursor, previous });
+      stack.push({ cursor, previous, annotated });
       cursor = previous;
       previous = null;
+      annotated = null;
+      pending = [];
       continue;
     }
 
-    if (token === ")") {
+    if (bracket === ")") {
       const outer = stack.pop();
       if (outer === undefined) {
         throw new PgnParseError("Unbalanced ')' in the movetext.", gameNumber);
       }
       cursor = outer.cursor;
       previous = outer.previous;
+      annotated = outer.annotated;
+      // A variation of nothing but a comment: kept on the move it answers.
+      if (pending.length > 0 && annotated !== null) {
+        (annotated.comments ??= []).push(...pending);
+      }
+      pending = [];
       continue;
     }
+
+    // A reserved section or a move number: nothing to read.
+    if (san === undefined) continue;
+    const token = san;
 
     if (RESULTS.has(token)) continue;
 
@@ -297,23 +369,34 @@ export const parsePgnTree = (pgn: string, gameNumber?: number): GameTree => {
       throw new PgnParseError(`Illegal move "${token}".`, gameNumber);
     }
 
-    const nodeId = add(cursor.parentId, {
+    const node = add(cursor.parentId, {
       san: move.san,
       from: move.from,
       to: move.to,
       fen: move.after,
       captured: move.captured,
     });
+    if (pending.length > 0) {
+      (node.preComments ??= []).push(...pending);
+      pending = [];
+    }
+    annotated = node;
+    if (suffix !== "") addNag(SUFFIX_NAGS[suffix]);
 
     previous = cursor;
-    cursor = { parentId: nodeId, fen: move.after };
+    cursor = { parentId: node.id, fen: move.after };
   }
 
   if (stack.length > 0) {
     throw new PgnParseError("Unclosed '(' in the movetext.", gameNumber);
   }
 
-  return { ...empty, moves, nextId };
+  return {
+    ...empty,
+    moves,
+    nextId,
+    ...(gameComments.length > 0 ? { comments: gameComments } : {}),
+  };
 };
 
 /**

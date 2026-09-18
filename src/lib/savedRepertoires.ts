@@ -40,8 +40,10 @@ import {
  * - **Merge** ({@link mergedRepertoireOf}) — every game folded into one tree
  *   (`mergeTrees`): the first game's line is the mainline, and where a later
  *   game leaves it, that becomes a side line. Offered only when every game
- *   starts from the same position, since a tree has one start. What a merge
- *   loses is the files' `{ comments }` — the tree does not carry them.
+ *   starts from the same position, since a tree has one start. The files'
+ *   annotations come along (CTA-69) — `{ comments }`, NAGs and `!?` marks,
+ *   one text said twice about the same move kept once; each later game's
+ *   opening comment opens its own line (`mergeTrees`).
  * - **Split** ({@link splitRepertoiresOf}) — every game its own repertoire,
  *   named by the game (`"2...Qa5 · #1"`) and filed together in a folder named
  *   after the text, each keeping its original text, comments and all.

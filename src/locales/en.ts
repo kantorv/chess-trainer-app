@@ -961,7 +961,7 @@ const en = {
       skipped_other: "{{count}} games have no moves or could not be read, and are left out.",
       merge: "Merge into one repertoire",
       mergeHelp:
-        "One tree: the first game's line is the mainline, and wherever another game leaves it becomes a side line. Comments in the file are not kept.",
+        "One tree: the first game's line is the mainline, and wherever another game leaves it becomes a side line. The file's comments and move marks are kept.",
       mergeUnavailable:
         "These games start from different positions, so they cannot share one tree.",
       split_one: "Keep as {{count}} repertoire",

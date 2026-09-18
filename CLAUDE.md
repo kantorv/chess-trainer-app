@@ -69,7 +69,7 @@ change by whether it *adds* to that count, not by the exit code.
 | `src/lib/engine.ts` | The Stockfish worker wrapper: search, UCI option discovery, and the protocol discipline that keeps the engine alive (see the chessboard rules §4). |
 | `src/lib/engineAnalysis.ts` | Reading the engine's numbers: `scoreFromUci` (the one place a score is normalised to White's perspective), `formatScore`, `evalBarFraction`, `pvToSan`, `variationNumbering`, plus the `Analysis` / `EngineLine` shape both engine screens collect into and the `withEngineLine` fold. Pure. |
 | `src/lib/gameModel.ts` | **The shared game model** — `Game` / `GameMove` / `GameHeaders`, plus `gameTag` / `initialFenOf` / `finalFenOf` and the `gameFromChess` snapshot. One *line* of play; all three game screens speak it. |
-| `src/lib/gameTree.ts` | **The variation tree** — `GameTree` / `VariationNode`, `addMove` (the branch), `mainline` / `lineOf` / `pathTo` / `fenAtNode`, `treeToPgn`, the variations explorer's edits (CTA-64: `promoteVariation` / `makeMainline` / `deleteFrom`, immutable and id-preserving, plus `isInSideLine`, `subtreeCounts` and `linePgn`, the one line to a move as PGN), and the `treeFromGame` ⇄ `mainlineGame` bridge that makes a `Game` a walk over a tree. Also `gameToPgn`, the **linear** game's writer, which is `treeToPgn` over the one-line tree rather than a second copy of the numbering and `SetUp`/`FEN` rules. Read the next section before touching it. |
+| `src/lib/gameTree.ts` | **The variation tree** — `GameTree` / `VariationNode`, `addMove` (the branch), `mainline` / `lineOf` / `pathTo` / `fenAtNode`, `treeToPgn`, the variations explorer's edits (CTA-64: `promoteVariation` / `makeMainline` / `deleteFrom`, immutable and id-preserving, plus `isInSideLine`, `subtreeCounts` and `linePgn`, the one line to a move as PGN), the PGN annotations a node and a tree carry (CTA-69: optional `comments` / `preComments` / `nags`, written back by `treeToPgn`, joined by `mergeTrees`), and the `treeFromGame` ⇄ `mainlineGame` bridge that makes a `Game` a walk over a tree. Also `gameToPgn`, the **linear** game's writer, which is `treeToPgn` over the one-line tree rather than a second copy of the numbering and `SetUp`/`FEN` rules. Read the next section before touching it. |
 | `src/lib/pgn.ts` | PGN ingestion only: text in, a `Game` (`parsePgnGames`, mainline only — what `chess.js` gives) or a `GameTree` (`parsePgnTrees`, side lines kept) out. |
 | `src/lib/fen.ts` | FEN ingestion: `parseFen` validates and normalises a pasted position, or throws `FenParseError`. |
 | `src/lib/positionEditor.ts` | A position *being edited*: `fenFields` / `fenFromFields` (the six fields apart and back together, which is what makes the editor's side-to-move, castling and en passant controls round-trip), `enPassantOptions`, and `positionProblems` — **non-throwing** legality reporting, because a half-edited board is illegal by definition. Pure. |
@@ -783,8 +783,8 @@ for the board. Only the differences are written out here:
   sampler: 14 games, none with a side line), and a lichess study writes each
   chapter as one. The reader picks: **merge** them into one tree (the first
   game's line is the mainline, each later divergence a side line — the sampler
-  becomes one 230-node tree with 13 side lines; only offered when every game shares a start, and the file's
-  comments are not kept), or **split** them into one repertoire per game, each
+  becomes one 230-node tree with 13 side lines; only offered when every game shares a start; the file's
+  annotations are kept — see the next bullet but one), or **split** them into one repertoire per game, each
   keeping its own text and named by the game, **all filed in a new folder**
   named after the text — and the reader lands inside it.
   `RepertoireMergeSplit.tsx` is that choice, shown on upload and on the route
@@ -802,6 +802,18 @@ for the board. Only the differences are written out here:
   count, the download and a delete — works in every view, the picks kept
   across a view switch. The delete asks first ("Delete N repertoires?") and
   goes in one write (`removeSavedRepertoires`) (CTA-68).
+- **Annotations survive the tree** (CTA-69). `parsePgnTree` keeps a file's
+  `{ comments }` (and `;` ones), `$N` NAGs and the `!`/`?` marks (read as
+  NAGs 1–6) on the tree — `comments` / `preComments` (the text opening a
+  variation) / `nags` on `VariationNode`, `comments` (before move 1) on
+  `GameTree`, all optional and absent when empty — and `treeToPgn` writes
+  them back, so a merge, Update and Save as copy lose none of them, and every
+  edit keeps them on the moves that survive. `mergeTrees` keeps a text said
+  twice about one move once, joins different ones in file order, unions
+  NAGs, and hangs each later game's opening comment before the first move
+  that game added (the tree's own, when it added none): the 310-game Alapin
+  course merges with all ~4,450 comments, less exact duplicates. Nothing
+  displays them yet.
 - **A file and a paste are one record.** Both go through `readRepertoireText`
   and the same constructors. Line endings are normalised and a file name is
   never read, so the two routes cannot drift apart. `RepertoireUpload.test.tsx`
