@@ -529,6 +529,9 @@ describe("the player's map and its permanent link", () => {
 describe("keeping a session's changes", () => {
   const BAR = "repertoire-board-changes";
   const path = () => screen.getByTestId("location").getAttribute("data-path");
+  const SAVE = "repertoire-board-save";
+  /** Open the strip from the header's Save button. */
+  const openChanges = () => fireEvent.click(screen.getByTestId(SAVE));
 
   /** 1. e4 c6, then 2. d3 — beside the repertoire's 2. d4, so a change. */
   const addD3 = () => {
@@ -537,6 +540,33 @@ describe("keeping a session's changes", () => {
     expect(screen.queryByTestId(BAR)).not.toBeInTheDocument();
     drop("d2", "d3");
   };
+
+  it("keeps the strip behind the header's Save button, which lights up with a change", () => {
+    mountIdle(`/repertoires/${storeRepertoire("r", CARO)}`);
+    // Nothing changed: disabled, and no strip.
+    expect(screen.getByTestId(SAVE)).toBeDisabled();
+    expect(screen.queryByTestId(BAR)).not.toBeInTheDocument();
+
+    addD3();
+    // Changed: enabled and coloured — but the strip waits for the click.
+    expect(screen.getByTestId(SAVE)).toBeEnabled();
+    expect(screen.getByTestId(SAVE)).toHaveClass("MuiIconButton-colorPrimary");
+    expect(screen.queryByTestId(BAR)).not.toBeInTheDocument();
+
+    openChanges();
+    expect(screen.getByTestId(BAR)).toBeInTheDocument();
+    expect(screen.getByTestId(SAVE)).toHaveAttribute("aria-pressed", "true");
+    // A second click puts it away again; the changes stay.
+    openChanges();
+    expect(screen.queryByTestId(BAR)).not.toBeInTheDocument();
+    expect(screen.getByTestId(SAVE)).toBeEnabled();
+
+    // Dropped, the button goes back to disabled and the strip stays closed.
+    openChanges();
+    fireEvent.click(screen.getByTestId(`${BAR}-discard`));
+    expect(screen.getByTestId(SAVE)).toBeDisabled();
+    expect(screen.queryByTestId(BAR)).not.toBeInTheDocument();
+  });
 
   it("offers the choice only while something has changed", () => {
     mountIdle(`/repertoires/${storeRepertoire("r", CARO)}`);
@@ -547,6 +577,7 @@ describe("keeping a session's changes", () => {
     expect(screen.queryByTestId(BAR)).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId("board-control-previous"));
     drop("d2", "d3");
+    openChanges();
     expect(screen.getByTestId(`${BAR}-summary`)).toHaveTextContent("1 move added");
   });
 
@@ -563,6 +594,7 @@ describe("keeping a session's changes", () => {
     storeRepertoire("other", CARO);
     mountIdle("/repertoires/r");
     addD3();
+    openChanges();
     fireEvent.click(screen.getByTestId(`${BAR}-update`));
 
     const record = findSavedRepertoire("r")!;
@@ -581,6 +613,7 @@ describe("keeping a session's changes", () => {
     const original = findSavedRepertoire("r")!.pgn;
     mountProbed("/repertoires/r");
     addD3();
+    openChanges();
     fireEvent.click(screen.getByTestId(`${BAR}-copy`));
     act(() => {
       vi.advanceTimersByTime(0);
@@ -603,6 +636,7 @@ describe("keeping a session's changes", () => {
     expect(findSavedRepertoire("r")!.settings.protected).toBe(true);
     mountProbed("/repertoires/r?at=e4");
     addD3();
+    openChanges();
 
     expect(screen.getByTestId(`${BAR}-protected`)).toHaveTextContent(
       "This repertoire is protected",
@@ -621,6 +655,7 @@ describe("keeping a session's changes", () => {
     const original = findSavedRepertoire("r")!;
     mountProbed("/repertoires/r");
     addD3();
+    openChanges();
     fireEvent.click(screen.getByTestId(`${BAR}-copy`));
     act(() => {
       vi.advanceTimersByTime(0);
@@ -633,6 +668,7 @@ describe("keeping a session's changes", () => {
 
     // The copy goes on being edited, and its strip has Update.
     drop("e7", "e5");
+    openChanges();
     expect(screen.queryByTestId(`${BAR}-protected`)).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId(`${BAR}-update`));
     expect(findSavedRepertoire(copy.id)!.pgn).toContain("2. d4 (2. d3 e5)");
@@ -643,6 +679,7 @@ describe("keeping a session's changes", () => {
     const stored = localStorage.getItem(SAVED_REPERTOIRES_STORAGE_KEY);
     mountIdle("/repertoires/r");
     addD3();
+    openChanges();
     drop("e7", "e5");
     expect(screen.getByTestId(`${BAR}-summary`)).toHaveTextContent("2 moves added");
 

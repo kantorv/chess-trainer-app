@@ -894,8 +894,10 @@ RepertoireGame.tsx ──┴─▶ RepertoirePlayer.tsx ── download: treeToP
   record — `core.tree !== repertoire`: every edit makes a new tree and
   replaying a move that is there does not, so the test holds for the moves
   added today and for the edits to come (deleting a line, promoting a side
-  line) with nothing to keep in step — a strip above the footer
-  (`RepertoireChangesBar.tsx`) offers three things:
+  line) with nothing to keep in step — the header's **Save** button (disabled
+  while nothing has changed) takes the primary colour, and a click on it
+  opens a strip above the footer (`RepertoireChangesBar.tsx`; it closes
+  itself once the changes are saved or dropped) that offers three things:
   - **Update repertoire** — `withRepertoireTree` (`lib/savedRepertoires.ts`)
     writes the tree into the record, preview and size re-read, and the
     session becomes the new baseline (the additions stop being additions; the

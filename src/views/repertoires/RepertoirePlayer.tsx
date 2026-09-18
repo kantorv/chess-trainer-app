@@ -12,6 +12,7 @@ import Typography from "@mui/material/Typography";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
 import RestartAltRoundedIcon from "@mui/icons-material/RestartAltRounded";
+import SaveRoundedIcon from "@mui/icons-material/SaveRounded";
 import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
 import { Link as RouterLink, useLocation, useNavigate, useSearchParams } from "react-router";
 import { useTranslation } from "react-i18next";
@@ -97,8 +98,10 @@ import { useRepertoireGame } from "./useRepertoireGame";
  *   tracked. The header's download writes them out; the Engine tab's "Clear"
  *   drops them.
  * - **Changes are kept on the reader's say-so** (the player's; a game never
- *   writes). While the session's tree differs from the record, a strip above
- *   the footer (`RepertoireChangesBar.tsx`) offers **Update this repertoire**
+ *   writes). While the session's tree differs from the record, the header's
+ *   **Save** button (disabled while nothing has changed) takes the primary
+ *   colour, and a click on it opens a strip above the footer
+ *   (`RepertoireChangesBar.tsx`) that offers **Update this repertoire**
  *   (`withRepertoireTree`, in place — the session becomes the record, and the
  *   additions stop being additions; on a **protected** repertoire — its
  *   settings, on by default — the strip says so and offers a link to its
@@ -437,6 +440,16 @@ function RepertoirePlayer({
   const changed = game === undefined && shown === "ready" && core.tree !== repertoire;
   const [saveProblem, setSaveProblem] = useState<SavedRepertoireProblem | null>(null);
 
+  /*
+    The strip is opened from the header's Save button, not shown the moment
+    something changes: the button — disabled while nothing has, coloured
+    while something has — is the signal, and the strip the choice. Once the
+    changes are saved or dropped it closes itself (adjusted during render,
+    `react-hooks/set-state-in-effect`).
+  */
+  const [changesOpen, setChangesOpen] = useState(false);
+  if (changesOpen && !changed) setChangesOpen(false);
+
   /** Make the changes part of this repertoire; the session is the record now. */
   const updateRecord = () => {
     // A protected repertoire has no Update in the strip; belt and braces.
@@ -588,6 +601,28 @@ function RepertoirePlayer({
             )}
             {game === undefined && (
               <RepertoireGamesMenu id={saved.id} testId={`${id}-games`} />
+            )}
+            {game === undefined && (
+              <Tooltip
+                title={t(
+                  changed ? "repertoires.changes.saveOpen" : "repertoires.changes.saveNothing",
+                )}
+              >
+                <span>
+                  <IconButton
+                    size="small"
+                    disabled={!changed}
+                    color={changed ? "primary" : "default"}
+                    onClick={() => setChangesOpen((open) => !open)}
+                    aria-label={t("repertoires.changes.saveOpen")}
+                    aria-pressed={changed ? changesOpen : undefined}
+                    data-testid={`${id}-save`}
+                    sx={{ flexShrink: 0 }}
+                  >
+                    <SaveRoundedIcon fontSize="small" />
+                  </IconButton>
+                </span>
+              </Tooltip>
             )}
             <Tooltip title={t("repertoires.play.restart")}>
               <IconButton
@@ -774,7 +809,7 @@ function RepertoirePlayer({
         footer:
           shown !== "ready" ? undefined : (
             <>
-              {changed && (
+              {changed && changesOpen && (
                 <RepertoireChangesBar
                   testId={`${id}-changes`}
                   summary={t("repertoires.changes.added", { count: extensionIds.size })}

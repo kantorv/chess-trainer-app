@@ -1054,6 +1054,9 @@ const en = {
      */
     changes: {
       title: "Unsaved changes",
+      /** The header's Save button: opens the strip; disabled with nothing to save. */
+      saveOpen: "Unsaved changes — save or discard them",
+      saveNothing: "No unsaved changes",
       added_one: "{{count}} move added",
       added_other: "{{count}} moves added",
       update: "Update repertoire",
