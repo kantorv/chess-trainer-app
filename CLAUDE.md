@@ -808,9 +808,11 @@ for the board. Only the differences are written out here:
 - **Nothing on the board writes.** A repertoire is the record; a move tried
   against it is exploration, and the Engine tab's clear puts it back.
 - **Settings are the one thing edited after the fact** (`/repertoires/<id>/settings`):
-  the title (the record's `name`), a description, and the main color — the
+  the title (the record's `name`), a description, the main color — the
   side it is played from, which the board opens facing and the preview card
-  shows. They are one `settings` object normalised field by field, so an
+  shows — and whether the board opens drawing the next-move arrows
+  (`showArrows`, on by default; CTA-63 — the player's Settings tab switches
+  them for a session, and the games open without them). They are one `settings` object normalised field by field, so an
   option added later reads as its default on every older record; the recipe
   is the header of `lib/repertoireSettings.ts`. The write is in place and
   keeps the list order, `updateSavedOpeningNote`'s rule.
@@ -873,7 +875,9 @@ RepertoireGame.tsx ──┴─▶ RepertoirePlayer.tsx ── download: treeToP
   per-tab `disabled`). Moves stays mounted while another tab shows. The
   header keeps the opening line, the description, the Games menu, Restart
   (back to the start, extensions kept), the download and the settings link.
-- **Arrows are the reader's call**, off by default: every continuation at the
+- **Arrows are the reader's call**: the player opens as the repertoire's
+  `showArrows` setting says (on by default), a game without them, and the
+  Settings tab switches them for the session — every continuation at the
   node on screen through the shared `nextMoveArrowsOf` — the mainline's move
   green, side lines blue. The v2 boards draw through the same helper; the
   shipped Analysis Board keeps its own copy. With Autoplay off the footer is

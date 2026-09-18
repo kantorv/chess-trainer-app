@@ -904,6 +904,9 @@ const en = {
       descriptionHelp: "Your own notes: what this repertoire covers, what to remember.",
       color: "Main color",
       colorHelp: "The side you play this repertoire as. Its board opens facing it.",
+      showArrows: "Show next-move arrows",
+      showArrowsHelp:
+        "The board opens with arrows for the moves that follow the position on it: the main line in green, side lines in blue. You can still switch them for a session. Games always start without them.",
       white: "White",
       black: "Black",
       save: "Save",
