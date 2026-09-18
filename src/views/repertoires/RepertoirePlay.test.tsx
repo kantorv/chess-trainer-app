@@ -74,6 +74,10 @@ const drop = (from: string, to: string) =>
     boardOptions().onPieceDrop!({ sourceSquare: from, targetSquare: to });
   });
 
+/** Open the Settings tab, where the side and the arrows live. */
+const openSettings = () =>
+  fireEvent.click(screen.getByTestId("repertoire-play-panel-tab-settings"));
+
 /** Long enough for the trainer to have replied, if it is going to. */
 const wait = () =>
   act(() => {
@@ -138,6 +142,7 @@ describe("playing a repertoire against the trainer", () => {
     wait();
     expect(position()).toBe(fenAfter("e4", "c6"));
 
+    openSettings();
     fireEvent.click(screen.getByTestId("repertoire-play-side-black"));
     // Back at the start, facing Black, and the trainer thinking as White.
     expect(position()).toBe(new Chess().fen());
@@ -211,6 +216,7 @@ describe("playing a repertoire against the trainer", () => {
     // Off by default: a drill does not show the answer.
     expect(boardOptions().arrows).toEqual([]);
 
+    openSettings();
     fireEvent.click(screen.getByTestId("repertoire-play-arrows").querySelector("input")!);
     // One continuation is still drawn — unlike the reading boards.
     expect(boardOptions().arrows).toEqual([
@@ -230,6 +236,27 @@ describe("playing a repertoire against the trainer", () => {
     // And off again.
     fireEvent.click(screen.getByTestId("repertoire-play-arrows").querySelector("input")!);
     expect(boardOptions().arrows).toEqual([]);
+  });
+
+  it("keeps the side and the arrows in a Settings tab beside Moves", () => {
+    mount(`/repertoires/${storeRepertoire("r", CARO)}/play`);
+    for (const tab of ["moves", "settings"]) {
+      expect(screen.getByTestId(`repertoire-play-panel-tab-${tab}`)).toBeInTheDocument();
+    }
+    // Not in the header any more, and not on screen until the tab is opened.
+    const header = screen.getByTestId("repertoire-play-panel-header");
+    expect(header.querySelector('[data-testid="repertoire-play-side"]')).toBeNull();
+    expect(screen.queryByTestId("repertoire-play-arrows")).not.toBeInTheDocument();
+
+    const list = screen.getByTestId("move-list");
+    openSettings();
+    expect(screen.getByTestId("repertoire-play-settings")).toBeInTheDocument();
+    expect(screen.getByTestId("repertoire-play-side-white")).toHaveAttribute("aria-pressed", "true");
+    // The move list is kept mounted, hidden, while Settings shows.
+    expect(screen.getByTestId("repertoire-play-panel-content-moves")).not.toBeVisible();
+
+    fireEvent.click(screen.getByTestId("repertoire-play-panel-tab-moves"));
+    expect(screen.getByTestId("move-list")).toBe(list);
   });
 
   it("restarts at the start position and keeps the extensions", () => {

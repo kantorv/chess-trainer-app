@@ -971,8 +971,15 @@ const en = {
       restart: "Restart from the start position",
       download: "Download with your additions as PGN",
       back: "Back to the board",
+      sideHelp:
+        "The trainer plays the other side. Changing it starts again from the first move; what you added is kept.",
       /** The switch that draws the next-move arrows — off by default. */
-      arrows: "Arrows",
+      arrows: "Show next-move arrows",
+      arrowsHelp:
+        "Arrows for the moves that follow the position on the board: the main line in green, side lines in blue.",
+      tabs: {
+        settings: "Settings",
+      },
       status: {
         thinking: "The trainer is choosing a move…",
         yourMove: "Your move.",

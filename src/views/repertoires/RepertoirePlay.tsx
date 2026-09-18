@@ -66,8 +66,12 @@ import { useSavedRepertoires } from "./useSavedRepertoires";
  *   download, which writes the session tree — repertoire, extensions, side
  *   lines and all — as one PGN.
  *
+ * - **Two tabs: Moves · Settings.** The session's knobs — the side and the
+ *   arrows — live in the Settings tab rather than the header, which keeps
+ *   the actions (restart, download, back). A later drill mode's options go
+ *   there too.
  * - **Arrows are the reader's call, and off by default.** A drill should not
- *   show the answer unless asked, so the header's switch draws the next-move
+ *   show the answer unless asked, so the Settings tab's switch draws the next-move
  *   arrows (`nextMoveArrowsOf`: the mainline's move in its own colour, the
  *   side lines in another) for every continuation at the node on screen —
  *   the repertoire's and the reader's additions alike, and a single one too,
@@ -81,7 +85,11 @@ import { useSavedRepertoires } from "./useSavedRepertoires";
  * 9,146-node reason.
  */
 
-/** The tabs that stay mounted once opened — see `BoardPanel`'s `keepMounted`. */
+/**
+ * The tabs that stay mounted once opened — see `BoardPanel`'s `keepMounted`.
+ * The Moves list of a 9,000-node repertoire takes most of a second to mount,
+ * so a trip to Settings and back must not remount it.
+ */
 const KEEP_MOUNTED = ["moves"] as const;
 
 /** Whether the repertoire's tree is on the board yet. */
@@ -155,6 +163,7 @@ function RepertoirePlayScreen({ saved }: { saved: SavedRepertoire }) {
     };
   }, [loadTree, requestReply, saved]);
 
+  const [tab, setTab] = useState("moves");
   const [showArrows, setShowArrows] = useState(false);
   const continuations = useMemo(
     () =>
@@ -223,35 +232,6 @@ function RepertoirePlayScreen({ saved }: { saved: SavedRepertoire }) {
               >
                 {saved.name || t("repertoires.untitled")}
               </Typography>
-              <Box sx={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 1, mt: 0.5 }}>
-                <ToggleButtonGroup
-                  exclusive
-                  size="small"
-                  value={side}
-                  onChange={(_, next: Side | null) => changeSide(next)}
-                  aria-label={t("repertoires.play.side")}
-                  data-testid="repertoire-play-side"
-                >
-                  <ToggleButton value="white" data-testid="repertoire-play-side-white">
-                    {t("repertoires.play.white")}
-                  </ToggleButton>
-                  <ToggleButton value="black" data-testid="repertoire-play-side-black">
-                    {t("repertoires.play.black")}
-                  </ToggleButton>
-                </ToggleButtonGroup>
-                <FormControlLabel
-                  sx={{ m: 0 }}
-                  control={
-                    <Switch
-                      size="small"
-                      checked={showArrows}
-                      data-testid="repertoire-play-arrows"
-                      onChange={(event) => setShowArrows(event.target.checked)}
-                    />
-                  }
-                  label={t("repertoires.play.arrows")}
-                />
-              </Box>
             </Box>
             {shown === "loading" && (
               <CircularProgress
@@ -300,9 +280,8 @@ function RepertoirePlayScreen({ saved }: { saved: SavedRepertoire }) {
             </Tooltip>
           </>
         ),
-        // One tab for now; the drill's own tabs come later.
-        activeTab: "moves",
-        onTabChange: () => {},
+        activeTab: tab,
+        onTabChange: setTab,
         keepMounted: KEEP_MOUNTED,
         tabs: [
           {
@@ -324,6 +303,18 @@ function RepertoirePlayScreen({ saved }: { saved: SavedRepertoire }) {
                 />
               )),
           },
+          {
+            id: "settings",
+            label: t("repertoires.play.tabs.settings"),
+            content: (
+              <PlaySettings
+                side={side}
+                onSideChange={changeSide}
+                showArrows={showArrows}
+                onShowArrowsChange={setShowArrows}
+              />
+            ),
+          },
         ],
         footer:
           shown === "ready" ? (
@@ -342,6 +333,72 @@ function RepertoirePlayScreen({ saved }: { saved: SavedRepertoire }) {
           ) : undefined,
       }}
     />
+  );
+}
+
+/**
+ * The Settings tab: the session's knobs, one labelled row each. Presentational
+ * — the screen owns the state, since changing side restarts the session.
+ */
+function PlaySettings({
+  side,
+  onSideChange,
+  showArrows,
+  onShowArrowsChange,
+}: {
+  side: Side;
+  onSideChange: (next: Side | null) => void;
+  showArrows: boolean;
+  onShowArrowsChange: (next: boolean) => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <Box
+      data-testid="repertoire-play-settings"
+      sx={{ display: "flex", flexDirection: "column", gap: 2, p: 1 }}
+    >
+      <Box>
+        <Typography variant="subtitle2" id="repertoire-play-side-label" sx={{ fontWeight: 600 }}>
+          {t("repertoires.play.side")}
+        </Typography>
+        <ToggleButtonGroup
+          exclusive
+          size="small"
+          value={side}
+          onChange={(_, next: Side | null) => onSideChange(next)}
+          aria-labelledby="repertoire-play-side-label"
+          data-testid="repertoire-play-side"
+          sx={{ my: 0.5 }}
+        >
+          <ToggleButton value="white" data-testid="repertoire-play-side-white">
+            {t("repertoires.play.white")}
+          </ToggleButton>
+          <ToggleButton value="black" data-testid="repertoire-play-side-black">
+            {t("repertoires.play.black")}
+          </ToggleButton>
+        </ToggleButtonGroup>
+        <Typography variant="caption" sx={{ display: "block", color: "text.secondary" }}>
+          {t("repertoires.play.sideHelp")}
+        </Typography>
+      </Box>
+      <Box>
+        <FormControlLabel
+          sx={{ m: 0 }}
+          control={
+            <Switch
+              size="small"
+              checked={showArrows}
+              data-testid="repertoire-play-arrows"
+              onChange={(event) => onShowArrowsChange(event.target.checked)}
+            />
+          }
+          label={t("repertoires.play.arrows")}
+        />
+        <Typography variant="caption" sx={{ display: "block", color: "text.secondary" }}>
+          {t("repertoires.play.arrowsHelp")}
+        </Typography>
+      </Box>
+    </Box>
   );
 }
 
