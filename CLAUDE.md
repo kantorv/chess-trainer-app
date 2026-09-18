@@ -833,7 +833,7 @@ a scripted opponent that answers only from the file — and lets the reader
 extend it as they go. Reached from the Play button on the repertoire's board
 and on each list row and card. It is the repertoire board again (same core,
 same shell, same parse behind a `setTimeout(0)`), with
-`useTrainerModule` (`views/dev/core/`) in place of the engine and the pure
+`useTrainerModule` (`views/dev/core/`) as the opponent — the engine stays, off by default and never replying — and the pure
 half in `lib/repertoireTrainer.ts`:
 
 ```
@@ -864,9 +864,16 @@ RepertoirePlay.tsx ── BoardShell / BoardPanel ── TreeMoveList(extensionI
   list tints them (`success.main`, a theme token) through the optional
   `extensionIds` on `TreeMoveList` → `MoveList`, read per token from the
   selection store like the highlight; every other consumer passes none.
-- **Two tabs: Moves · Settings.** The session's knobs — the side and the
-  arrows — are in the Settings tab; the header keeps the actions (restart,
-  download, back). Moves stays mounted while Settings shows.
+- **Three tabs: Moves · Engine · Settings.** The session's knobs — the side
+  and the arrows — are in the Settings tab; the Engine tab is the other
+  boards' own; the header keeps the engine's switch and the actions
+  (restart, download, back). Moves stays mounted while another tab shows.
+- **The engine is off by default, and never an opponent.** A header switch,
+  as on the repertoire board: on, it searches the position on screen and
+  fills the pinned best-variations block and the eval bar; it passes no
+  `onBestMove`, so it never moves a piece. A line clicked in the block is
+  played under the node on screen as exploration — the trainer does not
+  answer it. The Engine tab's "Clear" drops the session's additions.
 - **Arrows are the reader's call.** A Settings-tab switch, **off by default** (a
   drill should not show the answer), draws the next-move arrows for every
   continuation at the node on screen through the shared `nextMoveArrowsOf`
@@ -876,8 +883,7 @@ RepertoirePlay.tsx ── BoardShell / BoardPanel ── TreeMoveList(extensionI
   own copy, untouched.
 - **The session is session-only.** The reader picks White or Black per
   session (default: the repertoire's main color); changing side and "Restart"
-  both go back to the start and **keep** the extensions. No engine (a drill
-  should not show the answer), no autosave, and the stored record is never
+  both go back to the start and **keep** the extensions. No autosave, and the stored record is never
   written: leaving drops the extensions. The way out is the header's download
   — the session tree through `treeToPgn` and `downloadPgn`, named from the
   repertoire.

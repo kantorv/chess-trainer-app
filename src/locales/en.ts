@@ -971,6 +971,8 @@ const en = {
       restart: "Restart from the start position",
       download: "Download with your additions as PGN",
       back: "Back to the board",
+      /** The engine's switch — off by default: a drill does not show the answer. */
+      engine: "Engine",
       sideHelp:
         "The trainer plays the other side. Changing it starts again from the first move; what you added is kept.",
       /** The switch that draws the next-move arrows — off by default. */

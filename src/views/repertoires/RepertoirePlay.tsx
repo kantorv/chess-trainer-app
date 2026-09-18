@@ -15,6 +15,11 @@ import { Link as RouterLink, Navigate, useParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import type { ChessboardOptions } from "react-chessboard";
 
+import {
+  ANALYSIS_UCI_OPTION,
+  DEFAULT_ANALYSIS_SETTINGS,
+  type AnalysisSettings,
+} from "../../lib/analysisSettings";
 import { emptyTree, findNode, type GameTree } from "../../lib/gameTree";
 import { downloadPgn } from "../../lib/pgnExport";
 import { slugify } from "../../lib/pgnLibrary";
@@ -27,7 +32,9 @@ import {
 import BoardShell from "../dev/core/BoardShell";
 import TreeMoveList from "../dev/core/TreeMoveList";
 import { useBoardCore } from "../dev/core/useBoardCore";
+import { useEngineModule } from "../dev/core/useEngineModule";
 import { useTrainerModule, type TrainerStatus } from "../dev/core/useTrainerModule";
+import AnalysisSettingsPanel from "../tools/analysis/AnalysisSettings";
 import { nextMoveArrowsOf } from "../tools/analysis/nextMoveArrows";
 import { MissingRepertoire } from "./RepertoireBoard";
 import { useSavedRepertoires } from "./useSavedRepertoires";
@@ -40,13 +47,13 @@ import { useSavedRepertoires } from "./useSavedRepertoires";
  * Composed from the v2 core
  * ([`.claude/rules/chessboard-v2.md`](../../../.claude/rules/chessboard-v2.md))
  * like the repertoire's own board (`RepertoireBoard.tsx`), with the trainer
- * module in place of the engine:
+ * module as the opponent:
  *
  * | Capability | Taken | Because |
  * | --- | --- | --- |
  * | Base | `useBoardCore({ orientation })` | facing the side the reader plays; both colours move from any node, because past the repertoire's end the reader plays both |
  * | Trainer | `useTrainerModule` | the opponent — see that file for the "replies to a move, never to a position" rule |
- * | Engine | ❌ | a drill should not show the answer |
+ * | Engine | switch, **off by default**, **no reply** | a drill should not show the answer unless asked; switched on, it is the usual pinned lines block and eval bar, and it never moves a piece — the trainer is the only opponent |
  * | Autosave | ❌ | the session is the reader's, the record is the file's |
  *
  * ## The rules of a session
@@ -66,10 +73,18 @@ import { useSavedRepertoires } from "./useSavedRepertoires";
  *   download, which writes the session tree — repertoire, extensions, side
  *   lines and all — as one PGN.
  *
- * - **Two tabs: Moves · Settings.** The session's knobs — the side and the
- *   arrows — live in the Settings tab rather than the header, which keeps
- *   the actions (restart, download, back). A later drill mode's options go
- *   there too.
+ * - **Three tabs: Moves · Engine · Settings.** The session's knobs — the side
+ *   and the arrows — live in the Settings tab; the Engine tab is the other
+ *   boards' own (`AnalysisSettings`), and the engine's switch sits in the
+ *   header, where the other boards keep it, so it is reachable from any tab.
+ *   The header also keeps the actions (restart, download, back).
+ * - **The engine is off until the reader turns it on.** On, it searches the
+ *   position on screen and fills the pinned best-variations block above the
+ *   tabs, exactly as on the repertoire board; a line clicked there is played
+ *   under the node on screen (the core's `playVariation`) — exploration, so
+ *   the trainer does not answer it, and moves the file lacks are extensions
+ *   like any other. Its "Clear" puts the repertoire back as the record has it,
+ *   dropping this session's additions — the board's "Clear" too.
  * - **Arrows are the reader's call, and off by default.** A drill should not
  *   show the answer unless asked, so the Settings tab's switch draws the next-move
  *   arrows (`nextMoveArrowsOf`: the mainline's move in its own colour, the
@@ -164,6 +179,34 @@ function RepertoirePlayScreen({ saved }: { saved: SavedRepertoire }) {
   }, [loadTree, requestReply, saved]);
 
   const [tab, setTab] = useState("moves");
+
+  /*
+    The engine — the repertoire board's wiring (`RepertoireBoard.tsx`), off by
+    default here. No `onBestMove`: the trainer is the only thing that answers.
+  */
+  const [engineOn, setEngineOn] = useState(false);
+  const [settings, setSettings] = useState<AnalysisSettings>(DEFAULT_ANALYSIS_SETTINGS);
+  const [showEvalBar, setShowEvalBar] = useState(true);
+  const onUciOptionsReady = useCallback(
+    (clamped: Readonly<Record<string, number>>) =>
+      setSettings((current) => {
+        const multiPv = clamped[ANALYSIS_UCI_OPTION.multiPv] ?? current.multiPv;
+        return multiPv === current.multiPv ? current : { ...current, multiPv };
+      }),
+    [],
+  );
+  const engine = useEngineModule({
+    enabled: engineOn,
+    fen: core.fen,
+    depth: settings.depth,
+    moveTimeMs: settings.moveTimeMs,
+    uciOptions: useMemo(
+      () => ({ [ANALYSIS_UCI_OPTION.multiPv]: settings.multiPv }),
+      [settings.multiPv],
+    ),
+    onUciOptionsReady,
+  });
+  const topLine = engine.analysis.lines.find((line) => line !== undefined);
   const [showArrows, setShowArrows] = useState(false);
   const continuations = useMemo(
     () =>
@@ -195,6 +238,12 @@ function RepertoirePlayScreen({ saved }: { saved: SavedRepertoire }) {
     restart();
   };
 
+  /** The Engine tab's "Clear": the repertoire as the record has it, from the start. */
+  const clear = () => {
+    loadTree(repertoire);
+    requestReply(null);
+  };
+
   const download = () =>
     downloadPgn(slugify(saved.name) || "repertoire", [core.pgn]);
 
@@ -218,7 +267,9 @@ function RepertoirePlayScreen({ saved }: { saved: SavedRepertoire }) {
         onPieceDrop: trainer.onPieceDrop,
         resolvePromotion: trainer.resolvePromotion,
       }}
-      showEvalBar={false}
+      // The bar only means something while the engine is searching.
+      score={topLine?.score ?? null}
+      showEvalBar={engineOn && showEvalBar}
       boardOptions={boardOptions}
       panel={{
         header: (
@@ -241,6 +292,18 @@ function RepertoirePlayScreen({ saved }: { saved: SavedRepertoire }) {
                 sx={{ flexShrink: 0 }}
               />
             )}
+            <FormControlLabel
+              sx={{ flexShrink: 0, m: 0 }}
+              control={
+                <Switch
+                  size="small"
+                  checked={engineOn}
+                  data-testid="repertoire-play-setting-engine"
+                  onChange={(event) => setEngineOn(event.target.checked)}
+                />
+              }
+              label={t("repertoires.play.engine")}
+            />
             <Tooltip title={t("repertoires.play.restart")}>
               <IconButton
                 size="small"
@@ -280,6 +343,10 @@ function RepertoirePlayScreen({ saved }: { saved: SavedRepertoire }) {
             </Tooltip>
           </>
         ),
+        analysis: engine.analysis,
+        requestedMultiPv: settings.multiPv,
+        engineOn,
+        onPlayVariation: core.playVariation,
         activeTab: tab,
         onTabChange: setTab,
         keepMounted: KEEP_MOUNTED,
@@ -300,8 +367,26 @@ function RepertoirePlayScreen({ saved }: { saved: SavedRepertoire }) {
                   nodeId={core.nodeId}
                   onSelectNode={core.goToNode}
                   extensionIds={extensionIds}
+                  evalsByFen={engine.evalsByFen}
                 />
               )),
+          },
+          {
+            id: "engine",
+            label: t("repertoires.detail.tabs.engine"),
+            content: (
+              <AnalysisSettingsPanel
+                settings={settings}
+                onChange={(patch: Partial<AnalysisSettings>) =>
+                  setSettings((current) => ({ ...current, ...patch }))
+                }
+                engineOptions={engine.engineOptions}
+                engineOn={engineOn}
+                showEvalBar={showEvalBar}
+                onShowEvalBarChange={setShowEvalBar}
+                onClear={clear}
+              />
+            ),
           },
           {
             id: "settings",
