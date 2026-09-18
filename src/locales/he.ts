@@ -571,11 +571,17 @@ const he: typeof en = {
     },
     open: "פתיחה",
     add: "הוספה",
-    remove: "מחיקת הרפרטואר",
     select: "בחירת הרפרטואר",
     selectAll: "בחירת כל הרפרטוארים",
     selected: "{{count}} נבחרו",
     download: "הורדת הנבחרים כקובץ PGN",
+    deleteSelected: "מחיקת הנבחרים",
+    bulkDelete: {
+      title_one: "למחוק רפרטואר אחד?",
+      title_other: "למחוק {{count}} רפרטוארים?",
+      text: "הם יוסרו מהדפדפן הזה. אי אפשר לבטל את זה.",
+      confirm: "מחיקה",
+    },
     upload: {
       title: "הוספת רפרטואר",
       intro:
@@ -599,7 +605,11 @@ const he: typeof en = {
       sections: {
         general: "כללי",
         board: "לוח",
+        folder: "תיקייה",
       },
+      folder: "תיקייה",
+      folderHelp: "איפה הוא מתויק ברשימה.",
+      folderNone: "אין עדיין תיקיות — צרו אחת מ״תיקייה חדשה״ שברשימה.",
       name: "כותרת",
       nameHelp: "מוצגת ברשימה ומעל הלוח.",
       description: "תיאור",
@@ -650,9 +660,7 @@ const he: typeof en = {
       count_other: "{{count}} רפרטוארים",
       deleteConfirm_one: "הרפרטואר שבה עובר ל״ללא תיקייה״; שום דבר לא נמחק.",
       deleteConfirm_other: "{{count}} הרפרטוארים שבה עוברים ל״ללא תיקייה״; שום דבר לא נמחק.",
-      move: "העברה לתיקייה",
-      moveTitle: "העברה לתיקייה",
-      empty: "התיקייה ריקה. העבירו אליה רפרטוארים מהרשימה.",
+      empty: "התיקייה ריקה. העבירו אליה רפרטוארים מההגדרות שלהם.",
     },
     games: {
       open: "משחקים",

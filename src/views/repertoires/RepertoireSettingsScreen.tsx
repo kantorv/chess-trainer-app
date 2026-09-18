@@ -8,25 +8,28 @@ import { Link as RouterLink, useLocation, useNavigate, useParams } from "react-r
 import { useTranslation } from "react-i18next";
 
 import type { SavedRepertoire } from "../../lib/savedRepertoires";
-import { updateRepertoireSettings } from "../../lib/savedRepertoireStore";
+import { fileRepertoire, updateRepertoireSettings } from "../../lib/savedRepertoireStore";
 import { RightPanel } from "../main/rightPanel";
 import {
   BoardSection,
+  FolderSection,
   GeneralSection,
   type RepertoireSettingsDraft,
   type RepertoireSettingsSectionProps,
 } from "./RepertoireSettingsSections";
+import { useRepertoireFolders } from "./useRepertoireFolders";
 import { useSavedRepertoires } from "./useSavedRepertoires";
 
 /**
  * **A repertoire's settings** (`/repertoires/<id>/settings`) — its title,
- * description and main color, and whatever option comes next.
+ * description and main color, the folder it is filed under (CTA-68 — the one
+ * place a repertoire moves between folders), and whatever option comes next.
  *
  * The screen is a **list of sections** over **one draft**: each section
  * (`RepertoireSettingsSections.tsx`) edits the draft through a patch, and
  * nothing is written until Save, which writes the whole draft at once through
- * `updateRepertoireSettings` — in place, so the repertoire keeps its place in
- * the list. Cancel drops the draft. Both go back where the reader came from
+ * `updateRepertoireSettings` (and the folder through `fileRepertoire`) — in
+ * place, so the repertoire keeps its place in the list. Cancel drops the draft. Both go back where the reader came from
  * (the router state a link here passes), or to the repertoire's board.
  *
  * Adding an option never touches this file unless it needs a new *section*;
@@ -41,6 +44,7 @@ const SECTIONS: readonly {
 }[] = [
   { id: "general", labelKey: "repertoires.settings.sections.general", Body: GeneralSection },
   { id: "board", labelKey: "repertoires.settings.sections.board", Body: BoardSection },
+  { id: "folder", labelKey: "repertoires.settings.sections.folder", Body: FolderSection },
 ];
 
 function RepertoireSettingsScreen() {
@@ -75,23 +79,33 @@ function SettingsForm({ saved }: { saved: SavedRepertoire }) {
   const back =
     typeof from === "string" ? from : `/repertoires/${encodeURIComponent(saved.id)}`;
 
-  const [draft, setDraft] = useState<RepertoireSettingsDraft>({
+  // A `folderId` naming a folder that is gone reads as Unfiled, as the list
+  // reads it, so the tree preselects what the reader actually sees.
+  const folders = useRepertoireFolders();
+  const [draft, setDraft] = useState<RepertoireSettingsDraft>(() => ({
     name: saved.name,
     settings: saved.settings,
-  });
+    folderId:
+      saved.folderId !== null && folders.some((folder) => folder.id === saved.folderId)
+        ? saved.folderId
+        : null,
+  }));
   const [failed, setFailed] = useState(false);
 
   const onChange: RepertoireSettingsSectionProps["onChange"] = (patch) =>
     setDraft((current) => ({
       name: patch.name ?? current.name,
       settings: { ...current.settings, ...patch.settings },
+      // `null` is a real choice (Unfiled), so absence is told by `undefined`.
+      folderId: patch.folderId === undefined ? current.folderId : patch.folderId,
     }));
 
   const save = () => {
-    const problem = updateRepertoireSettings(saved.id, draft.name.trim(), {
-      ...draft.settings,
-      description: draft.settings.description.trim(),
-    });
+    const problem =
+      updateRepertoireSettings(saved.id, draft.name.trim(), {
+        ...draft.settings,
+        description: draft.settings.description.trim(),
+      }) ?? fileRepertoire(saved.id, draft.folderId);
     if (problem !== undefined) {
       setFailed(true);
       return;

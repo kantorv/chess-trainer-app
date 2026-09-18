@@ -20,6 +20,7 @@ import {
   findSavedRepertoire,
   MAX_SAVED_REPERTOIRES,
   removeSavedRepertoire,
+  removeSavedRepertoires,
   SAVED_REPERTOIRES_STORAGE_KEY,
   saveRepertoire,
   savedRepertoiresSnapshot,
@@ -73,6 +74,22 @@ describe("the saved-repertoires store", () => {
 
     for (let i = 0; i < MAX_SAVED_REPERTOIRES + 3; i += 1) saveRepertoire(record(`r${i}`));
     expect(savedRepertoiresSnapshot()).toHaveLength(MAX_SAVED_REPERTOIRES);
+  });
+
+  it("deletes several in one write, and writes nothing for ids it does not hold", () => {
+    saveRepertoire(record("a"));
+    saveRepertoire(record("b"));
+    saveRepertoire(record("c"));
+
+    const listener = vi.fn();
+    const unsubscribe = subscribeSavedRepertoires(listener);
+    expect(removeSavedRepertoires(["nope"])).toBeUndefined();
+    expect(listener).not.toHaveBeenCalled();
+
+    expect(removeSavedRepertoires(["a", "c", "nope"])).toBeUndefined();
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect(savedRepertoiresSnapshot().map((row) => row.id)).toEqual(["b"]);
+    unsubscribe();
   });
 
   it("drops a malformed row rather than rendering it", () => {

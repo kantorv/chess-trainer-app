@@ -4,23 +4,16 @@ import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
-import List from "@mui/material/List";
-import ListItemButton from "@mui/material/ListItemButton";
-import ListItemText from "@mui/material/ListItemText";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
-import FolderOffRoundedIcon from "@mui/icons-material/FolderOffRounded";
-import FolderRoundedIcon from "@mui/icons-material/FolderRounded";
 import { useTranslation } from "react-i18next";
 
-import {
-  sortedRepertoireFolders,
-  type RepertoireFolder,
-} from "../../lib/savedRepertoireFolders";
+import type { RepertoireFolder } from "../../lib/savedRepertoireFolders";
 
 /**
- * **The Repertoires list's three folder dialogs** — name one (new and rename),
- * confirm deleting one, and move a repertoire into one.
+ * **The Repertoires list's dialogs** — name a folder (new and rename),
+ * confirm deleting one, and confirm deleting the picked repertoires. (Moving a
+ * repertoire into a folder is its settings screen's, since CTA-68.)
  *
  * The saved games' dialogs (`views/engine/saved/`) are the model, reduced to
  * what a one-level list needs: no nested picker, no folder moves, no
@@ -144,66 +137,45 @@ export function RepertoireFolderDeleteDialog({
 }
 
 /**
- * Move a repertoire: Unfiled, or any folder — a flat list, since folders are
- * one level. A pick is the move; the dialog closes on it.
+ * Confirm deleting the picked repertoires — the list's bulk delete (CTA-68).
+ * The folder delete's dialog again, except that this one does delete: the
+ * repertoires are gone, not moved.
  */
-export function RepertoireMoveDialog({
+export function RepertoireBulkDeleteDialog({
   open,
-  folders,
-  current,
-  onMove,
+  count,
+  onConfirm,
   onClose,
 }: {
   open: boolean;
-  folders: readonly RepertoireFolder[];
-  /** Where the repertoire is now — `null` for Unfiled. */
-  current: string | null;
-  onMove: (folderId: string | null) => void;
+  /** How many repertoires are picked — what goes. */
+  count: number;
+  onConfirm: () => void;
   onClose: () => void;
 }) {
   const { t } = useTranslation();
-  const pick = (folderId: string | null) => {
-    onMove(folderId);
-    onClose();
-  };
-
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="xs">
-      <DialogTitle>{t("repertoires.folder.moveTitle")}</DialogTitle>
+      <DialogTitle data-testid="repertoires-delete-title">
+        {t("repertoires.bulkDelete.title", { count })}
+      </DialogTitle>
       <DialogContent>
-        <List dense disablePadding data-testid="repertoire-folder-picker">
-          <ListItemButton
-            selected={current === null}
-            onClick={() => pick(null)}
-            data-testid="repertoire-folder-pick-unfiled"
-            sx={{ borderRadius: 0.5 }}
-          >
-            <FolderOffRoundedIcon fontSize="small" sx={{ mr: 1.5, color: "text.secondary" }} />
-            <ListItemText primary={t("repertoires.folder.unfiled")} />
-          </ListItemButton>
-          {sortedRepertoireFolders(folders).map((folder) => (
-            <ListItemButton
-              key={folder.id}
-              selected={current === folder.id}
-              onClick={() => pick(folder.id)}
-              data-testid={`repertoire-folder-pick-${folder.id}`}
-              sx={{ borderRadius: 0.5 }}
-            >
-              <FolderRoundedIcon
-                fontSize="small"
-                sx={{ mr: 1.5, color: "text.secondary", flexShrink: 0 }}
-              />
-              <ListItemText
-                primary={folder.name || t("repertoires.untitled")}
-                slotProps={{ primary: { noWrap: true } }}
-              />
-            </ListItemButton>
-          ))}
-        </List>
+        <Typography variant="body2">{t("repertoires.bulkDelete.text")}</Typography>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} data-testid="repertoire-folder-move-cancel">
+        <Button onClick={onClose} data-testid="repertoires-delete-cancel">
           {t("repertoires.folder.cancel")}
+        </Button>
+        <Button
+          color="error"
+          variant="contained"
+          onClick={() => {
+            onConfirm();
+            onClose();
+          }}
+          data-testid="repertoires-delete-confirm"
+        >
+          {t("repertoires.bulkDelete.confirm")}
         </Button>
       </DialogActions>
     </Dialog>

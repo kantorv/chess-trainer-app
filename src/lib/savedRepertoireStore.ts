@@ -183,6 +183,20 @@ export const removeSavedRepertoire = (
 ): SavedRepertoireProblem | undefined =>
   write(savedRepertoiresSnapshot().filter((row) => row.id !== id));
 
+/**
+ * Forget several at once — the list's bulk delete — in **one** write, so a
+ * failed write leaves every one of them rather than some. Unknown ids are
+ * skipped; a set naming none of the stored records writes nothing.
+ */
+export const removeSavedRepertoires = (
+  ids: Iterable<string>,
+): SavedRepertoireProblem | undefined => {
+  const gone = new Set(ids);
+  const current = savedRepertoiresSnapshot();
+  if (!current.some((row) => gone.has(row.id))) return undefined;
+  return write(current.filter((row) => !gone.has(row.id)));
+};
+
 /** Forget all of them — and nothing kept under any other key. */
 export const clearSavedRepertoires = (): SavedRepertoireProblem | undefined =>
   write([]);
