@@ -302,6 +302,61 @@ export const addMove = (
   };
 };
 
+/**
+ * Fold several trees into **one** — the "merge" a repertoire file of many
+ * games is offered (CTA-61), where each game is one line of the same opening.
+ *
+ * The first tree is the spine: its mainline stays the mainline, and every
+ * later tree is walked in and hung on it — a move already there is followed
+ * (SAN identifies a move within a position, `addMove`'s own rule), a move that
+ * is not is appended after the moves already under that position, so it
+ * becomes a side line there. Every tree's own side lines come along the same
+ * way. Ids are minted fresh, `n1`… in the order nodes are first met, and the
+ * headers are the caller's.
+ *
+ * Built **in place** with a flat walk rather than one `addMove` per node,
+ * which copies the tree each time — a 310-game file would be quadratic.
+ *
+ * Every tree must start from `startFen`; a tree that does not is skipped, not
+ * forced (its moves mean nothing from another position). The caller decides
+ * whether merging is offered at all.
+ */
+export const mergeTrees = (
+  trees: readonly GameTree[],
+  startFen: string,
+  headers: GameHeaders = {},
+): GameTree => {
+  const moves: VariationNode[] = [];
+  let nextId = 1;
+
+  const into = (target: VariationNode[], source: readonly VariationNode[], ply: number) => {
+    for (const node of source) {
+      let existing = target.find((candidate) => candidate.san === node.san);
+      if (existing === undefined) {
+        existing = {
+          id: `n${nextId}`,
+          san: node.san,
+          from: node.from,
+          to: node.to,
+          fen: node.fen,
+          ply,
+          captured: node.captured,
+          children: [],
+        };
+        nextId += 1;
+        target.push(existing);
+      }
+      into(existing.children, node.children, ply + 1);
+    }
+  };
+
+  for (const tree of trees) {
+    if (tree.startFen === startFen) into(moves, tree.moves, 1);
+  }
+
+  return { headers: { ...headers }, startFen, moves, nextId };
+};
+
 /** Lift a linear {@link Game} into a tree with that game as its only line. */
 export const treeFromGame = (game: Game): GameTree => {
   const startFen = initialFenOf(game);

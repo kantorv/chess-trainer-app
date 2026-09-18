@@ -3,13 +3,16 @@ import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import i18n from "../../i18n";
-import {
-  checkRepertoirePgn,
-  savedRepertoireOf,
-} from "../../lib/savedRepertoires";
-import { saveRepertoire } from "../../lib/savedRepertoireStore";
+import { isMultiGameRepertoire, repertoireTreeOf } from "../../lib/savedRepertoires";
+import { findSavedRepertoire, savedRepertoiresSnapshot } from "../../lib/savedRepertoireStore";
 import { boardOptions, FakeEngine } from "../dev/devTestHarness";
-import { CARO, renderSection } from "./repertoireTestKit";
+import {
+  CARO,
+  CARO_TWO_GAMES,
+  renderSection,
+  storeLegacyRepertoire,
+  storeRepertoire,
+} from "./repertoireTestKit";
 
 /*
   The board screen, with the **real** panel — `RepertoirePropagation.test.tsx`
@@ -38,32 +41,25 @@ const files = import.meta.glob<string>("../../data/pgn/*.pgn", {
 });
 const shipped = (name: string) => files[`../../data/pgn/${name}`]!;
 
-/** Bring a text in the way the upload screen does, and return its id. */
-const bringIn = (id: string, text: string, name = "") => {
-  const check = checkRepertoirePgn(text);
-  if (!check.ok) throw new Error(`fixture did not read: ${check.problem}`);
-  expect(saveRepertoire(savedRepertoireOf(id, text, name, check.previewFen))).toBeUndefined();
-  return id;
-};
-
 const AFTER_NF3 = "rn1qkbnr/pp2pppp/2p5/3pPb2/3P4/5N2/PPP2PPP/RNBQKB1R b KQkq - 2 4";
-const AFTER_CXD5 = "rnbqkbnr/pp2pppp/8/3p4/3P4/8/PPP2PPP/RNBQKBNR w KQkq - 0 4";
 
 beforeEach(async () => {
   FakeEngine.reset();
   await i18n.changeLanguage("en");
 });
 
-/** Wait for the line picked to be read onto the board. */
-const lineReady = () =>
-  waitFor(() =>
-    expect(screen.queryByTestId("repertoire-board-reading")).not.toBeInTheDocument(),
+/** Wait for the repertoire to be read onto the board. */
+const ready = () =>
+  waitFor(
+    () =>
+      expect(screen.queryByTestId("repertoire-board-reading")).not.toBeInTheDocument(),
+    { timeout: 10_000 },
   );
 
 describe("a repertoire on the v2 board", () => {
   it("renders the shared board square and the shared panel skeleton", async () => {
-    renderSection(`/repertoires/${bringIn("r", CARO, "Caro")}`);
-    await lineReady();
+    renderSection(`/repertoires/${storeRepertoire("r", CARO, "Caro")}`);
+    await ready();
 
     // The square is `EngineBoardSquare`'s, reached through `BoardShell`.
     expect(screen.getByTestId("repertoire-board-screen")).toBeInTheDocument();
@@ -74,67 +70,41 @@ describe("a repertoire on the v2 board", () => {
     expect(screen.getByTestId("repertoire-board-panel")).toBeInTheDocument();
     expect(screen.getByTestId("repertoire-board-panel-variations")).toBeInTheDocument();
     expect(screen.getByTestId("repertoire-board-panel-status")).toBeInTheDocument();
-    for (const tab of ["lines", "moves", "engine"]) {
+    for (const tab of ["moves", "engine"]) {
       expect(screen.getByTestId(`repertoire-board-panel-tab-${tab}`)).toBeInTheDocument();
     }
+    // One game, one board: no Lines tab to pick from, no Tree tab to repeat it.
+    expect(screen.queryByTestId("repertoire-board-panel-tab-lines")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("repertoire-board-panel-tab-tree")).not.toBeInTheDocument();
     expect(screen.getByTestId("board-controls")).toBeInTheDocument();
     expect(screen.getByTestId("repertoire-board-name")).toHaveTextContent("Caro");
-    // No Tree tab: the Moves tab's merged list already draws the side lines.
-    expect(screen.queryByTestId("repertoire-board-panel-tab-tree")).not.toBeInTheDocument();
   });
 
-  it("opens on the Lines tab with the first line on the board", async () => {
-    renderSection(`/repertoires/${bringIn("r", CARO)}`);
-    await lineReady();
+  it("opens on the Moves tab with the repertoire's side lines in the list", async () => {
+    renderSection(`/repertoires/${storeRepertoire("r")}`);
+    await ready();
 
-    const lines = screen.getByTestId("repertoire-lines");
-    expect(within(lines).getByText("Advance")).toBeInTheDocument();
-    expect(within(lines).getByText("Exchange")).toBeInTheDocument();
-    expect(screen.getByTestId("repertoire-line-0")).toHaveClass("Mui-selected");
-    expect(screen.getByTestId("repertoire-board-line")).toHaveTextContent("3...Bf5");
-
-    // Loaded at ply 0, the way a game arrives; the end of the line is a click away.
-    await userEvent.click(screen.getByTestId("board-control-last"));
-    expect(boardOptions().position).toBe(AFTER_NF3);
-  });
-
-  it("loads a picked line into the same board, side lines intact", async () => {
-    renderSection(`/repertoires/${bringIn("r", CARO)}`);
-    await lineReady();
-    const engineBefore = FakeEngine.instances.length;
-
-    await userEvent.click(screen.getByTestId("repertoire-line-1"));
-    await lineReady();
-    expect(screen.getByTestId("repertoire-board-line")).toHaveTextContent("3...cxd5");
-    await userEvent.click(screen.getByTestId("board-control-last"));
-    expect(boardOptions().position).toBe(AFTER_CXD5);
-    // The same board: no remount, so no second worker.
-    expect(FakeEngine.instances.length).toBe(engineBefore);
-
-    // Back to the first line, and its `(3... c5 4. dxc5)` is in the tree.
-    await userEvent.click(screen.getByTestId("repertoire-line-0"));
-    await lineReady();
-    await userEvent.click(screen.getByTestId("repertoire-board-panel-tab-moves"));
     const moves = screen.getByTestId("repertoire-board-panel-content-moves");
     const side = within(moves).getAllByRole("group");
     expect(side).toHaveLength(1);
     expect(side[0]).toHaveTextContent("3… c5");
     expect(side[0]).toHaveTextContent("dxc5");
+
+    // Loaded at ply 0, the way a game arrives; the end of the mainline is a click away.
+    await userEvent.click(screen.getByTestId("board-control-last"));
+    expect(boardOptions().position).toBe(AFTER_NF3);
   });
 
   it("keeps the Moves tab mounted across tab switches, and follows the board while hidden", async () => {
-    renderSection(`/repertoires/${bringIn("r", CARO)}`);
-    await lineReady();
-
-    await userEvent.click(screen.getByTestId("repertoire-board-panel-tab-moves"));
+    renderSection(`/repertoires/${storeRepertoire("r")}`);
+    await ready();
     const list = screen.getByTestId("move-list");
 
-    // Away to Lines: the list is still there, hidden, not unmounted.
-    await userEvent.click(screen.getByTestId("repertoire-board-panel-tab-lines"));
+    // Away to Engine: the list is still there, hidden, not unmounted.
+    await userEvent.click(screen.getByTestId("repertoire-board-panel-tab-engine"));
     const hidden = screen.getByTestId("repertoire-board-panel-content-moves");
     expect(hidden).not.toBeVisible();
     expect(hidden).toContainElement(list);
-    expect(screen.getByTestId("repertoire-board-panel-content-lines")).toBeVisible();
 
     // A step while it is hidden still reaches it.
     await userEvent.click(screen.getByTestId("board-control-next"));
@@ -146,16 +116,14 @@ describe("a repertoire on the v2 board", () => {
     expect(screen.getByTestId("repertoire-board-panel-content-moves")).toBeVisible();
 
     // The Engine tab is not kept: leaving it unmounts it, as every tab used to.
-    await userEvent.click(screen.getByTestId("repertoire-board-panel-tab-engine"));
-    await userEvent.click(screen.getByTestId("repertoire-board-panel-tab-lines"));
     expect(
       screen.queryByTestId("repertoire-board-panel-content-engine"),
     ).not.toBeInTheDocument();
   });
 
   it("never moves a piece by itself", async () => {
-    renderSection(`/repertoires/${bringIn("r", CARO)}`);
-    await lineReady();
+    renderSection(`/repertoires/${storeRepertoire("r")}`);
+    await ready();
     const before = boardOptions().position;
     act(() => {
       FakeEngine.latest().say({ bestMove: "e2e4", fen: before });
@@ -168,40 +136,15 @@ describe("a repertoire on the v2 board", () => {
     expect(screen.getByTestId("repertoire-board-missing")).toBeInTheDocument();
   });
 
-  it("browses the Alapin example: 310 lines in its chapters, any one a click away", async () => {
-    const alapin = shipped(
-      "Tame_the_Sicilian_The_Alapin_Variation_GM_Kasimdzhanov__&_GM_Ganguly.pgn",
-    );
-    renderSection(`/repertoires/${bringIn("alapin", alapin, "Alapin")}`);
-    await lineReady();
-
-    expect(screen.getAllByTestId(/^repertoire-line-\d+$/)).toHaveLength(310);
-    expect(screen.getAllByTestId(/^repertoire-chapter-\d+$/).length).toBeGreaterThanOrEqual(29);
-
-    await userEvent.click(screen.getByTestId("repertoire-line-200"));
-    await lineReady();
-    expect(screen.getByTestId("repertoire-line-200")).toHaveClass("Mui-selected");
-    await userEvent.click(screen.getByTestId("board-control-last"));
-    expect(boardOptions().position).not.toBe(
-      "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
-    );
-  }, 30_000);
-
   it("opens the 9,146-node Nimzo-Indian example, reading first and then showing it", async () => {
     const nimzo = shipped("nimzo-indian-repertoire.pgn");
-    renderSection(`/repertoires/${bringIn("nimzo", nimzo)}`);
+    renderSection(`/repertoires/${storeRepertoire("nimzo", nimzo)}`);
 
     // The screen is up before the tree is: it says it is reading.
     expect(screen.getByTestId("repertoire-board-panel")).toBeInTheDocument();
     expect(screen.getByTestId("repertoire-board-reading")).toBeInTheDocument();
 
-    await waitFor(
-      () =>
-        expect(
-          screen.queryByTestId("repertoire-board-reading"),
-        ).not.toBeInTheDocument(),
-      { timeout: 10_000 },
-    );
+    await ready();
     expect(screen.getByTestId("repertoire-board-name")).toHaveTextContent(
       "Complete Nimzo-Indian Repertoire for Black by @hpy",
     );
@@ -210,4 +153,49 @@ describe("a repertoire on the v2 board", () => {
     await userEvent.click(screen.getByTestId("board-control-next"));
     expect(boardOptions().position).toContain("PPP1PPPP");
   }, 30_000);
+});
+
+describe("a record from before the one-game rule", () => {
+  it("opens on the merge-or-split choice, not on a board", async () => {
+    renderSection(`/repertoires/${storeLegacyRepertoire("old", CARO_TWO_GAMES, "Old Caro")}`);
+
+    expect(screen.getByTestId("repertoire-board-multi")).toHaveTextContent("Old Caro");
+    expect(await screen.findByTestId("repertoire-choice")).toHaveTextContent(
+      "This PGN holds 2 games",
+    );
+    expect(screen.queryByTestId("repertoire-board-board")).not.toBeInTheDocument();
+  });
+
+  it("merges in place: the same id, now one game, and opens on the board", async () => {
+    storeRepertoire("newer");
+    storeLegacyRepertoire("old", CARO_TWO_GAMES, "Old Caro");
+    renderSection("/repertoires/old");
+    await userEvent.click(await screen.findByTestId("repertoire-choice-merge"));
+
+    const merged = findSavedRepertoire("old")!;
+    expect(isMultiGameRepertoire(merged)).toBe(false);
+    expect(merged.name).toBe("Old Caro");
+    expect(repertoireTreeOf(merged)?.moves).toHaveLength(1);
+    // In its own place in the list, not moved to the top.
+    expect(savedRepertoiresSnapshot().map((row) => row.id)).toEqual(["newer", "old"]);
+
+    await ready();
+    expect(screen.getByTestId("repertoire-board-board")).toBeInTheDocument();
+  });
+
+  it("splits in place: one repertoire per game where the old one stood", async () => {
+    storeRepertoire("newer");
+    storeLegacyRepertoire("old", CARO_TWO_GAMES, "Old Caro");
+    renderSection("/repertoires/old");
+    await userEvent.click(await screen.findByTestId("repertoire-choice-split"));
+
+    const rows = savedRepertoiresSnapshot();
+    expect(rows.map((row) => row.name)).toEqual([
+      "My Caro",
+      "Old Caro — Advance · 3...Bf5",
+      "Old Caro — Exchange · 3...cxd5",
+    ]);
+    expect(findSavedRepertoire("old")).toBeUndefined();
+    expect(await screen.findByTestId("repertoires-screen")).toBeInTheDocument();
+  });
 });

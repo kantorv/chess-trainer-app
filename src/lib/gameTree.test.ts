@@ -12,6 +12,7 @@ import {
   lineOf,
   mainline,
   mainlineGame,
+  mergeTrees,
   nodeAtSanPath,
   pathTo,
   plyLabel,
@@ -401,3 +402,45 @@ describe("countVariations", () => {
     expect(countVariations(t5)).toBe(2);
   });
 });
+
+describe("mergeTrees", () => {
+  it("follows moves already there, and hangs new ones as side lines", () => {
+    const merged = mergeTrees(
+      [
+        parsePgnTree("1. e4 e5 2. Nf3 *"),
+        parsePgnTree("1. e4 c5 2. Nf3 *"),
+        parsePgnTree("1. e4 e5 2. Bc4 (2. Nc3) *"),
+      ],
+      DEFAULT_POSITION,
+      { Event: "Merged" },
+    );
+
+    expect(merged.headers).toEqual({ Event: "Merged" });
+    expect(mainline(merged).map((node) => node.san)).toEqual(["e4", "e5", "Nf3"]);
+    expect(merged.moves).toHaveLength(1);
+    expect(merged.moves[0].children.map((node) => node.san)).toEqual(["e5", "c5"]);
+    expect(merged.moves[0].children[0].children.map((node) => node.san)).toEqual([
+      "Nf3",
+      "Bc4",
+      "Nc3",
+    ]);
+    // Fresh ids, one per node in the order met — the last is 2. Nc3 — and
+    // plies that count from the start.
+    expect(merged.nextId).toBe(8);
+    expect(pathTo(merged, "n7").map((node) => [node.san, node.ply])).toEqual([
+      ["e4", 1],
+      ["e5", 2],
+      ["Nc3", 3],
+    ]);
+  });
+
+  it("skips a tree that starts from another position", () => {
+    const merged = mergeTrees(
+      [parsePgnTree("1. e4 *"), parsePgnTree('[SetUp "1"]\n[FEN "8/8/8/4k3/8/8/4P3/4K3 w - - 0 1"]\n\n1. Kd2 *')],
+      DEFAULT_POSITION,
+    );
+    expect(mainline(merged).map((node) => node.san)).toEqual(["e4"]);
+    expect(merged.nextId).toBe(2);
+  });
+});
+

@@ -3,14 +3,12 @@ import { fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import i18n from "../../i18n";
-import { checkRepertoirePgn, savedRepertoireOf } from "../../lib/savedRepertoires";
 import {
   findSavedRepertoire,
-  saveRepertoire,
   savedRepertoiresSnapshot,
 } from "../../lib/savedRepertoireStore";
 import { boardOptions } from "../dev/devTestHarness";
-import { CARO, renderSection } from "./repertoireTestKit";
+import { renderSection, storeRepertoire } from "./repertoireTestKit";
 
 /*
   The settings screen, reached the way a reader reaches it — from the list's
@@ -31,11 +29,7 @@ vi.mock("../../lib/openings", async (importOriginal) => {
   );
 });
 
-const store = (id: string) => {
-  const check = checkRepertoirePgn(CARO);
-  if (!check.ok) throw new Error("fixture did not read");
-  saveRepertoire(savedRepertoireOf(id, CARO, "", check.previewFen));
-};
+const store = (id: string) => storeRepertoire(id);
 
 beforeEach(async () => {
   await i18n.changeLanguage("en");

@@ -28,11 +28,19 @@ import {
 /** The `localStorage` key. Versioned, so a future shape change is a new key. */
 export const SAVED_REPERTOIRES_STORAGE_KEY = "chessapp.savedRepertoires.v1";
 
-/** How many repertoires are kept. See the note above: the quota bites first. */
-export const MAX_SAVED_REPERTOIRES = 30;
+/**
+ * How many repertoires are kept. See the note above: the quota bites first.
+ * Generous, because a split makes one record per game — the Alapin example
+ * alone is 310 — and a split that would pass it is refused whole
+ * ({@link addRepertoires}) rather than quietly dropping the oldest.
+ */
+export const MAX_SAVED_REPERTOIRES = 500;
 
-/** What went wrong with a write. One case, but named rather than boolean. */
-export type SavedRepertoireProblem = "storage";
+/**
+ * What went wrong with a write: the browser's storage refused it, or a split
+ * would take the list past {@link MAX_SAVED_REPERTOIRES}.
+ */
+export type SavedRepertoireProblem = "storage" | "too-many";
 
 const repertoires = recordStore<SavedRepertoire>(
   SAVED_REPERTOIRES_STORAGE_KEY,
@@ -71,6 +79,27 @@ export const saveRepertoire = (
       ...current.filter((row) => row.id !== repertoire.id),
     ].slice(0, MAX_SAVED_REPERTOIRES),
   );
+};
+
+/**
+ * Keep several new repertoires in one write — a split — at the top of the
+ * list in the order given, or, with `replacing`, **in that record's place**:
+ * a repertoire from before the one-game rule turned into what the reader
+ * chose (`isMultiGameRepertoire`). All or nothing: a set that would pass
+ * {@link MAX_SAVED_REPERTOIRES} is refused as `"too-many"` and nothing is
+ * written, rather than the oldest being dropped to make room.
+ */
+export const addRepertoires = (
+  records: readonly SavedRepertoire[],
+  replacing?: string,
+): SavedRepertoireProblem | undefined => {
+  const current = savedRepertoiresSnapshot();
+  const at = replacing === undefined ? -1 : current.findIndex((row) => row.id === replacing);
+  const kept = current.filter((row) => row.id !== replacing);
+  if (kept.length + records.length > MAX_SAVED_REPERTOIRES) return "too-many";
+
+  const insertAt = at === -1 ? 0 : at;
+  return write([...kept.slice(0, insertAt), ...records, ...kept.slice(insertAt)]);
 };
 
 /**

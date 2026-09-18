@@ -3,12 +3,13 @@ import { act, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import i18n from "../../i18n";
-import { savedRepertoireOf } from "../../lib/savedRepertoires";
+import { SAVED_REPERTOIRES_STORAGE_KEY } from "../../lib/savedRepertoireStore";
 import {
-  SAVED_REPERTOIRES_STORAGE_KEY,
-  saveRepertoire,
-} from "../../lib/savedRepertoireStore";
-import { CARO, renderSection } from "./repertoireTestKit";
+  CARO_TWO_GAMES,
+  renderSection,
+  storeLegacyRepertoire,
+  storeRepertoire,
+} from "./repertoireTestKit";
 
 /*
   The list screen. `<Chessboard>` is stubbed (`.claude/rules/chessboard.md` §8)
@@ -21,10 +22,11 @@ vi.mock("react-chessboard", () => ({
   ),
 }));
 
-const BRANCH_FEN = "rnbqkbnr/pp2pppp/2p5/3p4/3PP3/8/PPP2PPP/RNBQKBNR w KQkq - 0 3";
+/** Where CARO first branches: after 3.e5, 3...Bf5 or 3...c5. */
+const BRANCH_FEN = "rnbqkbnr/pp2pppp/2p5/3pP3/3P4/8/PPP2PPP/RNBQKBNR b KQkq - 0 3";
 
-const store = (id: string, name: string, when: string) =>
-  saveRepertoire(savedRepertoireOf(id, CARO, name, BRANCH_FEN, new Date(when)));
+// Stored in call order, so the last one stored is the newest.
+const store = (id: string, name: string) => storeRepertoire(id, undefined, name);
 
 beforeEach(async () => {
   await i18n.changeLanguage("en");
@@ -41,8 +43,8 @@ describe("the Repertoires list", () => {
   });
 
   it("lists stored repertoires newest first, with their size, and links each to its board", () => {
-    store("a", "Caro", "2026-09-17T10:00:00Z");
-    store("b", "", "2026-09-18T10:00:00Z");
+    store("a", "Caro");
+    store("b", "");
     renderSection("/repertoires");
 
     const rows = screen.getAllByTestId(/^repertoires-item-/);
@@ -53,7 +55,7 @@ describe("the Repertoires list", () => {
     // Unnamed by the reader, named by its own Event tag.
     expect(rows[0]).toHaveTextContent("My Caro");
     expect(rows[1]).toHaveTextContent("Caro");
-    expect(rows[1]).toHaveTextContent("2 lines · 2 chapters");
+    expect(rows[1]).toHaveTextContent("4 moves · 1 variation");
     expect(screen.getByTestId("repertoires-open-a")).toHaveAttribute(
       "href",
       "/repertoires/a",
@@ -62,7 +64,7 @@ describe("the Repertoires list", () => {
   });
 
   it("survives a reload — a fresh mount reads what storage holds", () => {
-    store("a", "Caro", "2026-09-17T10:00:00Z");
+    store("a", "Caro");
     const first = renderSection("/repertoires");
     first.unmount();
 
@@ -72,14 +74,14 @@ describe("the Repertoires list", () => {
   });
 
   it("deletes one", async () => {
-    store("a", "Caro", "2026-09-17T10:00:00Z");
+    store("a", "Caro");
     renderSection("/repertoires");
     await userEvent.click(screen.getByTestId("repertoires-remove-a"));
     expect(screen.getByTestId("repertoires-empty")).toBeInTheDocument();
   });
 
   it("offers the saved screens' three views, and previews where the lines branch", async () => {
-    store("a", "Caro", "2026-09-17T10:00:00Z");
+    store("a", "Caro");
     renderSection("/repertoires");
 
     for (const view of ["list", "compact", "comfortable"]) {
@@ -99,8 +101,8 @@ describe("the Repertoires list", () => {
   });
 
   it("picks rows for export in the list view", async () => {
-    store("a", "Caro", "2026-09-17T10:00:00Z");
-    store("b", "Slav", "2026-09-18T10:00:00Z");
+    store("a", "Caro");
+    store("b", "Slav");
     renderSection("/repertoires");
 
     await userEvent.click(
@@ -117,8 +119,16 @@ describe("the Repertoires list", () => {
   it("follows a write made while it is showing", () => {
     renderSection("/repertoires");
     act(() => {
-      store("a", "Caro", "2026-09-17T10:00:00Z");
+      store("a", "Caro");
     });
     expect(screen.getByTestId("repertoires-item-a")).toBeInTheDocument();
+  });
+
+  it("marks a record from before the one-game rule as needing a choice", () => {
+    storeLegacyRepertoire("old", CARO_TWO_GAMES, "Old Caro");
+    renderSection("/repertoires");
+    expect(screen.getByTestId("repertoires-item-old")).toHaveTextContent(
+      "Several games — open to merge or split",
+    );
   });
 });

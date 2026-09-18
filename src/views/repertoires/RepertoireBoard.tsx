@@ -8,7 +8,7 @@ import Tooltip from "@mui/material/Tooltip";
 import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
 import Switch from "@mui/material/Switch";
 import Typography from "@mui/material/Typography";
-import { Link as RouterLink, useParams } from "react-router";
+import { Link as RouterLink, useNavigate, useParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import type { Arrow, ChessboardOptions } from "react-chessboard";
 
@@ -19,9 +19,10 @@ import {
 } from "../../lib/analysisSettings";
 import { emptyTree, findNode, type VariationNode } from "../../lib/gameTree";
 import {
-  repertoireLinesOf,
-  repertoireLineTree,
-  type RepertoireLine,
+  isMultiGameRepertoire,
+  readRepertoireText,
+  repertoireTreeOf,
+  type RepertoireReading,
   type SavedRepertoire,
 } from "../../lib/savedRepertoires";
 import BoardShell from "../dev/core/BoardShell";
@@ -35,7 +36,7 @@ import {
   HOVERED_NEXT_MOVE_ARROW_COLOR,
   NEXT_MOVE_ARROW_COLOR,
 } from "../tools/analysis/nextMoveArrows";
-import RepertoireLines from "./RepertoireLines";
+import RepertoireMergeSplit from "./RepertoireMergeSplit";
 import { useSavedRepertoires } from "./useSavedRepertoires";
 
 /**
@@ -44,18 +45,20 @@ import { useSavedRepertoires } from "./useSavedRepertoires";
  * ([`.claude/rules/chessboard-v2.md`](../../../.claude/rules/chessboard-v2.md))
  * rather than a `/dev/*` one (CTA-61).
  *
- * It is Repertoire v2 (`views/dev/repertoire/RepertoireV2.tsx`) with the one
- * thing that screen could not have: **the repertoire's other lines**, in a
- * Lines tab, each one click from the board. Picking a line loads its tree into
- * the *same* board through the base's `loadTree` — no route change, no second
- * navigation level, and the engine worker is not rebuilt between lines. The
- * eval bar, the captured strips, the pinned best-variations block, the tab
- * strip and the board controls are all the core's; this file supplies slots.
+ * It is Repertoire v2 (`views/dev/repertoire/RepertoireV2.tsx`) over the
+ * reader's own record: one game — a mainline with its side lines, the rule
+ * `lib/savedRepertoires.ts` sets — on one board. The eval bar, the captured
+ * strips, the pinned best-variations block, the tab strip and the board
+ * controls are all the core's; this file supplies slots.
  *
- * Three tabs, not Repertoire v2's four: **Lines · Moves · Engine**. The merged
- * move list (CTA-53) already hangs every side line under the move it answers,
- * so a flowing Tree tab would draw the same tree a second time — the reason
- * the Analysis Board dropped its own in CTA-53.
+ * Two tabs: **Moves · Engine**. The merged move list (CTA-53) hangs every side
+ * line under the move it answers, so a flowing Tree tab would draw the same
+ * tree twice, and a Lines tab has nothing to list once a repertoire is one
+ * game.
+ *
+ * A record saved **before** the one-game rule, still holding several games,
+ * does not open on a board at all: it opens on the merge-or-split choice
+ * (`RepertoireMergeSplit`), and what the reader picks takes its place.
  *
  * | Capability | Taken | Because |
  * | --- | --- | --- |
@@ -64,20 +67,19 @@ import { useSavedRepertoires } from "./useSavedRepertoires";
  * | Book | header line only | the file *is* the book here |
  * | Autosave | ❌ | reading is not writing: the record is the file, and trying a move must not rewrite it |
  *
- * ## A line is parsed when it is picked, after a paint
+ * ## The tree is parsed after a paint
  *
- * The Lines tab is read off the tags (`repertoireLinesOf`), so 310 lines list
- * without a parse. A line's tree is parsed on demand — and behind a
- * `setTimeout(0)`, because the 9,146-node Nimzo-Indian line takes about a
- * second of main thread even after `parsePgnTree` stopped copying the tree per
- * move. The board says it is reading rather than the tab freezing on arrival.
+ * Behind a `setTimeout(0)`, because the 9,146-node Nimzo-Indian example takes
+ * about a second of main thread even after `parsePgnTree` stopped copying the
+ * tree per move. The board says it is reading rather than the tab freezing on
+ * arrival.
  */
 
 /** The tabs that stay mounted once opened — see `BoardPanel`'s `keepMounted`. */
 const KEEP_MOUNTED = ["moves"] as const;
 
-/** Which line is on the board, and whether it has been read yet. */
-type Shown = { index: number; state: "loading" | "ready" | "unreadable" };
+/** Whether the repertoire's tree is on the board yet. */
+type Shown = "loading" | "ready" | "unreadable";
 
 function RepertoireBoard() {
   const { id } = useParams();
@@ -85,9 +87,53 @@ function RepertoireBoard() {
   const saved = repertoires.find((row) => row.id === id);
 
   if (saved === undefined) return <MissingRepertoire />;
-  // Keyed, so opening another repertoire is a fresh board rather than this
+  // Keyed, so opening another repertoire is a fresh screen rather than this
   // one's state carried over — the "every arrival is initial state" rule.
+  if (isMultiGameRepertoire(saved)) {
+    return <MultiGameRepertoire key={saved.id} saved={saved} />;
+  }
   return <RepertoireBoardScreen key={saved.id} saved={saved} />;
+}
+
+/**
+ * A record from before the one-game rule: read (after a paint — the Alapin
+ * example is 310 games) and offered the merge-or-split choice in its place.
+ */
+function MultiGameRepertoire({ saved }: { saved: SavedRepertoire }) {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const [reading, setReading] = useState<RepertoireReading | null>(null);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setReading(readRepertoireText(saved.pgn)), 0);
+    return () => clearTimeout(timer);
+  }, [saved.pgn]);
+
+  return (
+    <Box data-testid="repertoire-board-multi" sx={{ height: "100%", overflowY: "auto" }}>
+      <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+        {saved.name || t("repertoires.untitled")}
+      </Typography>
+      <Typography variant="body2" sx={{ color: "text.secondary", mb: 2 }}>
+        {t("repertoires.choice.legacy")}
+      </Typography>
+      {reading === null ? (
+        <CircularProgress size={16} data-testid="repertoire-board-reading" />
+      ) : reading.ok && reading.games.length > 1 ? (
+        <RepertoireMergeSplit
+          reading={reading}
+          typedName={saved.name}
+          replacing={saved.id}
+          settings={saved.settings}
+          onDone={(path) => navigate(path)}
+        />
+      ) : (
+        <Typography variant="body2" sx={{ color: "text.secondary" }}>
+          {t("repertoires.detail.unreadable")}
+        </Typography>
+      )}
+    </Box>
+  );
 }
 
 function MissingRepertoire() {
@@ -107,69 +153,43 @@ function MissingRepertoire() {
 function RepertoireBoardScreen({ saved }: { saved: SavedRepertoire }) {
   const { t } = useTranslation();
 
-  const chapters = useMemo(() => repertoireLinesOf(saved.pgn), [saved.pgn]);
-  const lines = useMemo(
-    () => chapters.flatMap((chapter) => chapter.lines),
-    [chapters],
-  );
-  const firstLine = lines.at(0);
-
   // Facing the side the repertoire is played from (its settings) — read once,
   // like every arrival: coming back from the settings screen remounts this.
   const core = useBoardCore({ orientation: saved.settings.color });
   const { loadTree } = core;
 
-  const [shown, setShown] = useState<Shown>({
-    index: firstLine?.index ?? 0,
-    state: firstLine === undefined ? "unreadable" : "loading",
-  });
-  const shownLine = lines.find((line) => line.index === shown.index);
+  const [shown, setShown] = useState<Shown>("loading");
 
   /*
     The parse, behind a timer — see the header note. Only the timer's own
-    callback writes state, so an effect can start one without setting state
-    from the effect itself; and a newer pick cancels an older one still
-    waiting, so a reader clicking down the list does not parse every line on
-    the way past.
+    callback writes state, so the effect starts one without setting state
+    from the effect itself. `load` is also the Engine tab's "clear": it puts
+    the repertoire back as the record has it, dropping moves the reader tried.
   */
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const load = useCallback(
-    (line: RepertoireLine) => {
-      if (timer.current !== null) clearTimeout(timer.current);
-      timer.current = setTimeout(() => {
-        timer.current = null;
-        const tree = repertoireLineTree(line);
-        loadTree(tree ?? emptyTree());
-        setShown({ index: line.index, state: tree === undefined ? "unreadable" : "ready" });
-      }, 0);
-    },
-    [loadTree],
-  );
+  const load = useCallback(() => {
+    if (timer.current !== null) clearTimeout(timer.current);
+    timer.current = setTimeout(() => {
+      timer.current = null;
+      const tree = repertoireTreeOf(saved);
+      loadTree(tree ?? emptyTree());
+      setShown(tree === undefined ? "unreadable" : "ready");
+    }, 0);
+  }, [loadTree, saved]);
 
   useEffect(() => {
-    if (firstLine !== undefined) load(firstLine);
+    load();
     return () => {
       if (timer.current !== null) clearTimeout(timer.current);
     };
-  }, [firstLine, load]);
-
-  // Stable, so the memoised Lines tab does not re-render on every step.
-  const selectLine = useCallback(
-    (index: number) => {
-      const line = lines.find((candidate) => candidate.index === index);
-      if (line === undefined) return;
-      setShown({ index, state: "loading" });
-      load(line);
-    },
-    [lines, load],
-  );
+  }, [load]);
 
   const [settings, setSettings] = useState<AnalysisSettings>(
     DEFAULT_ANALYSIS_SETTINGS,
   );
   const [engineOn, setEngineOn] = useState(true);
   const [showEvalBar, setShowEvalBar] = useState(true);
-  const [tab, setTab] = useState("lines");
+  const [tab, setTab] = useState("moves");
   const [hoveredNextMove, setHoveredNextMove] = useState<VariationNode | null>(
     null,
   );
@@ -224,17 +244,17 @@ function RepertoireBoardScreen({ saved }: { saved: SavedRepertoire }) {
 
   /** A tab body while its line is not on the board yet — or will not be. */
   const notReady =
-    shown.state === "ready" ? undefined : (
+    shown === "ready" ? undefined : (
       <Box
-        data-testid={`repertoire-board-line-${shown.state}`}
+        data-testid={`repertoire-board-line-${shown}`}
         sx={{ display: "flex", alignItems: "center", gap: 1, p: 1, color: "text.secondary" }}
       >
-        {shown.state === "loading" && <CircularProgress size={16} />}
+        {shown === "loading" && <CircularProgress size={16} />}
         <Typography variant="body2">
           {t(
-            shown.state === "loading"
+            shown === "loading"
               ? "repertoires.detail.loading"
-              : "repertoires.detail.unreadableLine",
+              : "repertoires.detail.unreadable",
           )}
         </Typography>
       </Box>
@@ -259,20 +279,24 @@ function RepertoireBoardScreen({ saved }: { saved: SavedRepertoire }) {
               >
                 {saved.name || t("repertoires.untitled")}
               </Typography>
-              <Typography
-                variant="caption"
-                data-testid="repertoire-board-line"
-                dir="auto"
-                sx={{ color: "text.secondary", display: "block" }}
-                noWrap
-              >
-                {shownLine?.name ?? ""}
-              </Typography>
+              {/* The reader's own notes on it (its settings): one line here,
+                  the whole of it on hover. */}
+              {saved.settings.description !== "" && (
+                <Typography
+                  variant="caption"
+                  data-testid="repertoire-board-description"
+                  dir="auto"
+                  title={saved.settings.description}
+                  sx={{ color: "text.secondary", display: "block" }}
+                  noWrap
+                >
+                  {saved.settings.description}
+                </Typography>
+              )}
               <CurrentOpening fen={core.fen} testId="repertoire-board-opening" />
             </Box>
-            {/* In the header, so it shows whichever tab is open — the Lines tab
-                a reader starts on has no body of its own to say it. */}
-            {shown.state === "loading" && (
+            {/* In the header, so it shows whichever tab is open. */}
+            {shown === "loading" && (
               <CircularProgress
                 size={16}
                 data-testid="repertoire-board-reading"
@@ -312,42 +336,10 @@ function RepertoireBoardScreen({ saved }: { saved: SavedRepertoire }) {
         onPlayVariation: core.playVariation,
         activeTab: tab,
         onTabChange: setTab,
-        // The move list of a 9,000-node line takes most of a second to mount;
-        // mounted once, switching Lines ↔ Moves is free.
+        // The move list of a 9,000-node tree takes most of a second to mount;
+        // mounted once, switching Moves ↔ Engine is free.
         keepMounted: KEEP_MOUNTED,
         tabs: [
-          {
-            id: "lines",
-            label: t("repertoires.detail.tabs.lines"),
-            content: (
-              <>
-                {/* The reader's own notes on it, above the lines they describe. */}
-                {saved.settings.description !== "" && (
-                  <Typography
-                    variant="body2"
-                    dir="auto"
-                    data-testid="repertoire-board-description"
-                    sx={{
-                      color: "text.secondary",
-                      whiteSpace: "pre-wrap",
-                      px: 1,
-                      py: 0.75,
-                      mb: 0.5,
-                      borderBottom: "1px solid",
-                      borderColor: "divider",
-                    }}
-                  >
-                    {saved.settings.description}
-                  </Typography>
-                )}
-                <RepertoireLines
-                  chapters={chapters}
-                  selected={shown.index}
-                  onSelect={selectLine}
-                />
-              </>
-            ),
-          },
           {
             id: "moves",
             label: t("repertoires.detail.tabs.moves"),
@@ -374,15 +366,15 @@ function RepertoireBoardScreen({ saved }: { saved: SavedRepertoire }) {
                 engineOn={engineOn}
                 showEvalBar={showEvalBar}
                 onShowEvalBarChange={setShowEvalBar}
-                // "Clear" puts the line back as the file has it — the moves a
-                // reader tried against it go, the line does not.
-                onClear={() => selectLine(shown.index)}
+                // "Clear" puts the repertoire back as the record has it — the
+                // moves a reader tried against it go.
+                onClear={load}
               />
             ),
           },
         ],
         footer:
-          tab === "moves" && shown.state === "ready" ? (
+          tab === "moves" && shown === "ready" ? (
             <NextMovesBar
               nodes={continuations}
               onSelect={core.goToNode}

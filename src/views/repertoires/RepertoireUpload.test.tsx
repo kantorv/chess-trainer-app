@@ -8,7 +8,7 @@ import {
   clearSavedRepertoires,
   savedRepertoiresSnapshot,
 } from "../../lib/savedRepertoireStore";
-import { CARO, renderSection } from "./repertoireTestKit";
+import { CARO, CARO_TWO_GAMES, renderSection } from "./repertoireTestKit";
 
 /*
   The upload screen hands the reader to the board on success, so the board's
@@ -37,6 +37,7 @@ const content = (record: SavedRepertoire) => ({
   name: record.name,
   pgn: record.pgn,
   previewFen: record.previewFen,
+  stats: record.stats,
   settings: record.settings,
   folderId: record.folderId,
 });
@@ -130,5 +131,68 @@ describe("bringing a repertoire in", () => {
       "storage is full",
     );
     setItem.mockRestore();
+  });
+
+  it("stores one game as it stands — no choice to make", async () => {
+    renderSection("/repertoires/new");
+    paste(CARO);
+    await userEvent.click(screen.getByTestId("repertoire-upload-save"));
+    await stored();
+    expect(screen.queryByTestId("repertoire-choice")).not.toBeInTheDocument();
+  });
+});
+
+describe("a text of several games", () => {
+  it("is not stored as it is: the reader is asked to merge or split", async () => {
+    renderSection("/repertoires/new");
+    paste(CARO_TWO_GAMES);
+    await userEvent.click(screen.getByTestId("repertoire-upload-save"));
+
+    const choice = await screen.findByTestId("repertoire-choice");
+    expect(choice).toHaveTextContent("This PGN holds 2 games");
+    expect(screen.getByTestId("repertoire-choice-split")).toHaveTextContent(
+      "Split into 2 repertoires",
+    );
+    expect(savedRepertoiresSnapshot()).toEqual([]);
+  });
+
+  it("merges into one repertoire and opens it", async () => {
+    renderSection("/repertoires/new");
+    fireEvent.change(screen.getByTestId("repertoire-upload-name"), {
+      target: { value: "Caro-Kann" },
+    });
+    paste(CARO_TWO_GAMES);
+    await userEvent.click(screen.getByTestId("repertoire-upload-save"));
+    await userEvent.click(await screen.findByTestId("repertoire-choice-merge"));
+
+    const [record] = savedRepertoiresSnapshot();
+    expect(savedRepertoiresSnapshot()).toHaveLength(1);
+    expect(record).toMatchObject({ name: "Caro-Kann", stats: { moves: 4, variations: 1 } });
+    expect(await screen.findByTestId("repertoire-board-name")).toHaveTextContent("Caro-Kann");
+  });
+
+  it("splits into one repertoire per game and shows the list", async () => {
+    renderSection("/repertoires/new");
+    paste(CARO_TWO_GAMES);
+    await userEvent.click(screen.getByTestId("repertoire-upload-save"));
+    await userEvent.click(await screen.findByTestId("repertoire-choice-split"));
+
+    expect(savedRepertoiresSnapshot().map((row) => row.name)).toEqual([
+      "My Caro — Advance · 3...Bf5",
+      "My Caro — Exchange · 3...cxd5",
+    ]);
+    expect(await screen.findByTestId("repertoires-screen")).toBeInTheDocument();
+  });
+
+  it("offers no merge for games from different starts, and says why", async () => {
+    renderSection("/repertoires/new");
+    paste(
+      `${CARO}\n\n[Event "Endgame"]\n[SetUp "1"]\n[FEN "8/8/8/4k3/8/8/4P3/4K3 w - - 0 1"]\n\n1. Kd2 *`,
+    );
+    await userEvent.click(screen.getByTestId("repertoire-upload-save"));
+    expect(await screen.findByTestId("repertoire-choice-merge")).toBeDisabled();
+    expect(screen.getByTestId("repertoire-choice")).toHaveTextContent(
+      "start from different positions",
+    );
   });
 });

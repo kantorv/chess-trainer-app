@@ -1,21 +1,23 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_POSITION } from "chess.js";
 
-import { countVariations } from "./gameTree";
+import { countVariations, mainline, mergeTrees } from "./gameTree";
 import { parsePgnTree } from "./pgn";
 import { MAX_UPLOAD_CHARS } from "./pgnUploads";
 import {
-  checkRepertoirePgn,
-  repertoireLineTree,
-  repertoireLinesOf,
+  isMultiGameRepertoire,
+  mergedRepertoireOf,
+  readRepertoireText,
   repertoireNameOf,
+  repertoireTreeOf,
   repertoireTrunkFen,
   savedRepertoireFrom,
   savedRepertoireOf,
-  savedRepertoireSummary,
+  splitRepertoiresOf,
+  type RepertoireReading,
 } from "./savedRepertoires";
 
-/** The three shipped repertoires — the examples the issue names. */
+/** The three shipped repertoire files — the examples the issue names. */
 const files = import.meta.glob<string>("../data/pgn/*.pgn", {
   query: "?raw",
   import: "default",
@@ -32,12 +34,16 @@ const ALAPIN = shipped(
 const NIMZO = shipped("nimzo-indian-repertoire.pgn");
 const D4 = shipped("d2d4Variations.pgn");
 
-const TWO_LINES = [
+/** One game, a mainline with a side line: a repertoire as it stands. */
+const ONE = '[Event "My Caro"]\n\n1. e4 c6 2. d4 d5 3. e5 Bf5 (3... c5 4. dxc5) 4. Nf3 *';
+
+/** Two games, one line each: to merge or split. */
+const TWO = [
   '[Event "My Caro"]',
   '[White "1) Advance"]',
   '[Black "3...Bf5"]',
   "",
-  "1. e4 c6 2. d4 d5 3. e5 Bf5 (3... c5 4. dxc5) *",
+  "1. e4 c6 2. d4 d5 3. e5 Bf5 4. Nf3 *",
   "",
   '[Event "My Caro"]',
   '[White "2) Exchange"]',
@@ -47,75 +53,52 @@ const TWO_LINES = [
 ].join("\n");
 
 const NOW = new Date("2026-09-18T10:00:00.000Z");
+const AFTER_D5 = "rnbqkbnr/pp2pppp/2p5/3p4/3PP3/8/PPP2PPP/RNBQKBNR w KQkq - 0 3";
 
-describe("checking a repertoire on the way in", () => {
+const read = (text: string) => {
+  const reading = readRepertoireText(text);
+  if (!reading.ok) throw new Error(`did not read: ${reading.problem}`);
+  return reading;
+};
+
+describe("reading a text on the way in", () => {
   it("refuses an empty text and one over the uploads' ceiling", () => {
-    expect(checkRepertoirePgn("  \n ")).toEqual({ ok: false, problem: "empty" });
-    expect(checkRepertoirePgn("x".repeat(MAX_UPLOAD_CHARS + 1))).toEqual({
+    expect(readRepertoireText("  \n ")).toEqual({ ok: false, problem: "empty" });
+    expect(readRepertoireText("x".repeat(MAX_UPLOAD_CHARS + 1))).toEqual({
       ok: false,
       problem: "too-large",
     });
   });
 
-  it("refuses a text none of whose lines will read, with the first reason", () => {
-    const check = checkRepertoirePgn('[Event "x"]\n\n1. e4 Ke5 *');
-    expect(check.ok).toBe(false);
-    if (!check.ok) {
-      expect(check.problem).toBe("unreadable");
-      expect(check.detail).toMatch(/Ke5/);
-    }
+  it("refuses a text with no playable game, with the first reason", () => {
+    const reading = readRepertoireText('[Event "x"]\n\n1. e4 Ke5 *');
+    expect(reading).toMatchObject({ ok: false, problem: "unreadable" });
+    if (!reading.ok) expect(reading.detail).toMatch(/Ke5/);
   });
 
-  it("keeps a repertoire with one broken line among good ones, and counts it", () => {
-    const check = checkRepertoirePgn(
-      `${TWO_LINES}\n\n[Event "My Caro"]\n[White "3) Broken"]\n\n1. e4 Kxe8 *`,
+  it("reads one game as a repertoire as it stands", () => {
+    const reading = read(ONE);
+    expect(reading.games).toHaveLength(1);
+    expect(reading.mergeable).toBe(false);
+    expect(reading.name).toBe("My Caro");
+  });
+
+  it("reads several games as a choice, and counts the ones it leaves out", () => {
+    const reading = read(
+      `${TWO}\n\n[Event "Intro"]\n\n{ Just prose. } *\n\n[Event "Broken"]\n\n1. e4 Kxe8 *`,
     );
-    expect(check).toMatchObject({ ok: true, lines: 3, broken: 1 });
+    expect(reading.games.map((game) => game.index)).toEqual([0, 1]);
+    expect(reading.skipped).toBe(2);
+    expect(reading.mergeable).toBe(true);
   });
 
-  it("previews the position where the lines first branch", () => {
-    const check = checkRepertoirePgn(TWO_LINES);
-    expect(check.ok).toBe(true);
-    if (check.ok) {
-      // 1.e4 c6 2.d4 d5 is common to both; 3.e5 / 3.exd5 is the branch.
-      expect(check.previewFen).toBe(
-        "rnbqkbnr/pp2pppp/2p5/3p4/3PP3/8/PPP2PPP/RNBQKBNR w KQkq - 0 3",
-      );
-      expect(check.name).toBe("My Caro");
-    }
-  });
-
-  it("previews the start when the lines disagree from move one", () => {
-    const trees = [parsePgnTree("1. e4 *"), parsePgnTree("1. d4 *")];
-    expect(repertoireTrunkFen(trees)).toBe(DEFAULT_POSITION);
-    expect(repertoireTrunkFen([])).toBe(DEFAULT_POSITION);
-  });
-});
-
-describe("a file and a paste are one record", () => {
-  it("builds the identical record from CRLF file text and the textarea's LF text", () => {
-    const fileText = `\r\n${TWO_LINES.replace(/\n/g, "\r\n")}\r\n\r\n`;
-    const pastedText = TWO_LINES;
-
-    const fromFile = checkRepertoirePgn(fileText);
-    const fromPaste = checkRepertoirePgn(pastedText);
-    expect(fromFile).toEqual(fromPaste);
-    if (!fromFile.ok) throw new Error("expected the file to read");
-
-    expect(savedRepertoireOf("r1", fileText, "", fromFile.previewFen, NOW)).toEqual(
-      savedRepertoireOf("r1", pastedText, "", fromFile.previewFen, NOW),
+  it("does not offer a merge of games from different starts", () => {
+    const reading = read(
+      `${ONE}\n\n[Event "Endgame"]\n[SetUp "1"]\n[FEN "8/8/8/4k3/8/8/4P3/4K3 w - - 0 1"]\n\n1. Kd2 *`,
     );
-  });
-
-  it("is named by the reader, or else by its own tags, or else not at all", () => {
-    expect(savedRepertoireOf("r", TWO_LINES, "  Mine ", DEFAULT_POSITION, NOW).name).toBe(
-      "Mine",
-    );
-    expect(savedRepertoireOf("r", TWO_LINES, "", DEFAULT_POSITION, NOW).name).toBe(
-      "My Caro",
-    );
-    expect(savedRepertoireOf("r", "1. e4 *", "", DEFAULT_POSITION, NOW).name).toBe("");
-    expect(savedRepertoireOf("r", TWO_LINES, "", DEFAULT_POSITION, NOW).folderId).toBeNull();
+    expect(reading.games).toHaveLength(2);
+    expect(reading.mergeable).toBe(false);
+    expect(mergedRepertoireOf("m", reading, "", NOW)).toBeUndefined();
   });
 
   it("names a lichess study by its StudyName, not its chapter-suffixed Event", () => {
@@ -124,57 +107,120 @@ describe("a file and a paste are one record", () => {
     );
     expect(repertoireNameOf(ALAPIN)).toBeUndefined();
   });
+
+  it("names each game: chapter and line for a Chessable file, the two tags otherwise", () => {
+    expect(read(TWO).games.map((game) => game.name)).toEqual([
+      "Advance · 3...Bf5",
+      "Exchange · 3...cxd5",
+    ]);
+    expect(read(D4).games[0].name).toBe("QGD – Exchange I");
+  });
 });
 
-describe("reading the lines back", () => {
-  it("splits a Chessable-style file into its N) chapters, in chapter order", () => {
-    const chapters = repertoireLinesOf(ALAPIN);
-    expect(chapters.reduce((n, chapter) => n + chapter.lines.length, 0)).toBe(310);
-    expect(chapters.length).toBeGreaterThanOrEqual(29);
-    // Unnumbered chapters first, then "1) 2...Qa5" ahead of "10) 2...b6".
-    const labels = chapters.map((chapter) => chapter.label);
-    expect(labels[0]).toBe("Introduction");
-    expect(labels.indexOf("2...Qa5")).toBeLessThan(labels.indexOf("2...b6"));
-  });
-
-  it("keeps a flat file flat, naming each line by its two tags", () => {
-    const chapters = repertoireLinesOf(D4);
-    expect(chapters).toHaveLength(1);
-    expect(chapters[0].label).toBeUndefined();
-    expect(chapters[0].lines).toHaveLength(13);
-    expect(chapters[0].lines[0].name).toBe("QGD – Exchange I");
-  });
-
-  it("summarises a record without parsing a move", () => {
-    const record = savedRepertoireOf("r", ALAPIN, "Alapin", DEFAULT_POSITION, NOW);
-    const summary = savedRepertoireSummary(record);
-    expect(summary.lines).toBe(310);
-    expect(summary.chapters).toBeGreaterThanOrEqual(29);
-    expect(savedRepertoireSummary(savedRepertoireOf("r", D4, "", DEFAULT_POSITION, NOW))).toEqual(
-      { lines: 13, chapters: 0 },
+describe("a file and a paste are one record", () => {
+  it("reads CRLF file text and the textarea's LF text alike, into the identical record", () => {
+    const fileText = `\r\n${ONE.replace(/\n/g, "\r\n")}\r\n\r\n`;
+    const fromFile = read(fileText);
+    const fromPaste = read(ONE);
+    expect(savedRepertoireOf("r", fromFile.games[0], "", fromFile.name, NOW)).toEqual(
+      savedRepertoireOf("r", fromPaste.games[0], "", fromPaste.name, NOW),
     );
   });
+});
 
-  it("parses a picked line with its side lines intact", () => {
-    const [chapter] = repertoireLinesOf(TWO_LINES).slice(0, 1);
-    const tree = repertoireLineTree(chapter.lines[0]);
-    expect(tree).toBeDefined();
-    expect(countVariations(tree!)).toBe(1);
+describe("one game, stored as written", () => {
+  it("keeps the text, previews where it branches, and counts its size", () => {
+    const reading = read(ONE);
+    const record = savedRepertoireOf("r", reading.games[0], "", reading.name, NOW);
+    expect(record.pgn).toBe(ONE);
+    expect(record.name).toBe("My Caro");
+    // 1.e4 c6 2.d4 d5 3.e5 — then 3...Bf5 or 3...c5.
+    expect(record.previewFen).toBe(
+      "rnbqkbnr/pp2pppp/2p5/3pP3/3P4/8/PPP2PPP/RNBQKBNR b KQkq - 0 3",
+    );
+    expect(record.stats).toEqual({ moves: 4, variations: 1 });
+    expect(record.folderId).toBeNull();
   });
 
-  it("reads the one-tree Nimzo-Indian example as a single line of 9,146 nodes", () => {
-    const [chapter] = repertoireLinesOf(NIMZO);
-    expect(chapter.lines).toHaveLength(1);
+  it("is named by the reader first", () => {
+    const reading = read(ONE);
+    expect(savedRepertoireOf("r", reading.games[0], "  Mine ", reading.name, NOW).name).toBe(
+      "Mine",
+    );
+  });
+});
+
+describe("merge", () => {
+  it("folds the games into one tree, the first game's line the mainline", () => {
+    const record = mergedRepertoireOf("m", read(TWO), "Caro", NOW)!;
+    expect(isMultiGameRepertoire(record)).toBe(false);
+    expect(record.name).toBe("Caro");
+
+    const tree = repertoireTreeOf(record)!;
+    expect(mainline(tree).map((node) => node.san)).toEqual([
+      "e4", "c6", "d4", "d5", "e5", "Bf5", "Nf3",
+    ]);
+    // The second game leaves the first at move 3: one side line, there.
+    expect(countVariations(tree)).toBe(1);
+    const afterD5 = mainline(tree)[3];
+    expect(afterD5.children.map((node) => node.san)).toEqual(["e5", "exd5"]);
+    expect(record.previewFen).toBe(AFTER_D5);
+    expect(record.pgn).toContain('[Event "Caro"]');
+  });
+
+  it("merges the Alapin example's 310 games into one tree that reads back whole", () => {
+    const reading = read(ALAPIN);
+    expect(reading.games).toHaveLength(310);
+    expect(reading.mergeable).toBe(true);
+    const record = mergedRepertoireOf("m", reading, "Alapin", NOW)!;
+    const merged = mergeTrees(
+      reading.games.map((game) => game.tree),
+      reading.games[0].tree.startFen,
+    );
+    // What is stored is what the board reads: the written PGN parses back to
+    // the same number of nodes the merge made.
+    expect(repertoireTreeOf(record)?.nextId).toBe(merged.nextId);
+    expect(record.stats?.variations).toBeGreaterThan(200);
+  });
+});
+
+describe("split", () => {
+  it("makes one repertoire per game, each with its own text and name", () => {
+    let n = 0;
+    const records = splitRepertoiresOf(() => `s${(n += 1)}`, read(TWO), "Caro", NOW);
+    expect(records.map((record) => [record.id, record.name])).toEqual([
+      ["s1", "Caro — Advance · 3...Bf5"],
+      ["s2", "Caro — Exchange · 3...cxd5"],
+    ]);
+    expect(records.every((record) => !isMultiGameRepertoire(record))).toBe(true);
+    expect(records[1].pgn).toContain("3. exd5 cxd5");
+  });
+
+  it("names each by the game alone when the text has no name", () => {
+    const reading: Extract<RepertoireReading, { ok: true }> = {
+      ...read(TWO),
+      name: undefined,
+    };
+    expect(splitRepertoiresOf(() => "x", reading, "", NOW)[0].name).toBe(
+      "Advance · 3...Bf5",
+    );
+  });
+});
+
+describe("the one-tree Nimzo-Indian example", () => {
+  it("is one game of 9,146 nodes — a repertoire as it stands", () => {
     // No wall-clock bound: a loaded suite run makes one flaky. For the record,
-    // this was ~4.5s before `parsePgnTree` built the tree in place, ~1s after.
-    const tree = repertoireLineTree(chapter.lines[0]);
-    expect(tree?.nextId).toBe(9147);
+    // the parse was ~4.5s before `parsePgnTree` built the tree in place, ~1s after.
+    const reading = read(NIMZO);
+    expect(reading.games).toHaveLength(1);
+    expect(reading.games[0].tree.nextId).toBe(9147);
   });
 });
 
 describe("a stored row", () => {
   it("round-trips, and fills in what an older or hand-edited row lacks", () => {
-    const record = savedRepertoireOf("r", TWO_LINES, "", DEFAULT_POSITION, NOW);
+    const reading = read(ONE);
+    const record = savedRepertoireOf("r", reading.games[0], "", reading.name, NOW);
     expect(savedRepertoireFrom(JSON.parse(JSON.stringify(record)))).toEqual(record);
 
     expect(
@@ -184,6 +230,7 @@ describe("a stored row", () => {
         savedAt: "x",
         updatedAt: "x",
         folderId: 7,
+        stats: "junk",
       }),
     ).toEqual({
       id: "r",
@@ -202,5 +249,18 @@ describe("a stored row", () => {
     expect(savedRepertoireFrom(null)).toBeUndefined();
     expect(savedRepertoireFrom({ id: "", pgn: "1. e4", savedAt: "", updatedAt: "" })).toBeUndefined();
     expect(savedRepertoireFrom({ id: "r", pgn: "", savedAt: "", updatedAt: "" })).toBeUndefined();
+  });
+
+  it("tells a record from before the one-game rule by its text", () => {
+    const record = savedRepertoireFrom({ id: "r", pgn: TWO, savedAt: "x", updatedAt: "x" })!;
+    expect(isMultiGameRepertoire(record)).toBe(true);
+  });
+});
+
+describe("the trunk a card previews", () => {
+  it("is the start when the lines disagree from move one", () => {
+    const trees = [parsePgnTree("1. e4 *"), parsePgnTree("1. d4 *")];
+    expect(repertoireTrunkFen(trees)).toBe(DEFAULT_POSITION);
+    expect(repertoireTrunkFen([])).toBe(DEFAULT_POSITION);
   });
 });

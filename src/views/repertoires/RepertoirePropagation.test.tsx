@@ -2,9 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { screen } from "@testing-library/react";
 
 import i18n from "../../i18n";
-import { checkRepertoirePgn, savedRepertoireOf } from "../../lib/savedRepertoires";
-import { saveRepertoire } from "../../lib/savedRepertoireStore";
-import { CARO, renderSection } from "./repertoireTestKit";
+import { renderSection, storeRepertoire } from "./repertoireTestKit";
 
 /*
   **The propagation assertion, for the first shipped screen on the v2 core** —
@@ -47,17 +45,15 @@ beforeEach(async () => {
 
 describe("the repertoire board is composed, not written", () => {
   it("renders the one shared panel and the one shared square, and nothing of its own", () => {
-    const check = checkRepertoirePgn(CARO);
-    if (!check.ok) throw new Error("fixture did not read");
-    saveRepertoire(savedRepertoireOf("r", CARO, "", check.previewFen));
+    storeRepertoire("r");
 
     renderSection("/repertoires/r");
 
     const panels = screen.getAllByTestId("the-one-board-panel");
     expect(panels).toHaveLength(1);
     expect(panels[0]).toHaveAttribute("data-panel-id", "repertoire-board-panel");
-    // The slots this screen fills — the Lines tab is its own addition.
-    expect(screen.getByTestId("panel-tab-ids")).toHaveTextContent("lines,moves,engine");
+    // The slots this screen fills.
+    expect(screen.getByTestId("panel-tab-ids")).toHaveTextContent("moves,engine");
 
     const squares = screen.getAllByTestId("the-one-board-square");
     expect(squares).toHaveLength(1);

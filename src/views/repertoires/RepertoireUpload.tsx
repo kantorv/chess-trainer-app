@@ -10,13 +10,15 @@ import { Link as RouterLink, useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 
 import {
-  checkRepertoirePgn,
   newSavedRepertoireId,
+  readRepertoireText,
   savedRepertoireOf,
   type RepertoireProblem,
+  type RepertoireReading,
 } from "../../lib/savedRepertoires";
 import { saveRepertoire } from "../../lib/savedRepertoireStore";
 import { RightPanel } from "../main/rightPanel";
+import RepertoireMergeSplit from "./RepertoireMergeSplit";
 
 /**
  * **Add a repertoire** (`/repertoires/new`) — a `.pgn` file picked, or PGN
@@ -25,11 +27,19 @@ import { RightPanel } from "../main/rightPanel";
  * ## One way in, whichever door
  *
  * The file's text and the pasted text go through **the same function**,
- * {@link bringIn}: the same check (`checkRepertoirePgn` — the uploads' size and
- * emptiness rules, then every line parsed as the board will parse it), the same
- * constructor (`savedRepertoireOf`, which never reads a file name) and the same
+ * {@link bringIn}: the same reading (`readRepertoireText` — the uploads' size and
+ * emptiness rules, then every game parsed as the board will parse it), the same
+ * constructors (which never read a file name) and the same
  * write. So a file and its pasted text are the same record, and
  * `RepertoireUpload.test.tsx` asserts it through this screen, not only below it.
+ *
+ * ## A repertoire is one game
+ *
+ * A text of one game is stored as it is and opens on its board. A text of
+ * several — a Chessable export, a lichess study of many chapters — is not a
+ * repertoire as it stands (`lib/savedRepertoires.ts`), so the screen asks
+ * what to do with it: merge the games into one tree, or split them into one
+ * repertoire each (`RepertoireMergeSplit`).
  *
  * ## The read waits for a paint
  *
@@ -62,23 +72,37 @@ function RepertoireUpload() {
   );
 
   /** The one route in, for a file and a paste alike. */
+  /** A text of several games, waiting for the reader to merge or split it. */
+  const [choice, setChoice] = useState<Extract<RepertoireReading, { ok: true }> | null>(
+    null,
+  );
+
+  /** The one route in, for a file and a paste alike. */
   const bringIn = (text: string) => {
     setBusy(true);
     setProblem(null);
+    setChoice(null);
     pending.current = setTimeout(() => {
       pending.current = null;
-      const check = checkRepertoirePgn(text);
-      if (!check.ok) {
+      const reading = readRepertoireText(text);
+      if (!reading.ok) {
         setBusy(false);
-        setProblem({ kind: check.problem, detail: check.detail });
+        setProblem({ kind: reading.problem, detail: reading.detail });
+        return;
+      }
+
+      if (reading.games.length > 1) {
+        // Not a repertoire as it stands: the reader chooses merge or split.
+        setBusy(false);
+        setChoice(reading);
         return;
       }
 
       const record = savedRepertoireOf(
         newSavedRepertoireId(),
-        text,
+        reading.games[0],
         name,
-        check.previewFen,
+        reading.name,
       );
       if (saveRepertoire(record) !== undefined) {
         setBusy(false);
@@ -183,6 +207,14 @@ function RepertoireUpload() {
             </Box>
           )}
         </Box>
+
+        {choice !== null && (
+          <RepertoireMergeSplit
+            reading={choice}
+            typedName={name}
+            onDone={(path) => navigate(path)}
+          />
+        )}
 
         {problem !== null && (
           <Alert severity="error" data-testid="repertoire-upload-problem">

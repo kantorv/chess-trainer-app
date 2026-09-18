@@ -847,10 +847,13 @@ const en = {
       "Repertoires are kept in this browser only. Clearing site data removes them, and they do not follow you to another device.",
     /** A repertoire whose tags carry no name and the reader typed none. */
     untitled: "Untitled repertoire",
-    lines_one: "{{count}} line",
-    lines_other: "{{count}} lines",
-    chapters_one: "{{count}} chapter",
-    chapters_other: "{{count}} chapters",
+    /** A repertoire's size: its mainline, and the side lines off it. */
+    moves_one: "{{count}} move",
+    moves_other: "{{count}} moves",
+    variations_one: "{{count}} variation",
+    variations_other: "{{count}} variations",
+    /** A record from before the one-game rule, which opens on the choice. */
+    needsChoice: "Several games — open to merge or split",
     view: {
       label: "View",
       list: "List",
@@ -907,14 +910,36 @@ const en = {
       cancel: "Cancel",
       problem: "It could not be saved — this browser's storage is full or unavailable.",
     },
+    /**
+     * A text of several games: a repertoire is one game (a mainline with side
+     * lines), so the reader merges them into one or splits them into many.
+     */
+    choice: {
+      title_one: "This PGN holds {{count}} game",
+      title_other: "This PGN holds {{count}} games",
+      explain:
+        "A repertoire is one game: a mainline with its side lines. Choose how to bring these in.",
+      skipped_one: "{{count}} game has no moves or could not be read, and is left out.",
+      skipped_other: "{{count}} games have no moves or could not be read, and are left out.",
+      merge: "Merge into one repertoire",
+      mergeHelp:
+        "One tree: the first game's line is the mainline, and wherever another game leaves it becomes a side line. Comments in the file are not kept.",
+      mergeUnavailable:
+        "These games start from different positions, so they cannot share one tree.",
+      split_one: "Keep as {{count}} repertoire",
+      split_other: "Split into {{count}} repertoires",
+      splitHelp: "Each game becomes a repertoire of its own, named after the file and the game.",
+      tooMany: "That would pass the limit of {{max}} repertoires in this browser.",
+      legacy:
+        "This was saved as several games. A repertoire is one game with side lines — choose how to keep it.",
+    },
     /** The board a repertoire is read on. */
     detail: {
       missing: "There is no such repertoire in this browser.",
       back: "Back to repertoires",
       loading: "Reading this line…",
-      unreadableLine: "This line could not be read.",
+      unreadable: "This repertoire could not be read.",
       tabs: {
-        lines: "Lines",
         moves: "Moves",
         tree: "Tree",
         engine: "Engine",

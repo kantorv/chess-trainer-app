@@ -17,7 +17,7 @@ import { Chessboard, type ChessboardOptions } from "react-chessboard";
 
 import { downloadPgn } from "../../lib/pgnExport";
 import {
-  savedRepertoireSummary,
+  isMultiGameRepertoire,
   type SavedRepertoire,
 } from "../../lib/savedRepertoires";
 import { removeSavedRepertoire } from "../../lib/savedRepertoireStore";
@@ -92,15 +92,20 @@ function SettingsLink({ saved }: { saved: SavedRepertoire }) {
 /** The two caption lines both views print: the name, then its size and date. */
 const useCaption = (saved: SavedRepertoire) => {
   const { t, i18n } = useTranslation();
-  // A tag scan over the whole file — cheap, but an 800 KB file is worth not
+  // A text scan of the whole PGN — cheap, but a large record is worth not
   // rescanning on every checkbox toggle.
-  const summary = useMemo(() => savedRepertoireSummary(saved), [saved]);
+  const multiGame = useMemo(() => isMultiGameRepertoire(saved), [saved]);
+  const stats = saved.stats;
   return {
     primary: saved.name || t("repertoires.untitled"),
     secondary: savedListLine([
-      t("repertoires.lines", { count: summary.lines }),
-      summary.chapters > 0
-        ? t("repertoires.chapters", { count: summary.chapters })
+      // A record from before the one-game rule says what it needs instead.
+      multiGame ? t("repertoires.needsChoice") : "",
+      !multiGame && stats !== undefined
+        ? t("repertoires.moves", { count: stats.moves })
+        : "",
+      !multiGame && stats !== undefined && stats.variations > 0
+        ? t("repertoires.variations", { count: stats.variations })
         : "",
       savedListDate(saved.updatedAt, i18n.language),
     ]),
