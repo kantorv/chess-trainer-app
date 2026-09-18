@@ -13,6 +13,7 @@ import {
   repertoireTrunkFen,
   savedRepertoireFrom,
   savedRepertoireOf,
+  splitFolderNameOf,
   splitRepertoiresOf,
   type RepertoireReading,
 } from "./savedRepertoires";
@@ -185,25 +186,22 @@ describe("merge", () => {
 });
 
 describe("split", () => {
-  it("makes one repertoire per game, each with its own text and name", () => {
+  it("makes one repertoire per game, named by the game, all filed in the given folder", () => {
     let n = 0;
-    const records = splitRepertoiresOf(() => `s${(n += 1)}`, read(TWO), "Caro", NOW);
-    expect(records.map((record) => [record.id, record.name])).toEqual([
-      ["s1", "Caro — Advance · 3...Bf5"],
-      ["s2", "Caro — Exchange · 3...cxd5"],
+    const records = splitRepertoiresOf(() => `s${(n += 1)}`, read(TWO), "f1", NOW);
+    expect(records.map((record) => [record.id, record.name, record.folderId])).toEqual([
+      ["s1", "Advance · 3...Bf5", "f1"],
+      ["s2", "Exchange · 3...cxd5", "f1"],
     ]);
     expect(records.every((record) => !isMultiGameRepertoire(record))).toBe(true);
     expect(records[1].pgn).toContain("3. exd5 cxd5");
   });
 
-  it("names each by the game alone when the text has no name", () => {
-    const reading: Extract<RepertoireReading, { ok: true }> = {
-      ...read(TWO),
-      name: undefined,
-    };
-    expect(splitRepertoiresOf(() => "x", reading, "", NOW)[0].name).toBe(
-      "Advance · 3...Bf5",
-    );
+  it("names the split's folder by the reader, else by the text, else leaves it to the caller", () => {
+    expect(splitFolderNameOf(read(TWO), " Caro ")).toBe("Caro");
+    expect(splitFolderNameOf(read(TWO), "")).toBe("My Caro");
+    const nameless: Extract<RepertoireReading, { ok: true }> = { ...read(TWO), name: undefined };
+    expect(splitFolderNameOf(nameless, "")).toBeUndefined();
   });
 });
 

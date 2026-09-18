@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import i18n from "../../i18n";
 import { isMultiGameRepertoire, repertoireTreeOf } from "../../lib/savedRepertoires";
 import { findSavedRepertoire, savedRepertoiresSnapshot } from "../../lib/savedRepertoireStore";
+import { repertoireFoldersSnapshot } from "../../lib/savedRepertoireFolderStore";
 import { boardOptions, FakeEngine } from "../dev/devTestHarness";
 import {
   CARO,
@@ -189,13 +190,16 @@ describe("a record from before the one-game rule", () => {
     renderSection("/repertoires/old");
     await userEvent.click(await screen.findByTestId("repertoire-choice-split"));
 
+    // Into a folder named after the old record, in the old record's place.
+    const [folder] = repertoireFoldersSnapshot();
+    expect(folder.name).toBe("Old Caro");
     const rows = savedRepertoiresSnapshot();
-    expect(rows.map((row) => row.name)).toEqual([
-      "My Caro",
-      "Old Caro — Advance · 3...Bf5",
-      "Old Caro — Exchange · 3...cxd5",
+    expect(rows.map((row) => [row.name, row.folderId])).toEqual([
+      ["My Caro", null],
+      ["Advance · 3...Bf5", folder.id],
+      ["Exchange · 3...cxd5", folder.id],
     ]);
     expect(findSavedRepertoire("old")).toBeUndefined();
-    expect(await screen.findByTestId("repertoires-screen")).toBeInTheDocument();
+    expect(await screen.findByTestId("repertoires-title")).toHaveTextContent("Old Caro");
   });
 });

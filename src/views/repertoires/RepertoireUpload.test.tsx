@@ -8,6 +8,7 @@ import {
   clearSavedRepertoires,
   savedRepertoiresSnapshot,
 } from "../../lib/savedRepertoireStore";
+import { repertoireFoldersSnapshot } from "../../lib/savedRepertoireFolderStore";
 import { CARO, CARO_TWO_GAMES, renderSection } from "./repertoireTestKit";
 
 /*
@@ -171,17 +172,23 @@ describe("a text of several games", () => {
     expect(await screen.findByTestId("repertoire-board-name")).toHaveTextContent("Caro-Kann");
   });
 
-  it("splits into one repertoire per game and shows the list", async () => {
+  it("splits into one repertoire per game, in a folder of their own, and opens it", async () => {
     renderSection("/repertoires/new");
     paste(CARO_TWO_GAMES);
     await userEvent.click(screen.getByTestId("repertoire-upload-save"));
     await userEvent.click(await screen.findByTestId("repertoire-choice-split"));
 
-    expect(savedRepertoiresSnapshot().map((row) => row.name)).toEqual([
-      "My Caro — Advance · 3...Bf5",
-      "My Caro — Exchange · 3...cxd5",
+    const [folder] = repertoireFoldersSnapshot();
+    expect(folder.name).toBe("My Caro");
+    expect(
+      savedRepertoiresSnapshot().map((row) => [row.name, row.folderId]),
+    ).toEqual([
+      ["Advance · 3...Bf5", folder.id],
+      ["Exchange · 3...cxd5", folder.id],
     ]);
-    expect(await screen.findByTestId("repertoires-screen")).toBeInTheDocument();
+    // The reader lands inside the folder the split made.
+    expect(await screen.findByTestId("repertoires-title")).toHaveTextContent("My Caro");
+    expect(screen.getAllByTestId(/^repertoires-item-/)).toHaveLength(2);
   });
 
   it("offers no merge for games from different starts, and says why", async () => {
