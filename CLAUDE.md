@@ -922,9 +922,14 @@ lines dropping below their branch point.
   white, Black's black, each ringed in a theme token so it shows on either
   theme — larger at a line's end; the moves on the way to the position on
   screen carry a primary ring under a highlighted path, and a marker sits on
-  that position, kept in view as play moves. It maps the repertoire, not the
-  session: inside a line the reader added, the marker waits on the last
-  repertoire position.
+  that position, kept in view as play moves.
+- **The player's map is the session's; a game's is the repertoire's.** The
+  player draws the repertoire *and* the moves added this session, **as they
+  are added** — their lines and a ring round their dots in the move list's
+  extension colour (`success.main`), and "N added" in the header — so the
+  reader always sees what they have added to the file. Backtracking draws the
+  repertoire its coverage is defined on; inside a line the reader added there,
+  the marker waits on the last repertoire position.
 - **Coverage is the lines' colour, and a game's.** Backtracking passes it —
   covered lines green, a progress bar and "N lines left"; the player passes
   none — every line one neutral colour, and the tree's size in the header.

@@ -93,9 +93,13 @@ import {
  *   costs what is visible; the moves on the reader's way are bold and in the
  *   primary colour.
  *
- * It is a map of the **repertoire**, not of the session: a move the reader
- * added is not on it, and while they stand in one, the marker waits on the
- * last repertoire position before it (the screen hands that in).
+ * **What it maps is the screen's.** The player hands it the **session's** tree
+ * — the repertoire and every move added this session — with `addedIds`, so a
+ * move played off the file appears at once, its line and a ring round its dot
+ * in the added colour (the move list's `success.main`, one colour for one
+ * idea), and the header counts them. Backtracking hands it the repertoire as
+ * it arrived — its coverage is defined on that — and while the reader stands
+ * in an added line the marker waits on the last repertoire position before it.
  *
  * The drawing is a diagram, not text, so it is pinned left-to-right (`dir`)
  * the way the move numbers are: depth runs the same way in every language.
@@ -115,6 +119,8 @@ const drawingSx: SxProps<Theme> = {
   "& .map-open": stroke((palette) => palette.text.disabled),
   "& .map-covered": stroke((palette) => palette.success.main),
   "& .map-trail": stroke((palette) => palette.primary.main),
+  // The reader's additions — the move list's extension colour.
+  "& .map-added": stroke((palette) => palette.success.main),
   "& .map-label": {
     fill: (theme: Theme) => (theme.vars ?? theme).palette.text.primary,
     // A halo in the paper colour, painted under the glyphs, so a label stays
@@ -160,8 +166,8 @@ type Drawing = {
   layout: MapLayout;
   /** The moves on the reader's way, for the labels to pick out. */
   trailIds: ReadonlySet<string>;
-  edges: { covered: string; open: string };
-  dots: { white: string; black: string; whiteEnds: string; blackEnds: string };
+  edges: { covered: string; open: string; added: string };
+  dots: { white: string; black: string; whiteEnds: string; blackEnds: string; added: string };
   trail: { edges: string; dots: string };
   here: { px: number; py: number };
   width: number;
@@ -194,6 +200,13 @@ function MapLayers({
         data-testid={`${testId}-covered-lines`}
       />
       <path
+        className="map-added"
+        d={edges.added}
+        strokeWidth={2}
+        vectorEffect="non-scaling-stroke"
+        data-testid={`${testId}-added-lines`}
+      />
+      <path
         className="map-trail"
         d={trail.edges}
         strokeWidth={3}
@@ -205,6 +218,8 @@ function MapLayers({
       {/* Each dot: a thin ring, then the side's colour over it. */}
       <path className="map-dot-ring" d={dots.white + dots.black} strokeWidth={5.5} />
       <path className="map-dot-ring" d={dots.whiteEnds + dots.blackEnds} strokeWidth={7.5} />
+      {/* An added move's ring, in the added colour, over its plain one. */}
+      <path className="map-added" d={dots.added} strokeWidth={7} data-testid={`${testId}-added-moves`} />
       <path className="map-dot-white" d={dots.white} strokeWidth={4} data-testid={`${testId}-white-moves`} />
       <path className="map-dot-black" d={dots.black} strokeWidth={4} data-testid={`${testId}-black-moves`} />
       <path className="map-dot-white" d={dots.whiteEnds} strokeWidth={6} data-testid={`${testId}-white-ends`} />
@@ -269,6 +284,7 @@ function RepertoireMap({
   zoom = MAP_DEFAULT_ZOOM,
   onZoomChange,
   onSelectNode,
+  addedIds,
 }: {
   testId: string;
   /** The repertoire as it arrived. */
@@ -285,16 +301,18 @@ function RepertoireMap({
    * links while the moves are written on it.
    */
   onSelectNode?: (id: string) => void;
+  /** The moves in `repertoire` the reader added this session — the player's. */
+  addedIds?: ReadonlySet<string>;
 }) {
   const { t } = useTranslation();
   const [fullScreen, setFullScreen] = useState(false);
 
   const layout = useMemo(() => mapLayoutOf(repertoire), [repertoire]);
   const edges = useMemo(
-    () => mapEdgePaths(layout, coverage ?? NO_COVERAGE),
-    [layout, coverage],
+    () => mapEdgePaths(layout, coverage ?? NO_COVERAGE, addedIds),
+    [layout, coverage, addedIds],
   );
-  const dots = useMemo(() => mapDots(layout), [layout]);
+  const dots = useMemo(() => mapDots(layout, addedIds), [layout, addedIds]);
   const trail = useMemo(() => {
     const path = pathTo(repertoire, nodeId);
     return {
@@ -327,11 +345,17 @@ function RepertoireMap({
   const smallest = zoom <= MAP_ZOOM_LEVELS[0];
   const largest = zoom >= MAP_ZOOM_LEVELS[MAP_ZOOM_LEVELS.length - 1];
 
-  /** The tree's size — what the header says without a game. */
-  const size = t("repertoires.play.map.size", {
-    lines: t("repertoires.play.map.lines", { count: layout.order.length === 0 ? 0 : layout.rows }),
-    moves: t("repertoires.play.map.moves", { count: layout.order.length }),
-  });
+  /** The tree's size — what the header says without a game — and what was added. */
+  const added = addedIds?.size ?? 0;
+  const size = [
+    t("repertoires.play.map.size", {
+      lines: t("repertoires.play.map.lines", {
+        count: layout.order.length === 0 ? 0 : layout.rows,
+      }),
+      moves: t("repertoires.play.map.moves", { count: layout.order.length }),
+    }),
+    ...(added > 0 ? [t("repertoires.play.map.added", { count: added })] : []),
+  ].join(" · ");
 
   const progress =
     coverage === undefined ? (

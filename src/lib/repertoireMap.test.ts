@@ -54,10 +54,18 @@ describe("the repertoire map layout", () => {
     expect(open).toContain(`M${px(2)} ${py(0)}V${py(1)}H${px(3)}`); // 2. Bc4
   });
 
-  it("splits edges by coverage", () => {
+  it("splits edges by coverage, and the reader's additions apart from both", () => {
     const layout = mapLayoutOf(tree);
     const edges = mapEdgePaths(layout, coverageOf(tree, new Set([nf3.id])));
     expect(edges.covered).toBe(`M${px(2)} ${py(0)}H${px(3)}`);
+    expect(edges.added).toBe("");
+
+    // 2. Bc4 as an addition: its edge is the added one, and its dot ringed.
+    const added = mapEdgePaths(layout, coverageOf(tree, new Set()), new Set([bc4.id]));
+    expect(added.added).toBe(`M${px(2)} ${py(0)}V${py(1)}H${px(3)}`);
+    expect(added.open).not.toContain(`V${py(1)}H${px(3)}`);
+    expect(mapDots(layout, new Set([bc4.id])).added).toBe(`M${px(3)} ${py(1)}h0`);
+    expect(mapDots(layout).added).toBe("");
   });
 
   it("colours every dot by the side that moved, a line's end apart", () => {

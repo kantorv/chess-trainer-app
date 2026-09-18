@@ -128,20 +128,31 @@ const edgeTo = (layout: MapLayout, node: VariationNode): string => {
     : `M${from.px} ${from.py}V${to.py}H${to.px}`;
 };
 
+const NOTHING_ADDED: ReadonlySet<string> = new Set();
+
 /**
- * The tree as two path strings: the edges into positions whose lines are all
- * covered, and the rest. Recomputed when the coverage changes — once per line.
+ * The tree as path strings: the edges into moves the reader **added** (the
+ * player draws the session's tree — `extensionIdsOf`), then of the rest those
+ * into positions whose lines are all covered, and the others. Recomputed when
+ * the tree or the coverage changes — a move added, a line covered.
  */
 export const mapEdgePaths = (
   layout: MapLayout,
   coverage: Coverage,
-): { covered: string; open: string } => {
+  added: ReadonlySet<string> = NOTHING_ADDED,
+): { covered: string; open: string; added: string } => {
   const covered: string[] = [];
   const open: string[] = [];
+  const addedEdges: string[] = [];
   for (const node of layout.order) {
-    (coverage.under(node.id) === 0 ? covered : open).push(edgeTo(layout, node));
+    const target = added.has(node.id)
+      ? addedEdges
+      : coverage.under(node.id) === 0
+        ? covered
+        : open;
+    target.push(edgeTo(layout, node));
   }
-  return { covered: covered.join(""), open: open.join("") };
+  return { covered: covered.join(""), open: open.join(""), added: addedEdges.join("") };
 };
 
 /** A dot: a zero-length segment, drawn with round caps. */
@@ -158,21 +169,33 @@ const dotAt = (layout: MapLayout, node: VariationNode): string => {
  */
 export const mapDots = (
   layout: MapLayout,
-): { white: string; black: string; whiteEnds: string; blackEnds: string } => {
+  added: ReadonlySet<string> = NOTHING_ADDED,
+): {
+  white: string;
+  black: string;
+  whiteEnds: string;
+  blackEnds: string;
+  /** The added moves' dots again, whichever side — ringed in the added colour. */
+  added: string;
+} => {
   const white: string[] = [];
   const black: string[] = [];
   const whiteEnds: string[] = [];
   const blackEnds: string[] = [];
+  const addedDots: string[] = [];
   for (const node of layout.order) {
     const isWhite = layout.whiteMoves.has(node.id);
     const end = node.children.length === 0;
-    (end ? (isWhite ? whiteEnds : blackEnds) : isWhite ? white : black).push(dotAt(layout, node));
+    const dot = dotAt(layout, node);
+    (end ? (isWhite ? whiteEnds : blackEnds) : isWhite ? white : black).push(dot);
+    if (added.has(node.id)) addedDots.push(dot);
   }
   return {
     white: white.join(""),
     black: black.join(""),
     whiteEnds: whiteEnds.join(""),
     blackEnds: blackEnds.join(""),
+    added: addedDots.join(""),
   };
 };
 

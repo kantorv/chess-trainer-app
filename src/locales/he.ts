@@ -681,6 +681,8 @@ const he: typeof en = {
         lines_other: "{{count}} קווים",
         moves_one: "מסע אחד",
         moves_other: "{{count}} מסעים",
+        added_one: "מסע אחד נוסף",
+        added_other: "{{count}} נוספו",
       },
       score: {
         successes: "נכון",

@@ -1016,6 +1016,8 @@ const en = {
         lines_other: "{{count}} lines",
         moves_one: "{{count}} move",
         moves_other: "{{count}} moves",
+        added_one: "{{count}} added",
+        added_other: "{{count}} added",
       },
       /** Game mode's tally — this session only. */
       score: {

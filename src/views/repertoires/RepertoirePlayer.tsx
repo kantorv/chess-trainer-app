@@ -354,21 +354,23 @@ function RepertoirePlayer({
   );
 
   /*
-    The map (the player's and Backtracking's) shows the repertoire, not the
-    session: inside a line the reader added, its marker waits on the last
-    repertoire position before it.
+    The map: the player's draws the session — the repertoire and what was
+    added, as it is added — so its marker is simply the node on screen.
+    Backtracking's draws the repertoire its coverage is defined on: inside a
+    line the reader added, its marker waits on the last repertoire position.
   */
   const hasMap = game !== "end";
   // The map's zoom is the screen's, so it survives a trip to another tab.
   const [mapZoom, setMapZoom] = useState(MAP_DEFAULT_ZOOM);
   const mapNodeId = useMemo(() => {
     if (!hasMap) return null;
+    if (game === undefined) return core.nodeId;
     const path = pathTo(core.tree, core.nodeId);
     for (let index = path.length - 1; index >= 0; index -= 1) {
       if (originalIds.has(path[index].id)) return path[index].id;
     }
     return null;
-  }, [hasMap, core.tree, core.nodeId, originalIds]);
+  }, [hasMap, game, core.tree, core.nodeId, originalIds]);
 
   /** Back to the start, extensions kept; the trainer answers if it is White. */
   const restart = useCallback(() => {
@@ -621,7 +623,8 @@ function RepertoirePlayer({
                     shown === "ready" ? (
                       <RepertoireMap
                         testId={`${id}-map`}
-                        repertoire={repertoire}
+                        repertoire={game === undefined ? core.tree : repertoire}
+                        addedIds={game === undefined ? extensionIds : undefined}
                         coverage={game === "backtrack" ? rules.coverage : undefined}
                         nodeId={mapNodeId}
                         // The player's full-screen map: a dot is a link to its
