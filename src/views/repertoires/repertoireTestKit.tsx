@@ -25,6 +25,7 @@ import Repertoires from "./Repertoires";
 import RepertoireBoard from "./RepertoireBoard";
 import RepertoireUpload from "./RepertoireUpload";
 import RepertoireSettingsScreen from "./RepertoireSettingsScreen";
+import RepertoirePlay from "./RepertoirePlay";
 
 /**
  * A repertoire as the one-game rule wants it: one game, a mainline with a
@@ -79,7 +80,7 @@ export const storeLegacyRepertoire = (id: string, text: string, name = "") => {
   return id;
 };
 
-/** The section's four routes, mounted at `path`, as `App.tsx` mounts them. */
+/** The section's five routes, mounted at `path`, as `App.tsx` mounts them. */
 export const renderSection = (path: string, extra?: ReactNode) =>
   render(
     <AppThemeWithLang>
@@ -90,6 +91,7 @@ export const renderSection = (path: string, extra?: ReactNode) =>
             <Route path="/repertoires/new" element={<RepertoireUpload />} />
             <Route path="/repertoires/:id" element={<RepertoireBoard />} />
             <Route path="/repertoires/:id/settings" element={<RepertoireSettingsScreen />} />
+            <Route path="/repertoires/:id/play" element={<RepertoirePlay />} />
           </Routes>
           <RightPanelOutlet />
           {extra}

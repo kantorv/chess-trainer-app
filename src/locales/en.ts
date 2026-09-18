@@ -959,6 +959,25 @@ const en = {
       moveTitle: "Move to folder",
       empty: "This folder is empty. Move repertoires here from the list.",
     },
+    /**
+     * Playing a repertoire against the trainer (`/repertoires/<id>/play`,
+     * CTA-63) — a scripted opponent that answers only from the repertoire.
+     */
+    play: {
+      open: "Play",
+      side: "Your side",
+      white: "White",
+      black: "Black",
+      restart: "Restart from the start position",
+      download: "Download with your additions as PGN",
+      back: "Back to the board",
+      status: {
+        thinking: "The trainer is choosing a move…",
+        yourMove: "Your move.",
+        outOfBook:
+          "The repertoire ends here. Every move you play now adds to it.",
+      },
+    },
     /** The board a repertoire is read on. */
     detail: {
       missing: "There is no such repertoire in this browser.",
