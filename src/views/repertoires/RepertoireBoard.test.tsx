@@ -74,11 +74,13 @@ describe("a repertoire on the v2 board", () => {
     expect(screen.getByTestId("repertoire-board-panel")).toBeInTheDocument();
     expect(screen.getByTestId("repertoire-board-panel-variations")).toBeInTheDocument();
     expect(screen.getByTestId("repertoire-board-panel-status")).toBeInTheDocument();
-    for (const tab of ["lines", "moves", "tree", "engine"]) {
+    for (const tab of ["lines", "moves", "engine"]) {
       expect(screen.getByTestId(`repertoire-board-panel-tab-${tab}`)).toBeInTheDocument();
     }
     expect(screen.getByTestId("board-controls")).toBeInTheDocument();
     expect(screen.getByTestId("repertoire-board-name")).toHaveTextContent("Caro");
+    // No Tree tab: the Moves tab's merged list already draws the side lines.
+    expect(screen.queryByTestId("repertoire-board-panel-tab-tree")).not.toBeInTheDocument();
   });
 
   it("opens on the Lines tab with the first line on the board", async () => {
@@ -112,10 +114,12 @@ describe("a repertoire on the v2 board", () => {
     // Back to the first line, and its `(3... c5 4. dxc5)` is in the tree.
     await userEvent.click(screen.getByTestId("repertoire-line-0"));
     await lineReady();
-    await userEvent.click(screen.getByTestId("repertoire-board-panel-tab-tree"));
-    const tree = screen.getByTestId("repertoire-board-panel-content-tree");
-    expect(tree).toHaveTextContent("c5");
-    expect(tree).toHaveTextContent("dxc5");
+    await userEvent.click(screen.getByTestId("repertoire-board-panel-tab-moves"));
+    const moves = screen.getByTestId("repertoire-board-panel-content-moves");
+    const side = within(moves).getAllByRole("group");
+    expect(side).toHaveLength(1);
+    expect(side[0]).toHaveTextContent("3… c5");
+    expect(side[0]).toHaveTextContent("dxc5");
   });
 
   it("never moves a piece by itself", async () => {

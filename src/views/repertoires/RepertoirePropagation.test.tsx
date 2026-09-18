@@ -57,7 +57,7 @@ describe("the repertoire board is composed, not written", () => {
     expect(panels).toHaveLength(1);
     expect(panels[0]).toHaveAttribute("data-panel-id", "repertoire-board-panel");
     // The slots this screen fills — the Lines tab is its own addition.
-    expect(screen.getByTestId("panel-tab-ids")).toHaveTextContent("lines,moves,tree,engine");
+    expect(screen.getByTestId("panel-tab-ids")).toHaveTextContent("lines,moves,engine");
 
     const squares = screen.getAllByTestId("the-one-board-square");
     expect(squares).toHaveLength(1);
