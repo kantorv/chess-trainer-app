@@ -864,6 +864,13 @@ RepertoirePlay.tsx ── BoardShell / BoardPanel ── TreeMoveList(extensionI
   list tints them (`success.main`, a theme token) through the optional
   `extensionIds` on `TreeMoveList` → `MoveList`, read per token from the
   selection store like the highlight; every other consumer passes none.
+- **Arrows are the reader's call.** A header switch, **off by default** (a
+  drill should not show the answer), draws the next-move arrows for every
+  continuation at the node on screen through the shared `nextMoveArrowsOf`
+  (`views/tools/analysis/nextMoveArrows.ts`): the mainline's move in one
+  colour, side lines in another. The v2 boards and the repertoire board draw
+  their arrows through the same helper; the shipped Analysis Board keeps its
+  own copy, untouched.
 - **The session is session-only.** The reader picks White or Black per
   session (default: the repertoire's main color); changing side and "Restart"
   both go back to the start and **keep** the extensions. No engine (a drill

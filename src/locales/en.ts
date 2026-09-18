@@ -971,6 +971,8 @@ const en = {
       restart: "Restart from the start position",
       download: "Download with your additions as PGN",
       back: "Back to the board",
+      /** The switch that draws the next-move arrows — off by default. */
+      arrows: "Arrows",
       status: {
         thinking: "The trainer is choosing a move…",
         yourMove: "Your move.",

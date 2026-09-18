@@ -5,6 +5,10 @@ import { Chess } from "chess.js";
 import i18n from "../../i18n";
 import { downloadPgn } from "../../lib/pgnExport";
 import { SAVED_REPERTOIRES_STORAGE_KEY } from "../../lib/savedRepertoireStore";
+import {
+  NEXT_MOVE_ARROW_COLOR,
+  SIDELINE_NEXT_MOVE_ARROW_COLOR,
+} from "../tools/analysis/nextMoveArrows";
 import { boardOptions, FakeEngine } from "../dev/devTestHarness";
 import {
   CARO_TWO_GAMES,
@@ -200,6 +204,32 @@ describe("playing a repertoire against the trainer", () => {
     fireEvent.click(screen.getByTestId("board-control-first"));
     wait();
     expect(position()).toBe(new Chess().fen());
+  });
+
+  it("draws no arrows until asked, then the mainline and side lines in two colours", () => {
+    mount(`/repertoires/${storeRepertoire("r", CARO)}/play`);
+    // Off by default: a drill does not show the answer.
+    expect(boardOptions().arrows).toEqual([]);
+
+    fireEvent.click(screen.getByTestId("repertoire-play-arrows").querySelector("input")!);
+    // One continuation is still drawn — unlike the reading boards.
+    expect(boardOptions().arrows).toEqual([
+      { startSquare: "e2", endSquare: "e4", color: NEXT_MOVE_ARROW_COLOR },
+    ]);
+
+    // Add 2. d3 beside the repertoire's 2. d4, then step back to where both hang.
+    drop("e2", "e4");
+    wait();
+    drop("d2", "d3");
+    fireEvent.click(screen.getByTestId("board-control-previous"));
+    expect(boardOptions().arrows).toEqual([
+      { startSquare: "d2", endSquare: "d4", color: NEXT_MOVE_ARROW_COLOR },
+      { startSquare: "d2", endSquare: "d3", color: SIDELINE_NEXT_MOVE_ARROW_COLOR },
+    ]);
+
+    // And off again.
+    fireEvent.click(screen.getByTestId("repertoire-play-arrows").querySelector("input")!);
+    expect(boardOptions().arrows).toEqual([]);
   });
 
   it("restarts at the start position and keeps the extensions", () => {

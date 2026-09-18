@@ -413,7 +413,15 @@ Every `/dev/*` screen, and exactly what it picks. Nothing else differs.
 | **Masked v2** | `/dev/masked` | Play v2's, verbatim | ✅ switch, **reply** | header line only | ❌ (a mask cannot be restored on `/dev/play`) | Moves · Engine · Mask | Play v2's | Play v2's | `pieces: maskedPieces(mask)` |
 | **Openings v2** | `/dev/openings` | `?fen=`, `?openings=` | ✅ switch, no reply | ✅ continuations + arrows | ❌ **button-triggered save** | Moves · Engine · Tree | opening + Save + switch | the explorer list | book arrows |
 | **Repertoire v2** | `/dev/repertoire` | `?game=library/<path>/<id>` | ✅ switch, no reply | header line only | ❌ (a shipped file is not the reader's work) | Moves · Engine · Tree · Info | opening + switch | next-moves bar | next-move arrows |
-| **Play repertoire** (shipped, CTA-63) | `/repertoires/<id>/play` | `orientation`: the reader's side | ❌ (a drill does not show the answer) — **`useTrainerModule`** instead (§2.5) | ❌ | ❌ (session-only; leaves by download) | Moves (extensions tinted) | name + side toggle + restart + download + back | the trainer's status line | — |
+| **Play repertoire** (shipped, CTA-63) | `/repertoires/<id>/play` | `orientation`: the reader's side | ❌ (a drill does not show the answer) — **`useTrainerModule`** instead (§2.5) | ❌ | ❌ (session-only; leaves by download) | Moves (extensions tinted) | name + side toggle + arrows switch + restart + download + back | the trainer's status line | next-move arrows, **off by default** |
+
+**Next-move arrows are one helper.** `nextMoveArrowsOf` (`views/tools/analysis/nextMoveArrows.ts`)
+builds the arrows for a position's continuations — `children[0]`, the
+mainline, in `NEXT_MOVE_ARROW_COLOR`, every side line in
+`SIDELINE_NEXT_MOVE_ARROW_COLOR`, the hovered one in the hover colour.
+Analysis, Play, Masked and Repertoire v2 and the two repertoire screens draw
+through it (Openings v2 draws its book arrows), so a change of
+colour reaches them all; the shipped Analysis Board keeps its own copy (§6).
 
 Read the table as the specification of the derived classes. Three things it
 makes visible, which were the drift:
