@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import type { Score } from "../../../lib/engineAnalysis";
 import {
+  hasComments,
   mainlineGame,
   type GameTree,
   type VariationNode,
@@ -36,6 +37,10 @@ import MoveContextMenu, { type MoveMenuTarget } from "./MoveContextMenu";
  *
  * `children[0]` is the mainline at every level, so everything after it is a
  * side line — which is the whole of how `branches` is built.
+ *
+ * A move carrying a PGN comment is marked with the comment icon (CTA-69):
+ * the mainline's by ply (`annotatedPlies`, built here), a side line's off its
+ * own node (`markCommentedNodes`).
  *
  * The optional `extensionIds` (CTA-63) cross the same seam: the list tints
  * side-line tokens by node id and numbered cells by ply, so the mainline's
@@ -100,6 +105,16 @@ function TreeMoveList({
     return plies;
   }, [extensionIds, mainlineNodes]);
 
+  // The mainline's commented moves, by ply — the seam again (CTA-69); a side
+  // line's tokens read their own node.
+  const annotatedPlies = useMemo(() => {
+    const plies = new Set<number>();
+    mainlineNodes.forEach((node, index) => {
+      if (hasComments(node)) plies.add(index + 1);
+    });
+    return plies;
+  }, [mainlineNodes]);
+
   const mainlineIndex = mainlineNodes.findIndex((node) => node.id === nodeId);
   const mainlinePly =
     nodeId === null ? 0 : mainlineIndex === -1 ? -1 : mainlineIndex + 1;
@@ -150,6 +165,8 @@ function TreeMoveList({
       mask={mask}
       extensionIds={extensionIds}
       extensionPlies={extensionPlies}
+      annotatedPlies={annotatedPlies}
+      markCommentedNodes
       onContextMenuPly={editable ? openMenuAtPly : undefined}
       onContextMenuNode={editable ? openMenuAtNode : undefined}
     />

@@ -106,6 +106,13 @@ export type GameTree = {
 */
 
 /**
+ * Whether a move carries a comment — after it or before it. What the
+ * variations explorer marks with its comment icon.
+ */
+export const hasComments = (node: VariationNode): boolean =>
+  (node.comments?.length ?? 0) > 0 || (node.preComments?.length ?? 0) > 0;
+
+/**
  * `extra` appended to `into`, a text already there not added again — how a
  * merge joins what several games say about the same move. Returns `into`
  * (created when absent) so a caller can assign it.

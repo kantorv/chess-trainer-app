@@ -812,8 +812,12 @@ for the board. Only the differences are written out here:
   twice about one move once, joins different ones in file order, unions
   NAGs, and hangs each later game's opening comment before the first move
   that game added (the tree's own, when it added none): the 310-game Alapin
-  course merges with all ~4,450 comments, less exact duplicates. Nothing
-  displays them yet.
+  course merges with all ~4,450 comments, less exact duplicates. The
+  variations explorer marks a commented move with a comment icon
+  (`hasComments`: a comment after it or opening its line; `TreeMoveList`
+  passes the mainline's plies as `annotatedPlies` and `markCommentedNodes`
+  for the side lines — opt-in, so the flowing `VariationTree` marks nothing);
+  the texts themselves are not shown yet.
 - **A file and a paste are one record.** Both go through `readRepertoireText`
   and the same constructors. Line endings are normalised and a file name is
   never read, so the two routes cannot drift apart. `RepertoireUpload.test.tsx`
