@@ -8,6 +8,7 @@ import { downloadPgn } from "../../lib/pgnExport";
 import {
   SAVED_REPERTOIRES_STORAGE_KEY,
   findSavedRepertoire,
+  savedRepertoiresSnapshot,
   updateRepertoireSettings,
 } from "../../lib/savedRepertoireStore";
 import {
@@ -522,5 +523,96 @@ describe("the player's map and its permanent link", () => {
   it("is the player's only: a game starts at the start", () => {
     mountProbed(`/repertoires/${storeRepertoire("r", CARO)}/games/end?at=e4,c6`);
     expect(position()).toBe(new Chess().fen());
+  });
+});
+
+describe("keeping a session's changes", () => {
+  const BAR = "repertoire-board-changes";
+  const path = () => screen.getByTestId("location").getAttribute("data-path");
+
+  /** 1. e4 c6, then 2. d3 — beside the repertoire's 2. d4, so a change. */
+  const addD3 = () => {
+    drop("e2", "e4");
+    drop("c7", "c6");
+    expect(screen.queryByTestId(BAR)).not.toBeInTheDocument();
+    drop("d2", "d3");
+  };
+
+  it("offers the choice only while something has changed", () => {
+    mountIdle(`/repertoires/${storeRepertoire("r", CARO)}`);
+    // Following the repertoire's own moves is not a change.
+    drop("e2", "e4");
+    drop("c7", "c6");
+    drop("d2", "d4");
+    expect(screen.queryByTestId(BAR)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("board-control-previous"));
+    drop("d2", "d3");
+    expect(screen.getByTestId(`${BAR}-summary`)).toHaveTextContent("1 move added");
+  });
+
+  it("updates the repertoire in place, and the session becomes the record", () => {
+    storeRepertoire("r", CARO);
+    storeRepertoire("other", CARO);
+    mountIdle("/repertoires/r");
+    addD3();
+    fireEvent.click(screen.getByTestId(`${BAR}-update`));
+
+    const record = findSavedRepertoire("r")!;
+    expect(record.pgn).toContain("2. d4 (2. d3)");
+    expect(record.stats).toEqual({ moves: 4, variations: 2 });
+    // Changed, so it is the one most recently worked on.
+    expect(savedRepertoiresSnapshot()[0].id).toBe("r");
+    // Nothing left to save, the reader still where they were, 2. d3 no longer an addition.
+    expect(screen.queryByTestId(BAR)).not.toBeInTheDocument();
+    expect(position()).toBe(fenAfter("e4", "c6", "d3"));
+    expect(document.querySelector('[data-san="d3"]')).not.toHaveAttribute("data-extension");
+  });
+
+  it("saves a copy with the changes and opens it there, leaving the original as it was", () => {
+    storeRepertoire("r", CARO, "Caro");
+    const original = findSavedRepertoire("r")!.pgn;
+    mountProbed("/repertoires/r");
+    addD3();
+    fireEvent.click(screen.getByTestId(`${BAR}-copy`));
+    act(() => {
+      vi.advanceTimersByTime(0);
+    });
+
+    expect(findSavedRepertoire("r")!.pgn).toBe(original);
+    const copy = savedRepertoiresSnapshot().find((row) => row.id !== "r")!;
+    expect(copy).toMatchObject({ name: "Caro (copy)" });
+    expect(copy.pgn).toContain("2. d4 (2. d3)");
+    // Opened: its own route, at the position the reader was on, nothing unsaved.
+    expect(path()).toBe(`/repertoires/${copy.id}`);
+    expect(atParam()).toBe("e4,c6,d3");
+    expect(screen.getByTestId("repertoire-board-name")).toHaveTextContent("Caro (copy)");
+    expect(position()).toBe(fenAfter("e4", "c6", "d3"));
+    expect(screen.queryByTestId(BAR)).not.toBeInTheDocument();
+  });
+
+  it("discards the changes, back on the last repertoire position", () => {
+    storeRepertoire("r", CARO);
+    const stored = localStorage.getItem(SAVED_REPERTOIRES_STORAGE_KEY);
+    mountIdle("/repertoires/r");
+    addD3();
+    drop("e7", "e5");
+    expect(screen.getByTestId(`${BAR}-summary`)).toHaveTextContent("2 moves added");
+
+    fireEvent.click(screen.getByTestId(`${BAR}-discard`));
+    expect(screen.queryByTestId(BAR)).not.toBeInTheDocument();
+    expect(position()).toBe(fenAfter("e4", "c6"));
+    expect(document.querySelector('[data-san="d3"]')).toBeNull();
+    expect(localStorage.getItem(SAVED_REPERTOIRES_STORAGE_KEY)).toBe(stored);
+  });
+
+  it("is the player's only: a game never offers to write", () => {
+    mountIdle(`/repertoires/${storeRepertoire("r", CARO)}/games/end`);
+    for (const [from, to] of [["e2", "e4"], ["d2", "d4"], ["e4", "e5"], ["g1", "f3"]]) {
+      drop(from, to);
+      wait();
+    }
+    // Past the end, a move is added — and still nothing to save.
+    drop("e7", "e6");
+    expect(screen.queryByTestId("repertoire-game-changes")).not.toBeInTheDocument();
   });
 });

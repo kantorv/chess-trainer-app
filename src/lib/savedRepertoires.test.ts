@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_POSITION } from "chess.js";
 
-import { countVariations, mainline, mergeTrees } from "./gameTree";
+import { addMove, countVariations, mainline, mergeTrees } from "./gameTree";
 import { parsePgnTree } from "./pgn";
 import { MAX_UPLOAD_CHARS } from "./pgnUploads";
 import {
@@ -16,6 +16,8 @@ import {
   splitFolderNameOf,
   splitRepertoiresOf,
   type RepertoireReading,
+  repertoireCopyOf,
+  withRepertoireTree,
 } from "./savedRepertoires";
 
 /** The three shipped repertoire files — the examples the issue names. */
@@ -148,6 +150,66 @@ describe("one game, stored as written", () => {
     expect(savedRepertoireOf("r", reading.games[0], "  Mine ", reading.name, NOW).name).toBe(
       "Mine",
     );
+  });
+});
+
+describe("a repertoire changed on its board", () => {
+  /** ONE with 2. d3 added beside 2. d4 — a new side line. */
+  const changed = () => {
+    const tree = parsePgnTree(ONE);
+    const c6 = tree.moves[0].children[0];
+    return addMove(tree, c6.id, {
+      san: "d3",
+      from: "d2",
+      to: "d3",
+      fen: "rnbqkbnr/pp1ppppp/2p5/8/4P3/3P4/PPP2PPP/RNBQKBNR b KQkq - 0 2",
+    }).tree;
+  };
+
+  it("takes the tree as its game, and re-reads its preview and size", () => {
+    const reading = read(ONE);
+    const saved = {
+      ...savedRepertoireOf("r", reading.games[0], "", reading.name, NOW),
+      folderId: "f",
+    };
+    const later = new Date("2026-09-19T10:00:00.000Z");
+    const updated = withRepertoireTree(saved, changed(), later);
+    expect(updated.pgn).toContain("2. d4 (2. d3)");
+    expect(parsePgnTree(updated.pgn).moves[0].children[0].children).toHaveLength(2);
+    expect(updated.stats).toEqual({ moves: 4, variations: 2 });
+    // Branching at move two now, so the card previews the position after 1... c6.
+    expect(updated.previewFen).toBe(
+      "rnbqkbnr/pp1ppppp/2p5/8/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2",
+    );
+    expect(updated).toMatchObject({
+      id: "r",
+      name: "My Caro",
+      folderId: "f",
+      savedAt: saved.savedAt,
+      updatedAt: later.toISOString(),
+    });
+  });
+
+  it("copies into a new record, named, with the original's settings and folder", () => {
+    const reading = read(ONE);
+    const saved = {
+      ...savedRepertoireOf("r", reading.games[0], "", reading.name, NOW),
+      folderId: "f",
+      settings: { description: "Mine", color: "black" as const, showArrows: false },
+    };
+    const later = new Date("2026-09-19T10:00:00.000Z");
+    const copy = repertoireCopyOf(saved, changed(), "c", "My Caro (copy)", later);
+    expect(copy).toMatchObject({
+      id: "c",
+      name: "My Caro (copy)",
+      folderId: "f",
+      settings: saved.settings,
+      savedAt: later.toISOString(),
+    });
+    expect(copy.pgn).toContain('[Event "My Caro (copy)"]');
+    expect(copy.pgn).toContain("2. d4 (2. d3)");
+    // The original is a value, and is not touched.
+    expect(saved.pgn).toBe(ONE);
   });
 });
 
