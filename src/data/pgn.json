@@ -24,6 +24,30 @@
       },
       "order": 40
     },
+    "Tame_the_Sicilian_The_Alapin_Variation_GM_Kasimdzhanov__&_GM_Ganguly.pgn": {
+      "label": {
+        "en": "Tame the Sicilian: the Alapin",
+        "he": "לאלף את הסיציליאנית: אלאפין"
+      },
+      "order": 50
+    },
+    "nimzo-indian-repertoire.pgn": {
+      "kind": "repertoire",
+      "label": {
+        "en": "Nimzo-Indian, complete repertoire for Black",
+        "he": "נימצו-אינדית, רפרטואר מלא לשחור"
+      },
+      "order": 60
+    },
+    "d2d4Variations.pgn": {
+      "kind": "repertoire",
+      "chapters": false,
+      "label": {
+        "en": "1.d4 repertoire for White",
+        "he": "רפרטואר 1.d4 ללבן"
+      },
+      "order": 70
+    },
     "lichess_study_chess-fundamentals-by-jr-capablanca-part-1-of-3_by_frankv53_2021.02.16.pgn": {
       "under": "chess-fundamentals-capablanca",
       "label": { "en": "Part 1 of 3", "he": "חלק 1 מתוך 3" },

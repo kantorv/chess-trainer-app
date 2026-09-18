@@ -17,7 +17,8 @@ import { resolveGameReference } from "../../../lib/gameReference";
 import { emptyTree, findNode, type VariationNode } from "../../../lib/gameTree";
 import { localizedText } from "../../../lib/libraryCatalog";
 import { parsePgnTree } from "../../../lib/pgn";
-import { pgnCatalog } from "../../../lib/pgnCatalog";
+import { pgnCatalog, pgnKinds } from "../../../lib/pgnCatalog";
+import { pgnKindOf } from "../../../lib/pgnKind";
 import { asAppLanguage } from "../../../i18n";
 import AnalysisSettingsPanel from "../../tools/analysis/AnalysisSettings";
 import NextMovesBar from "../../tools/analysis/NextMovesBar";
@@ -66,14 +67,25 @@ function RepertoireV2() {
   const [searchParams] = useSearchParams();
 
   /*
-    The line. The `?game=` reference first; failing that, the first game the
-    shipped catalog holds, so a developer opening the route sees a real
-    repertoire rather than an empty board.
+    The line. The `?game=` reference first; failing that, the first line of a
+    folder the catalog actually labelled `repertoire`, so a developer opening
+    the route sees a real repertoire — branches and all — rather than an empty
+    board or, worse, a study chapter that happens to sort first and would make
+    the screen look like it had lost its side lines. Only if the catalog ships
+    no repertoire at all does it fall back to any game.
   */
   const item = useMemo(() => {
     const referenced = resolveGameReference(searchParams.get("game"));
     if (referenced !== undefined) return referenced;
-    return pgnCatalog.items.find((candidate) => candidate.kind === "game");
+
+    const games = pgnCatalog.items.filter(
+      (candidate) => candidate.kind === "game",
+    );
+    return (
+      games.find(
+        (candidate) => pgnKindOf(candidate.category, pgnKinds) === "repertoire",
+      ) ?? games[0]
+    );
   }, [searchParams]);
 
   const tree = useMemo(() => {
