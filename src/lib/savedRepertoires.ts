@@ -43,8 +43,8 @@ import {
  *   starts from the same position, since a tree has one start. What a merge
  *   loses is the files' `{ comments }` — the tree does not carry them.
  * - **Split** ({@link splitRepertoiresOf}) — every game its own repertoire,
- *   named by the file's name and the game's own (`"Alapin — 2...Qa5 · #1"`),
- *   each keeping its original text, comments and all.
+ *   named by the game (`"2...Qa5 · #1"`) and filed together in a folder named
+ *   after the text, each keeping its original text, comments and all.
  *
  * A text of **one** game needs neither and is stored as written. A game with
  * no moves — an introduction chapter that is all prose — is skipped by both,
@@ -63,7 +63,7 @@ import {
  * Read once, when it is brought in, so a list never parses a tree to draw a
  * card: {@link SavedRepertoire.previewFen}, the position where it first
  * branches, and {@link SavedRepertoire.stats}, its size. Plus the reader's
- * {@link SavedRepertoire.settings} and a `folderId` for the folders to come.
+ * {@link SavedRepertoire.settings} and the `folderId` it is filed under.
  */
 
 /** How big a repertoire is — read off its tree when it is brought in. */
@@ -97,7 +97,11 @@ export type SavedRepertoire = {
    * A record written before a setting existed reads as that setting's default.
    */
   settings: RepertoireSettings;
-  /** Always `null` for now: Unfiled. See the module note. */
+  /**
+   * The folder it is filed under (`savedRepertoireFolders.ts`, one level), or
+   * `null` for **Unfiled**. A split files its repertoires into a folder of
+   * their own; otherwise the reader files them on the list.
+   */
   folderId: string | null;
   /** ISO 8601, when it was brought in. */
   savedAt: string;
@@ -356,26 +360,30 @@ export const mergedRepertoireOf = (
 
 /**
  * **Split**: every game its own repertoire, in file order, each keeping its
- * own text. Named `"<name> — <game>"`, or the game's own name when the
- * repertoire has none. `newId` is called once per record.
+ * own text, named by the game alone (`"2...Qa5 · #1"`) and filed under
+ * `folderId` — the folder the split makes, named after the text
+ * (`savedRepertoireFolders.ts`), which is what says where they came from.
+ * `newId` is called once per record.
  */
 export const splitRepertoiresOf = (
   newId: () => string,
   reading: Extract<RepertoireReading, { ok: true }>,
-  typedName: string,
+  folderId: string | null,
   now: Date = new Date(),
-): SavedRepertoire[] => {
-  const base = typedName.trim() || reading.name || "";
-  return reading.games.map((game) =>
-    recordOf(
-      newId(),
-      base === "" ? game.name : `${base} — ${game.name}`,
-      game.pgn,
-      game.tree,
-      now,
-    ),
-  );
-};
+): SavedRepertoire[] =>
+  reading.games.map((game) => ({
+    ...recordOf(newId(), game.name, game.pgn, game.tree, now),
+    folderId,
+  }));
+
+/**
+ * The name a split's folder takes: the reader's, else the text's own — the
+ * caller supplies a fallback for a text that has neither.
+ */
+export const splitFolderNameOf = (
+  reading: Extract<RepertoireReading, { ok: true }>,
+  typedName: string,
+): string | undefined => typedName.trim() || reading.name || undefined;
 
 /* ------------------------------------------------------------------ *
  * Reading a record back

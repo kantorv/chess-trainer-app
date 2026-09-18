@@ -11,9 +11,15 @@ import type { RepertoireSettings } from "../../lib/repertoireSettings";
 import {
   mergedRepertoireOf,
   newSavedRepertoireId,
+  splitFolderNameOf,
   splitRepertoiresOf,
   type RepertoireReading,
 } from "../../lib/savedRepertoires";
+import {
+  createRepertoireFolder,
+  MAX_REPERTOIRE_FOLDERS,
+  removeRepertoireFolder,
+} from "../../lib/savedRepertoireFolderStore";
 import {
   addRepertoires,
   MAX_SAVED_REPERTOIRES,
@@ -33,8 +39,9 @@ import {
  * working), carrying its `settings` over.
  *
  * Merge is offered only when the games share a start position; otherwise the
- * button says why it is off. Split says how many repertoires it makes. Both
- * write through `addRepertoires`, all or nothing.
+ * button says why it is off. Split says how many repertoires it makes, and
+ * puts them in a folder of their own, named after the text; the reader lands
+ * inside it. Both write through `addRepertoires`, all or nothing.
  */
 type RepertoireMergeSplitProps = {
   reading: Extract<RepertoireReading, { ok: true }>;
@@ -44,7 +51,7 @@ type RepertoireMergeSplitProps = {
   replacing?: string;
   /** Settings to keep on what is made — a replaced record's own. */
   settings?: RepertoireSettings;
-  /** Called with where to go: the merged repertoire's board, or the list. */
+  /** Called with where to go: the merged repertoire's board, or the split's folder. */
   onDone: (path: string) => void;
 };
 
@@ -56,7 +63,7 @@ function RepertoireMergeSplit({
   onDone,
 }: RepertoireMergeSplitProps) {
   const { t } = useTranslation();
-  const [problem, setProblem] = useState<SavedRepertoireProblem | null>(null);
+  const [problem, setProblem] = useState<SavedRepertoireProblem | "folder" | null>(null);
   const count = reading.games.length;
 
   const withSettings = <T extends { settings: RepertoireSettings }>(record: T): T =>
@@ -70,13 +77,27 @@ function RepertoireMergeSplit({
     onDone(`/repertoires/${encodeURIComponent(record.id)}`);
   };
 
+  /*
+    A split lands in a folder of its own, named after the text, so a file of
+    310 games does not arrive as 310 loose rows. The folder is made first,
+    because the records name it; if the records then cannot be written, the
+    folder is taken back out rather than left empty.
+  */
   const split = () => {
-    const records = splitRepertoiresOf(newSavedRepertoireId, reading, typedName).map(
+    const folder = createRepertoireFolder(
+      splitFolderNameOf(reading, typedName) ?? t("repertoires.untitled"),
+    );
+    if (folder === undefined) return setProblem("folder");
+
+    const records = splitRepertoiresOf(newSavedRepertoireId, reading, folder.id).map(
       withSettings,
     );
     const failed = addRepertoires(records, replacing);
-    if (failed !== undefined) return setProblem(failed);
-    onDone("/repertoires");
+    if (failed !== undefined) {
+      removeRepertoireFolder(folder.id);
+      return setProblem(failed);
+    }
+    onDone(`/repertoires?folder=${encodeURIComponent(folder.id)}`);
   };
 
   return (
@@ -145,7 +166,9 @@ function RepertoireMergeSplit({
         <Alert severity="error" data-testid="repertoire-choice-problem">
           {problem === "too-many"
             ? t("repertoires.choice.tooMany", { max: MAX_SAVED_REPERTOIRES })
-            : t("repertoires.upload.problem.storage")}
+            : problem === "folder"
+              ? t("repertoires.choice.folderFailed", { max: MAX_REPERTOIRE_FOLDERS })
+              : t("repertoires.upload.problem.storage")}
         </Alert>
       )}
     </Box>

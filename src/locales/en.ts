@@ -928,10 +928,36 @@ const en = {
         "These games start from different positions, so they cannot share one tree.",
       split_one: "Keep as {{count}} repertoire",
       split_other: "Split into {{count}} repertoires",
-      splitHelp: "Each game becomes a repertoire of its own, named after the file and the game.",
+      splitHelp:
+        "Each game becomes a repertoire of its own, named after the game, all in a new folder named after the file.",
+      folderFailed:
+        "Could not make a folder for them — the limit is {{max}} folders, or this browser's storage is full.",
       tooMany: "That would pass the limit of {{max}} repertoires in this browser.",
       legacy:
         "This was saved as several games. A repertoire is one game with side lines — choose how to keep it.",
+    },
+    /**
+     * The folders repertoires are filed under — one level: a folder holds
+     * repertoires, never another folder.
+     */
+    folder: {
+      unfiled: "Unfiled",
+      back: "All repertoires",
+      new: "New folder",
+      newTitle: "New folder",
+      rename: "Rename folder",
+      delete: "Delete folder",
+      download: "Download this folder as PGN",
+      name: "Folder name",
+      save: "Save",
+      cancel: "Cancel",
+      count_one: "{{count}} repertoire",
+      count_other: "{{count}} repertoires",
+      deleteConfirm_one: "Its {{count}} repertoire moves to Unfiled; nothing is deleted.",
+      deleteConfirm_other: "Its {{count}} repertoires move to Unfiled; nothing is deleted.",
+      move: "Move to folder",
+      moveTitle: "Move to folder",
+      empty: "This folder is empty. Move repertoires here from the list.",
     },
     /** The board a repertoire is read on. */
     detail: {

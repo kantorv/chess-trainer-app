@@ -10,8 +10,13 @@ import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
 import Typography from "@mui/material/Typography";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
+import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
+import CreateNewFolderRoundedIcon from "@mui/icons-material/CreateNewFolderRounded";
+import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
+import DriveFileMoveRoundedIcon from "@mui/icons-material/DriveFileMoveRounded";
+import DriveFileRenameOutlineRoundedIcon from "@mui/icons-material/DriveFileRenameOutlineRounded";
 import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
-import { Link as RouterLink } from "react-router";
+import { Link as RouterLink, useLocation, useNavigate, useSearchParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import { Chessboard, type ChessboardOptions } from "react-chessboard";
 
@@ -20,7 +25,18 @@ import {
   isMultiGameRepertoire,
   type SavedRepertoire,
 } from "../../lib/savedRepertoires";
-import { removeSavedRepertoire } from "../../lib/savedRepertoireStore";
+import {
+  createRepertoireFolder,
+  removeRepertoireFolder,
+  renameRepertoireFolder,
+} from "../../lib/savedRepertoireFolderStore";
+import {
+  repertoiresInFolder,
+  sortedRepertoireFolders,
+  type RepertoireFolder,
+} from "../../lib/savedRepertoireFolders";
+import { fileRepertoire, removeSavedRepertoire } from "../../lib/savedRepertoireStore";
+import { slugify } from "../../lib/pgnLibrary";
 import { RightPanel } from "../main/rightPanel";
 import SavedListExportBar from "../shared/SavedListExportBar";
 import SavedListRemoveButton from "../shared/SavedListRemoveButton";
@@ -32,6 +48,13 @@ import {
   savedListLine,
   type SavedListView,
 } from "../shared/savedList";
+import {
+  RepertoireFolderDeleteDialog,
+  RepertoireFolderNameDialog,
+  RepertoireMoveDialog,
+} from "./RepertoireFolderDialogs";
+import { RepertoireFolderCard, RepertoireFolderRow } from "./RepertoireFolderViews";
+import { useRepertoireFolders } from "./useRepertoireFolders";
 import { useSavedRepertoires } from "./useSavedRepertoires";
 
 /**
@@ -48,6 +71,12 @@ import { useSavedRepertoires } from "./useSavedRepertoires";
  *   (`/repertoires/<id>`), and nowhere else — there is no single position to
  *   hand Play with Engine and no single game to hand Load PGN, since a
  *   repertoire is many lines.
+ * - **Folders, one level deep.** The top level lists the folders, then the
+ *   Unfiled repertoires; `?folder=<id>` opens one — its repertoires, with its
+ *   rename and delete in the top bar and the way back beside its name. A
+ *   split lands the reader inside the folder it made. Every repertoire moves
+ *   between folders from its own row or card; a folder deleted keeps its
+ *   repertoires (they go back to Unfiled). See `lib/savedRepertoireFolders.ts`.
  * - **A card previews where the repertoire branches.** Not the start, which
  *   every 1.e4 repertoire shares, and not any one line's end: the position the
  *   record's check found every line still agreeing on
@@ -73,17 +102,42 @@ const boardPath = (saved: SavedRepertoire) =>
  */
 function SettingsLink({ saved }: { saved: SavedRepertoire }) {
   const { t } = useTranslation();
+  const location = useLocation();
   return (
     <Tooltip title={t("repertoires.settings.open")}>
       <IconButton
         size="small"
         component={RouterLink}
         to={`${boardPath(saved)}/settings`}
-        state={{ from: "/repertoires" }}
+        // Back to this list as it stands — inside the folder it was opened in.
+        state={{ from: `${location.pathname}${location.search}` }}
         aria-label={t("repertoires.settings.open")}
         data-testid={`repertoires-settings-${saved.id}`}
       >
         <SettingsRoundedIcon fontSize="small" />
+      </IconButton>
+    </Tooltip>
+  );
+}
+
+/** "Move to folder" — on both the row and the card; the list owns the dialog. */
+function MoveButton({
+  saved,
+  onMove,
+}: {
+  saved: SavedRepertoire;
+  onMove: (saved: SavedRepertoire) => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <Tooltip title={t("repertoires.folder.move")}>
+      <IconButton
+        size="small"
+        onClick={() => onMove(saved)}
+        aria-label={t("repertoires.folder.move")}
+        data-testid={`repertoires-move-${saved.id}`}
+      >
+        <DriveFileMoveRoundedIcon fontSize="small" />
       </IconButton>
     </Tooltip>
   );
@@ -123,10 +177,12 @@ function RepertoireRow({
   saved,
   checked,
   onToggle,
+  onMove,
 }: {
   saved: SavedRepertoire;
   checked: boolean;
   onToggle: () => void;
+  onMove: (saved: SavedRepertoire) => void;
 }) {
   const { t } = useTranslation();
   const { primary, secondary } = useCaption(saved);
@@ -174,6 +230,7 @@ function RepertoireRow({
         >
           {t("repertoires.open")}
         </Button>
+        <MoveButton saved={saved} onMove={onMove} />
         <SettingsLink saved={saved} />
         <SavedListRemoveButton
           id={saved.id}
@@ -193,7 +250,13 @@ function RepertoireRow({
   );
 }
 
-function RepertoireCard({ saved }: { saved: SavedRepertoire }) {
+function RepertoireCard({
+  saved,
+  onMove,
+}: {
+  saved: SavedRepertoire;
+  onMove: (saved: SavedRepertoire) => void;
+}) {
   const { t } = useTranslation();
   const { primary, secondary } = useCaption(saved);
 
@@ -223,6 +286,7 @@ function RepertoireCard({ saved }: { saved: SavedRepertoire }) {
             {secondary}
           </Typography>
         </Box>
+        <MoveButton saved={saved} onMove={onMove} />
         <SettingsLink saved={saved} />
         <SavedListRemoveButton
           id={saved.id}
@@ -237,29 +301,88 @@ function RepertoireCard({ saved }: { saved: SavedRepertoire }) {
 
 function Repertoires() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [view, setView] = useState<SavedListView>(SAVED_LIST_DEFAULT_VIEW);
   const repertoires = useSavedRepertoires();
+  const folders = useRepertoireFolders();
 
   /*
-    The picks, held as ids and read *through* the list, so one deleted — here
-    or in another tab — falls out of the count rather than haunting it.
+    Where the reader is: a folder named by `?folder=`, or the top level. A
+    folder the store does not hold — deleted in another tab, a stale link —
+    is the top level, rather than an empty screen for nothing.
+  */
+  const [searchParams] = useSearchParams();
+  const folderParam = searchParams.get("folder");
+  const current = folders.find((folder) => folder.id === folderParam) ?? null;
+  const folderId = current?.id ?? null;
+
+  const visible = repertoiresInFolder(repertoires, folders, folderId);
+  // Folders are one level: they are listed at the top level, and only there.
+  const shownFolders = current === null ? sortedRepertoireFolders(folders) : [];
+  const countIn = (id: string) => repertoiresInFolder(repertoires, folders, id).length;
+
+  /*
+    The picks, held as ids and read *through* the rows on screen, so one
+    deleted or moved away falls out of the count rather than haunting it —
+    and cleared on moving to another folder (adjusted during render, not in
+    an effect), since a count for rows nobody can see is a trap.
   */
   const [picked, setPicked] = useState<ReadonlySet<string>>(new Set());
-  const selected = repertoires.filter((saved) => picked.has(saved.id));
+  const [pickedIn, setPickedIn] = useState<string | null>(folderId);
+  if (pickedIn !== folderId) {
+    setPickedIn(folderId);
+    setPicked(new Set());
+  }
+  const selected = visible.filter((saved) => picked.has(saved.id));
 
   const togglePicked = (id: string) =>
-    setPicked((current) => {
-      const next = new Set(current);
+    setPicked((currentPicks) => {
+      const next = new Set(currentPicks);
       if (!next.delete(id)) next.add(id);
       return next;
     });
 
   const toggleAll = () =>
     setPicked(
-      selected.length === repertoires.length
+      selected.length === visible.length
         ? new Set()
-        : new Set(repertoires.map((saved) => saved.id)),
+        : new Set(visible.map((saved) => saved.id)),
     );
+
+  /* The dialogs: naming a folder, deleting one, moving a repertoire. */
+  const [naming, setNaming] = useState<{ folder: RepertoireFolder | null } | null>(null);
+  const [deleting, setDeleting] = useState<RepertoireFolder | null>(null);
+  const [moving, setMoving] = useState<SavedRepertoire | null>(null);
+
+  const saveName = (name: string) => {
+    if (naming?.folder) renameRepertoireFolder(naming.folder.id, name);
+    else createRepertoireFolder(name);
+  };
+
+  const deleteFolder = (folder: RepertoireFolder) => {
+    removeRepertoireFolder(folder.id);
+    if (folder.id === folderId) navigate("/repertoires");
+  };
+
+  // An empty folder goes at once; one with repertoires in it asks first.
+  const askDelete = (folder: RepertoireFolder) =>
+    countIn(folder.id) === 0 ? deleteFolder(folder) : setDeleting(folder);
+
+  const downloadFolder = (folder: RepertoireFolder) =>
+    downloadPgn(
+      slugify(folder.name) || "repertoire-folder",
+      repertoiresInFolder(repertoires, folders, folder.id).map((saved) => saved.pgn),
+    );
+
+  const folderViewProps = (folder: RepertoireFolder) => ({
+    folder,
+    count: countIn(folder.id),
+    onRename: (target: RepertoireFolder) => setNaming({ folder: target }),
+    onDelete: askDelete,
+    onDownload: downloadFolder,
+  });
+
+  const nothingHere = visible.length === 0 && shownFolders.length === 0;
 
   return (
     <>
@@ -281,18 +404,75 @@ function Repertoires() {
             borderColor: "divider",
           }}
         >
+          {current !== null && (
+            <Tooltip title={t("repertoires.folder.back")}>
+              <IconButton
+                size="small"
+                component={RouterLink}
+                to="/repertoires"
+                aria-label={t("repertoires.folder.back")}
+                data-testid="repertoires-folder-back"
+              >
+                <ArrowBackRoundedIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
           <Box sx={{ minWidth: 0, marginInlineEnd: "auto" }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 700, lineHeight: 1.3 }}>
-              {t("repertoires.title")}
+            <Typography
+              variant="subtitle1"
+              data-testid="repertoires-title"
+              sx={{ fontWeight: 700, lineHeight: 1.3 }}
+              noWrap
+            >
+              {current === null
+                ? t("repertoires.title")
+                : current.name || t("repertoires.untitled")}
             </Typography>
             <Typography
               data-testid="repertoires-count"
               variant="caption"
               sx={{ display: "block", color: "text.secondary" }}
             >
-              {t("repertoires.count", { count: repertoires.length })}
+              {current === null
+                ? t("repertoires.count", { count: repertoires.length })
+                : t("repertoires.folder.count", { count: visible.length })}
             </Typography>
           </Box>
+
+          {current === null ? (
+            <Button
+              size="small"
+              variant="outlined"
+              startIcon={<CreateNewFolderRoundedIcon fontSize="small" />}
+              onClick={() => setNaming({ folder: null })}
+              data-testid="repertoires-new-folder"
+            >
+              {t("repertoires.folder.new")}
+            </Button>
+          ) : (
+            <>
+              <Tooltip title={t("repertoires.folder.rename")}>
+                <IconButton
+                  size="small"
+                  onClick={() => setNaming({ folder: current })}
+                  aria-label={t("repertoires.folder.rename")}
+                  data-testid="repertoires-folder-rename"
+                >
+                  <DriveFileRenameOutlineRoundedIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title={t("repertoires.folder.delete")}>
+                <IconButton
+                  size="small"
+                  onClick={() => askDelete(current)}
+                  aria-label={t("repertoires.folder.delete")}
+                  data-testid="repertoires-folder-delete"
+                >
+                  <DeleteOutlineRoundedIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            </>
+          )}
 
           <Button
             size="small"
@@ -305,12 +485,12 @@ function Repertoires() {
             {t("repertoires.add")}
           </Button>
 
-          {view === "list" && repertoires.length > 0 && (
+          {view === "list" && visible.length > 0 && (
             <SavedListExportBar
               testIdPrefix="repertoires"
               labelKey="repertoires"
-              checked={selected.length === repertoires.length}
-              indeterminate={selected.length > 0 && selected.length < repertoires.length}
+              checked={selected.length === visible.length}
+              indeterminate={selected.length > 0 && selected.length < visible.length}
               onToggleAll={toggleAll}
               selectedCount={selected.length}
               onClearSelected={() => setPicked(new Set())}
@@ -334,14 +514,14 @@ function Repertoires() {
           />
         </Box>
 
-        {repertoires.length === 0 ? (
+        {nothingHere ? (
           <Box data-testid="repertoires-body" sx={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
             <Typography
               data-testid="repertoires-empty"
               variant="body2"
               sx={{ color: "text.secondary", textAlign: "center", py: 4 }}
             >
-              {t("repertoires.empty")}
+              {t(current === null ? "repertoires.empty" : "repertoires.folder.empty")}
             </Typography>
           </Box>
         ) : view === "list" ? (
@@ -350,24 +530,52 @@ function Repertoires() {
             sx={{ flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden" }}
           >
             <List disablePadding>
-              {repertoires.map((saved) => (
+              {shownFolders.map((folder) => (
+                <RepertoireFolderRow key={folder.id} {...folderViewProps(folder)} />
+              ))}
+              {visible.map((saved) => (
                 <RepertoireRow
                   key={saved.id}
                   saved={saved}
                   checked={picked.has(saved.id)}
                   onToggle={() => togglePicked(saved.id)}
+                  onMove={setMoving}
                 />
               ))}
             </List>
           </Box>
         ) : (
           <Box data-testid="repertoires-grid" sx={savedListGridSx(view)}>
-            {repertoires.map((saved) => (
-              <RepertoireCard key={saved.id} saved={saved} />
+            {shownFolders.map((folder) => (
+              <RepertoireFolderCard key={folder.id} {...folderViewProps(folder)} />
+            ))}
+            {visible.map((saved) => (
+              <RepertoireCard key={saved.id} saved={saved} onMove={setMoving} />
             ))}
           </Box>
         )}
       </Box>
+
+      <RepertoireFolderNameDialog
+        open={naming !== null}
+        title={t(naming?.folder ? "repertoires.folder.rename" : "repertoires.folder.newTitle")}
+        initial={naming?.folder?.name ?? ""}
+        onSave={saveName}
+        onClose={() => setNaming(null)}
+      />
+      <RepertoireFolderDeleteDialog
+        folder={deleting}
+        count={deleting === null ? 0 : countIn(deleting.id)}
+        onConfirm={() => deleting !== null && deleteFolder(deleting)}
+        onClose={() => setDeleting(null)}
+      />
+      <RepertoireMoveDialog
+        open={moving !== null}
+        folders={folders}
+        current={moving?.folderId ?? null}
+        onMove={(target) => moving !== null && fileRepertoire(moving.id, target)}
+        onClose={() => setMoving(null)}
+      />
 
       <RightPanel>
         <Box sx={{ color: "text.secondary" }}>

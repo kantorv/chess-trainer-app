@@ -18,6 +18,12 @@ import {
  * the `storage`-event subscription. [`savedOpeningStore.ts`](./savedOpeningStore.ts)
  * again, with one difference worth saying:
  *
+ * - **The folder a repertoire is filed under is a second store**
+ *   ([`savedRepertoireFolderStore.ts`](./savedRepertoireFolderStore.ts)), one
+ *   level deep; the writes that change a repertoire's `folderId` —
+ *   {@link fileRepertoire}, {@link unfileRepertoiresIn} — are here, because
+ *   these are the records they change.
+ *
  * - **The ceiling is bytes, not rows.** A record is a whole file — the Alapin
  *   example is 800 KB — so the origin's few megabytes run out long before any
  *   row cap would. The cap below is a bound on the list, not a promise that
@@ -128,6 +134,37 @@ export const updateRepertoireSettings = (
         ? { ...row, name, settings, updatedAt: new Date().toISOString() }
         : row,
     ),
+  );
+};
+
+/**
+ * File one repertoire under a folder — `null` for Unfiled — **in place**:
+ * moving a repertoire is not working on it, so it keeps its place in the list
+ * (`updateRepertoireSettings`' rule). A move to where it already is, or of an
+ * unknown id, is a no-op. The folder is the caller's to have checked.
+ */
+export const fileRepertoire = (
+  id: string,
+  folderId: string | null,
+): SavedRepertoireProblem | undefined => {
+  const current = savedRepertoiresSnapshot();
+  const existing = current.find((row) => row.id === id);
+  if (existing === undefined || existing.folderId === folderId) return undefined;
+  return write(current.map((row) => (row.id === id ? { ...row, folderId } : row)));
+};
+
+/**
+ * File every repertoire under a folder back to **Unfiled** — the repertoires'
+ * half of deleting that folder (`removeRepertoireFolder`). Here rather than in
+ * the folder store because these are the records whose `folderId` changes.
+ */
+export const unfileRepertoiresIn = (
+  folderId: string,
+): SavedRepertoireProblem | undefined => {
+  const current = savedRepertoiresSnapshot();
+  if (!current.some((row) => row.folderId === folderId)) return undefined;
+  return write(
+    current.map((row) => (row.folderId === folderId ? { ...row, folderId: null } : row)),
   );
 };
 
