@@ -9,10 +9,7 @@ import { findNode, type VariationNode } from "../../../lib/gameTree";
 import { isAnyMasked, type PieceMask } from "../../../lib/pieceMask";
 import EngineSettings from "../../engine/play/EngineSettings";
 import NextMovesBar from "../../tools/analysis/NextMovesBar";
-import {
-  HOVERED_NEXT_MOVE_ARROW_COLOR,
-  NEXT_MOVE_ARROW_COLOR,
-} from "../../tools/analysis/nextMoveArrows";
+import { nextMoveArrowsOf } from "../../tools/analysis/nextMoveArrows";
 import CurrentOpening from "../../shared/CurrentOpening";
 import BoardShell from "../core/BoardShell";
 import TreeMoveList from "../core/TreeMoveList";
@@ -96,14 +93,7 @@ function PlayBoardScreen({
 
   const arrows: Arrow[] =
     tab === "moves" && continuations.length >= 2
-      ? continuations.map((node) => ({
-          startSquare: node.from,
-          endSquare: node.to,
-          color:
-            hoveredNextMove?.id === node.id
-              ? HOVERED_NEXT_MOVE_ARROW_COLOR
-              : NEXT_MOVE_ARROW_COLOR,
-        }))
+      ? nextMoveArrowsOf(continuations, hoveredNextMove?.id)
       : [];
 
   const boardOptions: ChessboardOptions = { arrows, ...(pieces ? { pieces } : {}) };

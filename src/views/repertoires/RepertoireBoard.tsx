@@ -33,10 +33,7 @@ import { useEngineModule } from "../dev/core/useEngineModule";
 import CurrentOpening from "../shared/CurrentOpening";
 import AnalysisSettingsPanel from "../tools/analysis/AnalysisSettings";
 import NextMovesBar from "../tools/analysis/NextMovesBar";
-import {
-  HOVERED_NEXT_MOVE_ARROW_COLOR,
-  NEXT_MOVE_ARROW_COLOR,
-} from "../tools/analysis/nextMoveArrows";
+import { nextMoveArrowsOf } from "../tools/analysis/nextMoveArrows";
 import RepertoireMergeSplit from "./RepertoireMergeSplit";
 import { useSavedRepertoires } from "./useSavedRepertoires";
 
@@ -231,14 +228,7 @@ function RepertoireBoardScreen({ saved }: { saved: SavedRepertoire }) {
   // — the one with the bar they point along — is showing.
   const arrows: Arrow[] =
     tab === "moves" && continuations.length >= 2
-      ? continuations.map((node) => ({
-          startSquare: node.from,
-          endSquare: node.to,
-          color:
-            hoveredNextMove?.id === node.id
-              ? HOVERED_NEXT_MOVE_ARROW_COLOR
-              : NEXT_MOVE_ARROW_COLOR,
-        }))
+      ? nextMoveArrowsOf(continuations, hoveredNextMove?.id)
       : [];
 
   const boardOptions: ChessboardOptions = { arrows };
