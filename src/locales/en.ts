@@ -1062,12 +1062,10 @@ const en = {
       copyHelp: "Keep this repertoire as it is, and save a copy with your changes.",
       discard: "Discard",
       copyName: "{{name}} (copy)",
-      /** Update, on a protected repertoire. */
+      /** The strip on a protected repertoire: no Update, its settings instead. */
       protected: {
-        title: "This repertoire is protected",
-        body: "Its settings protect it from being changed. Save your changes as a copy — the copy isn't protected, so you can go on editing it — or open its settings to switch protection off. Opening the settings leaves this board, and the changes you haven't saved are lost.",
+        note: "This repertoire is protected: save your changes as a copy, or switch protection off in its settings (leaving this board loses the changes).",
         settings: "Open settings",
-        cancel: "Cancel",
       },
       problem: {
         storage: "It could not be saved — this browser's storage is full or unavailable.",

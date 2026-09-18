@@ -598,55 +598,43 @@ describe("keeping a session's changes", () => {
     expect(screen.queryByTestId(BAR)).not.toBeInTheDocument();
   });
 
-  it("asks instead of updating a protected repertoire — the default — and writes nothing", () => {
+  it("says a protected repertoire — the default — is protected, and offers its settings instead of Update", () => {
     storeRepertoire("r", CARO);
     expect(findSavedRepertoire("r")!.settings.protected).toBe(true);
-    const stored = localStorage.getItem(SAVED_REPERTOIRES_STORAGE_KEY);
     mountProbed("/repertoires/r?at=e4");
     addD3();
-    fireEvent.click(screen.getByTestId(`${BAR}-update`));
 
-    const dialog = screen.getByTestId("repertoire-board-protected");
-    expect(dialog).toHaveTextContent("This repertoire is protected");
-    expect(localStorage.getItem(SAVED_REPERTOIRES_STORAGE_KEY)).toBe(stored);
-    // Its settings, with the way back to this position.
-    expect(screen.getByTestId("repertoire-board-protected-settings")).toHaveAttribute(
+    expect(screen.getByTestId(`${BAR}-protected`)).toHaveTextContent(
+      "This repertoire is protected",
+    );
+    expect(screen.queryByTestId(`${BAR}-update`)).not.toBeInTheDocument();
+    expect(screen.getByTestId(`${BAR}-settings`)).toHaveAttribute(
       "href",
       "/repertoires/r/settings",
     );
-
-    // Cancel: the session and its changes as they were.
-    fireEvent.click(screen.getByTestId("repertoire-board-protected-cancel"));
-    act(() => {
-      vi.advanceTimersByTime(1_000);
-    });
-    expect(screen.queryByTestId("repertoire-board-protected")).not.toBeInTheDocument();
-    expect(screen.getByTestId(`${BAR}-summary`)).toHaveTextContent("1 move added");
-    expect(position()).toBe(fenAfter("e4", "c6", "d3"));
+    // No dialog on the way: the strip is the whole of it.
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
-  it("saves an unprotected copy from the protected dialog, and opens it there", () => {
+  it("saves an unprotected copy of a protected repertoire, which then updates in place", () => {
     storeRepertoire("r", CARO, "Caro");
-    const original = localStorage.getItem(SAVED_REPERTOIRES_STORAGE_KEY);
+    const original = findSavedRepertoire("r")!;
     mountProbed("/repertoires/r");
     addD3();
-    fireEvent.click(screen.getByTestId(`${BAR}-update`));
-    fireEvent.click(screen.getByTestId("repertoire-board-protected-copy"));
+    fireEvent.click(screen.getByTestId(`${BAR}-copy`));
     act(() => {
-      vi.advanceTimersByTime(1_000);
+      vi.advanceTimersByTime(0);
     });
 
     const copy = savedRepertoiresSnapshot().find((row) => row.id !== "r")!;
     expect(copy).toMatchObject({ name: "Caro (copy)", settings: { protected: false } });
-    expect(findSavedRepertoire("r")!.settings.protected).toBe(true);
-    expect(JSON.parse(original!)).toContainEqual(findSavedRepertoire("r"));
+    expect(findSavedRepertoire("r")).toEqual(original);
     expect(path()).toBe(`/repertoires/${copy.id}`);
-    expect(screen.queryByTestId("repertoire-board-protected")).not.toBeInTheDocument();
 
-    // The copy goes on being edited, and updates without asking.
+    // The copy goes on being edited, and its strip has Update.
     drop("e7", "e5");
+    expect(screen.queryByTestId(`${BAR}-protected`)).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId(`${BAR}-update`));
-    expect(screen.queryByTestId("repertoire-board-protected")).not.toBeInTheDocument();
     expect(findSavedRepertoire(copy.id)!.pgn).toContain("2. d4 (2. d3 e5)");
   });
 
