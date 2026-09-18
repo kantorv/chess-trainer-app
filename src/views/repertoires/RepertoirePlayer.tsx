@@ -52,6 +52,7 @@ import {
   REQUIRED_MOVE_ARROW_COLOR,
 } from "../tools/analysis/nextMoveArrows";
 import RepertoireGamesMenu from "./RepertoireGamesMenu";
+import { MAP_DEFAULT_ZOOM } from "../../lib/repertoireMap";
 import RepertoireMap from "./RepertoireMap";
 import { useRepertoireGame } from "./useRepertoireGame";
 
@@ -310,6 +311,8 @@ function RepertoirePlayer({
     Backtracking's map shows the repertoire, not the session: inside a line
     the reader added, its marker waits on the last repertoire position before it.
   */
+  // The map's zoom is the screen's, so it survives a trip to another tab.
+  const [mapZoom, setMapZoom] = useState(MAP_DEFAULT_ZOOM);
   const mapNodeId = useMemo(() => {
     if (game !== "backtrack") return null;
     const path = pathTo(core.tree, core.nodeId);
@@ -571,6 +574,8 @@ function RepertoirePlayer({
                         repertoire={repertoire}
                         coverage={rules.coverage}
                         nodeId={mapNodeId}
+                        zoom={mapZoom}
+                        onZoomChange={setMapZoom}
                       />
                     ) : (
                       reading || null

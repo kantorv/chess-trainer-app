@@ -666,6 +666,9 @@ const he: typeof en = {
         left_one: "נותר קו אחד",
         left_other: "נותרו {{count}} קווים",
         done: "כל הקווים כוסו.",
+        zoomIn: "הגדלה",
+        zoomOut: "הקטנה",
+        zoomReset: "חזרה ל-100%",
       },
       score: {
         successes: "נכון",

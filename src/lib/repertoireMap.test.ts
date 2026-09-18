@@ -10,7 +10,11 @@ import {
   mapEdgePaths,
   mapLayoutOf,
   mapLeafDots,
+  mapMoveDots,
+  mapPathDots,
   mapPathTo,
+  MAP_ZOOM_LEVELS,
+  nextMapZoom,
 } from "./repertoireMap";
 
 // Three lines: 1. e4 e5 2. Nf3 (the mainline) | 2. Bc4 | 1... c5 2. Nf3.
@@ -55,6 +59,20 @@ describe("the repertoire map layout", () => {
     expect(dots.open.match(/h0/g)).toHaveLength(2);
   });
 
+  it("puts a dot on every move that is not a line's end, and on the way played", () => {
+    const layout = mapLayoutOf(tree);
+    const none = mapMoveDots(layout, coverageOf(tree, new Set()));
+    // e4, e5, c5: the three moves with a continuation.
+    expect(none.open.match(/h0/g)).toHaveLength(3);
+    expect(none.covered).toBe("");
+    // With both e5 lines covered, e5's dot turns; e4 and c5 still lead somewhere.
+    const some = mapMoveDots(layout, coverageOf(tree, new Set([nf3.id, bc4.id])));
+    expect(some.covered).toBe(`M${px(2)} ${py(0)}h0`);
+    expect(mapPathDots(layout, pathTo(tree, bc4.id))).toBe(
+      `M${px(1)} ${py(0)}h0M${px(2)} ${py(0)}h0M${px(3)} ${py(1)}h0`,
+    );
+  });
+
   it("traces the way from the start to a position", () => {
     const layout = mapLayoutOf(tree);
     expect(mapPathTo(layout, pathTo(tree, c5nf3.id))).toBe(
@@ -63,6 +81,13 @@ describe("the repertoire map layout", () => {
         `M${px(2)} ${py(2)}H${px(3)}`,
     );
     expect(mapPathTo(layout, [])).toBe("");
+  });
+
+  it("steps the zoom through its levels and stops at the ends", () => {
+    expect(nextMapZoom(1, 1)).toBe(1.25);
+    expect(nextMapZoom(1, -1)).toBe(0.8);
+    expect(nextMapZoom(MAP_ZOOM_LEVELS[0], -1)).toBe(MAP_ZOOM_LEVELS[0]);
+    expect(nextMapZoom(3, 1)).toBe(3);
   });
 
   it("lays out an empty tree without dividing by nothing", () => {
