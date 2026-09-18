@@ -41,6 +41,24 @@ type Selection = {
   ply: number;
   /** The engine's scores by the FEN they describe, if the list prints any. */
   evalsByFen: ReadonlyMap<string, Score> | undefined;
+  /**
+   * The nodes to tint as **extensions** — moves added to a repertoire this
+   * session (CTA-63). Optional: a list that marks nothing passes none.
+   */
+  extensionNodes?: ReadonlySet<string>;
+  /** The same, for the numbered mainline cells, by ply. */
+  extensionPlies?: ReadonlySet<number>;
+};
+
+/** Every key in exactly one of two sets — what changed between them. */
+const changedKeys = <K>(
+  next: ReadonlySet<K> | undefined,
+  previous: ReadonlySet<K> | undefined,
+): K[] => {
+  const changed: K[] = [];
+  for (const key of next ?? []) if (!previous?.has(key)) changed.push(key);
+  for (const key of previous ?? []) if (!next?.has(key)) changed.push(key);
+  return changed;
 };
 
 export type MoveSelection = {
@@ -113,6 +131,14 @@ export const createMoveSelection = (initial: Selection): MoveSelection => {
         }
         changed.forEach(fens.notify);
       }
+      // A marked set grows one node per move: notify only what joined or left,
+      // on the same keyed channels the highlight uses.
+      if (next.extensionNodes !== previous.extensionNodes) {
+        changedKeys(next.extensionNodes, previous.extensionNodes).forEach(nodes.notify);
+      }
+      if (next.extensionPlies !== previous.extensionPlies) {
+        changedKeys(next.extensionPlies, previous.extensionPlies).forEach(plies.notify);
+      }
     },
   };
 };
@@ -129,10 +155,10 @@ export const MoveSelectionContext = createContext<MoveSelection>(NOWHERE);
  */
 export const useMoveSelectionStore = (selection: Selection): MoveSelection => {
   const [store] = useState(() => createMoveSelection(selection));
-  const { nodeId, ply, evalsByFen } = selection;
+  const { nodeId, ply, evalsByFen, extensionNodes, extensionPlies } = selection;
   useLayoutEffect(() => {
-    store.write({ nodeId, ply, evalsByFen });
-  }, [store, nodeId, ply, evalsByFen]);
+    store.write({ nodeId, ply, evalsByFen, extensionNodes, extensionPlies });
+  }, [store, nodeId, ply, evalsByFen, extensionNodes, extensionPlies]);
   return store;
 };
 
@@ -155,6 +181,28 @@ export const useIsCurrentPly = (ply: number): boolean => {
     [store, ply],
   );
   const read = () => store.read().ply === ply;
+  return useSyncExternalStore(subscribe, read, read);
+};
+
+/** Whether this side-line token is a move added this session (CTA-63). */
+export const useIsExtensionNode = (id: string): boolean => {
+  const store = useContext(MoveSelectionContext);
+  const subscribe = useCallback(
+    (onChange: () => void) => store.subscribeNode(id, onChange),
+    [store, id],
+  );
+  const read = () => store.read().extensionNodes?.has(id) ?? false;
+  return useSyncExternalStore(subscribe, read, read);
+};
+
+/** Whether this numbered-row cell is a move added this session (CTA-63). */
+export const useIsExtensionPly = (ply: number): boolean => {
+  const store = useContext(MoveSelectionContext);
+  const subscribe = useCallback(
+    (onChange: () => void) => store.subscribePly(ply, onChange),
+    [store, ply],
+  );
+  const read = () => store.read().extensionPlies?.has(ply) ?? false;
   return useSyncExternalStore(subscribe, read, read);
 };
 

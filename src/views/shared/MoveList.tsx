@@ -13,6 +13,7 @@ import {
   MoveSelectionContext,
   useEvalText,
   useIsCurrentPly,
+  useIsExtensionPly,
   useMoveSelectionStore,
   useScrollWhenCurrent,
 } from "./moveSelection";
@@ -102,6 +103,16 @@ type MoveListProps = {
    * navigate.
    */
   onSelectNode?: (id: string) => void;
+  /**
+   * Moves to tint as **extensions** — added to a repertoire this session, not
+   * in the file it arrived as (CTA-63, the Play repertoire screen). Side-line
+   * tokens by node id, numbered cells by mainline ply. Read per token from the
+   * selection store, like the highlight, so a move added re-renders the one
+   * token it marks rather than the list. Without them nothing is tinted, which
+   * is why every other consumer passes none.
+   */
+  extensionIds?: ReadonlySet<string>;
+  extensionPlies?: ReadonlySet<number>;
 };
 
 /**
@@ -141,6 +152,13 @@ const selectedCellSx = {
   color: "primary.contrastText",
   fontWeight: 700,
 } as const;
+
+/**
+ * A move added this session (CTA-63): a theme token, so it follows light and
+ * dark, and a colour only — the current-move highlight still wins over it.
+ * `VariationLine.tsx`'s `Token` carries the same rule for side-line moves.
+ */
+const extensionCellSx = { color: "success.main" } as const;
 
 /**
  * The eval printed beside a move: small and dimmed, so the SAN stays the thing
@@ -198,6 +216,7 @@ function FilledCell({
   onSelect: (ply: number) => void;
 }) {
   const isCurrent = useIsCurrentPly(move.ply);
+  const isExtension = useIsExtensionPly(move.ply);
   // The eval of the position after this move, or `undefined` when not scored.
   const evalText = useEvalText(move.fen);
   const ref = useScrollWhenCurrent<HTMLButtonElement>(isCurrent);
@@ -208,12 +227,14 @@ function FilledCell({
       dir="ltr"
       data-testid={`move-ply-${move.ply}`}
       data-has-comment={hasComment ? "true" : undefined}
+      data-extension={isExtension ? "true" : undefined}
       aria-current={isCurrent ? "true" : undefined}
       onClick={() => onSelect(move.ply)}
       sx={{
         ...cellSx,
         ...sanTokenSx,
         gap: 0.25,
+        ...(isExtension ? extensionCellSx : {}),
         ...(isCurrent ? selectedCellSx : {}),
       }}
     >
@@ -296,6 +317,8 @@ function MoveList({
   branches,
   currentNodeId,
   onSelectNode,
+  extensionIds,
+  extensionPlies,
 }: MoveListProps) {
   const { t } = useTranslation();
   const rows = useMemo(() => moveRowsOf(game), [game]);
@@ -307,6 +330,8 @@ function MoveList({
     nodeId: currentNodeId ?? null,
     ply: currentPly,
     evalsByFen,
+    extensionNodes: extensionIds,
+    extensionPlies,
   });
 
   /*

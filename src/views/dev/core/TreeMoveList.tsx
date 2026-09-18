@@ -33,6 +33,10 @@ import MoveList from "../../shared/MoveList";
  *
  * `children[0]` is the mainline at every level, so everything after it is a
  * side line — which is the whole of how `branches` is built.
+ *
+ * The optional `extensionIds` (CTA-63) cross the same seam: the list tints
+ * side-line tokens by node id and numbered cells by ply, so the mainline's
+ * share of the set is translated to plies here, once per change.
  */
 function TreeMoveList({
   tree,
@@ -41,6 +45,7 @@ function TreeMoveList({
   onSelectNode,
   evalsByFen,
   mask,
+  extensionIds,
 }: {
   tree: GameTree;
   /** The mainline, already walked by the core — not re-walked here. */
@@ -51,6 +56,8 @@ function TreeMoveList({
   evalsByFen?: ReadonlyMap<string, Score>;
   /** A masked board prints coordinates for a hidden piece's move. */
   mask?: PieceMask;
+  /** Moves to tint as added this session — the Play repertoire screen's. */
+  extensionIds?: ReadonlySet<string>;
 }) {
   // Memoised on the tree: the walk reads the whole line, and stepping around
   // inside a side line re-renders the panel without touching it.
@@ -66,6 +73,15 @@ function TreeMoveList({
     }
     return map;
   }, [tree, mainlineNodes]);
+
+  const extensionPlies = useMemo(() => {
+    if (extensionIds === undefined) return undefined;
+    const plies = new Set<number>();
+    mainlineNodes.forEach((node, index) => {
+      if (extensionIds.has(node.id)) plies.add(index + 1);
+    });
+    return plies;
+  }, [extensionIds, mainlineNodes]);
 
   const mainlineIndex = mainlineNodes.findIndex((node) => node.id === nodeId);
   const mainlinePly =
@@ -96,6 +112,8 @@ function TreeMoveList({
       currentNodeId={nodeId}
       onSelectNode={onSelectNode}
       mask={mask}
+      extensionIds={extensionIds}
+      extensionPlies={extensionPlies}
     />
   );
 }
