@@ -75,4 +75,40 @@ describe("the move-selection store", () => {
     store.write({ nodeId: "n2", ply: 2, evalsByFen: undefined });
     expect(listener).not.toHaveBeenCalled();
   });
+  it("notifies only the tokens an extension set gained or lost (CTA-63)", () => {
+    const store = createMoveSelection({
+      nodeId: null,
+      ply: 0,
+      evalsByFen: undefined,
+      extensionNodes: new Set(["n1"]),
+      extensionPlies: new Set([1]),
+    });
+    const nodes = Object.fromEntries(
+      ["n1", "n2", "n3"].map((id) => {
+        const listener = vi.fn();
+        store.subscribeNode(id, listener);
+        return [id, listener];
+      }),
+    );
+    const plies = [1, 2, 3].map((ply) => {
+      const listener = vi.fn();
+      store.subscribePly(ply, listener);
+      return listener;
+    });
+
+    // One move added: n2 on the mainline at ply 2. n1 stays marked.
+    store.write({
+      nodeId: null,
+      ply: 0,
+      evalsByFen: undefined,
+      extensionNodes: new Set(["n1", "n2"]),
+      extensionPlies: new Set([1, 2]),
+    });
+
+    expect(nodes.n1).not.toHaveBeenCalled();
+    expect(nodes.n2).toHaveBeenCalledOnce();
+    expect(nodes.n3).not.toHaveBeenCalled();
+    expect(plies.map((listener) => listener.mock.calls.length)).toEqual([0, 1, 0]);
+    expect(store.read().extensionNodes?.has("n2")).toBe(true);
+  });
 });

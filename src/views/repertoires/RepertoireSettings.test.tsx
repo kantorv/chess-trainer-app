@@ -70,6 +70,32 @@ describe("a repertoire's settings screen", () => {
     );
   });
 
+  it("keeps whether the board draws the next-move arrows, on by default", async () => {
+    store("a");
+    renderSection("/repertoires/a/settings");
+    const toggle = screen.getByTestId("repertoire-settings-show-arrows");
+    expect(toggle).toBeChecked();
+
+    await userEvent.click(toggle);
+    await userEvent.click(screen.getByTestId("repertoire-settings-save"));
+    expect(findSavedRepertoire("a")?.settings.showArrows).toBe(false);
+
+    // The board, opened afresh, draws none.
+    renderSection("/repertoires/a");
+    await waitFor(() => expect(boardOptions().id).toBe("repertoire-board"), { timeout: 10_000 });
+    await waitFor(() => expect(boardOptions().arrows).toEqual([]));
+  });
+
+  it("protects a repertoire by default, and saves the reader's no", async () => {
+    store("a");
+    renderSection("/repertoires/a/settings");
+    const toggle = screen.getByTestId("repertoire-settings-protected");
+    expect(toggle).toBeChecked();
+    await userEvent.click(toggle);
+    await userEvent.click(screen.getByTestId("repertoire-settings-save"));
+    expect(findSavedRepertoire("a")?.settings.protected).toBe(false);
+  });
+
   it("drops the draft on Cancel", async () => {
     store("a");
     renderSection("/repertoires");

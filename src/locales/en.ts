@@ -904,6 +904,12 @@ const en = {
       descriptionHelp: "Your own notes: what this repertoire covers, what to remember.",
       color: "Main color",
       colorHelp: "The side you play this repertoire as. Its board opens facing it.",
+      protected: "Protected",
+      protectedHelp:
+        "Changes made on its board can't be written into it — only saved as a copy — until this is off. Copies are never protected.",
+      showArrows: "Show next-move arrows",
+      showArrowsHelp:
+        "The board opens with arrows for the moves that follow the position on it: the main line in green, side lines in blue. You can still switch them for a session. Games always start without them.",
       white: "White",
       black: "Black",
       save: "Save",
@@ -958,6 +964,116 @@ const en = {
       move: "Move to folder",
       moveTitle: "Move to folder",
       empty: "This folder is empty. Move repertoires here from the list.",
+    },
+    /**
+     * Playing a repertoire against the trainer (`/repertoires/<id>/play`,
+     * CTA-63) — a scripted opponent that answers only from the repertoire.
+     */
+    /** The games a repertoire is played as (CTA-63) — `lib/repertoireGames.ts`. */
+    games: {
+      open: "Games",
+      end: { title: "Get to the end" },
+      backtrack: { title: "Backtracking" },
+    },
+    play: {
+      side: "Your side",
+      white: "White",
+      black: "Black",
+      restart: "Restart from the start position",
+      download: "Download with your additions as PGN",
+      back: "Back to the board",
+      /** The engine's switch — off by default: a drill does not show the answer. */
+      engine: "Engine",
+      engineHelp:
+        "Shows the engine's best lines above the tabs and the evaluation bar. It never plays a move; its settings are in the Engine tab.",
+      sideHelp:
+        "The trainer plays the other side. Changing it starts again from the first move; what you added is kept.",
+      /** The switch that draws the next-move arrows — off by default. */
+      arrows: "Show next-move arrows",
+      arrowsHelp:
+        "Arrows for the moves that follow the position on the board: the main line in green, side lines in blue.",
+      autoplay: "Autoplay",
+      autoplayHelp:
+        "The trainer answers your moves from the repertoire, picking among its lines at random. Off, you move both sides.",
+      tabs: {
+        settings: "Settings",
+        score: "Score",
+        map: "Map",
+      },
+      /** Backtracking's Map tab — the repertoire as a tree. */
+      map: {
+        label: "The repertoire as a tree: covered lines in green, your way here highlighted",
+        here: "You are here",
+        left_one: "{{count}} line left",
+        left_other: "{{count}} lines left",
+        done: "Every line is covered.",
+        zoomIn: "Zoom in",
+        zoomOut: "Zoom out",
+        fullScreen: "Open the map full screen",
+        fit: "Fit the whole tree",
+        close: "Close the map",
+        mouseHint: "Scroll to zoom, drag to move",
+        showMoves: "Show moves",
+        zoomToRead: "Zoom in to read the moves",
+        goTo: "Go to {{move}}",
+        size: "{{lines}}, {{moves}}",
+        lines_one: "{{count}} line",
+        lines_other: "{{count}} lines",
+        moves_one: "{{count}} move",
+        moves_other: "{{count}} moves",
+        added_one: "{{count}} added",
+        added_other: "{{count}} added",
+      },
+      /** Game mode's tally — this session only. */
+      score: {
+        successes: "Right",
+        failures: "Wrong",
+        accuracy: "Accuracy",
+        help: "Each position counts once: your first try there. Retries after a wrong move don't count again. The score is for this session only.",
+        reset: "Reset score",
+        startOver: "Start over",
+        finished_one: "{{count}} line finished",
+        finished_other: "{{count}} lines finished",
+        covered: "Lines covered: {{covered}} of {{total}}",
+      },
+      status: {
+        thinking: "The trainer is choosing a move…",
+        yourMove: "Your move.",
+        outOfBook:
+          "The repertoire ends here. Every move you play now adds to it.",
+        tryAgain: "That move isn't in the repertoire. Try again.",
+        lineComplete: "You reached the end of this line. Restart for another.",
+        lineCovered: "Line covered. Going back to the next line to cover…",
+        allCovered: "Every line is covered. Well done!",
+        required: "Play the marked move: the other lines from here are already covered.",
+      },
+    },
+    /**
+     * What to do with a session's changes to a repertoire (CTA-63) — the strip
+     * the player shows while there are any.
+     */
+    changes: {
+      title: "Unsaved changes",
+      /** The header's Save button: opens the strip; disabled with nothing to save. */
+      saveOpen: "Unsaved changes — save or discard them",
+      saveNothing: "No unsaved changes",
+      added_one: "{{count}} move added",
+      added_other: "{{count}} moves added",
+      update: "Update repertoire",
+      updateHelp: "Make these changes part of this repertoire.",
+      copy: "Save as copy",
+      copyHelp: "Keep this repertoire as it is, and save a copy with your changes.",
+      discard: "Discard",
+      copyName: "{{name}} (copy)",
+      /** The strip on a protected repertoire: no Update, its settings instead. */
+      protected: {
+        note: "This repertoire is protected: save your changes as a copy, or switch protection off in its settings (leaving this board loses the changes).",
+        settings: "Open settings",
+      },
+      problem: {
+        storage: "It could not be saved — this browser's storage is full or unavailable.",
+        "too-many": "There is no room for another repertoire in this browser.",
+      },
     },
     /** The board a repertoire is read on. */
     detail: {

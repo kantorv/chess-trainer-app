@@ -57,7 +57,7 @@ const ready = () =>
     { timeout: 10_000 },
   );
 
-describe("a repertoire on the v2 board", () => {
+describe("a repertoire's own view — the player, on the v2 board", () => {
   it("renders the shared board square and the shared panel skeleton", async () => {
     renderSection(`/repertoires/${storeRepertoire("r", CARO, "Caro")}`);
     await ready();
@@ -67,13 +67,17 @@ describe("a repertoire on the v2 board", () => {
     expect(screen.getByTestId("repertoire-board-board")).toBeInTheDocument();
     expect(boardOptions().id).toBe("repertoire-board");
 
-    // The skeleton is `BoardPanel`'s: pinned variations, status, the tabs, the controls.
+    // The skeleton is `BoardPanel`'s: status, the tabs, the controls. The
+    // pinned variations wait for the engine, which is off until asked (CTA-63).
     expect(screen.getByTestId("repertoire-board-panel")).toBeInTheDocument();
-    expect(screen.getByTestId("repertoire-board-panel-variations")).toBeInTheDocument();
+    expect(screen.queryByTestId("repertoire-board-panel-variations")).not.toBeInTheDocument();
     expect(screen.getByTestId("repertoire-board-panel-status")).toBeInTheDocument();
-    for (const tab of ["moves", "engine"]) {
+    for (const tab of ["moves", "settings", "engine"]) {
       expect(screen.getByTestId(`repertoire-board-panel-tab-${tab}`)).toBeInTheDocument();
     }
+    // The player (CTA-63): its games a menu away, no game running.
+    expect(screen.getByTestId("repertoire-board-games")).toBeInTheDocument();
+    expect(screen.queryByTestId("repertoire-board-panel-tab-score")).not.toBeInTheDocument();
     // One game, one board: no Lines tab to pick from, no Tree tab to repeat it.
     expect(screen.queryByTestId("repertoire-board-panel-tab-lines")).not.toBeInTheDocument();
     expect(screen.queryByTestId("repertoire-board-panel-tab-tree")).not.toBeInTheDocument();
@@ -101,8 +105,8 @@ describe("a repertoire on the v2 board", () => {
     await ready();
     const list = screen.getByTestId("move-list");
 
-    // Away to Engine: the list is still there, hidden, not unmounted.
-    await userEvent.click(screen.getByTestId("repertoire-board-panel-tab-engine"));
+    // Away to Settings: the list is still there, hidden, not unmounted.
+    await userEvent.click(screen.getByTestId("repertoire-board-panel-tab-settings"));
     const hidden = screen.getByTestId("repertoire-board-panel-content-moves");
     expect(hidden).not.toBeVisible();
     expect(hidden).toContainElement(list);
@@ -116,9 +120,9 @@ describe("a repertoire on the v2 board", () => {
     expect(screen.getByTestId("move-list")).toBe(list);
     expect(screen.getByTestId("repertoire-board-panel-content-moves")).toBeVisible();
 
-    // The Engine tab is not kept: leaving it unmounts it, as every tab used to.
+    // The Settings tab is not kept: leaving it unmounts it, as every tab used to.
     expect(
-      screen.queryByTestId("repertoire-board-panel-content-engine"),
+      screen.queryByTestId("repertoire-board-panel-content-settings"),
     ).not.toBeInTheDocument();
   });
 

@@ -1,4 +1,7 @@
 import Box from "@mui/material/Box";
+import FormControlLabel from "@mui/material/FormControlLabel";
+import Switch from "@mui/material/Switch";
+import type { ReactNode } from "react";
 import TextField from "@mui/material/TextField";
 import ToggleButton from "@mui/material/ToggleButton";
 import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
@@ -37,6 +40,40 @@ export type RepertoireSettingsSectionProps = {
   }) => void;
 };
 
+/** One on/off option, with a line on what it does. */
+function SwitchOption({
+  checked,
+  onChange,
+  label,
+  help,
+  testId,
+}: {
+  checked: boolean;
+  onChange: (next: boolean) => void;
+  label: ReactNode;
+  help: ReactNode;
+  testId: string;
+}) {
+  return (
+    <Box>
+      <FormControlLabel
+        sx={{ m: 0 }}
+        control={
+          <Switch
+            checked={checked}
+            onChange={(event) => onChange(event.target.checked)}
+            slotProps={{ input: { "data-testid": testId } as object }}
+          />
+        }
+        label={label}
+      />
+      <Typography variant="caption" sx={{ display: "block", color: "text.secondary" }}>
+        {help}
+      </Typography>
+    </Box>
+  );
+}
+
 /** Title and description — what the repertoire is called and what it is. */
 export function GeneralSection({ draft, onChange }: RepertoireSettingsSectionProps) {
   const { t } = useTranslation();
@@ -69,47 +106,63 @@ export function GeneralSection({ draft, onChange }: RepertoireSettingsSectionPro
           },
         }}
       />
+      <SwitchOption
+        checked={draft.settings.protected}
+        onChange={(next) => onChange({ settings: { protected: next } })}
+        label={t("repertoires.settings.protected")}
+        help={t("repertoires.settings.protectedHelp")}
+        testId="repertoire-settings-protected"
+      />
     </Box>
   );
 }
 
-/** How the board shows it — for now, the side it is played from. */
+/** How the board shows it — the side it is played from, and its arrows. */
 export function BoardSection({ draft, onChange }: RepertoireSettingsSectionProps) {
   const { t } = useTranslation();
   const colors: readonly RepertoireColor[] = ["white", "black"];
   return (
-    <Box>
-      <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.75 }}>
-        {t("repertoires.settings.color")}
-      </Typography>
-      <ToggleButtonGroup
-        exclusive
-        size="small"
-        value={draft.settings.color}
-        onChange={(_event, next: RepertoireColor | null) => {
-          // MUI reports `null` for a click on the pressed button: a side is
-          // always chosen, so that is not a change.
-          if (next !== null) onChange({ settings: { color: next } });
-        }}
-        aria-label={t("repertoires.settings.color")}
-      >
-        {colors.map((color) => (
-          <ToggleButton
-            key={color}
-            value={color}
-            data-testid={`repertoire-settings-color-${color}`}
-            sx={{ textTransform: "none", px: 2 }}
-          >
-            {t(`repertoires.settings.${color}`)}
-          </ToggleButton>
-        ))}
-      </ToggleButtonGroup>
-      <Typography
-        variant="caption"
-        sx={{ display: "block", color: "text.secondary", mt: 0.75 }}
-      >
-        {t("repertoires.settings.colorHelp")}
-      </Typography>
+    <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+      <Box>
+        <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.75 }}>
+          {t("repertoires.settings.color")}
+        </Typography>
+        <ToggleButtonGroup
+          exclusive
+          size="small"
+          value={draft.settings.color}
+          onChange={(_event, next: RepertoireColor | null) => {
+            // MUI reports `null` for a click on the pressed button: a side is
+            // always chosen, so that is not a change.
+            if (next !== null) onChange({ settings: { color: next } });
+          }}
+          aria-label={t("repertoires.settings.color")}
+        >
+          {colors.map((color) => (
+            <ToggleButton
+              key={color}
+              value={color}
+              data-testid={`repertoire-settings-color-${color}`}
+              sx={{ textTransform: "none", px: 2 }}
+            >
+              {t(`repertoires.settings.${color}`)}
+            </ToggleButton>
+          ))}
+        </ToggleButtonGroup>
+        <Typography
+          variant="caption"
+          sx={{ display: "block", color: "text.secondary", mt: 0.75 }}
+        >
+          {t("repertoires.settings.colorHelp")}
+        </Typography>
+      </Box>
+      <SwitchOption
+        checked={draft.settings.showArrows}
+        onChange={(next) => onChange({ settings: { showArrows: next } })}
+        label={t("repertoires.settings.showArrows")}
+        help={t("repertoires.settings.showArrowsHelp")}
+        testId="repertoire-settings-show-arrows"
+      />
     </Box>
   );
 }

@@ -86,7 +86,11 @@ change by whether it *adds* to that count, not by the exit code.
 | `src/lib/savedGameFolders.ts` + `savedGameFolderStore.ts` | **The reader's saved-game folders, and the tree they nest into** — `GameFolder` is a name and a parent id, with the reads over a list of them (cycles cut, dangling parents read as top level), and the CRUD over the shared recordStore: `create` (hands back what it made), `rename`, `moveGameFolder` (refuses the folder's own subtree), `removeGameFolder` (re-parents sub-folders and files the games back to Unfiled in one write-through). [`savedOpeningFolders.ts`](src/lib/savedOpeningFolders.ts) again, and for the same reason — the one difference is the autosave trap, which the games store owns. Non-throwing throughout. |
 | `src/lib/pgnUploads.ts` + `pgnUploadStore.ts` | **The reader's own `.pgn` files** — what an upload is, how it becomes a library under the `uploads` folder (through the same loader), whether a picked file is worth keeping; and the `localStorage` half, whose snapshot is checked against a revision stamp so a megabyte of PGN is not re-read per render. Non-throwing throughout. |
 | `src/lib/savedAnalyses.ts` + `savedAnalysisStore.ts` | **The reader's analysis boards** — what a saved analysis is (the whole tree as PGN, the `AnalysisSettings` it was worked under, where the reader was standing as SAN from the root, and which way the board faced), how it is written and read back, and `savedAnalysisCatalogOf` so `?game=` resolves against it; and the `localStorage` half. The pair above, deliberately, with two differences: `treeToPgn` / `parsePgnTree` rather than the linear writer, because side lines are the point, and a **place in the tree** as part of the record. Non-throwing throughout. |
-| `src/lib/savedRepertoires.ts` + `savedRepertoireStore.ts` | **The reader's repertoires** (CTA-61) — and the rule that **a repertoire is one game**: a mainline with its side lines. `readRepertoireText` is the one reading a file and a paste share (the uploads' size/emptiness rules, line endings normalised, every game parsed as a tree, games with no moves skipped and counted); a text of one game is stored as written (`savedRepertoireOf`), and a text of several is not stored as it is — it is **merged** into one tree (`mergedRepertoireOf`, over `mergeTrees` in `lib/gameTree.ts`: the first game's line the mainline, each later divergence a side line; only when every game shares a start) or **split** into one record per game (`splitRepertoiresOf`, each keeping its own text). A record carries its name (typed, else the tags' `StudyName` / `Event`), `previewFen` (where it first branches), `stats` (moves and side lines, for a caption without a parse), its `settings` (`lib/repertoireSettings.ts` — read back field by field; that file's header is the recipe for adding an option), and the `folderId` it is filed under (`null` is Unfiled). A row from before the rule, still holding several games, is told by `isMultiGameRepertoire` and opens on the choice. The store is `chessapp.savedRepertoires.v1` over `recordStore`, capped at 500 because a split makes a record per game; `addRepertoires` writes a split all-or-nothing, in a replaced record's place when given one, and `updateRepertoireSettings` / `fileRepertoire` edit in place. Non-throwing throughout. |
+| `src/lib/savedRepertoires.ts` + `savedRepertoireStore.ts` | **The reader's repertoires** (CTA-61) — and the rule that **a repertoire is one game**: a mainline with its side lines. `readRepertoireText` is the one reading a file and a paste share (the uploads' size/emptiness rules, line endings normalised, every game parsed as a tree, games with no moves skipped and counted); a text of one game is stored as written (`savedRepertoireOf`), and a text of several is not stored as it is — it is **merged** into one tree (`mergedRepertoireOf`, over `mergeTrees` in `lib/gameTree.ts`: the first game's line the mainline, each later divergence a side line; only when every game shares a start) or **split** into one record per game (`splitRepertoiresOf`, each keeping its own text). A record carries its name (typed, else the tags' `StudyName` / `Event`), `previewFen` (where it first branches), `stats` (moves and side lines, for a caption without a parse), its `settings` (`lib/repertoireSettings.ts` — read back field by field; that file's header is the recipe for adding an option), and the `folderId` it is filed under (`null` is Unfiled). A row from before the rule, still holding several games, is told by `isMultiGameRepertoire` and opens on the choice. The store is `chessapp.savedRepertoires.v1` over `recordStore`, capped at 500 because a split makes a record per game; `addRepertoires` writes a split all-or-nothing, in a replaced record's place when given one, and `updateRepertoireSettings` / `fileRepertoire` edit in place. A tree changed on the board becomes a record through `withRepertoireTree` (the record, its game replaced — Update) or `repertoireCopyOf` (a new record with the original's settings and folder — Save as copy) (CTA-63). Non-throwing throughout. |
+| `src/lib/repertoireTrainer.ts` | **The trainer's policy and the session model** (CTA-63) — `TrainerPolicy` (the seam every later trainer is a function of), `pickTrainerMove` (uniform over the repertoire's moves at a node, the random source injectable), `repertoireMovesAt`, the extension fold (`nodeIdsOf` the repertoire as it arrived, `extensionIdsOf` the session tree against it), and game mode's pure half: `judgeDrop` (a drop judged book / wrong / unjudged before it is made) and the `DrillScore` tally. Pure; the move is played by `views/dev/core/useTrainerModule.ts`. |
+| `src/lib/repertoireGames.ts` | **The repertoire games** (CTA-63) — `RepertoireGameId` (`end`, `backtrack`) and the menu's order, `repertoireGamePath`, and Backtracking's pure half: `coverageOf` (uncovered lines under every position — one post-order walk), `backtrackingPolicy` (a `TrainerPolicy` steering to uncovered lines), `requiredMovesAt` (the reader's moves that still lead somewhere new, when that is only some of them) and `backtrackTarget` (where play goes back to when a line ends). A line is a leaf of the repertoire as it arrived. |
+| `src/lib/repertoireMap.ts` | **The repertoire map's layout** (CTA-63) — `mapLayoutOf` (a column per ply, a row per line, a position on its first child's row, so the mainline runs along the top; which moves are White's), and what is drawn from it: `mapEdgePaths` (split by coverage), `mapDots` (by the side that moved), `mapPathTo` / `mapPathDots` (the way to the reader), `mapLabelsIn` / `visibleRect` (the move labels, culled to the view), and the viewport's `MapView` arithmetic (`zoomViewAt`, `fitView`, `centerView`, `MAP_INITIAL_K`). Pure; `views/repertoires/RepertoireMap.tsx` draws it. |
+| `src/lib/repertoireLink.ts` | **A permanent link to a position in a repertoire** (CTA-63) — `?at=` on `/repertoires/<id>`: `atParamOf` (the moves from the start as comma-joined SAN) and `nodeAtParam` (back to a node, as far as the path still matches). Pure. |
 | `src/lib/savedRepertoireFolders.ts` + `savedRepertoireFolderStore.ts` | **The folders repertoires are filed under — one level**: a folder holds repertoires, never another folder, so it has no `parentId` and none of the tree machinery the games' and openings' folders carry. `repertoiresInFolder` reads a `folderId` naming a missing folder as Unfiled; `sortedRepertoireFolders` orders by name. The store (`chessapp.savedRepertoireFolders.v1`, cap 100) is create (hands the folder back) / rename / delete, and a delete **keeps its repertoires** — `unfileRepertoiresIn`, the repertoire store's half, files them back to Unfiled. A **split** makes a folder of its own, named after the text, and files every split repertoire into it. Non-throwing throughout. |
 | `src/lib/savedOpenings.ts` + `savedOpeningFolders.ts` + the two stores | **The reader's saved openings, and the folders they are filed under** — what a saved opening is (the whole tree as PGN — side lines are the point — plus the orientation it was viewed from, the note it is named by and the folder it is filed under), how it is written and read back, and the folder entity: `OpeningFolder` is a name and a parent id, with the reads over a list of them (cycles cut, dangling parents read as top level). The `localStorage` halves: the openings' store, with an idempotent `saveOpening` and a note edited in place (`updateSavedOpeningNote` keeps the record's place in the list); and the folders' store, where the CRUD lives because every caller must mean the same thing — `moveOpeningFolder` refuses the folder's own subtree, and `removeOpeningFolder` re-parents sub-folders and files the openings back to Unfiled in one write-through. The saved openings are **not** a `LibraryCatalog`: nothing hands one on with `?game=` — reopening is `?openings=<id>`, and the position hand-off is `?fen=` at the end of the mainline. Non-throwing throughout. |
 | `src/lib/recordStore.ts` | **The shared localStorage record-store factory** — the snapshot/subscribe/write machinery every record store (`savedGameStore`, `savedAnalysisStore`, `savedOpeningStore`, `savedOpeningFolderStore`, `pgnUploadStore`) is built over: the try/catch read, the revision-stamped cached snapshot, the `storage`-event subscription, and the write that stamps the revision after the data. A row the normaliser (the `savedGameFrom`-style guard each store passes in) refuses is dropped, not rendered. Pure, non-throwing; one instance per store, each file keeping its own caps, idempotency comparisons and cross-store operations beside it. |
@@ -94,8 +98,8 @@ change by whether it *adds* to that count, not by the exit code.
 | `src/lib/gameReference.ts` | **The `?game=` carrier** — `library/<category path>/<id>` (the key was `pgn` before CTA-38; still resolves), formatted by `gameReferenceOf` and resolved by `resolveGameReference` through the same `resolveLibraryPath`. A game does not fit in a URL, so what travels is a reference into the catalog. |
 | `src/views/library/` | The section-agnostic screens a library section renders: `LibraryList.tsx` (a fixed top bar — the category's name and counts, the name search, the card-size toggle — over the only thing on the screen that scrolls, the card grid: this category's **sub-folders** first, as `LibraryFolderCard.tsx`, then its items as preview boards; its pure `librarySearch.ts` and `cardSize.ts` under it, and the folder's notes — or the hint, when it has none — in the right-hand panel), `LibraryDetail.tsx` (which resolves the URL, renders the miss, and dispatches on the item's kind — and on the `variationMode` flag the section passes for a repertoire line), `LibraryPositionDetail.tsx` (one position, read-only, facing the side to move, with the three `?fen=` hand-offs), `LibraryGameDetail.tsx` (the game replayed over the shared `MoveList` / `BoardControls` / `useGameNavigation`, with the `?game=` and `?fen=` hand-offs), `LibraryVariationDetail.tsx` (a repertoire line replayed with its **variation tree** — `parsePgnTree` + the shared `VariationTree` / `useTreeNavigation`), `LibraryCardFooter.tsx` and its pure `gameSummary.ts` (a card's footer, and the one branch the list screen makes on the item's kind), `BackToCategory.tsx`, `folderNotes.ts` / `pgnFolderNotes.ts` / `LibraryNotes.tsx` (a folder's authored MDX notes — the pure path lookup, the shipped `.mdx` glob, and the panel that styles and scrolls them), and `section.ts`, which is what tells one section from another — route base, catalog, chrome keys, test ids, `?game=` key, folder notes. |
 | `src/views/pgn/` | The Library section: `UserPgnsSection.tsx` is **one component behind every `/library/*` URL** (was "User PGNs" at `/pgn/*`; file path kept), resolving the splat through the catalog, over a catalog whose items are games — and **the one place a PGN kind becomes a screen** (see *What kind of thing a PGN file is* below). Under it, the screens the section's own kinds need: `PgnCollection.tsx` (a multi-study file's index), `PgnCollectionNav.tsx` (its studies in the shell's left rail, while one of them is open), `PgnUploads.tsx` (the reader's own files — the button and the list), the shared two-line `PgnIndexRow.tsx`, the pure `collectionSummary.ts`, and `useUploads.ts` (the `useSyncExternalStore` binding, so `src/lib/` stays free of React). |
-| `src/views/dev/` | **The Development section** (CTA-60) — dev-only, gated on `import.meta.env.DEV` in `navFolders()` / `navItems()` / `App.tsx`, so none of it reaches the deployed build. `core/` is the **unified board core** specified in [`.claude/rules/chessboard-v2.md`](.claude/rules/chessboard-v2.md): the base hook (`useBoardCore.ts` — the `GameTree` as the one game shape, node navigation, the rules oracle, promotion, orientation), the capability modules a board composes rather than is flagged by (`useEngineModule.ts`, whose optional `onBestMove` is the entire Play/Analysis difference; `useOpeningBookModule.ts`; `useAutosave.ts`; `devStores.ts`, the dev-prefixed `localStorage` keys over the shipped `recordStore` factory and normalisers), and the composition layer that had no owner before — `BoardShell.tsx` (over the shared `EngineBoardSquare`, never a second copy of the `calc()`) and `BoardPanel.tsx`, the one panel skeleton and the one pinned best-variations block, plus `TreeMoveList.tsx`, the merged move list's ply↔node seam. Beside them the five derived boards — `analysis/`, `play/` (whose `usePlayBoard` and `PlayBoardScreen` `masked/` reuses verbatim, adding only the mask), `masked/`, `openings/`, `repertoire/` — and `devNav.ts`. The five shipped board screens are untouched by all of it. **`core/` alone ships** since CTA-61, imported by the Repertoires board; the five derived boards, `devNav.ts` and `devStores.ts` stay behind the gate. |
-| `src/views/repertoires/` | **The Repertoires section** (CTA-61) — the reader's own repertoires. `Repertoires.tsx` is the list (`/repertoires`, over the saved-list machinery; a card previews where the repertoire first branches; `?folder=<id>` opens a folder, and `RepertoireFolderViews.tsx` / `RepertoireFolderDialogs.tsx` are the folder rows and cards and the name / delete / move dialogs, `useRepertoireFolders.ts` their store binding), `RepertoireUpload.tsx` brings one in (`/repertoires/new`, a `.pgn` file or pasted text through **one** function), `RepertoireMergeSplit.tsx` is the merge-or-split choice a text of several games gets (on the upload screen, and on the route of a record saved before the one-game rule), `RepertoireBoard.tsx` reads one (`/repertoires/<id>`) — the first shipped screen composed from the v2 core, Moves · Engine — and `RepertoireSettingsScreen.tsx` edits one (`/repertoires/<id>/settings`: a list of sections from `RepertoireSettingsSections.tsx` over one draft, written on Save). `useSavedRepertoires.ts` is the store binding; `repertoireTestKit.tsx` the tests' shared mount and fixtures. |
+| `src/views/dev/` | **The Development section** (CTA-60) — dev-only, gated on `import.meta.env.DEV` in `navFolders()` / `navItems()` / `App.tsx`, so none of it reaches the deployed build. `core/` is the **unified board core** specified in [`.claude/rules/chessboard-v2.md`](.claude/rules/chessboard-v2.md): the base hook (`useBoardCore.ts` — the `GameTree` as the one game shape, node navigation, the rules oracle, promotion, orientation), the capability modules a board composes rather than is flagged by (`useEngineModule.ts`, whose optional `onBestMove` is the entire Play/Analysis difference; `useOpeningBookModule.ts`; `useTrainerModule.ts`, the repertoire trainer (CTA-63); `useAutosave.ts`; `devStores.ts`, the dev-prefixed `localStorage` keys over the shipped `recordStore` factory and normalisers), and the composition layer that had no owner before — `BoardShell.tsx` (over the shared `EngineBoardSquare`, never a second copy of the `calc()`) and `BoardPanel.tsx`, the one panel skeleton and the one pinned best-variations block, plus `TreeMoveList.tsx`, the merged move list's ply↔node seam. Beside them the five derived boards — `analysis/`, `play/` (whose `usePlayBoard` and `PlayBoardScreen` `masked/` reuses verbatim, adding only the mask), `masked/`, `openings/`, `repertoire/` — and `devNav.ts`. The five shipped board screens are untouched by all of it. **`core/` alone ships** since CTA-61, imported by the Repertoires board; the five derived boards, `devNav.ts` and `devStores.ts` stay behind the gate. |
+| `src/views/repertoires/` | **The Repertoires section** (CTA-61) — the reader's own repertoires. `Repertoires.tsx` is the list (`/repertoires`, over the saved-list machinery; a card previews where the repertoire first branches; `?folder=<id>` opens a folder, and `RepertoireFolderViews.tsx` / `RepertoireFolderDialogs.tsx` are the folder rows and cards and the name / delete / move dialogs, `useRepertoireFolders.ts` their store binding), `RepertoireUpload.tsx` brings one in (`/repertoires/new`, a `.pgn` file or pasted text through **one** function), `RepertoireMergeSplit.tsx` is the merge-or-split choice a text of several games gets (on the upload screen, and on the route of a record saved before the one-game rule), `RepertoireBoard.tsx` is the route of one (`/repertoires/<id>`: the miss, the legacy choice, else the player) and `RepertoireGame.tsx` the route of its games (`/repertoires/<id>/games/<end|backtrack>`), both over **`RepertoirePlayer.tsx`** — the one screen composed from the v2 core that a repertoire is read, drilled and played on (CTA-63; see *Playing a repertoire*), with `useRepertoireGame.ts` (a game's session state), `RepertoireMap.tsx` (the Map tab, the player's and Backtracking's), `RepertoireChangesBar.tsx` (update the repertoire / save a copy / discard, while the session has changes); on a protected repertoire it says so and links to its settings in Update's place and `RepertoireGamesMenu.tsx` (the menu on the player and on every list row and card) beside it — and `RepertoireSettingsScreen.tsx` edits one (`/repertoires/<id>/settings`: a list of sections from `RepertoireSettingsSections.tsx` over one draft, written on Save). `useSavedRepertoires.ts` is the store binding; `repertoireTestKit.tsx` the tests' shared mount and fixtures. |
 | `src/views/main/navFromLibrary.ts` | Building a sidebar subtree — a folder plus a list screen per category, at any depth — out of a library catalog, and merging it into the authored registries. Pure; `userPgnsNavFolder()` / `userPgnsNavItems()` are the shipped use, over a catalog built from `.pgn` files. It is a generator over any `LibraryCatalog`, not a Library-section special case. |
 | `src/lib/treeManager.ts` | Read-only tree walks (`traverse` / `toArray` / `collectIds` / `findBy` / `getPath`). The seam for anything tree-shaped: `navTree.ts` and `libraryCatalog.ts` are its consumers. |
 
@@ -769,7 +773,8 @@ screens do, validated with `parseFen` and taken as initial state.
 
 A repertoire the reader brings in at `/repertoires/new` is **one game** — a
 mainline with its side lines, the shape the board reads — kept as PGN
-(`lib/savedRepertoires.ts`) and read on one v2 board at `/repertoires/<id>`.
+(`lib/savedRepertoires.ts`) and read on one v2 board at `/repertoires/<id>` —
+since CTA-63 the **player** (*Playing a repertoire*, below).
 It is the Saved openings section again for the list, and Repertoire v2 again
 for the board. Only the differences are written out here:
 
@@ -803,15 +808,19 @@ for the board. Only the differences are written out here:
 - **Nothing on the board writes.** A repertoire is the record; a move tried
   against it is exploration, and the Engine tab's clear puts it back.
 - **Settings are the one thing edited after the fact** (`/repertoires/<id>/settings`):
-  the title (the record's `name`), a description, and the main color — the
+  the title (the record's `name`), a description, the main color — the
   side it is played from, which the board opens facing and the preview card
-  shows. They are one `settings` object normalised field by field, so an
+  shows — whether the board opens drawing the next-move arrows
+  (`showArrows`, on by default; CTA-63 — the player's Settings tab switches
+  them for a session, and the games open without them), and whether it is
+  **protected** (`protected`, on by default; CTA-63 — its board offers no
+  "Update", only its settings and a copy; copies are never protected). They are one `settings` object normalised field by field, so an
   option added later reads as its default on every older record; the recipe
   is the header of `lib/repertoireSettings.ts`. The write is in place and
   keeps the list order, `updateSavedOpeningNote`'s rule.
-- **Two tabs: Moves · Engine.** No Tree tab: the merged move list already
-  hangs every side line under its move, the CTA-53 reason; and no Lines tab,
-  since a repertoire is one game. The Moves tab is kept mounted once opened
+- **No Tree tab, no Lines tab.** The merged move list already hangs every side
+  line under its move, the CTA-53 reason; and a repertoire is one game. (The
+  player's tabs are in the next section.) The Moves tab is kept mounted once opened
   (`BoardPanel`'s opt-in `keepMounted`), so switching tabs never re-mounts a
   9,000-move list.
 - **A move list renders its structure once per game.** `MoveList`,
@@ -824,6 +833,178 @@ for the board. Only the differences are written out here:
   the reader could step. `findNode` / `pathTo` read a per-tree index
   (`lib/gameTree.ts`) instead of walking the tree, and the core memoises its
   `pgn`. Keep new per-token state in that store, not in the list's props.
+
+## Playing a repertoire
+
+A repertoire's own view, `/repertoires/<id>`, is the **player**
+(`views/repertoires/RepertoirePlayer.tsx`, CTA-63): the board the repertoire
+is read, tried and drilled on. The same screen, with a game's rules, is each of
+its **games** at `/repertoires/<id>/games/<game>`, reached from the Games menu
+in the player's header and on every list row and card. Composed from the v2
+core, with two modules of its own beside the engine:
+
+```
+lib/repertoireTrainer.ts ─policy · judgeDrop─┐                    ┌─ lib/repertoireGames.ts (coverage, required, backtrack)
+                                             ▼                    ▼
+                           useTrainerModule (views/dev/core) ◀── useRepertoireGame (views/repertoires)
+                             reply guard · timer · game mode        score · lines finished · coverage
+                                             │ playVariation
+                                             ▼
+RepertoireBoard.tsx ─┐                 useBoardCore ──▶ BoardShell / BoardPanel ── TreeMoveList(extensionIds)
+RepertoireGame.tsx ──┴─▶ RepertoirePlayer.tsx ── download: treeToPgn(session tree) ──▶ downloadPgn
+```
+
+**The player — every session's rules:**
+
+- **The trainer answers only from the repertoire as it arrived**, behind the
+  **Autoplay** setting — **off by default**, so opening a repertoire reads
+  like a board and the reader moves both sides. On, it plays one of the file's
+  moves at its turn (uniformly: `children[0]` is not favoured), and only in
+  reply to a move — stepping back to its turn never moves a piece
+  (`useTrainerModule`: the wrapped drop owes a reply where the move lands;
+  navigating drops it). It asks the *original* tree, so it never moves inside
+  a line the reader added.
+- **Every move the file does not have is an extension** — added under the
+  node on screen and tinted (`success.main`) in the move list through the
+  optional `extensionIds` on `TreeMoveList` → `MoveList`, read per token from
+  the selection store. `extensionIdsOf(sessionTree, nodeIdsOf(original))` is
+  the whole of the tracking. Past a line's end the reader moves both colours.
+- **Tabs: Moves · (Score) · Map · Settings · Engine** (a game adds Score;
+  Get to the end has no Map). Settings holds the side
+  (default: the main color; the board faces it; a change restarts), Autoplay,
+  the next-move arrows and the engine's switch. The Engine tab is the other
+  boards' own and is **disabled while the engine is off** (`BoardPanel`'s
+  per-tab `disabled`). Moves stays mounted while another tab shows. The
+  header keeps the opening line, the description, the Games menu, Restart
+  (back to the start, extensions kept), the download and the settings link.
+- **Arrows are the reader's call**: the player opens as the repertoire's
+  `showArrows` setting says (on by default), a game without them, and the
+  Settings tab switches them for the session — every continuation at the
+  node on screen through the shared `nextMoveArrowsOf` — the mainline's move
+  green, side lines blue. The v2 boards draw through the same helper; the
+  shipped Analysis Board keeps its own copy. With Autoplay off the footer is
+  the next-moves bar (CTA-54), whose hover draws that move's arrow; with it on,
+  the trainer's status line.
+- **The engine is off by default, and never an opponent**: on, the pinned
+  best-variations block and the eval bar; no `onBestMove`. A line clicked in
+  the block is exploration — the trainer does not answer it. The Engine tab's
+  "Clear" drops the session's additions.
+- **Changes are kept on the reader's say-so — update, or copy.** Nothing is
+  written unasked (no autosave). While the session's tree differs from the
+  record — `core.tree !== repertoire`: every edit makes a new tree and
+  replaying a move that is there does not, so the test holds for the moves
+  added today and for the edits to come (deleting a line, promoting a side
+  line) with nothing to keep in step — the header's **Save** button (disabled
+  while nothing has changed) takes the primary colour, and a click on it
+  opens a strip above the footer (`RepertoireChangesBar.tsx`; it closes
+  itself once the changes are saved or dropped) that offers three things:
+  - **Update repertoire** — `withRepertoireTree` (`lib/savedRepertoires.ts`)
+    writes the tree into the record, preview and size re-read, and the
+    session becomes the new baseline (the additions stop being additions; the
+    reader stays where they are). On a **protected** repertoire —
+    `settings.protected`, on by default, so a stray click cannot overwrite a
+    shipped or borrowed one — there is no Update: the strip says the
+    repertoire is protected and, in Update's place, links to its settings
+    (to switch protection off; leaving the board drops the unsaved changes,
+    and the strip says so), with Save as copy beside it. No dialog. The screen parses the record it *opened*,
+    once, so the write coming back as a new `saved` does not re-parse it and
+    put the reader at the start with fresh ids.
+  - **Save as copy** — `repertoireCopyOf` makes a new record, "‹name› (copy)",
+    with the original's settings and folder — **unprotected**, since a copy
+    exists to be edited — and the screen navigates to it at
+    the position on screen (`?at=`). The original is untouched: how a shipped
+    or borrowed repertoire becomes one's own.
+  - **Discard** — back to the record, on the last repertoire position.
+  A reload or closed tab with changes unsaved asks first (`beforeunload`).
+  A game never writes and never shows the strip. The header's download
+  writes the session tree out either way.
+
+**A game is the player with rules** (`lib/repertoireGames.ts`, the session
+state in `useRepertoireGame`). The trainer always plays, the Autoplay switch
+is gone, a **Score** tab opens first, and the trainer module runs in **game
+mode** (`drill`): each of the reader's moves at their own turn inside the
+repertoire is judged *before* it is made (`judgeDrop`) — a repertoire move is
+right; any other legal move is wrong and **taken back** (the drop refused, so
+it never becomes an extension), the status saying "try again". **One verdict
+per position**, the first try's; Restart judges afresh. A line is *finished*
+when play — not navigation — reaches a leaf of the repertoire (the module's
+`arrival`). The score (right, wrong, accuracy, a reset) is session-only.
+
+- **Get to the end** (`end`) — the trainer picks at random; reaching a line's
+  end finishes it ("N lines finished"), and Restart starts another. Past the
+  end play is free, extending, unjudged.
+- **Backtracking** (`backtrack`) — every line is to be covered. The trainer
+  steers to uncovered lines (`backtrackingPolicy`). Where only some of the
+  reader's moves still lead to an uncovered line, those are **required**
+  (`requiredMovesAt`): a purple arrow (`REQUIRED_MOVE_ARROW_COLOR`, drawn
+  whatever the arrows switch says) and the status line say so, and a finished
+  line's move is refused — not a failure, it is a right move. When a line
+  ends it is covered, and after a moment play goes **back** to the deepest
+  position with an uncovered line under it (`backtrackTarget`), where the
+  trainer answers if it is its turn; when none is left, the game is done.
+  "Lines covered: X of N", and a "Start over" that uncovers everything.
+  Its **Map** tab carries the coverage (*The map*, below).
+
+**The map** (the player's and Backtracking's Map tab — `RepertoireMap.tsx`
+over the pure `lib/repertoireMap.ts`) draws the repertoire as an SVG tree:
+depth left to right, a row per line, the mainline on the top row and side
+lines dropping below their branch point.
+
+- **Every move is a dot in the colour of the side that made it** — White's
+  white, Black's black, each ringed in a theme token so it shows on either
+  theme — larger at a line's end; the moves on the way to the position on
+  screen carry a primary ring under a highlighted path, and a marker sits on
+  that position, kept in view as play moves.
+- **The player's map is the session's; a game's is the repertoire's.** The
+  player draws the repertoire *and* the moves added this session, **as they
+  are added** — their lines and a ring round their dots in the move list's
+  extension colour (`success.main`), and "N added" in the header — so the
+  reader always sees what they have added to the file. Backtracking draws the
+  repertoire its coverage is defined on; inside a line the reader added there,
+  the marker waits on the last repertoire position.
+- **Coverage is the lines' colour, and a game's.** Backtracking passes it —
+  covered lines green, a progress bar and "N lines left"; the player passes
+  none — every line one neutral colour, and the tree's size in the header.
+- **One interactive viewport, in the tab and full screen.** The tab's map
+  and the full-screen MUI `Dialog` opened from it are the same component
+  (`MapViewport`): the wheel zooms about the pointer and a drag pans (a native
+  non-passive wheel listener; the arithmetic — `zoomViewAt`, `fitView`,
+  `centerView` — is pure), with zoom, fit-all and "where am I" buttons. Both
+  open at a readable 250% (`MAP_INITIAL_K`) centred on the reader and
+  **follow** them — when play moves the marker out of view, the view
+  re-centres on it at the same zoom. Each measures itself (`ResizeObserver`).
+  The Map tab is kept mounted, so its view survives a trip to another tab.
+- **Show moves is on by default** (one setting for both views): each move's
+  SAN above its dot, in the drawing's units so labels scale with the view and
+  never overlap (not drawn below 150%, where a hint says to zoom in), and only
+  for the dots on screen (`mapLabelsIn` / `visibleRect`, capped at
+  `MAP_LABEL_LIMIT`).
+- **In the player, a written move is a link** — in the tab and full screen:
+  clicking its dot goes to that position (and closes the dialog). A drag that starts on a dot still pans —
+  the pointer is captured, and the click refused, only after it has travelled
+  a few pixels. A game's map has no links: it is not a way to skip ahead.
+- The edges and dots are a few path strings, not an element per move, so
+  the 9,146-node example lays out in ~10ms.
+
+**A permanent link to a position**: `/repertoires/<id>?at=e4,c6,d4`
+(`lib/repertoireLink.ts`). A position is the moves from the start as SAN — the
+saved analysis' `sanPathTo` / `nodeAtSanPath`, since node ids are minted per
+parse — joined by commas (SAN never holds one; `URLSearchParams` encodes `+`,
+`#`, `=`). The player reads it once, when the tree lands, and writes every
+step back with history **replace** (the library detail's `?move=` rule), so the
+address bar is always a link to the position on screen: a reload, a bookmark,
+a shared link or a map click all reopen there. A stale link goes as far as it
+still matches, so a link into a line added in a session and never saved
+reopens on the last repertoire move before it. The settings link carries it
+back. A game ignores it and starts at the start.
+
+What is designed for and not built: **saving extensions back**, a **persisted
+score or coverage** (per position, per repertoire — what spaced repetition
+needs; it goes where `useRepertoireGame` keeps them today), and **other
+policies** (weighted, mainline-first, spaced repetition — each a new
+`TrainerPolicy`). A new game is an id in `REPERTOIRE_GAMES`, its rules in
+`lib/repertoireGames.ts`, its state in `useRepertoireGame`, and a title key.
+`.claude/rules/chessboard-v2.md` §2.5 is the module's recipe.
 
 ## A mask is a costume, never a rule
 
