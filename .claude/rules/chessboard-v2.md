@@ -333,15 +333,20 @@ The slot contract:
 | `engineOn` | `boolean?` | The block renders nothing while off; the status row says so. |
 | `onPlayVariation` | `((sans) => void)?` | Present ⇒ the lines are clickable (CTA-55). Absent ⇒ plain text. |
 | `mask` | `PieceMask?` | Masked notation inside the block. |
-| `tabs` | `readonly { id, label, content }[]` | One tab is rendered at a time, never three with two hidden. |
+| `tabs` | `readonly { id, label, content }[]` | One tab is rendered at a time, never three with two hidden — unless `keepMounted` names it. |
+| `keepMounted` | `readonly string[]?` | Opt-in: these tabs mount on first open and then stay mounted, hidden, while another shows — for a body whose mount is the cost (the Repertoires board keeps `moves`). Each has its own scrolling region; showing one again scrolls its `aria-current` move into view. |
 | `activeTab` / `onTabChange` | | The screen's state — a screen may need to know the tab (CTA-54's arrows). |
 | `footer` | `ReactNode?` | A sibling of the scrolling region, so it stays put while the tab scrolls. |
 | `ply` / `lastPly` / `onSelectPly` / `onFlip` | | Straight through to the shared `BoardControls`. |
 
 Two rules it keeps for every consumer:
 
-- **One tab is rendered at a time.** The move list scrolls its selection into
-  view, and a hidden copy would be scrolling a zero-height box on every move.
+- **One tab is rendered at a time** by default. The move list scrolls its
+  selection into view, and a hidden copy would be scrolling a zero-height box
+  on every move. `keepMounted` is the deliberate exception (CTA-61): a hidden
+  token's `scrollIntoView` is a no-op, and the panel re-scrolls the current
+  move when the tab shows again. Use it for a tab whose mount is expensive,
+  not as a default — every kept tab keeps rendering while hidden.
 - **The panel is a non-scrolling flex column and exactly one child scrolls.**
   The shell's aside does not scroll (`Layout.tsx`), so `flex: 1` +
   `minHeight: 0` + `overflowY: auto` on the tab region is what keeps a long

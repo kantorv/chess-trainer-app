@@ -122,6 +122,37 @@ describe("a repertoire on the v2 board", () => {
     expect(side[0]).toHaveTextContent("dxc5");
   });
 
+  it("keeps the Moves tab mounted across tab switches, and follows the board while hidden", async () => {
+    renderSection(`/repertoires/${bringIn("r", CARO)}`);
+    await lineReady();
+
+    await userEvent.click(screen.getByTestId("repertoire-board-panel-tab-moves"));
+    const list = screen.getByTestId("move-list");
+
+    // Away to Lines: the list is still there, hidden, not unmounted.
+    await userEvent.click(screen.getByTestId("repertoire-board-panel-tab-lines"));
+    const hidden = screen.getByTestId("repertoire-board-panel-content-moves");
+    expect(hidden).not.toBeVisible();
+    expect(hidden).toContainElement(list);
+    expect(screen.getByTestId("repertoire-board-panel-content-lines")).toBeVisible();
+
+    // A step while it is hidden still reaches it.
+    await userEvent.click(screen.getByTestId("board-control-next"));
+    expect(within(hidden).getByTestId("move-ply-1")).toHaveAttribute("aria-current", "true");
+
+    // Back: the very same list, now visible — no remount.
+    await userEvent.click(screen.getByTestId("repertoire-board-panel-tab-moves"));
+    expect(screen.getByTestId("move-list")).toBe(list);
+    expect(screen.getByTestId("repertoire-board-panel-content-moves")).toBeVisible();
+
+    // The Engine tab is not kept: leaving it unmounts it, as every tab used to.
+    await userEvent.click(screen.getByTestId("repertoire-board-panel-tab-engine"));
+    await userEvent.click(screen.getByTestId("repertoire-board-panel-tab-lines"));
+    expect(
+      screen.queryByTestId("repertoire-board-panel-content-engine"),
+    ).not.toBeInTheDocument();
+  });
+
   it("never moves a piece by itself", async () => {
     renderSection(`/repertoires/${bringIn("r", CARO)}`);
     await lineReady();

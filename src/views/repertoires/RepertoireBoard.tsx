@@ -70,6 +70,9 @@ import { useSavedRepertoires } from "./useSavedRepertoires";
  * move. The board says it is reading rather than the tab freezing on arrival.
  */
 
+/** The tabs that stay mounted once opened — see `BoardPanel`'s `keepMounted`. */
+const KEEP_MOUNTED = ["moves"] as const;
+
 /** Which line is on the board, and whether it has been read yet. */
 type Shown = { index: number; state: "loading" | "ready" | "unreadable" };
 
@@ -291,6 +294,9 @@ function RepertoireBoardScreen({ saved }: { saved: SavedRepertoire }) {
         onPlayVariation: core.playVariation,
         activeTab: tab,
         onTabChange: setTab,
+        // The move list of a 9,000-node line takes most of a second to mount;
+        // mounted once, switching Lines ↔ Moves is free.
+        keepMounted: KEEP_MOUNTED,
         tabs: [
           {
             id: "lines",
