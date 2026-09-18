@@ -11,6 +11,8 @@ import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
+import PauseRoundedIcon from "@mui/icons-material/PauseRounded";
+import PlayArrowRoundedIcon from "@mui/icons-material/PlayArrowRounded";
 import RestartAltRoundedIcon from "@mui/icons-material/RestartAltRounded";
 import SaveRoundedIcon from "@mui/icons-material/SaveRounded";
 import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
@@ -118,7 +120,8 @@ import { useRepertoireGame } from "./useRepertoireGame";
  *   a session change like any other — the Save button, the strip, the Map
  *   and `?at=` all follow the edited tree.
  * - **Tabs: Moves · (Score) · Map · Settings · Engine.** Settings holds the
- *   side, Autoplay (player only), the next-move arrows and the engine's
+ *   side, Autoplay (player only — and the header's **Play** button, a second
+ *   control over the same state), the next-move arrows and the engine's
  *   switch; the Engine tab is disabled while the engine is off; Score is a
  *   game's; the Map (`RepertoireMap.tsx`) is the player's — its full-screen
  *   dots links to their positions — and Backtracking's, with the coverage.
@@ -628,6 +631,27 @@ function RepertoirePlayer({
                     <SaveRoundedIcon fontSize="small" />
                   </IconButton>
                 </span>
+              </Tooltip>
+            )}
+            {game === undefined && (
+              // A second control over the Settings tab's Autoplay: one state, so
+              // the two cannot disagree. A game's trainer always plays — no toggle.
+              <Tooltip title={t(autoplay ? "repertoires.play.autoplayOff" : "repertoires.play.autoplayOn")}>
+                <IconButton
+                  size="small"
+                  color={autoplay ? "primary" : "default"}
+                  onClick={() => changeAutoplay(!autoplay)}
+                  aria-label={t(autoplay ? "repertoires.play.autoplayOff" : "repertoires.play.autoplayOn")}
+                  aria-pressed={autoplay}
+                  data-testid={`${id}-play`}
+                  sx={{ flexShrink: 0 }}
+                >
+                  {autoplay ? (
+                    <PauseRoundedIcon fontSize="small" />
+                  ) : (
+                    <PlayArrowRoundedIcon fontSize="small" />
+                  )}
+                </IconButton>
               </Tooltip>
             )}
             <Tooltip title={t("repertoires.play.restart")}>
