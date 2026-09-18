@@ -119,14 +119,18 @@ describe("the saved-repertoires store", () => {
     saveRepertoire(record("a"));
     saveRepertoire(record("b"));
     expect(
-      updateRepertoireSettings("a", "Caro", { description: "Main line", color: "black" }),
+      updateRepertoireSettings("a", "Caro", {
+        description: "Main line",
+        color: "black",
+        showArrows: false,
+      }),
     ).toBeUndefined();
 
     const rows = savedRepertoiresSnapshot();
     expect(rows.map((row) => row.id)).toEqual(["b", "a"]);
     expect(rows[1]).toMatchObject({
       name: "Caro",
-      settings: { description: "Main line", color: "black" },
+      settings: { description: "Main line", color: "black", showArrows: false },
     });
   });
 
@@ -145,7 +149,10 @@ describe("the saved-repertoires store", () => {
     saveRepertoire(record("a"));
     const listener = vi.fn();
     const unsubscribe = subscribeSavedRepertoires(listener);
-    saveRepertoire({ ...record("a"), settings: { description: "", color: "black" } });
+    saveRepertoire({
+      ...record("a"),
+      settings: { description: "", color: "black", showArrows: true },
+    });
     expect(listener).toHaveBeenCalled();
     unsubscribe();
   });

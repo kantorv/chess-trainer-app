@@ -1,6 +1,7 @@
 /**
  * **A saved repertoire's settings** — what the reader can say about a
- * repertoire beyond its text: a description, and the side it is played from.
+ * repertoire beyond its text: a description, the side it is played from, and
+ * whether its board draws the next-move arrows.
  *
  * One object on the record (`SavedRepertoire.settings`), read back through
  * {@link repertoireSettingsFrom}, which fills **each field on its own** from
@@ -40,11 +41,19 @@ export type RepertoireSettings = {
    * side is every position upside down.
    */
   color: RepertoireColor;
+  /**
+   * Whether the repertoire's own view opens drawing the next-move arrows —
+   * every continuation from the position on screen (CTA-63). The player's
+   * Settings tab can still switch them for a session; the games open without
+   * them whatever this says, since a drill must not show the answer.
+   */
+  showArrows: boolean;
 };
 
 export const DEFAULT_REPERTOIRE_SETTINGS: RepertoireSettings = {
   description: "",
   color: "white",
+  showArrows: true,
 };
 
 /** The most a description may hold — a paragraph or two, not a file. */
@@ -63,6 +72,10 @@ export const repertoireSettingsFrom = (value: unknown): RepertoireSettings => {
         ? row.description.slice(0, MAX_REPERTOIRE_DESCRIPTION_CHARS)
         : DEFAULT_REPERTOIRE_SETTINGS.description,
     color: row.color === "black" ? "black" : DEFAULT_REPERTOIRE_SETTINGS.color,
+    showArrows:
+      typeof row.showArrows === "boolean"
+        ? row.showArrows
+        : DEFAULT_REPERTOIRE_SETTINGS.showArrows,
   };
 };
 

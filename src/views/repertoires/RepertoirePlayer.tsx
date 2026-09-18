@@ -93,10 +93,12 @@ import { useRepertoireGame } from "./useRepertoireGame";
  * - **The player's URL is a permanent link** to the position on screen:
  *   `?at=<SANs from the start>` (`lib/repertoireLink.ts`), read once when the
  *   tree lands, written back on every step with history replace.
- * - **Arrows are the reader's call**, off by default: every continuation at
- *   the node on screen, the mainline's move in its own colour
- *   (`nextMoveArrowsOf`). In the player, hovering the next-moves bar draws
- *   the hovered move's arrow either way.
+ * - **Arrows are the reader's call**: every continuation at the node on
+ *   screen, the mainline's move in its own colour (`nextMoveArrowsOf`). The
+ *   player opens as the repertoire's settings say (`showArrows`, on by
+ *   default); a game opens without them. The Settings tab switches them for
+ *   the session. In the player, hovering the next-moves bar draws the hovered
+ *   move's arrow either way.
  *
  * ## A game is the player with rules
  *
@@ -322,7 +324,11 @@ function RepertoirePlayer({
   });
   const topLine = engine.analysis.lines.find((line) => line !== undefined);
 
-  const [showArrows, setShowArrows] = useState(false);
+  // The repertoire's own view opens as its settings say (on unless the reader
+  // turned them off); a game opens without — a drill must not show the answer.
+  const [showArrows, setShowArrows] = useState(
+    game === undefined && saved.settings.showArrows,
+  );
   const [hovered, setHovered] = useState<VariationNode | null>(null);
   const continuations = useMemo(
     () =>

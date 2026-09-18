@@ -5,7 +5,11 @@ import { useLocation } from "react-router";
 
 import i18n from "../../i18n";
 import { downloadPgn } from "../../lib/pgnExport";
-import { SAVED_REPERTOIRES_STORAGE_KEY } from "../../lib/savedRepertoireStore";
+import {
+  SAVED_REPERTOIRES_STORAGE_KEY,
+  findSavedRepertoire,
+  updateRepertoireSettings,
+} from "../../lib/savedRepertoireStore";
 import {
   NEXT_MOVE_ARROW_COLOR,
   SIDELINE_NEXT_MOVE_ARROW_COLOR,
@@ -259,14 +263,9 @@ describe("the repertoire player, Autoplay on", () => {
     expect(position()).toBe(new Chess().fen());
   });
 
-  it("draws no arrows until asked, then the mainline and side lines in two colours", () => {
+  it("draws the next-move arrows as the repertoire's settings say, mainline and side lines apart", () => {
     mount(`/repertoires/${storeRepertoire("r", CARO)}`);
-    // Off by default: a drill does not show the answer.
-    expect(boardOptions().arrows).toEqual([]);
-
-    openSettings();
-    fireEvent.click(screen.getByTestId("repertoire-board-arrows").querySelector("input")!);
-    // One continuation is still drawn — unlike the reading boards.
+    // On by default (the setting's default), and one continuation is drawn too.
     expect(boardOptions().arrows).toEqual([
       { startSquare: "e2", endSquare: "e4", color: NEXT_MOVE_ARROW_COLOR },
     ]);
@@ -281,8 +280,25 @@ describe("the repertoire player, Autoplay on", () => {
       { startSquare: "d2", endSquare: "d3", color: SIDELINE_NEXT_MOVE_ARROW_COLOR },
     ]);
 
-    // And off again.
+    // Switched off for the session in the Settings tab — the record is untouched.
+    const stored = localStorage.getItem(SAVED_REPERTOIRES_STORAGE_KEY);
+    openSettings();
     fireEvent.click(screen.getByTestId("repertoire-board-arrows").querySelector("input")!);
+    expect(boardOptions().arrows).toEqual([]);
+    expect(localStorage.getItem(SAVED_REPERTOIRES_STORAGE_KEY)).toBe(stored);
+  });
+
+  it("opens without arrows when the repertoire's settings say so, and so does a game", () => {
+    storeRepertoire("r", CARO);
+    updateRepertoireSettings("r", "", { ...findSavedRepertoire("r")!.settings, showArrows: false });
+    mountIdle("/repertoires/r");
+    expect(boardOptions().arrows).toEqual([]);
+    openSettings();
+    expect(screen.getByTestId("repertoire-board-arrows").querySelector("input")).not.toBeChecked();
+  });
+
+  it("opens a game without arrows whatever the setting says", () => {
+    mountIdle(`/repertoires/${storeRepertoire("r", CARO)}/games/end`);
     expect(boardOptions().arrows).toEqual([]);
   });
 
