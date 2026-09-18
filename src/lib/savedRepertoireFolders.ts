@@ -15,7 +15,7 @@ import type { SavedRepertoire } from "./savedRepertoires";
  *
  * The one place a folder is made without the reader asking is a **split**: a
  * text of many games split into one repertoire each lands in a folder of its
- * own, named after the text, so 310 repertoires do not arrive loose in the
+ * own, named after the text, so hundreds of repertoires do not arrive loose in the
  * list.
  *
  * The pure half; the `localStorage` half and the CRUD are

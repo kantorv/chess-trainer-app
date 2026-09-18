@@ -77,7 +77,7 @@ change by whether it *adds* to that count, not by the exit code.
 | `src/lib/capturedPieces.ts` | **The captured-pieces strips' data** — `capturedOfLine` (the history-based walk: each move's optional `captured` names the piece type it took, so a promoted pawn is never a capture — the lists are never a FEN-diff), the per-side lists strongest first, `materialDiff` (the pieces each FEN carries relative to the line's own start, so a promotion is a gain for the side that made it) / `diffForSide`, and `capturedSummaryOf`, the one seam every play/analysis board composes. Pure. |
 | `src/lib/pieceMask.ts` | **Piece masking** — the `PieceMask` (true type → the type drawn in its place, all twelve), the presets, `maskedPieces` (the board's `options.pieces`) and `maskSan` / `maskSanLine` (the notation). Pure, and the only place the mask exists. |
 | `src/lib/libraryCatalog.ts` | **The shared library layer** — the types (`LibraryCategory` with its `path` and `children`, the `LibraryItem` union of `LibraryPosition` and `LibraryGame`, `LocalizedText`), `libraryCatalogOf` (the one constructor, which derives the `positions` projection from `items`), the non-throwing `loadLibraryCatalog` (a JSON-of-FEN-rows producer kept for a future section of positions — every FEN through `parseFen`, ids unique, category paths known, bad rows dropped into `problems`), the lookups, `categoryLabel` (data label or catalog key), `resolveLibraryPath` (the longest-category-prefix match a splat route needs), `libraryItemFen` and `sideToMoveOf`. Pure, section-agnostic, and the only place that knows what a library's data looks like. |
-| `src/data/pgn/` | **The Library section's data** (was "User PGNs"; dir name kept) — the project's `.pgn` files themselves: three lichess study exports (queen-vs-rook rosettes, a custom puzzle set, and nine annotated master games), the three-part Capablanca study, one **multi-study** export of an author's twenty-eight queen-vs-rook studies, and **three opening repertoires** (CTA-60) — the Alapin (310 lines in 29 `"N) "` chapters, recognised by shape alone), a complete Nimzo-Indian for Black (one chapter, and the section's stress case: 9,146 nodes in a single tree), and a 1.d4 repertoire for White (13 lines, flat — its `White` tag is the opening family rather than a chapter, hence `chapters: false`). One file is one folder — or, when it carries several `StudyName`s or is a chaptered `repertoire`, a folder of sub-folders — and each game/line inside it is one item. A folder's optional **notes** are a sibling `.mdx` of the same stem. The only thing adding content touches. |
+| `src/data/pgn/` | **The Library section's data** (was "User PGNs"; dir name kept) — the project's `.pgn` files themselves: three lichess study exports (queen-vs-rook rosettes, a custom puzzle set, and nine annotated master games), the three-part Capablanca study, one **multi-study** export of an author's twenty-eight queen-vs-rook studies, and **three opening repertoires** (CTA-60; the first two replaced by the project's own in CTA-66) — a Sicilian 2.c3 sampler (`sicilian-2c3-sampler.pgn`: 14 comment-free lines in an unnumbered chapter and five `"N) "` chapters named out of order, recognised by shape alone), a one-tree repertoire (`live-chess-2026-09-18.pgn`: one game, a manifest `kind`, and the section's stress case: 7,859 nodes and 141 side lines in a single tree), and a 1.d4 repertoire for White (13 lines, flat — its `White` tag is the opening family rather than a chapter, hence `chapters: false`). One file is one folder — or, when it carries several `StudyName`s or is a chaptered `repertoire`, a folder of sub-folders — and each game/line inside it is one item. A folder's optional **notes** are a sibling `.mdx` of the same stem. The only thing adding content touches. |
 | `src/data/pgn.json` | That section's *optional* manifest: renames, translates, nests, orders and — for the two kinds the tags cannot declare — **types** a folder. Every field is an override: a file it says nothing about still appears, one it nests but does not label is still named from its own `StudyName` tag (which the shipped entry for the master-games study relies on), `kind` forces the taxonomy read, and `chapters: false` keeps a declared `repertoire` flat rather than splitting it on its `White` tag. |
 | `src/lib/pgnLibrary.ts` | **The second producer of a `LibraryCatalog`** — `loadPgnLibrary` turns `path -> PGN text` plus that manifest into categories and `LibraryGame` items, naming each from the file's `StudyName` / a game's `ChapterName` / its players. A file carrying **more than one `StudyName`** splits into a folder of study sub-folders (`studyGroupsOf`); one with a single one, or none, is untouched. Non-throwing: a broken game, an empty file, a manifest naming a file that is not there all land in `problems`. Pure — it takes its files as a parameter. |
 | `src/lib/pgnCatalog.ts` | That loader over the shipped files, once: an eager `import.meta.glob('../data/pgn/*.pgn', { query: '?raw' })`, so Vite inlines the text at build time and the sidebar can be built from the result at module scope. Exports the shipped catalog and its `pgnKinds`, plus **`userPgnsLibrary()`** — that catalog with the reader's uploads folded in, memoised on them, which is what every screen in the section actually reads. |
@@ -779,11 +779,11 @@ It is the Saved openings section again for the list, and Repertoire v2 again
 for the board. Only the differences are written out here:
 
 - **A text of several games is not a repertoire as it stands.** A
-  Chessable-style export writes each line as its own game (the Alapin example:
-  310 games, none with a side line), and a lichess study writes each chapter as
-  one. The reader picks: **merge** them into one tree (the first game's line is
-  the mainline, each later divergence a side line — the Alapin becomes one
-  3,500-node tree; only offered when every game shares a start, and the file's
+  Chessable-style export writes each line as its own game (the shipped 2.c3
+  sampler: 14 games, none with a side line), and a lichess study writes each
+  chapter as one. The reader picks: **merge** them into one tree (the first
+  game's line is the mainline, each later divergence a side line — the sampler
+  becomes one 230-node tree with 13 side lines; only offered when every game shares a start, and the file's
   comments are not kept), or **split** them into one repertoire per game, each
   keeping its own text and named by the game, **all filed in a new folder**
   named after the text — and the reader lands inside it.
@@ -802,7 +802,7 @@ for the board. Only the differences are written out here:
   asserts it through the screen.
 - **A big tree is parsed after a paint.** `parsePgnTree` built its tree with one
   `addMove` per move, which is quadratic. It now builds in place (same ids, same
-  output), which took the 9,146-node Nimzo-Indian example from ~4.5s to ~1s.
+  output), which took a ~9,000-node one-tree repertoire from ~4.5s to ~1s.
   The remaining second is `chess.js` matching SANs, so the board parses behind a
   `setTimeout(0)` and shows that it is reading.
 - **Nothing on the board writes.** A repertoire is the record; a move tried
@@ -828,7 +828,7 @@ for the board. Only the differences are written out here:
   token reads "am I current" and "what is my eval" from a selection store
   (`views/shared/moveSelection.ts`) whose subscriptions are keyed by node, ply
   and FEN. A step re-renders two tokens and an engine message re-renders none.
-  Before, both redrew every token, which on the 9,146-node example was ~0.9s
+  Before, both redrew every token, which on a ~9,000-node repertoire was ~0.9s
   each — the engine's streamed lines alone kept the list redrawing faster than
   the reader could step. `findNode` / `pathTo` read a per-tree index
   (`lib/gameTree.ts`) instead of walking the tree, and the core memoises its
@@ -987,7 +987,7 @@ lines dropping below their branch point.
   the pointer is captured, and the click refused, only after it has travelled
   a few pixels. A game's map has no links: it is not a way to skip ahead.
 - The edges and dots are a few path strings, not an element per move, so
-  the 9,146-node example lays out in ~10ms.
+  a ~9,000-node repertoire lays out in ~10ms.
 
 **The variations explorer** (CTA-64) is the player's Moves tab — the merged
 move list of CTA-53 (`TreeMoveList` over the shared `MoveList` /

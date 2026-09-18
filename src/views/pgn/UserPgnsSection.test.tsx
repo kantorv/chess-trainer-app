@@ -965,14 +965,14 @@ const REPERTOIRE_PGN = [1, 2, 3, 4]
   .join("\n");
 
 describe("an uploaded repertoire", () => {
-  const ROOT = "uploads/alapin";
+  const ROOT = "uploads/c3-sicilian";
   const CHAPTER = `${ROOT}/2-move-1`;
   const LINE = `${CHAPTER}/line-1-1`;
 
   beforeEach(async () => {
     await i18n.changeLanguage("en");
     clearUploads();
-    addUpload("alapin.pgn", REPERTOIRE_PGN);
+    addUpload("c3-sicilian.pgn", REPERTOIRE_PGN);
   });
 
   it("is recognised by shape and shows the root as chapter folder-cards", () => {

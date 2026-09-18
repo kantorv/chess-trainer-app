@@ -104,7 +104,7 @@ type Indexed = { node: VariationNode; parent: VariationNode | null };
  * A board asks "which node is this id" and "how did the game get here" several
  * times per render — the navigation, the captured strips, the continuations —
  * and each used to be a walk of the whole tree, `pathTo`'s copying an ancestor
- * array at every node it passed. On a 9,146-node repertoire that was most of
+ * array at every node it passed. On a ~9,000-node repertoire that was most of
  * the cost of a step (CTA-61). Trees are immutable values (the module note),
  * so the index is cached against the tree's `moves` array: any operation that
  * changes the tree hands back a new array, and so a new index, while one that
@@ -314,7 +314,7 @@ export const addMove = (
  * depth, `atLevel` gets the list the path's node sits in (that node already
  * replaced by its rebuilt self) and returns the list to use instead. Only the
  * nodes on the path and the lists holding them are copied — an edit deep in a
- * 9,146-node repertoire copies a few dozen arrays, not the tree.
+ * many-thousand-node repertoire copies a few dozen arrays, not the tree.
  */
 const rebuildAlong = (
   tree: GameTree,
@@ -465,7 +465,7 @@ export const linePgn = (tree: GameTree, id: string | null): string => {
  * headers are the caller's.
  *
  * Built **in place** with a flat walk rather than one `addMove` per node,
- * which copies the tree each time — a 310-game file would be quadratic.
+ * which copies the tree each time — a file of hundreds of games would be quadratic.
  *
  * Every tree must start from `startFen`; a tree that does not is skipped, not
  * forced (its moves mean nothing from another position). The caller decides

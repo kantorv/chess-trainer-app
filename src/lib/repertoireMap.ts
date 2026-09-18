@@ -18,7 +18,7 @@ import type { Coverage } from "./repertoireGames";
  *
  * ## Why path strings, not elements
  *
- * The 9,146-node example would be nine thousand `<line>` elements. Instead the
+ * The shipped one-tree example would be nearly eight thousand `<line>` elements. Instead the
  * edges are grouped into one `d` string per kind — covered, open, the path to
  * the reader — so the map is a handful of elements whatever its size, and a
  * step redraws one short path rather than the tree.
@@ -256,7 +256,7 @@ export type MapLabel = { id: string; san: string; px: number; py: number };
 /**
  * The moves whose dots fall inside `rect` (drawing coordinates), in the
  * tree's order, at most `limit` of them — only what is on screen is written,
- * so a 9,146-node repertoire costs what is visible, not what exists.
+ * so a many-thousand-node repertoire costs what is visible, not what exists.
  */
 export const mapLabelsIn = (
   layout: MapLayout,

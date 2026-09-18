@@ -212,7 +212,7 @@ export const parsePgnTree = (pgn: string, gameNumber?: number): GameTree => {
     than one `addMove` per move. `addMove` is the right operation for a board —
     it returns a new tree, so React state can hold one — but it finds the
     parent by walking the tree and then copies every node on the way back, so a
-    whole file through it is quadratic: the 9,146-node Nimzo-Indian repertoire
+    whole file through it is quadratic: a ~9,000-node one-tree repertoire
     took seconds. Every node here is minted by this call and handed out only
     once the walk is over, so there is nothing to protect by copying.
 

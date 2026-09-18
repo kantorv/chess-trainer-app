@@ -42,7 +42,7 @@ import { menuAnchorOf, type ContextMenuNodeHandler } from "./moveContextMenu";
  * them for itself from the list's selection store (`moveSelection.ts`), and
  * everything here is memoised on the tree's own nodes — so a list renders its
  * structure once per game, and a step re-renders the two tokens whose
- * highlight changed rather than every token in a 9,146-node tree (CTA-61).
+ * highlight changed rather than every token in a many-thousand-node tree (CTA-61).
  *
  * **A right-click is opt-in** (CTA-64, the variations explorer's move menu):
  * with `onContextMenuNode` a token reports the node and where the pointer was,

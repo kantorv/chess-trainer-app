@@ -43,8 +43,8 @@ import RepertoireMergeSplit from "./RepertoireMergeSplit";
  *
  * ## The read waits for a paint
  *
- * Checking the 9,000-node Nimzo-Indian example parses every move of it — about
- * a second of main thread. The work is put behind a `setTimeout(0)` so the
+ * Checking the shipped one-tree example (7,859 nodes) parses every move of it —
+ * most of a second of main thread. The work is put behind a `setTimeout(0)` so the
  * "Reading…" state is on screen first, rather than the button appearing to
  * have done nothing while the tab stalls.
  */

@@ -6,7 +6,7 @@ import { createMoveSelection } from "./moveSelection";
 /*
   The property the move lists' speed rests on (CTA-61): a change reaches the
   tokens it concerns and **no others**. If it regressed to one flat listener
-  set, every step through a 9,146-node repertoire would ask every token again —
+  set, every step through a many-thousand-node repertoire would ask every token again —
   nothing would render wrongly, it would only be slow, which is exactly the
   kind of regression no rendering test would catch.
 */

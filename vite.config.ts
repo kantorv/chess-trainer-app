@@ -62,8 +62,8 @@ export default defineConfig({
       Raised rather than papered over per-file: the tests are not wrong and the
       work is real, so the honest fix is to stop asserting that a render
       finishes in five seconds on a loaded machine. A genuine hang still fails,
-      three times slower. The two tests that walk the 9,146-node Nimzo-Indian
-      repertoire carry their own longer timeouts, in place, where the reason is.
+      three times slower. The two tests that walk the 7,859-node one-tree
+      example repertoire carry their own longer timeouts, in place, where the reason is.
     */
     testTimeout: 20000,
     coverage: {

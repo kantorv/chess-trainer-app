@@ -31,10 +31,8 @@ const shipped = (name: string) => {
   if (text === undefined) throw new Error(`no shipped file ${name}`);
   return text;
 };
-const ALAPIN = shipped(
-  "Tame_the_Sicilian_The_Alapin_Variation_GM_Kasimdzhanov__&_GM_Ganguly.pgn",
-);
-const NIMZO = shipped("nimzo-indian-repertoire.pgn");
+const SAMPLER = shipped("sicilian-2c3-sampler.pgn");
+const ONE_TREE = shipped("live-chess-2026-09-18.pgn");
 const D4 = shipped("d2d4Variations.pgn");
 
 /** One game, a mainline with a side line: a repertoire as it stands. */
@@ -105,10 +103,14 @@ describe("reading a text on the way in", () => {
   });
 
   it("names a lichess study by its StudyName, not its chapter-suffixed Event", () => {
-    expect(repertoireNameOf(NIMZO)).toBe(
-      "Complete Nimzo-Indian Repertoire for Black by @hpy",
-    );
-    expect(repertoireNameOf(ALAPIN)).toBeUndefined();
+    expect(
+      repertoireNameOf(
+        '[Event "My French: Chapter 1"]\n[StudyName "My French"]\n\n1. e4 e6 *',
+      ),
+    ).toBe("My French");
+    // Every `Event` of the sampler is the `"?"` placeholder: no name.
+    expect(repertoireNameOf(SAMPLER)).toBeUndefined();
+    expect(repertoireNameOf(ONE_TREE)).toBe("Live Chess");
   });
 
   it("names each game: chapter and line for a Chessable file, the two tags otherwise", () => {
@@ -237,11 +239,11 @@ describe("merge", () => {
     expect(record.pgn).toContain('[Event "Caro"]');
   });
 
-  it("merges the Alapin example's 310 games into one tree that reads back whole", () => {
-    const reading = read(ALAPIN);
-    expect(reading.games).toHaveLength(310);
+  it("merges the 2.c3 sampler's 14 games into one tree that reads back whole", () => {
+    const reading = read(SAMPLER);
+    expect(reading.games).toHaveLength(14);
     expect(reading.mergeable).toBe(true);
-    const record = mergedRepertoireOf("m", reading, "Alapin", NOW)!;
+    const record = mergedRepertoireOf("m", reading, "Sampler", NOW)!;
     const merged = mergeTrees(
       reading.games.map((game) => game.tree),
       reading.games[0].tree.startFen,
@@ -249,7 +251,8 @@ describe("merge", () => {
     // What is stored is what the board reads: the written PGN parses back to
     // the same number of nodes the merge made.
     expect(repertoireTreeOf(record)?.nextId).toBe(merged.nextId);
-    expect(record.stats?.variations).toBeGreaterThan(200);
+    // Every game but the first leaves the tree somewhere: 13 side lines.
+    expect(record.stats?.variations).toBe(13);
   });
 });
 
@@ -273,13 +276,13 @@ describe("split", () => {
   });
 });
 
-describe("the one-tree Nimzo-Indian example", () => {
-  it("is one game of 9,146 nodes — a repertoire as it stands", () => {
-    // No wall-clock bound: a loaded suite run makes one flaky. For the record,
-    // the parse was ~4.5s before `parsePgnTree` built the tree in place, ~1s after.
-    const reading = read(NIMZO);
+describe("the shipped one-tree example", () => {
+  it("is one game of 7,859 nodes — a repertoire as it stands", () => {
+    // No wall-clock bound: a loaded suite run makes one flaky.
+    const reading = read(ONE_TREE);
     expect(reading.games).toHaveLength(1);
-    expect(reading.games[0].tree.nextId).toBe(9147);
+    expect(reading.games[0].tree.nextId).toBe(7860);
+    expect(countVariations(reading.games[0].tree)).toBe(141);
   });
 });
 
