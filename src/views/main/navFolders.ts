@@ -2,6 +2,7 @@ import type { SvgIconComponent } from "@mui/icons-material";
 import AccountTreeRoundedIcon from "@mui/icons-material/AccountTreeRounded";
 import FolderSpecialRoundedIcon from "@mui/icons-material/FolderSpecialRounded";
 import HandymanRoundedIcon from "@mui/icons-material/HandymanRounded";
+import MenuBookRoundedIcon from "@mui/icons-material/MenuBookRounded";
 import MemoryRoundedIcon from "@mui/icons-material/MemoryRounded";
 import TravelExploreRoundedIcon from "@mui/icons-material/TravelExploreRounded";
 import VisibilityOffRoundedIcon from "@mui/icons-material/VisibilityOffRounded";
@@ -111,6 +112,16 @@ export const navFolders = (): readonly NavFolder[] => [
     // for, so the folder renders as one clickable row to it and the board
     // view leaves the sidebar entirely — it is the saved list's New button.
     singleEntry: true,
+  },
+  /*
+    The reader's own repertoires (CTA-61): the list and the screen they are
+    brought in on. A repertoire's board is reached from its row, not from here —
+    `/repertoires/<id>` is a route, not a nav entry, like a library item.
+  */
+  {
+    id: "repertoires",
+    labelKey: "nav.folders.repertoires",
+    icon: MenuBookRoundedIcon,
   },
   /*
     The Development section (CTA-60) — the boards composed from the unified

@@ -26,6 +26,9 @@ const en = {
     savedAnalyses: "Saved analyses",
     boardEditor: "Board Editor",
     savedOpenings: "Saved openings",
+    /** The reader's own repertoires (CTA-61), and the screen they come in on. */
+    repertoires: "My repertoires",
+    addRepertoire: "Add repertoire",
     /** Sidebar folders — groupings over the routes, never routes themselves. */
     folders: {
       engine: "Engine",
@@ -34,6 +37,7 @@ const en = {
       tools: "Tools",
       analysisBoard: "Analysis Board",
       openings: "Openings",
+      repertoires: "Repertoires",
       /**
        * The Library section's root (was "User PGNs" before CTA-38). Its
        * sub-folders have no key here and never will: they are generated — one
@@ -824,6 +828,73 @@ const en = {
     leftPanel: {
       ariaLabel: "Other items in {{category}}",
       close: "Close",
+    },
+  },
+  /**
+   * The **Repertoires** section (CTA-61) — the reader's own opening
+   * repertoires, brought in as a `.pgn` file or pasted text, listed like the
+   * saved screens and read on the unified v2 board. The list reuses the
+   * saved-list machinery, which reads `view.*`, `remove`, `select`,
+   * `selectAll`, `selected` and `download` out of this block.
+   */
+  repertoires: {
+    title: "Repertoires",
+    count: "Repertoires: {{count}}",
+    empty:
+      "No repertoires yet. Add one from a .pgn file, or paste its PGN, and it appears here.",
+    hint: "Your own opening repertoires. Open one to read its lines on the board, side lines and all, with the engine beside you.",
+    storage:
+      "Repertoires are kept in this browser only. Clearing site data removes them, and they do not follow you to another device.",
+    /** A repertoire whose tags carry no name and the reader typed none. */
+    untitled: "Untitled repertoire",
+    lines_one: "{{count}} line",
+    lines_other: "{{count}} lines",
+    chapters_one: "{{count}} chapter",
+    chapters_other: "{{count}} chapters",
+    view: {
+      label: "View",
+      list: "List",
+      compact: "Small boards",
+      comfortable: "Big boards",
+    },
+    open: "Open",
+    add: "Add",
+    remove: "Delete this repertoire",
+    select: "Select this repertoire",
+    selectAll: "Select all repertoires",
+    selected: "{{count}} selected",
+    download: "Download selected as PGN",
+    /** The screen a repertoire is brought in on. */
+    upload: {
+      title: "Add a repertoire",
+      intro:
+        "Choose a .pgn file, or paste its text below. Both are read the same way: every line is checked before anything is kept.",
+      name: "Name",
+      nameHelp: "Leave empty to take the name from the file's own tags.",
+      pick: "Choose a .pgn file",
+      paste: "…or paste PGN here",
+      save: "Add pasted PGN",
+      reading: "Reading…",
+      problem: {
+        empty: "That holds no PGN.",
+        "too-large": "That is too large to keep in this browser.",
+        unreadable: "No line in it could be read.",
+        storage:
+          "It could not be saved — this browser's storage is full or unavailable.",
+      },
+    },
+    /** The board a repertoire is read on. */
+    detail: {
+      missing: "There is no such repertoire in this browser.",
+      back: "Back to repertoires",
+      loading: "Reading this line…",
+      unreadableLine: "This line could not be read.",
+      tabs: {
+        lines: "Lines",
+        moves: "Moves",
+        tree: "Tree",
+        engine: "Engine",
+      },
     },
   },
   footer: {
