@@ -18,12 +18,18 @@ import {
   useScrollWhenCurrent,
 } from "./moveSelection";
 import { VariationBlock } from "./VariationLine";
+import {
+  menuAnchorOf,
+  type ContextMenuNodeHandler,
+  type MenuAnchor,
+} from "./moveContextMenu";
 
 /**
  * The lichess-style move list: numbered pairs, the current ply highlighted,
  * every move a jump target.
  *
- * A branching game renders here too (CTA-53): its side lines arrive as the
+ * A branching game renders here too (CTA-53) — which is what makes this list,
+ * behind `TreeMoveList`, the **variations explorer**: its side lines arrive as the
  * optional `branches` prop and hang as indented runs under the mainline move
  * each branches from, inside this list — which is how the Analysis Board's
  * Moves tab shows one list instead of printing the mainline twice, once here
@@ -113,6 +119,15 @@ type MoveListProps = {
    */
   extensionIds?: ReadonlySet<string>;
   extensionPlies?: ReadonlySet<number>;
+  /**
+   * A right-click on a move (CTA-64 — the variations explorer's move menu):
+   * numbered cells report their ply, side-line tokens their node, each with
+   * the pointer's position, and the browser's own menu is held back. Opt-in:
+   * without them nothing is bound, which is every consumer but the repertoire
+   * player. They are part of the memoised structure, so they must be stable.
+   */
+  onContextMenuPly?: (ply: number, anchor: MenuAnchor) => void;
+  onContextMenuNode?: ContextMenuNodeHandler;
 };
 
 /**
@@ -188,6 +203,7 @@ const MoveCell = memo(function MoveCell({
   text,
   hasComment,
   onSelect,
+  onContextMenu,
 }: {
   move: GameMove | null;
   /** What to print for it — its SAN, or the mask's rewrite of it. */
@@ -195,12 +211,21 @@ const MoveCell = memo(function MoveCell({
   /** Whether the PGN carries an annotation for this move (see `annotatedPlies`). */
   hasComment: boolean;
   onSelect: (ply: number) => void;
+  onContextMenu?: (ply: number, anchor: MenuAnchor) => void;
 }) {
   if (move === null) {
     // A game that starts with Black to move opens with an empty White slot.
     return <Box aria-hidden sx={{ ...cellSx, visibility: "hidden" }} />;
   }
-  return <FilledCell move={move} text={text} hasComment={hasComment} onSelect={onSelect} />;
+  return (
+    <FilledCell
+      move={move}
+      text={text}
+      hasComment={hasComment}
+      onSelect={onSelect}
+      onContextMenu={onContextMenu}
+    />
+  );
 });
 
 /** A cell with a move in it — the hooks live here, behind the empty-slot branch. */
@@ -209,11 +234,13 @@ function FilledCell({
   text,
   hasComment,
   onSelect,
+  onContextMenu,
 }: {
   move: GameMove;
   text: string;
   hasComment: boolean;
   onSelect: (ply: number) => void;
+  onContextMenu?: (ply: number, anchor: MenuAnchor) => void;
 }) {
   const isCurrent = useIsCurrentPly(move.ply);
   const isExtension = useIsExtensionPly(move.ply);
@@ -230,6 +257,14 @@ function FilledCell({
       data-extension={isExtension ? "true" : undefined}
       aria-current={isCurrent ? "true" : undefined}
       onClick={() => onSelect(move.ply)}
+      onContextMenu={
+        onContextMenu === undefined
+          ? undefined
+          : (event) => {
+              event.preventDefault();
+              onContextMenu(move.ply, menuAnchorOf(event));
+            }
+      }
       sx={{
         ...cellSx,
         ...sanTokenSx,
@@ -319,6 +354,8 @@ function MoveList({
   onSelectNode,
   extensionIds,
   extensionPlies,
+  onContextMenuPly,
+  onContextMenuNode,
 }: MoveListProps) {
   const { t } = useTranslation();
   const rows = useMemo(() => moveRowsOf(game), [game]);
@@ -375,6 +412,7 @@ function MoveList({
           node={node}
           startFen={startFen}
           onSelectNode={onSelectNode}
+          onContextMenuNode={onContextMenuNode}
           groupLabel={t("moveList.variation")}
         />
       ));
@@ -431,6 +469,7 @@ function MoveList({
                       (annotatedPlies?.has(row.white.ply) ?? false)
                     }
                     onSelect={onSelectPly}
+                    onContextMenu={onContextMenuPly}
                   />
                   <MoveCell
                     move={row.black}
@@ -440,6 +479,7 @@ function MoveList({
                       (annotatedPlies?.has(row.black.ply) ?? false)
                     }
                     onSelect={onSelectPly}
+                    onContextMenu={onContextMenuPly}
                   />
                 </Box>
                 {/*
@@ -455,7 +495,18 @@ function MoveList({
         )}
       </>
     );
-  }, [rows, maskedSan, branches, startFen, onSelectNode, onSelectPly, annotatedPlies, t]);
+  }, [
+    rows,
+    maskedSan,
+    branches,
+    startFen,
+    onSelectNode,
+    onSelectPly,
+    onContextMenuNode,
+    onContextMenuPly,
+    annotatedPlies,
+    t,
+  ]);
 
   return (
     <MoveSelectionContext.Provider value={selection}>

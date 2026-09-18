@@ -20,7 +20,7 @@ screen composes which of them, and with what wiring**. So each improvement had
 to be re-applied by hand, and four of them were re-applied to two screens and
 forgotten on three:
 
-| | CTA-50/51 per-FEN evals | CTA-53 merged move list | CTA-54 next-moves bar | CTA-55 pinned click-to-play variations |
+| | CTA-50/51 per-FEN evals | CTA-53 merged move list (now the variations explorer) | CTA-54 next-moves bar | CTA-55 pinned click-to-play variations |
 | --- | --- | --- | --- | --- |
 | Analysis Board | ✅ | ✅ | ✅ | ✅ |
 | Play with Engine | ✅ | ❌ | ❌ | ❌ |
@@ -126,6 +126,7 @@ Exactly this, and a screen reads nothing else off the base:
 | `appendMove` | `(move) => boolean` | Add at the **end of the mainline** — the engine's reply. |
 | `playVariation` | `(sans) => void` | Replay a SAN prefix under the node on screen (CTA-55). |
 | `loadTree` / `loadFen` / `reset` | | Replace the whole game; `loadFen` also turns the board. |
+| `replaceTree` | `(tree) => void` | Replace the tree with an **edit of itself** (CTA-64 — promote, make main line, delete from here) *without* `loadTree`'s step to the start: the node on screen stays when it survived, else its nearest surviving ancestor. Marks dirty. |
 | `dirty` / `markDirty` | `boolean` / `() => void` | Whether this board is the reader's own work. |
 | `pgn` | `string` | `treeToPgn(tree)` — what a Position tab copies. |
 
@@ -435,7 +436,7 @@ Every `/dev/*` screen, and exactly what it picks. Nothing else differs.
 | **Masked v2** | `/dev/masked` | Play v2's, verbatim | ✅ switch, **reply** | header line only | ❌ (a mask cannot be restored on `/dev/play`) | Moves · Engine · Mask | Play v2's | Play v2's | `pieces: maskedPieces(mask)` |
 | **Openings v2** | `/dev/openings` | `?fen=`, `?openings=` | ✅ switch, no reply | ✅ continuations + arrows | ❌ **button-triggered save** | Moves · Engine · Tree | opening + Save + switch | the explorer list | book arrows |
 | **Repertoire v2** | `/dev/repertoire` | `?game=library/<path>/<id>` | ✅ switch, no reply | header line only | ❌ (a shipped file is not the reader's work) | Moves · Engine · Tree · Info | opening + switch | next-moves bar | next-move arrows |
-| **Repertoire player** (shipped, CTA-63) | `/repertoires/<id>`, and `/games/<end\|backtrack>` | `orientation`: the reader's side | ✅ switch, **off by default**, no reply — the opponent is **`useTrainerModule`** (§2.5): behind Autoplay in the player, always in a game (game mode, a game's policy and required moves from `useRepertoireGame`) | ❌ | ❌ (session-only; leaves by download) | Moves (extensions tinted) · Score (games) · Map (the player's; Backtracking's with coverage) · Settings (side, Autoplay, arrows, engine switch) · Engine (disabled while off) | name + opening + Games menu + restart + download + settings link (a game: its title, back) | next-moves bar, or the trainer's status line | next-move arrows (off by default); a required move's arrow |
+| **Repertoire player** (shipped, CTA-63) | `/repertoires/<id>`, and `/games/<end\|backtrack>` | `orientation`: the reader's side | ✅ switch, **off by default**, no reply — the opponent is **`useTrainerModule`** (§2.5): behind Autoplay in the player, always in a game (game mode, a game's policy and required moves from `useRepertoireGame`) | ❌ | ❌ (session-only; leaves by download) | Moves — the variations explorer (extensions tinted; the player's right-click move menu, CTA-64) · Score (games) · Map (the player's; Backtracking's with coverage) · Settings (side, Autoplay, arrows, engine switch) · Engine (disabled while off) | name + opening + Games menu + restart + download + settings link (a game: its title, back) | next-moves bar, or the trainer's status line | next-move arrows (off by default); a required move's arrow |
 
 **Next-move arrows are one helper.** `nextMoveArrowsOf` (`views/tools/analysis/nextMoveArrows.ts`)
 builds the arrows for a position's continuations — `children[0]`, the
@@ -602,6 +603,7 @@ what a screen gains:
 | `src/views/dev/core/useTrainerModule.ts` + `src/lib/repertoireTrainer.ts` | §2.5 — the repertoire trainer: the reply guard and timer (the module), the policy and the extension fold (pure). |
 | `src/views/dev/core/BoardShell.tsx` | §3.1 — the board square, over the shared `EngineBoardSquare`. |
 | `src/views/dev/core/BoardPanel.tsx` | §3.2 — **the** panel skeleton and the pinned variations block. |
+| `src/views/dev/core/TreeMoveList.tsx` + `MoveContextMenu.tsx` | **The variations explorer** — the merged move list of CTA-53 (the shared `MoveList` / `VariationLine` over a tree, the ply↔node seam) — and, opt-in through `onEditTree`, its right-click move menu (CTA-64): promote, make main line, delete from here, copy variation PGN, over the pure edits in `lib/gameTree.ts`. The repertoire player passes it; its games and the five dev boards do not. |
 | `src/views/dev/analysis/` · `play/` · `masked/` · `openings/` · `repertoire/` | §4 — the five derived boards. |
 | `src/views/dev/devNav.ts` | The dev-gated sidebar folder and its entries. |
 | `src/views/dev/devBoards.test.tsx` | The five boards rendered for real: the shared square, the shared skeleton, and the one thing each board keeps as its own. |
