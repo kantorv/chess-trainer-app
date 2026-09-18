@@ -737,6 +737,20 @@ const he: typeof en = {
         required: "שחקו את המסע המסומן: שאר הקווים מכאן כבר כוסו.",
       },
     },
+    annotations: {
+      title: "הערה",
+      before: "לפני המסע",
+      keys: {
+        eval: "הערכה",
+        depth: "עומק",
+        mate: "מט בעוד",
+        assessment: "הערכת עמדה",
+        clk: "שעון",
+        emt: "זמן שנוצל",
+        cal: "חצים",
+        csl: "משבצות",
+      },
+    },
     changes: {
       title: "שינויים שלא נשמרו",
       saveOpen: "שינויים שלא נשמרו — שמירה או ביטול",

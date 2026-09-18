@@ -29,9 +29,11 @@ import {
   emptyTree,
   findNode,
   pathTo,
+  plyLabel,
   type GameTree,
   type VariationNode,
 } from "../../lib/gameTree";
+import { annotationsAt } from "../../lib/moveAnnotations";
 import { downloadPgn } from "../../lib/pgnExport";
 import { atParamOf, nodeAtParam, REPERTOIRE_AT_PARAM } from "../../lib/repertoireLink";
 import { slugify } from "../../lib/pgnLibrary";
@@ -66,6 +68,7 @@ import {
   nextMoveArrowsOf,
   REQUIRED_MOVE_ARROW_COLOR,
 } from "../tools/analysis/nextMoveArrows";
+import RepertoireAnnotationsBar from "./RepertoireAnnotationsBar";
 import RepertoireChangesBar from "./RepertoireChangesBar";
 import RepertoireGamesMenu from "./RepertoireGamesMenu";
 import RepertoireMap from "./RepertoireMap";
@@ -446,6 +449,22 @@ function RepertoirePlayer({
     there does not (`addMove`), so this holds for the moves added today and
     for any edit that comes later, with nothing to keep in step.
   */
+  /*
+    What the PGN says at the position on screen (CTA-69): the comment block
+    above the footer. The player's only — a game is a test, and "better is
+    14...b4" would answer it.
+  */
+  const annotations = useMemo(
+    () => (game === undefined && shown === "ready" ? annotationsAt(core.tree, core.nodeId) : null),
+    [game, shown, core.tree, core.nodeId],
+  );
+  const annotatedLabel = useMemo(() => {
+    const node = findNode(core.tree, core.nodeId);
+    if (node === null) return t("moveList.startPosition");
+    const { number, isWhiteMove } = plyLabel(core.tree.startFen, node.ply);
+    return `${number}${isWhiteMove ? "." : "…"} ${node.san}`;
+  }, [core.tree, core.nodeId, t]);
+
   const navigate = useNavigate();
   const changed = game === undefined && shown === "ready" && core.tree !== repertoire;
   const [saveProblem, setSaveProblem] = useState<SavedRepertoireProblem | null>(null);
@@ -846,6 +865,13 @@ function RepertoirePlayer({
         footer:
           shown !== "ready" ? undefined : (
             <>
+              {annotations !== null && (
+                <RepertoireAnnotationsBar
+                  testId={`${id}-annotations`}
+                  label={annotatedLabel}
+                  annotations={annotations}
+                />
+              )}
               {changed && changesOpen && (
                 <RepertoireChangesBar
                   testId={`${id}-changes`}

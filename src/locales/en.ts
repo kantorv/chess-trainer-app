@@ -1082,6 +1082,29 @@ const en = {
       },
     },
     /**
+     * The comment block (CTA-69): what the PGN says at the position on
+     * screen — its comments, and the attributes read out of them.
+     */
+    annotations: {
+      title: "Comment",
+      /** The comment opening a variation, above the ones after its move. */
+      before: "Before this move",
+      /**
+       * An attribute's name. `[%key value]` commands the app does not know
+       * print their own key; these are the ones it does.
+       */
+      keys: {
+        eval: "Eval",
+        depth: "Depth",
+        mate: "Mate in",
+        assessment: "Assessment",
+        clk: "Clock",
+        emt: "Time spent",
+        cal: "Arrows",
+        csl: "Squares",
+      },
+    },
+    /**
      * What to do with a session's changes to a repertoire (CTA-63) — the strip
      * the player shows while there are any.
      */
