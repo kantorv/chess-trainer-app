@@ -963,8 +963,13 @@ const en = {
      * Playing a repertoire against the trainer (`/repertoires/<id>/play`,
      * CTA-63) — a scripted opponent that answers only from the repertoire.
      */
+    /** The games a repertoire is played as (CTA-63) — `lib/repertoireGames.ts`. */
+    games: {
+      open: "Games",
+      end: { title: "Get to the end" },
+      backtrack: { title: "Backtracking" },
+    },
     play: {
-      open: "Play",
       side: "Your side",
       white: "White",
       black: "Black",
@@ -981,9 +986,9 @@ const en = {
       arrows: "Show next-move arrows",
       arrowsHelp:
         "Arrows for the moves that follow the position on the board: the main line in green, side lines in blue.",
-      gameMode: "Game mode",
-      gameModeHelp:
-        "Test yourself: each of your moves is marked right or wrong. A move the repertoire doesn't have is taken back so you can try again, and your score is kept in the Score tab.",
+      autoplay: "Autoplay",
+      autoplayHelp:
+        "The trainer answers your moves from the repertoire, picking among its lines at random. Off, you move both sides.",
       tabs: {
         settings: "Settings",
         score: "Score",
@@ -995,6 +1000,10 @@ const en = {
         accuracy: "Accuracy",
         help: "Each position counts once: your first try there. Retries after a wrong move don't count again. The score is for this session only.",
         reset: "Reset score",
+        startOver: "Start over",
+        finished_one: "{{count}} line finished",
+        finished_other: "{{count}} lines finished",
+        covered: "Lines covered: {{covered}} of {{total}}",
       },
       status: {
         thinking: "The trainer is choosing a move…",
@@ -1002,6 +1011,10 @@ const en = {
         outOfBook:
           "The repertoire ends here. Every move you play now adds to it.",
         tryAgain: "That move isn't in the repertoire. Try again.",
+        lineComplete: "You reached the end of this line. Restart for another.",
+        lineCovered: "Line covered. Going back to the next line to cover…",
+        allCovered: "Every line is covered. Well done!",
+        required: "Play the marked move: the other lines from here are already covered.",
       },
     },
     /** The board a repertoire is read on. */

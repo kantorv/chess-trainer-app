@@ -85,8 +85,13 @@ export const pickTrainerMove: TrainerPolicy = (
   repertoire,
   nodeId,
   random = Math.random,
-) => {
-  const moves = repertoireMovesAt(repertoire, nodeId);
+) => pickUniform(repertoireMovesAt(repertoire, nodeId), random);
+
+/** One of `moves`, each equally likely; `undefined` when there are none. */
+export const pickUniform = (
+  moves: readonly VariationNode[],
+  random: () => number = Math.random,
+): VariationNode | undefined => {
   if (moves.length === 0) return undefined;
   // Clamped: a source that returns exactly 1 must not read past the end.
   const index = Math.min(moves.length - 1, Math.floor(random() * moves.length));
@@ -127,14 +132,19 @@ export const extensionIdsOf = (
  *
  * - `unjudged` — nothing to judge: the repertoire has no move here (its line
  *   ended, or the reader left it), or the drop is not a legal move at all;
- * - `book` — one of the repertoire's moves. For a promotion, `promotions`
- *   lists the pieces the repertoire promotes to (`"q"`, `"n"`, …), and the
- *   verdict waits for the picker;
+ * - `book` — one of the repertoire's moves; `nodes` are the repertoire's
+ *   nodes it can be (several only for a promotion). For a promotion,
+ *   `promotions` lists the pieces the repertoire promotes to (`"q"`, `"n"`,
+ *   …), and the verdict waits for the picker;
  * - `wrong` — a legal move the repertoire does not have.
  */
 export type DropJudgement =
   | { kind: "unjudged" }
-  | { kind: "book"; promotions?: ReadonlySet<string> }
+  | {
+      kind: "book";
+      nodes: readonly VariationNode[];
+      promotions?: ReadonlySet<string>;
+    }
   | { kind: "wrong" };
 
 /**
@@ -171,7 +181,9 @@ export const judgeDrop = (
       return piece === undefined ? [] : [piece.toLowerCase()];
     }),
   );
-  return promotions.size > 0 ? { kind: "book", promotions } : { kind: "book" };
+  return promotions.size > 0
+    ? { kind: "book", nodes: matches, promotions }
+    : { kind: "book", nodes: matches };
 };
 
 /** What one judged position came to. */

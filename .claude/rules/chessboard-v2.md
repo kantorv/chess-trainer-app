@@ -290,10 +290,12 @@ const trainer = useTrainerModule({
   delayMs?: number,
   drill?: boolean,                  // game mode: judge the reader's moves, take a wrong one back
   onJudged?: (verdict: "success" | "fail") => void,  // once per position — the first try's
+  required?: VariationNode[],       // a game's constraint: the moves the reader must choose from here
 });
 // → { status: "trainer-thinking" | "your-move" | "out-of-book" | "try-again",
 //     onPieceDrop, resolvePromotion,   // hand these to BoardShell in place of the core's
-//     requestReply(at) }               // "the session starts here"
+//     requestReply(at),                // "the session starts here"
+//     arrival }                        // where the last PLAYED move landed, while on screen
 ```
 
 A scripted opponent that answers **only from a repertoire**. What it owns:
@@ -321,6 +323,13 @@ A scripted opponent that answers **only from a repertoire**. What it owns:
   retries after a failure count nothing, and `requestReply` (a restart)
   judges the line afresh. Verdicts go out through `onJudged`; the status is
   `try-again` while a wrong try stands.
+- **`required` and `arrival`, for the games.** A repertoire move outside
+  `required` is refused in game mode, unjudged (Backtracking: a right move,
+  but a finished line's). `arrival` is the node the last *played* move —
+  reader's or trainer's — landed on, `null` after navigation, so a game
+  reads "a line was just finished" off it and navigating onto a line's end
+  never counts. The games' rules are `lib/repertoireGames.ts`; their session
+  state is the screen's (`useRepertoireGame`).
 
 **Adding a policy, a scoring rule or a mode.** A new trainer (weighted,
 mainline-first, spaced repetition) is a new function of type `TrainerPolicy`
@@ -426,7 +435,7 @@ Every `/dev/*` screen, and exactly what it picks. Nothing else differs.
 | **Masked v2** | `/dev/masked` | Play v2's, verbatim | ✅ switch, **reply** | header line only | ❌ (a mask cannot be restored on `/dev/play`) | Moves · Engine · Mask | Play v2's | Play v2's | `pieces: maskedPieces(mask)` |
 | **Openings v2** | `/dev/openings` | `?fen=`, `?openings=` | ✅ switch, no reply | ✅ continuations + arrows | ❌ **button-triggered save** | Moves · Engine · Tree | opening + Save + switch | the explorer list | book arrows |
 | **Repertoire v2** | `/dev/repertoire` | `?game=library/<path>/<id>` | ✅ switch, no reply | header line only | ❌ (a shipped file is not the reader's work) | Moves · Engine · Tree · Info | opening + switch | next-moves bar | next-move arrows |
-| **Play repertoire** (shipped, CTA-63) | `/repertoires/<id>/play` | `orientation`: the reader's side | ✅ switch, **off by default**, no reply — the opponent is **`useTrainerModule`** (§2.5) | ❌ | ❌ (session-only; leaves by download) | Moves (extensions tinted) · Score (only in game mode) · Settings (side, game mode, arrows, engine switch) · Engine (disabled while off) | name + restart + download + back | the trainer's status line | next-move arrows, **off by default** |
+| **Repertoire player** (shipped, CTA-63) | `/repertoires/<id>`, and `/games/<end\|backtrack>` | `orientation`: the reader's side | ✅ switch, **off by default**, no reply — the opponent is **`useTrainerModule`** (§2.5): behind Autoplay in the player, always in a game (game mode, a game's policy and required moves from `useRepertoireGame`) | ❌ | ❌ (session-only; leaves by download) | Moves (extensions tinted) · Score (games) · Settings (side, Autoplay, arrows, engine switch) · Engine (disabled while off) | name + opening + Games menu + restart + download + settings link (a game: its title, back) | next-moves bar, or the trainer's status line | next-move arrows (off by default); a required move's arrow |
 
 **Next-move arrows are one helper.** `nextMoveArrowsOf` (`views/tools/analysis/nextMoveArrows.ts`)
 builds the arrows for a position's continuations — `children[0]`, the
@@ -562,8 +571,8 @@ what a screen gains:
   is the first shipped screen composed from the core, so `useBoardCore`,
   `useEngineModule`, `BoardShell`, `BoardPanel` and `TreeMoveList` are in the
   production bundle by design — imported statically from `views/dev/core/`,
-  where they still live. Since CTA-63 `useTrainerModule` ships too, in the
-  Play repertoire screen's lazy chunk. What the gate keeps out is unchanged: the five
+  where they still live. Since CTA-63 `useTrainerModule` ships too — the
+  repertoire player is a repertoire's own view. What the gate keeps out is unchanged: the five
   derived `/dev/*` boards, `devNav.ts` and `devStores.ts` (the dev-prefixed
   keys), none of which a shipped screen imports. A shipped screen must not
   import `devStores.ts` or anything outside `core/`.
@@ -598,6 +607,6 @@ what a screen gains:
 | `src/views/dev/devBoards.test.tsx` | The five boards rendered for real: the shared square, the shared skeleton, and the one thing each board keeps as its own. |
 | `src/views/dev/devPanelPropagation.test.tsx` | The propagation assertion of §0 — `BoardPanel` replaced by a sentinel. |
 | `src/views/dev/core/devStores.test.ts` | The dev/shipped key isolation of §2.4, in both directions. |
-| `src/views/repertoires/RepertoireBoard.tsx` | The first **shipped** board composed from the core (CTA-61) — Repertoire v2 over the reader's own one-game repertoire. `RepertoirePropagation.test.tsx` puts it under the same propagation assertion as the five dev boards. |
-| `src/views/repertoires/RepertoirePlay.tsx` | The second shipped board on the core (CTA-63) — a repertoire drilled against the trainer (§2.5), under the same propagation assertion. |
+| `src/views/repertoires/RepertoireBoard.tsx` | The first **shipped** board composed from the core (CTA-61) — Repertoire v2 over the reader's own one-game repertoire; since CTA-63 the route over the player below. `RepertoirePropagation.test.tsx` puts it under the same propagation assertion as the five dev boards. |
+| `src/views/repertoires/RepertoirePlayer.tsx` | Since CTA-63 the screen behind `RepertoireBoard.tsx` and `RepertoireGame.tsx` — the repertoire player and its games, the trainer (§2.5) as the opponent. Both routes are under the same propagation assertion. |
 | `src/views/dev/devTestHarness.tsx` | The `Engine` and `<Chessboard>` stand-ins §8 of `chessboard.md` requires, written once for five boards. |

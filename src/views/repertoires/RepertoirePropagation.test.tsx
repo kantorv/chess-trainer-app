@@ -53,32 +53,32 @@ describe("the repertoire board is composed, not written", () => {
     expect(panels).toHaveLength(1);
     expect(panels[0]).toHaveAttribute("data-panel-id", "repertoire-board-panel");
     // The slots this screen fills.
-    expect(screen.getByTestId("panel-tab-ids")).toHaveTextContent("moves,engine");
+    expect(screen.getByTestId("panel-tab-ids")).toHaveTextContent("moves,settings,engine");
 
     const squares = screen.getAllByTestId("the-one-board-square");
     expect(squares).toHaveLength(1);
     expect(squares[0]).toHaveAttribute("data-square-id", "repertoire-board");
   });
 
-  // The Play repertoire screen (CTA-63) is under the same guarantee: the
-  // trainer is a module, not a panel of its own.
-  it("plays a repertoire on the same shared panel and square", () => {
+  // The repertoire games (CTA-63) are under the same guarantee: the trainer
+  // and a game's rules are modules, not a panel of their own.
+  it.each(["end", "backtrack"])("plays the %s game on the same shared panel and square", (game) => {
     vi.useFakeTimers();
     try {
       storeRepertoire("r");
-      renderSection("/repertoires/r/play");
+      renderSection(`/repertoires/r/games/${game}`);
       act(() => {
         vi.advanceTimersByTime(0);
       });
 
       const panels = screen.getAllByTestId("the-one-board-panel");
       expect(panels).toHaveLength(1);
-      expect(panels[0]).toHaveAttribute("data-panel-id", "repertoire-play-panel");
-      expect(screen.getByTestId("panel-tab-ids")).toHaveTextContent("moves,settings,engine");
+      expect(panels[0]).toHaveAttribute("data-panel-id", "repertoire-game-panel");
+      expect(screen.getByTestId("panel-tab-ids")).toHaveTextContent("moves,score,settings,engine");
 
       const squares = screen.getAllByTestId("the-one-board-square");
       expect(squares).toHaveLength(1);
-      expect(squares[0]).toHaveAttribute("data-square-id", "repertoire-play");
+      expect(squares[0]).toHaveAttribute("data-square-id", "repertoire-game");
     } finally {
       vi.useRealTimers();
     }
