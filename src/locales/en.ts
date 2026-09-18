@@ -973,6 +973,8 @@ const en = {
       back: "Back to the board",
       /** The engine's switch — off by default: a drill does not show the answer. */
       engine: "Engine",
+      engineHelp:
+        "Shows the engine's best lines above the tabs and the evaluation bar. It never plays a move; its settings are in the Engine tab.",
       sideHelp:
         "The trainer plays the other side. Changing it starts again from the first move; what you added is kept.",
       /** The switch that draws the next-move arrows — off by default. */

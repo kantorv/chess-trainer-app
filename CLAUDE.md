@@ -864,12 +864,13 @@ RepertoirePlay.tsx ── BoardShell / BoardPanel ── TreeMoveList(extensionI
   list tints them (`success.main`, a theme token) through the optional
   `extensionIds` on `TreeMoveList` → `MoveList`, read per token from the
   selection store like the highlight; every other consumer passes none.
-- **Three tabs: Moves · Engine · Settings.** The session's knobs — the side
-  and the arrows — are in the Settings tab; the Engine tab is the other
-  boards' own; the header keeps the engine's switch and the actions
+- **Three tabs: Moves · Settings · Engine.** The session's knobs — the side,
+  the arrows and the engine's switch — are in the Settings tab; the Engine
+  tab is the other boards' own and is **disabled while the engine is off**
+  (`BoardPanel`'s optional per-tab `disabled`). The header keeps the actions
   (restart, download, back). Moves stays mounted while another tab shows.
-- **The engine is off by default, and never an opponent.** A header switch,
-  as on the repertoire board: on, it searches the position on screen and
+- **The engine is off by default, and never an opponent.** Switched on in
+  Settings, it searches the position on screen and
   fills the pinned best-variations block and the eval bar; it passes no
   `onBestMove`, so it never moves a piece. A line clicked in the block is
   played under the node on screen as exploration — the trainer does not
