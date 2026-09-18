@@ -154,8 +154,8 @@ import { useRepertoireGame } from "./useRepertoireGame";
  *   repertoire as a tree (`RepertoireMap.tsx`): covered lines, the rest, and
  *   where the reader is.
  *
- * The tree is parsed after a paint, behind a `setTimeout(0)`: the 9,146-node
- * example takes about a second.
+ * The tree is parsed after a paint, behind a `setTimeout(0)`: a many-thousand-
+ * node repertoire takes about a second.
  */
 
 /**

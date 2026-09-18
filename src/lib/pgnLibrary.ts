@@ -579,7 +579,7 @@ export const loadPgnLibrary = (
 
     /*
       A repertoire is recognised first, because it is otherwise `games` — no
-      `StudyName`, so the branch below would file 310 flat cards. A manifest
+      `StudyName`, so the branch below would file every line as a flat card. A manifest
       `kind` wins; an undeclared file falls to the structural heuristic.
     */
     const declaredKind = entry?.kind;

@@ -11,7 +11,7 @@ import { formatScore, type Score } from "../../lib/engineAnalysis";
 
 /**
  * **What a move list highlights, kept out of its props** — the reason a step
- * through a 9,146-node repertoire re-renders two tokens rather than all of
+ * through a many-thousand-node repertoire re-renders two tokens rather than all of
  * them (CTA-61).
  *
  * A move list's *structure* — which tokens exist, in what order, under which

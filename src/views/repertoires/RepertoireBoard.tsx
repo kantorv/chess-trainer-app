@@ -47,8 +47,8 @@ function RepertoireBoard() {
 }
 
 /**
- * A record from before the one-game rule: read (after a paint — the Alapin
- * example is 310 games) and offered the merge-or-split choice in its place.
+ * A record from before the one-game rule: read (after a paint — such a text
+ * can hold hundreds of games) and offered the merge-or-split choice in its place.
  */
 export function MultiGameRepertoire({ saved }: { saved: SavedRepertoire }) {
   const { t } = useTranslation();
