@@ -817,3 +817,73 @@ describe("the variations explorer's move menu (CTA-64)", () => {
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
   });
 });
+
+describe("the header's Play button (CTA-65)", () => {
+  const play = () => screen.getByTestId("repertoire-board-play");
+  const settingsSwitch = () =>
+    screen.getByTestId("repertoire-board-setting-autoplay").querySelector("input")!;
+
+  it("sits in the header, off, offering to play", () => {
+    mountIdle(`/repertoires/${storeRepertoire("r", CARO)}`);
+    expect(play()).toHaveAttribute("aria-pressed", "false");
+    expect(play()).toHaveAccessibleName(i18n.t("repertoires.play.autoplayOn"));
+    // Beside Restart, before it.
+    expect(
+      play().compareDocumentPosition(screen.getByTestId("repertoire-board-restart")) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("toggles Autoplay: pressed while on, the trainer answering, and back off", () => {
+    mountIdle(`/repertoires/${storeRepertoire("r", CARO)}`);
+    fireEvent.click(play());
+    expect(play()).toHaveAttribute("aria-pressed", "true");
+    expect(play()).toHaveAccessibleName(i18n.t("repertoires.play.autoplayOff"));
+
+    drop("e2", "e4");
+    wait();
+    expect(position()).toBe(fenAfter("e4", "c6"));
+
+    fireEvent.click(play());
+    expect(play()).toHaveAttribute("aria-pressed", "false");
+    drop("d2", "d4");
+    wait();
+    // Off again: nobody answers.
+    expect(position()).toBe(fenAfter("e4", "c6", "d4"));
+  });
+
+  it("stays in sync with the Settings switch in both directions", () => {
+    mountIdle(`/repertoires/${storeRepertoire("r", CARO)}`);
+    openSettings();
+
+    fireEvent.click(play());
+    expect(settingsSwitch()).toBeChecked();
+
+    fireEvent.click(settingsSwitch());
+    expect(settingsSwitch()).not.toBeChecked();
+    expect(play()).toHaveAttribute("aria-pressed", "false");
+
+    fireEvent.click(settingsSwitch());
+    expect(play()).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("makes the trainer reply at once when switched on at its turn", () => {
+    mountIdle(`/repertoires/${storeRepertoire("r", CARO)}`);
+    openSettings();
+    fireEvent.click(screen.getByTestId("repertoire-board-side-black"));
+    // Autoplay is off, so White (the trainer's side) has not moved.
+    wait();
+    expect(position()).toBe(new Chess().fen());
+
+    fireEvent.click(play());
+    expect(status()).toBe("trainer-thinking");
+    wait();
+    expect(position()).toBe(fenAfter("e4"));
+  });
+
+  it("is absent from a game, where the trainer always plays", () => {
+    mountIdle(`/repertoires/${storeRepertoire("r", CARO)}/games/end`);
+    expect(screen.queryByTestId("repertoire-game-play")).not.toBeInTheDocument();
+    expect(screen.getByTestId("repertoire-game-restart")).toBeInTheDocument();
+  });
+});
