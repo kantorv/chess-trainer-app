@@ -134,6 +134,7 @@ const he: typeof en = {
     makeMainline: "הפיכה לקו הראשי",
     deleteFrom: "מחיקה מכאן",
     copyPgn: "העתקת ה־PGN של הווריאציה",
+    addComment: "הוספת הערה",
     copied: "ה־PGN של הווריאציה הועתק",
     copyFailed: "לא ניתן היה להעתיק — הלוח אינו זמין כאן.",
     deleteTitle: "מחיקה מהמסע",
@@ -143,6 +144,14 @@ const he: typeof en = {
     lines_one: "קו אחד",
     lines_other: "{{count}} קווים",
     delete: "מחיקה",
+    cancel: "ביטול",
+  },
+  commentDialog: {
+    addTitle: "הערה על",
+    editTitle: "עריכת ההערה על",
+    placeholder: "מה יש לומר על המסע הזה?",
+    help: "נשמר עם השינויים ברפרטואר. Ctrl+Enter שומר. פקודות בסגנון [%eval …] נשמרות כפי שנכתבו.",
+    save: "שמירה",
     cancel: "ביטול",
   },
   moveList: {
@@ -740,6 +749,9 @@ const he: typeof en = {
     annotations: {
       title: "הערה",
       before: "לפני המסע",
+      add: "הוספת הערה",
+      edit: "עריכת ההערה",
+      delete: "מחיקת ההערה",
       keys: {
         eval: "הערכה",
         depth: "עומק",
@@ -757,7 +769,7 @@ const he: typeof en = {
       saveNothing: "אין שינויים שלא נשמרו",
       added_one: "נוסף מסע אחד",
       added_other: "נוספו {{count}} מסעים",
-      edited: "קווים סודרו מחדש או נמחקו",
+      edited: "קווים או הערות נערכו",
       update: "עדכון הרפרטואר",
       updateHelp: "הפיכת השינויים לחלק מהרפרטואר הזה.",
       copy: "שמירה כעותק",

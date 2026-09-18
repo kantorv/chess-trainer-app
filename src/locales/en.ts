@@ -183,6 +183,7 @@ const en = {
     makeMainline: "Make main line",
     deleteFrom: "Delete from here",
     copyPgn: "Copy variation PGN",
+    addComment: "Add comment",
     copied: "Variation PGN copied",
     copyFailed: "Could not copy — the clipboard is not available here.",
     deleteTitle: "Delete from",
@@ -193,6 +194,15 @@ const en = {
     lines_one: "{{count}} line",
     lines_other: "{{count}} lines",
     delete: "Delete",
+    cancel: "Cancel",
+  },
+  /** Adding or editing one comment on a move (CTA-69). */
+  commentDialog: {
+    addTitle: "Comment on",
+    editTitle: "Edit the comment on",
+    placeholder: "What is there to say about this move?",
+    help: "Saved with the repertoire's changes. Ctrl+Enter saves. [%eval …]-style commands are kept as written.",
+    save: "Save",
     cancel: "Cancel",
   },
   moveList: {
@@ -1089,6 +1099,9 @@ const en = {
       title: "Comment",
       /** The comment opening a variation, above the ones after its move. */
       before: "Before this move",
+      add: "Add a comment",
+      edit: "Edit this comment",
+      delete: "Delete this comment",
       /**
        * An attribute's name. `[%key value]` commands the app does not know
        * print their own key; these are the ones it does.
@@ -1116,7 +1129,7 @@ const en = {
       added_one: "{{count}} move added",
       added_other: "{{count}} moves added",
       /** The changes are edits alone — lines promoted or deleted, none added. */
-      edited: "Lines reordered or deleted",
+      edited: "Lines or comments edited",
       update: "Update repertoire",
       updateHelp: "Make these changes part of this repertoire.",
       copy: "Save as copy",

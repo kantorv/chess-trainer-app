@@ -25,6 +25,8 @@ export type AnnotationAttribute = { key: string; value: string };
 
 /** One comment, read: its prose in paragraphs, and its attributes. */
 export type ReadComment = {
+  /** The comment as stored — what an edit starts from. */
+  raw: string;
   paragraphs: string[];
   attributes: AnnotationAttribute[];
 };
@@ -76,7 +78,7 @@ export const readComment = (raw: string): ReadComment => {
     text = text.slice(0, mate.index) + " " + text.slice(mate.index + whole.length);
   }
 
-  return { paragraphs: reflowComment(text), attributes };
+  return { raw, paragraphs: reflowComment(text), attributes };
 };
 
 /**

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import i18n from "../../i18n";
@@ -95,5 +95,74 @@ describe("the player's comment block", () => {
     renderSection(`/repertoires/${storeRepertoire("r", ANNOTATED)}/games/end`);
     await ready("repertoire-game");
     expect(screen.queryByTestId("repertoire-game-annotations")).not.toBeInTheDocument();
+  });
+});
+
+describe("editing a move's comment", () => {
+  const AT_BB7 = "?at=d4,d5,c4,c6,Nf3,Nf6,Nc3,e6,e3,Nbd7,Bd3,dxc4,Bxc4,b5,Bd3,Bb7";
+  const save = () => screen.getByTestId("repertoire-board-save");
+
+  it("edits one from the block — a session change, Save lights up", async () => {
+    renderSection(`/repertoires/${storeRepertoire("r", ANNOTATED)}${AT_BB7}`);
+    await ready();
+    expect(save()).toBeDisabled();
+
+    await userEvent.click(screen.getByTestId("repertoire-board-annotations-after-0-edit"));
+    const field = screen.getByTestId("comment-dialog-text");
+    // The stored text, attributes and all.
+    expect(field).toHaveValue("better is 8...b4 9.Ne4 = 0.00 (27 ply)");
+    await userEvent.clear(field);
+    await userEvent.type(field, "Playable.");
+    await userEvent.click(screen.getByTestId("comment-dialog-save"));
+
+    expect(screen.getByTestId("repertoire-board-annotations-after-0")).toHaveTextContent("Playable.");
+    expect(save()).toBeEnabled();
+    await userEvent.click(save());
+    expect(screen.getByTestId("repertoire-board-changes-summary")).toHaveTextContent(
+      "Lines or comments edited",
+    );
+  });
+
+  it("adds one from the block, and deletes one", async () => {
+    renderSection(`/repertoires/${storeRepertoire("r", ANNOTATED)}${AT_BB7}`);
+    await ready();
+    await userEvent.click(screen.getByTestId("repertoire-board-annotations-add"));
+    expect(screen.getByTestId("comment-dialog-save")).toBeDisabled();
+    await userEvent.type(screen.getByTestId("comment-dialog-text"), "And a second.");
+    await userEvent.click(screen.getByTestId("comment-dialog-save"));
+    expect(screen.getByTestId("repertoire-board-annotations-after-1")).toHaveTextContent("And a second.");
+
+    await userEvent.click(screen.getByTestId("repertoire-board-annotations-after-0-delete"));
+    expect(screen.getByTestId("repertoire-board-annotations-after-0")).toHaveTextContent("And a second.");
+    expect(screen.queryByTestId("repertoire-board-annotations-after-1")).not.toBeInTheDocument();
+    expect(save()).toBeEnabled();
+  });
+
+  it("adds one to an uncommented move from its right-click menu, and Discard takes it back", async () => {
+    renderSection(`/repertoires/${storeRepertoire("r", ANNOTATED)}?at=d4`);
+    await ready();
+    expect(block()).not.toBeInTheDocument();
+
+    fireEvent.contextMenu(screen.getByTestId("move-ply-1"), { clientX: 40, clientY: 60 });
+    await userEvent.click(within(screen.getByRole("menu")).getByTestId("move-menu-comment"));
+    await userEvent.type(screen.getByTestId("comment-dialog-text"), "The Queen's Gambit.");
+    await userEvent.click(screen.getByTestId("comment-dialog-save"));
+
+    expect(block()).toHaveTextContent("The Queen's Gambit.");
+    expect(screen.getByTestId("move-comment-icon-1")).toBeInTheDocument();
+
+    await userEvent.click(save());
+    await userEvent.click(screen.getByTestId("repertoire-board-changes-discard"));
+    await waitFor(() => expect(screen.queryByTestId("move-comment-icon-1")).not.toBeInTheDocument());
+  });
+
+  it("offers no editing in a game", async () => {
+    renderSection(`/repertoires/${storeRepertoire("r", ANNOTATED)}/games/end`);
+    await ready("repertoire-game");
+    // A game opens on its Score tab; the move list is behind Moves.
+    await userEvent.click(screen.getByTestId("repertoire-game-panel-tab-moves"));
+    // No menu is bound: the right-click is the browser's (not prevented).
+    expect(fireEvent.contextMenu(await screen.findByTestId("move-ply-1"))).toBe(true);
+    expect(screen.queryByTestId("move-menu-comment")).not.toBeInTheDocument();
   });
 });

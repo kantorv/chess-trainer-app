@@ -11,12 +11,14 @@ import ListSubheader from "@mui/material/ListSubheader";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import Snackbar from "@mui/material/Snackbar";
+import AddCommentOutlinedIcon from "@mui/icons-material/AddCommentOutlined";
 import ArrowUpwardRoundedIcon from "@mui/icons-material/ArrowUpwardRounded";
 import ContentCopyRoundedIcon from "@mui/icons-material/ContentCopyRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import VerticalAlignTopRoundedIcon from "@mui/icons-material/VerticalAlignTopRounded";
 import { useTranslation } from "react-i18next";
 import {
+  commentsAt,
   deleteFrom,
   findNode,
   isInSideLine,
@@ -24,9 +26,11 @@ import {
   makeMainline,
   plyLabel,
   promoteVariation,
+  setComments,
   subtreeCounts,
   type GameTree,
 } from "../../../lib/gameTree";
+import CommentDialog, { type CommentDraft } from "./CommentDialog";
 import type { MenuAnchor } from "../../shared/moveContextMenu";
 
 /** The move a menu was opened on, and where. */
@@ -35,7 +39,8 @@ export type MoveMenuTarget = { nodeId: string; anchor: MenuAnchor };
 /**
  * **The variations explorer's move menu** (CTA-64) — lichess's right-click on
  * a move of the analysis board: promote the variation, make it the main line,
- * delete from here, copy the line's PGN.
+ * delete from here, copy the line's PGN — and, since CTA-69, add a comment to
+ * the move (`CommentDialog`; `setComments`, appended after the ones it has).
  *
  * Opened by `TreeMoveList` when its consumer passes `onEditTree`, at the
  * pointer (`anchorReference="anchorPosition"`). Every edit is a pure tree
@@ -69,6 +74,7 @@ function MoveContextMenu({
   // What the last copy did — kept past the snackbar's close, for its fade.
   const [copied, setCopied] = useState<"copied" | "failed">("copied");
   const [copyNoticeOpen, setCopyNoticeOpen] = useState(false);
+  const [commenting, setCommenting] = useState<string | null>(null);
 
   // A target the tree no longer holds (an edit landed first) opens nothing.
   const node = target === null ? null : findNode(tree, target.nodeId);
@@ -81,6 +87,23 @@ function MoveContextMenu({
     const { number, isWhiteMove } = plyLabel(tree.startFen, at.ply);
     return `${number}${isWhiteMove ? "." : "…"} ${at.san}`;
   };
+
+  // Built on each render, so the save edits the tree as it is then.
+  const commentingNode = commenting === null ? null : findNode(tree, commenting);
+  const commentDraft: CommentDraft | null =
+    commentingNode === null
+      ? null
+      : {
+          label: moveText(commentingNode),
+          initial: "",
+          onSave: (text) => {
+            const next = setComments(tree, commentingNode.id, "comments", [
+              ...commentsAt(tree, commentingNode.id, "comments"),
+              text,
+            ]);
+            if (next !== tree) onEditTree(next);
+          },
+        };
 
   const edit = (operation: (tree: GameTree, id: string) => GameTree) => {
     if (node === null) return;
@@ -146,6 +169,19 @@ function MoveContextMenu({
           </ListItemIcon>
           <ListItemText>{t("moveMenu.deleteFrom")}</ListItemText>
         </MenuItem>
+        <MenuItem
+          data-testid="move-menu-comment"
+          onClick={() => {
+            if (node === null) return;
+            setCommenting(node.id);
+            onClose();
+          }}
+        >
+          <ListItemIcon>
+            <AddCommentOutlinedIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>{t("moveMenu.addComment")}</ListItemText>
+        </MenuItem>
         <MenuItem data-testid="move-menu-copy" onClick={copy}>
           <ListItemIcon>
             <ContentCopyRoundedIcon fontSize="small" />
@@ -189,6 +225,8 @@ function MoveContextMenu({
           </Button>
         </DialogActions>
       </Dialog>
+
+      <CommentDialog draft={commentDraft} onClose={() => setCommenting(null)} />
 
       <Snackbar
         open={copyNoticeOpen}

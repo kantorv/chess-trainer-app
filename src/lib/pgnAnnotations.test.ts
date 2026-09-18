@@ -10,6 +10,7 @@ import {
   nodeAtSanPath,
   promoteVariation,
   findNode,
+  setComments,
   treeToPgn,
   type GameTree,
 } from "./gameTree";
@@ -199,5 +200,39 @@ describe("a repertoire record keeps them", () => {
     const tree = parsePgnTree(saved.pgn);
     expect(withRepertoireTree(saved, tree, NOW).pgn).toContain("{ Mine. }");
     expect(repertoireCopyOf(saved, tree, "c", "Copy", NOW).pgn).toContain("{ Mine. }");
+  });
+});
+
+describe("setComments — editing a move's comments", () => {
+  const tree = parsePgnTree(ANNOTATED);
+  const f4 = at(tree, "e4", "e5", "f4");
+
+  it("replaces the list, keeping every id and every other node", () => {
+    const edited = setComments(tree, f4.id, "comments", ["Rewritten.", " "]);
+    expect(at(edited, "e4", "e5", "f4")).toMatchObject({ id: f4.id, comments: ["Rewritten."], nags: [6] });
+    expect(at(edited, "e4").comments).toEqual(["King's pawn."]);
+    // Immutable: the tree it was given is untouched.
+    expect(f4.comments).toEqual(["The gambit.", "A second thought."]);
+    expect(treeToPgn(edited)).toContain("$6 { Rewritten. }");
+  });
+
+  it("adds to a move that had none, and removes the field with the last one", () => {
+    const e5 = at(tree, "e4", "e5", "Nf3");
+    const added = setComments(tree, e5.id, "comments", ["New."]);
+    expect(at(added, "e4", "e5", "Nf3").comments).toEqual(["New."]);
+    const removed = setComments(added, e5.id, "comments", []);
+    expect("comments" in at(removed, "e4", "e5", "Nf3")).toBe(false);
+  });
+
+  it("edits the comment opening a line, and the game's own", () => {
+    const nc3 = at(tree, "e4", "e5", "Nc3");
+    expect(at(setComments(tree, nc3.id, "preComments", []), "e4", "e5", "Nc3").preComments).toBeUndefined();
+    expect(setComments(tree, null, "comments", ["Intro."]).comments).toEqual(["Intro."]);
+    expect(setComments(tree, null, "comments", []).comments).toBeUndefined();
+  });
+
+  it("hands back the same tree when nothing changes", () => {
+    expect(setComments(tree, f4.id, "comments", ["The gambit.", "A second thought."])).toBe(tree);
+    expect(setComments(tree, "nope", "comments", ["x"])).toBe(tree);
   });
 });

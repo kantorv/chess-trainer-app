@@ -101,8 +101,8 @@ export type GameTree = {
   out loses none of it: merging a many-game upload, Update and Save as copy
   all write the tree. Every field is optional and absent when empty, so a tree
   built without annotations is exactly the value it always was. They ride on
-  the node, so every edit below keeps them on the moves that survive; nothing
-  here displays them.
+  the node, so every edit below keeps them on the moves that survive, and
+  `setComments` edits them like any other change to the tree.
 */
 
 /**
@@ -460,6 +460,61 @@ export const deleteFrom = (tree: GameTree, id: string): GameTree => {
     depth === last ? siblings.filter((sibling) => sibling.id !== node.id) : siblings,
   );
 };
+
+/** Which of a move's comment lists an edit is for — after it, or before it. */
+export type CommentKind = "comments" | "preComments";
+
+/**
+ * **Edit a move's comments** (CTA-69) — the list of `kind` at `id` replaced
+ * by `next`, each text trimmed and an empty one dropped; `id` `null` is the
+ * game's own comment (before the first move; `kind` is not read there). An
+ * empty list removes the field, so a move whose last comment goes is the
+ * value it was before it had one. Pure and id-preserving like the edits
+ * above — only the path to the move is copied — and the same reference back
+ * when nothing changes, or for an id the tree does not hold, so
+ * `core.tree !== repertoire` stays the whole of "changed".
+ */
+export const setComments = (
+  tree: GameTree,
+  id: string | null,
+  kind: CommentKind,
+  next: readonly string[],
+): GameTree => {
+  const texts = next.map((text) => text.trim()).filter((text) => text !== "");
+  const same = (current: readonly string[] | undefined) =>
+    (current ?? []).length === texts.length &&
+    texts.every((text, index) => current?.[index] === text);
+
+  if (id === null) {
+    if (same(tree.comments)) return tree;
+    const edited: GameTree = { ...tree };
+    if (texts.length === 0) delete edited.comments;
+    else edited.comments = texts;
+    return edited;
+  }
+
+  const path = pathTo(tree, id);
+  const target = path.at(-1);
+  if (target === undefined || same(target[kind])) return tree;
+  const edited: VariationNode = { ...target };
+  if (texts.length === 0) delete edited[kind];
+  else edited[kind] = texts;
+
+  const last = path.length - 1;
+  return rebuildAlong(tree, path, (siblings, node, depth) =>
+    depth === last
+      ? siblings.map((sibling) => (sibling.id === node.id ? edited : sibling))
+      : siblings,
+  );
+};
+
+/** The comments of `kind` at `id` — `null` the game's own; empty when none. */
+export const commentsAt = (
+  tree: GameTree,
+  id: string | null,
+  kind: CommentKind,
+): readonly string[] =>
+  (id === null ? tree.comments : findNode(tree, id)?.[kind]) ?? [];
 
 /**
  * What {@link deleteFrom} would take away: the moves from `id` on (itself

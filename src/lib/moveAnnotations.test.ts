@@ -11,14 +11,14 @@ import { nodeAtSanPath } from "./gameTree";
 
 describe("readComment", () => {
   it("keeps plain prose as paragraphs, hard wraps rejoined", () => {
-    expect(readComment("15.Bf4 was played in A\nMoiseenko vs A Colovic, 2008 (1-0)")).toEqual({
+    expect(readComment("15.Bf4 was played in A\nMoiseenko vs A Colovic, 2008 (1-0)")).toMatchObject({
       paragraphs: ["15.Bf4 was played in A Moiseenko vs A Colovic, 2008 (1-0)"],
       attributes: [],
     });
   });
 
   it("reads [%key value] commands as attributes and takes them out of the prose", () => {
-    expect(readComment("Sharp. [%eval 0.25] [%clk 0:05:00] [%cal Ge2e4,Rd1d8]")).toEqual({
+    expect(readComment("Sharp. [%eval 0.25] [%clk 0:05:00] [%cal Ge2e4,Rd1d8]")).toMatchObject({
       paragraphs: ["Sharp."],
       attributes: [
         { key: "eval", value: "0.25" },
@@ -29,7 +29,7 @@ describe("readComment", () => {
   });
 
   it("reads an engine's trailing evaluation — a comment of nothing else", () => {
-    expect(readComment("+/= +1.31 (21 ply)")).toEqual({
+    expect(readComment("+/= +1.31 (21 ply)")).toMatchObject({
       paragraphs: [],
       attributes: [
         { key: "assessment", value: "+/=" },
@@ -42,7 +42,7 @@ describe("readComment", () => {
   it("…and one ending a suggested line, even across a wrap", () => {
     expect(
       readComment("? 32.Rd3 Qc5+ 33.Rc3 Qd5 34.f3 Bf5+ 35.Bd3 Qa2 36.Bxf5 =\n-0.38 (31 ply)"),
-    ).toEqual({
+    ).toMatchObject({
       paragraphs: ["? 32.Rd3 Qc5+ 33.Rc3 Qd5 34.f3 Bf5+ 35.Bd3 Qa2 36.Bxf5"],
       attributes: [
         { key: "assessment", value: "=" },
@@ -53,13 +53,17 @@ describe("readComment", () => {
   });
 
   it("reads a forced mate and leaves the line after it", () => {
-    expect(readComment("-+\nmate-in-12 after 33...Bxd3+ 34.Rxd3 Qc4+")).toEqual({
+    expect(readComment("-+\nmate-in-12 after 33...Bxd3+ 34.Rxd3 Qc4+")).toMatchObject({
       paragraphs: ["after 33...Bxd3+ 34.Rxd3 Qc4+"],
       attributes: [
         { key: "assessment", value: "-+" },
         { key: "mate", value: "12" },
       ],
     });
+  });
+
+  it("keeps the stored text, for an edit to start from", () => {
+    expect(readComment("Sharp. [%eval 0.25]").raw).toBe("Sharp. [%eval 0.25]");
   });
 
   it("does not mistake a result in the prose for an evaluation", () => {
@@ -78,7 +82,7 @@ describe("annotationsAt", () => {
   });
 
   it("is a move's comments, before and after, and its NAGs", () => {
-    expect(at("d4")).toEqual({
+    expect(at("d4")).toMatchObject({
       before: [],
       after: [{ paragraphs: ["Main."], attributes: [{ key: "eval", value: "0.3" }] }],
       nags: [1],

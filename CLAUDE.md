@@ -827,6 +827,13 @@ for the board. Only the differences are written out here:
   analysis export's trailing `+/= +1.31 (21 ply)` / `mate-in-12` (as
   assessment, eval, depth, mate). The stored comment is never rewritten.
   A game shows no block: a comment would give its answer away.
+  **Comments are editable in the player**: the block adds one to the move
+  on screen and edits or deletes each (the stored text, `[%…]` commands
+  and all, in `CommentDialog.tsx`), and the move menu's *Add comment* adds
+  one to any move — list or map. Each is `setComments` (`lib/gameTree.ts`:
+  pure, id-preserving, the same tree back for a no-op) through the core's
+  `replaceTree`, so it is a session change like a move added: Save lights
+  up, the strip keeps it or Discard drops it. A game offers none.
 - **A file and a paste are one record.** Both go through `readRepertoireText`
   and the same constructors. Line endings are normalised and a file name is
   never read, so the two routes cannot drift apart. `RepertoireUpload.test.tsx`
@@ -1049,6 +1056,8 @@ since CTA-67, on every written move of the player's Map:
 - **Copy variation PGN** — the line from the start to the move, the tree's
   tags and `SetUp` / `FEN` kept, its `Result` not (a line is not a finished
   game).
+- **Add comment** (CTA-69) — a comment after the move, in a dialog;
+  `setComments`, appended after the ones it has.
 
 Four rules hold it together:
 

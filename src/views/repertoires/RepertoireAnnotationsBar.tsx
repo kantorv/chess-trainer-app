@@ -1,8 +1,14 @@
 import Box from "@mui/material/Box";
 import Chip from "@mui/material/Chip";
+import IconButton from "@mui/material/IconButton";
+import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
+import AddCommentOutlinedIcon from "@mui/icons-material/AddCommentOutlined";
+import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
+import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import { useTranslation } from "react-i18next";
 
+import type { CommentKind } from "../../lib/gameTree";
 import {
   isMoveMark,
   nagGlyph,
@@ -26,16 +32,23 @@ import {
  * paragraph takes `dir="auto"`; an attribute's value is pinned LTR by the
  * attribute (a signed score in an RTL flow has its sign migrate), never CSS —
  * the root `CLAUDE.md`'s rule.
+ *
+ * **Editing is opt-in** (`editing`): an add button beside the title, and an
+ * edit and a delete on every comment. The block only says which comment —
+ * its kind and its index in that list — and the player turns that into a
+ * tree edit (`setComments`), a session change like any other.
  */
 function RepertoireAnnotationsBar({
   testId,
   label,
   annotations,
+  editing,
 }: {
   testId: string;
   /** Where the reader is — the move as the list prints it, or the start. */
   label: string;
   annotations: PositionAnnotations;
+  editing?: CommentEditing;
 }) {
   const { t } = useTranslation();
   const marks = annotations.nags.filter(isMoveMark).map(nagGlyph).join("");
@@ -58,7 +71,7 @@ function RepertoireAnnotationsBar({
         overflowY: "auto",
       }}
     >
-      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+      <Typography variant="body2" sx={{ fontWeight: 600, display: "flex", alignItems: "center", flexWrap: "wrap" }}>
         {t("repertoires.annotations.title")}
         <Typography
           component="span"
@@ -86,6 +99,19 @@ function RepertoireAnnotationsBar({
             {nagGlyph(nag)}
           </Typography>
         ))}
+        {editing !== undefined && (
+          <Tooltip title={t("repertoires.annotations.add")}>
+            <IconButton
+              size="small"
+              aria-label={t("repertoires.annotations.add")}
+              data-testid={`${testId}-add`}
+              onClick={editing.onAdd}
+              sx={{ marginInlineStart: "auto" }}
+            >
+              <AddCommentOutlinedIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        )}
       </Typography>
 
       {annotations.before.length > 0 && (
@@ -94,30 +120,56 @@ function RepertoireAnnotationsBar({
             {t("repertoires.annotations.before")}
           </Typography>
           {annotations.before.map((comment, index) => (
-            <Comment key={index} comment={comment} testId={`${testId}-before-${index}`} italic />
+            <Comment
+              key={index}
+              comment={comment}
+              testId={`${testId}-before-${index}`}
+              italic
+              onEdit={editing && (() => editing.onEdit("preComments", index))}
+              onDelete={editing && (() => editing.onDelete("preComments", index))}
+            />
           ))}
         </Box>
       )}
       {annotations.after.map((comment, index) => (
-        <Comment key={index} comment={comment} testId={`${testId}-after-${index}`} />
+        <Comment
+          key={index}
+          comment={comment}
+          testId={`${testId}-after-${index}`}
+          onEdit={editing && (() => editing.onEdit("comments", index))}
+          onDelete={editing && (() => editing.onDelete("comments", index))}
+        />
       ))}
     </Box>
   );
 }
+
+/** What the player does with the block's edit controls. */
+export type CommentEditing = {
+  onAdd: () => void;
+  /** `index` is the comment's place in its `kind` list at this position. */
+  onEdit: (kind: CommentKind, index: number) => void;
+  onDelete: (kind: CommentKind, index: number) => void;
+};
 
 /** One comment: its paragraphs, then its attributes as chips. */
 function Comment({
   comment,
   testId,
   italic = false,
+  onEdit,
+  onDelete,
 }: {
   comment: ReadComment;
   testId: string;
   italic?: boolean;
+  onEdit?: () => void;
+  onDelete?: () => void;
 }) {
   const { t } = useTranslation();
   return (
-    <Box data-testid={testId} sx={{ mt: 0.5 }}>
+    <Box data-testid={testId} sx={{ mt: 0.5, display: "flex", alignItems: "flex-start", gap: 0.5 }}>
+      <Box sx={{ flex: 1, minWidth: 0 }}>
       {comment.paragraphs.map((paragraph, index) => (
         <Typography
           key={index}
@@ -146,6 +198,21 @@ function Comment({
               }
             />
           ))}
+        </Box>
+      )}
+      </Box>
+      {onEdit !== undefined && onDelete !== undefined && (
+        <Box sx={{ display: "flex", flexShrink: 0 }}>
+          <Tooltip title={t("repertoires.annotations.edit")}>
+            <IconButton size="small" aria-label={t("repertoires.annotations.edit")} data-testid={`${testId}-edit`} onClick={onEdit}>
+              <EditOutlinedIcon sx={{ fontSize: "1rem" }} />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title={t("repertoires.annotations.delete")}>
+            <IconButton size="small" aria-label={t("repertoires.annotations.delete")} data-testid={`${testId}-delete`} onClick={onDelete}>
+              <DeleteOutlineRoundedIcon sx={{ fontSize: "1rem" }} />
+            </IconButton>
+          </Tooltip>
         </Box>
       )}
     </Box>
