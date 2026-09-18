@@ -1001,6 +1001,9 @@ const en = {
       white: "White",
       black: "Black",
       restart: "Restart from the start position",
+      /** The header's Autoplay toggle: the label says what a click does. */
+      autoplayOn: "Play — the trainer answers your moves",
+      autoplayOff: "Pause — you move both sides",
       download: "Download with your additions as PGN",
       back: "Back to the board",
       /** The engine's switch — off by default: a drill does not show the answer. */

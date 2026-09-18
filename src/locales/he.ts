@@ -664,6 +664,8 @@ const he: typeof en = {
       white: "לבן",
       black: "שחור",
       restart: "התחלה מחדש מעמדת הפתיחה",
+      autoplayOn: "ניגון — המאמן עונה על המסעים שלכם",
+      autoplayOff: "השהיה — אתם מזיזים את שני הצדדים",
       download: "הורדה עם התוספות שלכם כ-PGN",
       back: "חזרה ללוח",
       engine: "מנוע",
