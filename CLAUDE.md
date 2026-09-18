@@ -864,7 +864,10 @@ RepertoirePlay.tsx ── BoardShell / BoardPanel ── TreeMoveList(extensionI
   list tints them (`success.main`, a theme token) through the optional
   `extensionIds` on `TreeMoveList` → `MoveList`, read per token from the
   selection store like the highlight; every other consumer passes none.
-- **Arrows are the reader's call.** A header switch, **off by default** (a
+- **Two tabs: Moves · Settings.** The session's knobs — the side and the
+  arrows — are in the Settings tab; the header keeps the actions (restart,
+  download, back). Moves stays mounted while Settings shows.
+- **Arrows are the reader's call.** A Settings-tab switch, **off by default** (a
   drill should not show the answer), draws the next-move arrows for every
   continuation at the node on screen through the shared `nextMoveArrowsOf`
   (`views/tools/analysis/nextMoveArrows.ts`): the mainline's move in one
