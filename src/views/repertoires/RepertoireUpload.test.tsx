@@ -37,6 +37,7 @@ const content = (record: SavedRepertoire) => ({
   name: record.name,
   pgn: record.pgn,
   previewFen: record.previewFen,
+  settings: record.settings,
   folderId: record.folderId,
 });
 

@@ -16,6 +16,7 @@ import { RightPanelOutlet, RightPanelProvider } from "../main/rightPanel";
 import Repertoires from "./Repertoires";
 import RepertoireBoard from "./RepertoireBoard";
 import RepertoireUpload from "./RepertoireUpload";
+import RepertoireSettingsScreen from "./RepertoireSettingsScreen";
 
 /** A small two-chapter repertoire: a side line in the first line, none in the second. */
 export const CARO = [
@@ -32,7 +33,7 @@ export const CARO = [
   "1. e4 c6 2. d4 d5 3. exd5 cxd5 *",
 ].join("\n");
 
-/** The section's three routes, mounted at `path`, as `App.tsx` mounts them. */
+/** The section's four routes, mounted at `path`, as `App.tsx` mounts them. */
 export const renderSection = (path: string, extra?: ReactNode) =>
   render(
     <AppThemeWithLang>
@@ -42,6 +43,7 @@ export const renderSection = (path: string, extra?: ReactNode) =>
             <Route path="/repertoires" element={<Repertoires />} />
             <Route path="/repertoires/new" element={<RepertoireUpload />} />
             <Route path="/repertoires/:id" element={<RepertoireBoard />} />
+            <Route path="/repertoires/:id/settings" element={<RepertoireSettingsScreen />} />
           </Routes>
           <RightPanelOutlet />
           {extra}

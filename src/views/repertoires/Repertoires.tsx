@@ -4,10 +4,13 @@ import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
 import CardActionArea from "@mui/material/CardActionArea";
 import Checkbox from "@mui/material/Checkbox";
+import IconButton from "@mui/material/IconButton";
+import Tooltip from "@mui/material/Tooltip";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
 import Typography from "@mui/material/Typography";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
+import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
 import { Link as RouterLink } from "react-router";
 import { useTranslation } from "react-i18next";
 import { Chessboard, type ChessboardOptions } from "react-chessboard";
@@ -54,6 +57,8 @@ import { useSavedRepertoires } from "./useSavedRepertoires";
 const previewOptions = (saved: SavedRepertoire): ChessboardOptions => ({
   id: `repertoires-preview-${saved.id}`,
   position: saved.previewFen,
+  // The side the reader plays it from (its settings), as its board opens.
+  boardOrientation: saved.settings.color,
   allowDragging: false,
   allowDrawingArrows: false,
   showNotation: false,
@@ -61,6 +66,28 @@ const previewOptions = (saved: SavedRepertoire): ChessboardOptions => ({
 
 const boardPath = (saved: SavedRepertoire) =>
   `/repertoires/${encodeURIComponent(saved.id)}`;
+
+/**
+ * The settings link — a gear on both the row and the card. It hands the list
+ * as `from`, so Save and Cancel come back here rather than to the board.
+ */
+function SettingsLink({ saved }: { saved: SavedRepertoire }) {
+  const { t } = useTranslation();
+  return (
+    <Tooltip title={t("repertoires.settings.open")}>
+      <IconButton
+        size="small"
+        component={RouterLink}
+        to={`${boardPath(saved)}/settings`}
+        state={{ from: "/repertoires" }}
+        aria-label={t("repertoires.settings.open")}
+        data-testid={`repertoires-settings-${saved.id}`}
+      >
+        <SettingsRoundedIcon fontSize="small" />
+      </IconButton>
+    </Tooltip>
+  );
+}
 
 /** The two caption lines both views print: the name, then its size and date. */
 const useCaption = (saved: SavedRepertoire) => {
@@ -120,6 +147,16 @@ function RepertoireRow({
         <Typography variant="caption" sx={{ ...ellipsis, color: "text.secondary" }}>
           {secondary}
         </Typography>
+        {saved.settings.description !== "" && (
+          <Typography
+            variant="caption"
+            dir="auto"
+            data-testid={`repertoires-description-${saved.id}`}
+            sx={{ ...ellipsis, color: "text.secondary", fontStyle: "italic" }}
+          >
+            {saved.settings.description}
+          </Typography>
+        )}
       </Box>
 
       <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexShrink: 0 }}>
@@ -132,6 +169,7 @@ function RepertoireRow({
         >
           {t("repertoires.open")}
         </Button>
+        <SettingsLink saved={saved} />
         <SavedListRemoveButton
           id={saved.id}
           onRemove={removeSavedRepertoire}
@@ -180,6 +218,7 @@ function RepertoireCard({ saved }: { saved: SavedRepertoire }) {
             {secondary}
           </Typography>
         </Box>
+        <SettingsLink saved={saved} />
         <SavedListRemoveButton
           id={saved.id}
           onRemove={removeSavedRepertoire}

@@ -21,6 +21,7 @@ import {
   saveRepertoire,
   savedRepertoiresSnapshot,
   subscribeSavedRepertoires,
+  updateRepertoireSettings,
 } from "./savedRepertoireStore";
 import { parsePgnGame } from "./pgn";
 
@@ -105,5 +106,40 @@ describe("the saved-repertoires store", () => {
     expect(savedGamesSnapshot()).toEqual(games);
     expect(savedAnalysesSnapshot()).toEqual(analyses);
     expect(savedOpeningsSnapshot()).toEqual(openings);
+  });
+
+  it("edits a title and settings in place, keeping the list order", () => {
+    saveRepertoire(record("a"));
+    saveRepertoire(record("b"));
+    expect(
+      updateRepertoireSettings("a", "Caro", { description: "Main line", color: "black" }),
+    ).toBeUndefined();
+
+    const rows = savedRepertoiresSnapshot();
+    expect(rows.map((row) => row.id)).toEqual(["b", "a"]);
+    expect(rows[1]).toMatchObject({
+      name: "Caro",
+      settings: { description: "Main line", color: "black" },
+    });
+  });
+
+  it("writes nothing for an unchanged edit or an unknown id", () => {
+    saveRepertoire(record("a", "Caro"));
+    const listener = vi.fn();
+    const unsubscribe = subscribeSavedRepertoires(listener);
+
+    updateRepertoireSettings("a", "Caro", record("a").settings);
+    updateRepertoireSettings("nope", "X", record("a").settings);
+    expect(listener).not.toHaveBeenCalled();
+    unsubscribe();
+  });
+
+  it("counts a settings change as a change for an idempotent re-save", () => {
+    saveRepertoire(record("a"));
+    const listener = vi.fn();
+    const unsubscribe = subscribeSavedRepertoires(listener);
+    saveRepertoire({ ...record("a"), settings: { description: "", color: "black" } });
+    expect(listener).toHaveBeenCalled();
+    unsubscribe();
   });
 });

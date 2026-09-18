@@ -190,6 +190,8 @@ describe("a stored row", () => {
       name: "",
       pgn: "1. e4 *",
       previewFen: DEFAULT_POSITION,
+      // A record from before settings existed reads as the defaults.
+      settings: { description: "", color: "white" },
       folderId: null,
       savedAt: "x",
       updatedAt: "x",

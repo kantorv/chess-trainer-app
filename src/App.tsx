@@ -17,6 +17,7 @@ import { default as UserPgnsScreen  } from './views/pgn/Main'
 import { default as RepertoiresScreen  } from './views/repertoires/RepertoiresMain'
 import { default as RepertoireUploadScreen  } from './views/repertoires/RepertoireUploadMain'
 import { default as RepertoireBoardScreen  } from './views/repertoires/RepertoireBoardMain'
+import { default as RepertoireSettingsScreen  } from './views/repertoires/RepertoireSettingsScreenMain'
 
 
 /**
@@ -156,6 +157,11 @@ const routes = createBrowserRouter(
         {
           path: "/repertoires/:id",
           element: <RepertoireBoardScreen />
+        },
+        // A repertoire's title, description and main color (and what comes next).
+        {
+          path: "/repertoires/:id/settings",
+          element: <RepertoireSettingsScreen />
         },
         // Pre-CTA-39 the Openings screen lived under `/tools`. Old links redirect.
         {

@@ -1,5 +1,9 @@
 import { recordStore } from "./recordStore";
 import {
+  sameRepertoireSettings,
+  type RepertoireSettings,
+} from "./repertoireSettings";
+import {
   savedRepertoireFrom,
   type SavedRepertoire,
 } from "./savedRepertoires";
@@ -45,7 +49,10 @@ const write = repertoires.write;
 
 /** Whether two records would show the same screen. */
 const unchanged = (a: SavedRepertoire, b: SavedRepertoire): boolean =>
-  a.pgn === b.pgn && a.name === b.name && a.folderId === b.folderId;
+  a.pgn === b.pgn &&
+  a.name === b.name &&
+  a.folderId === b.folderId &&
+  sameRepertoireSettings(a.settings, b.settings);
 
 /**
  * Keep one repertoire, newest first. A re-save of an identical record is a
@@ -63,6 +70,35 @@ export const saveRepertoire = (
       { ...repertoire, savedAt: existing?.savedAt ?? repertoire.savedAt },
       ...current.filter((row) => row.id !== repertoire.id),
     ].slice(0, MAX_SAVED_REPERTOIRES),
+  );
+};
+
+/**
+ * Change one repertoire's title and settings, **in place** — the record keeps
+ * its position in the list, because editing what a repertoire is called is
+ * not working on it (`updateSavedOpeningNote`'s rule). An unknown id, or a
+ * write that changes nothing, is a no-op.
+ */
+export const updateRepertoireSettings = (
+  id: string,
+  name: string,
+  settings: RepertoireSettings,
+): SavedRepertoireProblem | undefined => {
+  const current = savedRepertoiresSnapshot();
+  const existing = current.find((row) => row.id === id);
+  if (
+    existing === undefined ||
+    (existing.name === name && sameRepertoireSettings(existing.settings, settings))
+  ) {
+    return undefined;
+  }
+
+  return write(
+    current.map((row) =>
+      row.id === id
+        ? { ...row, name, settings, updatedAt: new Date().toISOString() }
+        : row,
+    ),
   );
 };
 
