@@ -17,6 +17,8 @@ import {
   MAP_ZOOM_LEVELS,
   centerView,
   fitView,
+  mapLabelsIn,
+  visibleRect,
   nextMapZoom,
   zoomViewAt,
 } from "./repertoireMap";
@@ -105,6 +107,23 @@ describe("the repertoire map layout", () => {
     // A 200 × 100 drawing in a 432 × 432 viewport: width-bound, centred.
     expect(fitView(200, 100, 432, 432)).toEqual({ k: 2, x: 16, y: 116 });
     expect(centerView(10, 20, 2, 400, 300)).toEqual({ k: 2, x: 180, y: 110 });
+  });
+
+  it("labels only the moves in view, up to a limit", () => {
+    const layout = mapLayoutOf(tree);
+    const everything = { left: -Infinity, top: -Infinity, right: Infinity, bottom: Infinity };
+    expect(mapLabelsIn(layout, everything).map((label) => label.san)).toEqual([
+      "e4", "e5", "Nf3", "Bc4", "c5", "Nf3",
+    ]);
+    expect(mapLabelsIn(layout, everything)[0]).toEqual({ id: e4.id, san: "e4", px: px(1), py: py(0) });
+    // Just the top row: 1. e4 e5 2. Nf3.
+    const top = { left: -Infinity, top: py(0) - 1, right: Infinity, bottom: py(0) + 1 };
+    expect(mapLabelsIn(layout, top).map((label) => label.san)).toEqual(["e4", "e5", "Nf3"]);
+    expect(mapLabelsIn(layout, everything, 2)).toHaveLength(2);
+    // A view panned to the drawing's origin at 2×, in a 100 × 50 viewport.
+    expect(visibleRect({ x: 0, y: 0, k: 2 }, 100, 50, 0)).toEqual({
+      left: -0, top: -0, right: 50, bottom: 25,
+    });
   });
 
   it("lays out an empty tree without dividing by nothing", () => {

@@ -387,6 +387,44 @@ describe("Backtracking", () => {
     expect(screen.queryByTestId(`${full}-view`)).not.toBeInTheDocument();
   });
 
+  it("writes the moves on the full-screen map, once zoomed in, for the dots on screen", () => {
+    mount(`/repertoires/${storeRepertoire("r", CARO)}/games/backtrack`);
+    const full = `${ID}-map-dialog`;
+    fireEvent.click(screen.getByTestId(`${ID}-panel-tab-map`));
+    play(["e2", "e4"]);
+    fireEvent.click(screen.getByTestId(`${ID}-map-fullscreen`));
+
+    const toggle = screen.getByTestId(`${full}-show-moves`);
+    expect(toggle).toHaveAttribute("aria-pressed", "false");
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-pressed", "true");
+    // At 100% the moves would be too small to read: none, and a hint says so.
+    expect(screen.queryByTestId(`${full}-labels`)).not.toBeInTheDocument();
+    expect(screen.getByTestId(`${full}-hint`)).toHaveTextContent("Zoom in to read the moves");
+
+    // Zoomed in: the moves around the reader are written, theirs picked out.
+    fireEvent.click(screen.getByTestId(`${full}-zoom-in`));
+    fireEvent.click(screen.getByTestId(`${full}-zoom-in`));
+    const labels = within(screen.getByTestId(`${full}-labels`));
+    const e4 = labels.getByText("e4");
+    expect(e4).toHaveClass("map-label-trail");
+    expect(labels.getByText("Bf5")).not.toHaveClass("map-label-trail");
+    expect(screen.getByTestId(`${full}-hint`)).toHaveTextContent("Scroll to zoom, drag to move");
+
+    // Dragged far off the drawing: nothing on screen, nothing written.
+    const viewport = screen.getByTestId(`${full}-viewport`);
+    fireEvent.pointerDown(viewport, { button: 0, clientX: 0, clientY: 0, pointerId: 1 });
+    fireEvent.pointerMove(viewport, { clientX: 5000, clientY: 5000, pointerId: 1 });
+    fireEvent.pointerUp(viewport, { pointerId: 1 });
+    expect(screen.queryByTestId(`${full}-labels`)).not.toBeInTheDocument();
+
+    // And off again.
+    fireEvent.click(screen.getByTestId(`${full}-locate`));
+    expect(screen.getByTestId(`${full}-labels`)).toBeInTheDocument();
+    fireEvent.click(toggle);
+    expect(screen.queryByTestId(`${full}-labels`)).not.toBeInTheDocument();
+  });
+
   it("has no map in Get to the end", () => {
     mount(`/repertoires/${storeRepertoire("r", CARO)}/games/end`);
     expect(screen.queryByTestId(`${ID}-panel-tab-map`)).not.toBeInTheDocument();

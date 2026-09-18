@@ -15,6 +15,7 @@ import IconButton from "@mui/material/IconButton";
 import LinearProgress from "@mui/material/LinearProgress";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
+import AbcRoundedIcon from "@mui/icons-material/AbcRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import FitScreenRoundedIcon from "@mui/icons-material/FitScreenRounded";
 import FullscreenRoundedIcon from "@mui/icons-material/FullscreenRounded";
@@ -32,6 +33,10 @@ import {
   MAP_PAD,
   centerView,
   fitView,
+  mapLabelsIn,
+  visibleRect,
+  MAP_LABEL_FONT,
+  MAP_LABEL_MIN_K,
   mapEdgePaths,
   mapLayoutOf,
   mapLeafDots,
@@ -43,6 +48,7 @@ import {
   MAP_ZOOM_LEVELS,
   nextMapZoom,
   zoomViewAt,
+  type MapLayout,
   type MapView,
 } from "../../lib/repertoireMap";
 
@@ -71,7 +77,12 @@ import {
  *   panel's width no longer hides the detail: the **wheel zooms about the
  *   pointer** and a **drag pans** (`MapView`, `zoomViewAt` — the arithmetic is
  *   pure and tested), with buttons to zoom, fit the whole tree, and go back to
- *   the reader's position. It opens centred on that position.
+ *   the reader's position. It opens centred on that position. **Show moves**
+ *   writes each move's SAN above its dot, in the drawing's units so it scales
+ *   with the view (readable from about 2.5×, not drawn below 150%), and only
+ *   for the dots on screen (`mapLabelsIn` / `visibleRect`), so a huge tree
+ *   costs what is visible; the moves on the reader's way are bold and in the
+ *   primary colour.
  *
  * It is a map of the **repertoire**, not of the session: a move the reader
  * added is not on it, and while they stand in one, the marker waits on the
@@ -95,6 +106,18 @@ const drawingSx: SxProps<Theme> = {
   "& .map-open": stroke((palette) => palette.text.disabled),
   "& .map-covered": stroke((palette) => palette.success.main),
   "& .map-trail": stroke((palette) => palette.primary.main),
+  "& .map-label": {
+    fill: (theme: Theme) => (theme.vars ?? theme).palette.text.primary,
+    // A halo in the paper colour, painted under the glyphs, so a label stays
+    // legible where it crosses a line.
+    ...stroke((palette) => palette.background.paper),
+    strokeWidth: 1,
+    paintOrder: "stroke",
+  },
+  "& .map-label-trail": {
+    fill: (theme: Theme) => (theme.vars ?? theme).palette.primary.main,
+    fontWeight: 700,
+  },
   "& .map-here": {
     fill: (theme: Theme) => (theme.vars ?? theme).palette.primary.main,
     ...stroke((palette) => palette.background.paper),
@@ -109,6 +132,9 @@ const BUTTON_ZOOM = 1.25;
 const TOOLBAR_ESTIMATE_PX = 64;
 
 type Drawing = {
+  layout: MapLayout;
+  /** The moves on the reader's way, for the labels to pick out. */
+  trailIds: ReadonlySet<string>;
   edges: { covered: string; open: string };
   ends: { covered: string; open: string };
   moves: { covered: string; open: string };
@@ -171,12 +197,15 @@ function MapButton({
   testId,
   onClick,
   disabled = false,
+  pressed,
   children,
 }: {
   label: string;
   testId: string;
   onClick: () => void;
   disabled?: boolean;
+  /** A toggle's state; absent for a plain button. */
+  pressed?: boolean;
   children: ReactNode;
 }) {
   return (
@@ -187,6 +216,8 @@ function MapButton({
           disabled={disabled}
           onClick={onClick}
           aria-label={label}
+          aria-pressed={pressed}
+          color={pressed ? "primary" : "default"}
           data-testid={testId}
         >
           {children}
@@ -223,10 +254,16 @@ function RepertoireMap({
   const moves = useMemo(() => mapMoveDots(layout, coverage), [layout, coverage]);
   const trail = useMemo(() => {
     const path = pathTo(repertoire, nodeId);
-    return { edges: mapPathTo(layout, path), dots: mapPathDots(layout, path) };
+    return {
+      edges: mapPathTo(layout, path),
+      dots: mapPathDots(layout, path),
+      ids: new Set(path.map((node) => node.id)),
+    };
   }, [layout, repertoire, nodeId]);
 
   const drawing: Drawing = {
+    layout,
+    trailIds: trail.ids,
     edges,
     ends,
     moves,
@@ -434,6 +471,24 @@ function FullScreenMap({
     return () => box.removeEventListener("wheel", onWheel);
   }, []);
 
+  /*
+    Show moves: the labels of the dots on screen, recomputed as the view
+    moves. The viewport is the dialog below its toolbar — the window stands in
+    for it, as for the first centring, so render reads no ref.
+  */
+  const [showMoves, setShowMoves] = useState(false);
+  const readable = view.k >= MAP_LABEL_MIN_K;
+  const labels = useMemo(
+    () =>
+      showMoves && readable
+        ? mapLabelsIn(
+            drawing.layout,
+            visibleRect(view, window.innerWidth, window.innerHeight - TOOLBAR_ESTIMATE_PX),
+          )
+        : [],
+    [showMoves, readable, drawing.layout, view],
+  );
+
   /** A drag pans: where the pointer went down, and the view it started from. */
   const drag = useRef<{ x: number; y: number; view: MapView } | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -469,9 +524,23 @@ function FullScreenMap({
         <Box sx={{ flexGrow: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
           {progress}
         </Box>
-        <Typography variant="caption" sx={{ color: "text.secondary" }}>
-          {t("repertoires.play.map.mouseHint")}
+        <Typography
+          variant="caption"
+          sx={{ color: showMoves && !readable ? "warning.main" : "text.secondary" }}
+          data-testid={`${testId}-hint`}
+        >
+          {showMoves && !readable
+            ? t("repertoires.play.map.zoomToRead")
+            : t("repertoires.play.map.mouseHint")}
         </Typography>
+        <MapButton
+          label={t("repertoires.play.map.showMoves")}
+          testId={`${testId}-show-moves`}
+          pressed={showMoves}
+          onClick={() => setShowMoves((current) => !current)}
+        >
+          <AbcRoundedIcon />
+        </MapButton>
         <MapButton
           label={t("repertoires.play.map.zoomOut")}
           testId={`${testId}-zoom-out`}
@@ -569,6 +638,29 @@ function FullScreenMap({
             data-k={view.k}
           >
             <MapLayers testId={testId} drawing={drawing} nodeId={nodeId} />
+            {labels.length > 0 && (
+              <g
+                data-testid={`${testId}-labels`}
+                fontSize={MAP_LABEL_FONT}
+                textAnchor="middle"
+                fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
+              >
+                {labels.map((label) => (
+                  <text
+                    key={label.id}
+                    x={label.px}
+                    // Above the dot, clear of the line running through it.
+                    y={label.py - MAP_LABEL_FONT * 0.75}
+                    className={
+                      drawing.trailIds.has(label.id) ? "map-label map-label-trail" : "map-label"
+                    }
+                    data-testid={`${testId}-label-${label.id}`}
+                  >
+                    {label.san}
+                  </text>
+                ))}
+              </g>
+            )}
           </g>
         </Box>
       </Box>

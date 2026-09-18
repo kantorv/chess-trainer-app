@@ -923,7 +923,12 @@ when play — not navigation — reaches a leaf of the repertoire (the module's
   **drag pans** (a native non-passive wheel listener, so the page neither
   scrolls nor zooms under it; the view arithmetic — `zoomViewAt`, `fitView`,
   `centerView` — is pure, in `lib/repertoireMap.ts`), with zoom, fit-all and
-  "where am I" buttons; it opens centred on the reader's position. The
+  "where am I" buttons; it opens centred on the reader's position. Its
+  **Show moves** toggle writes each move's SAN above its dot — in the
+  drawing's own units, so labels scale with the view and never overlap (not
+  drawn below 150%, where a hint says to zoom in) — and only for the dots on
+  screen (`mapLabelsIn` / `visibleRect`, capped at `MAP_LABEL_LIMIT`), the
+  moves on the reader's way bold in the primary colour. The
   edges are a few path strings, not an element per move, so the 9,146-node
   example lays out in ~10ms. It maps the repertoire, not the session: inside
   a line the reader added, the marker waits on the last repertoire position.
