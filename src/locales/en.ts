@@ -883,11 +883,18 @@ const en = {
     },
     open: "Open",
     add: "Add",
-    remove: "Delete this repertoire",
     select: "Select this repertoire",
     selectAll: "Select all repertoires",
     selected: "{{count}} selected",
     download: "Download selected as PGN",
+    deleteSelected: "Delete selected",
+    /** The bulk delete's confirm (CTA-68). */
+    bulkDelete: {
+      title_one: "Delete {{count}} repertoire?",
+      title_other: "Delete {{count}} repertoires?",
+      text: "They are removed from this browser. This can't be undone.",
+      confirm: "Delete",
+    },
     /** The screen a repertoire is brought in on. */
     upload: {
       title: "Add a repertoire",
@@ -918,7 +925,11 @@ const en = {
       sections: {
         general: "General",
         board: "Board",
+        folder: "Folder",
       },
+      folder: "Folder",
+      folderHelp: "Where it is filed in the list.",
+      folderNone: "No folders yet — make one from the list's New folder.",
       name: "Title",
       nameHelp: "Shown in the list and above the board.",
       description: "Description",
@@ -982,9 +993,7 @@ const en = {
       count_other: "{{count}} repertoires",
       deleteConfirm_one: "Its {{count}} repertoire moves to Unfiled; nothing is deleted.",
       deleteConfirm_other: "Its {{count}} repertoires move to Unfiled; nothing is deleted.",
-      move: "Move to folder",
-      moveTitle: "Move to folder",
-      empty: "This folder is empty. Move repertoires here from the list.",
+      empty: "This folder is empty. Move repertoires here from their settings.",
     },
     /**
      * Playing a repertoire against the trainer (`/repertoires/<id>/play`,

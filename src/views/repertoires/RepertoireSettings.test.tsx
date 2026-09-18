@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import i18n from "../../i18n";
+import { createRepertoireFolder } from "../../lib/savedRepertoireFolderStore";
 import {
+  fileRepertoire,
   findSavedRepertoire,
   savedRepertoiresSnapshot,
 } from "../../lib/savedRepertoireStore";
@@ -134,6 +136,47 @@ describe("a repertoire's settings screen", () => {
     expect(screen.getByTestId("repertoire-board-description")).toHaveTextContent(
       "Play it from Black.",
     );
+  });
+
+  it("offers the folders as a tree under Unfiled, preselected where it is filed", async () => {
+    store("a");
+    const caro = createRepertoireFolder("Caro")!;
+    const slav = createRepertoireFolder("Slav")!;
+    fileRepertoire("a", slav.id);
+    renderSection("/repertoires/a/settings");
+
+    const tree = screen.getByTestId("repertoire-settings-folder");
+    expect(tree).toHaveAttribute("role", "tree");
+    const items = within(tree).getAllByRole("treeitem");
+    expect(items.map((node) => node.dataset.testid)).toEqual([
+      "repertoire-settings-folder-unfiled",
+      `repertoire-settings-folder-${caro.id}`,
+      `repertoire-settings-folder-${slav.id}`,
+    ]);
+    // Unfiled is the root; the folders sit one level under it.
+    expect(items.map((node) => node.getAttribute("aria-level"))).toEqual(["1", "2", "2"]);
+    expect(screen.getByTestId(`repertoire-settings-folder-${slav.id}`)).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+
+    await userEvent.click(screen.getByTestId(`repertoire-settings-folder-${caro.id}`));
+    await userEvent.click(screen.getByTestId("repertoire-settings-save"));
+    expect(findSavedRepertoire("a")?.folderId).toBe(caro.id);
+  });
+
+  it("leaves the folder alone on Cancel", async () => {
+    store("a");
+    const caro = createRepertoireFolder("Caro")!;
+    renderSection("/repertoires/a/settings");
+    expect(screen.getByTestId("repertoire-settings-folder-unfiled")).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+
+    await userEvent.click(screen.getByTestId(`repertoire-settings-folder-${caro.id}`));
+    await userEvent.click(screen.getByTestId("repertoire-settings-cancel"));
+    expect(findSavedRepertoire("a")?.folderId).toBeNull();
   });
 
   it("says so for an id this browser does not hold", () => {

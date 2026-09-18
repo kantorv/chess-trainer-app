@@ -13,7 +13,6 @@ import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import CreateNewFolderRoundedIcon from "@mui/icons-material/CreateNewFolderRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
-import DriveFileMoveRoundedIcon from "@mui/icons-material/DriveFileMoveRounded";
 import DriveFileRenameOutlineRoundedIcon from "@mui/icons-material/DriveFileRenameOutlineRounded";
 import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
 import { Link as RouterLink, useLocation, useNavigate, useSearchParams } from "react-router";
@@ -35,11 +34,10 @@ import {
   sortedRepertoireFolders,
   type RepertoireFolder,
 } from "../../lib/savedRepertoireFolders";
-import { fileRepertoire, removeSavedRepertoire } from "../../lib/savedRepertoireStore";
+import { removeSavedRepertoires } from "../../lib/savedRepertoireStore";
 import { slugify } from "../../lib/pgnLibrary";
 import { RightPanel } from "../main/rightPanel";
 import SavedListExportBar from "../shared/SavedListExportBar";
-import SavedListRemoveButton from "../shared/SavedListRemoveButton";
 import SavedListViewToggle from "../shared/SavedListViewToggle";
 import {
   SAVED_LIST_DEFAULT_VIEW,
@@ -49,9 +47,9 @@ import {
   type SavedListView,
 } from "../shared/savedList";
 import {
+  RepertoireBulkDeleteDialog,
   RepertoireFolderDeleteDialog,
   RepertoireFolderNameDialog,
-  RepertoireMoveDialog,
 } from "./RepertoireFolderDialogs";
 import { RepertoireFolderCard, RepertoireFolderRow } from "./RepertoireFolderViews";
 import RepertoireGamesMenu from "./RepertoireGamesMenu";
@@ -63,10 +61,15 @@ import { useSavedRepertoires } from "./useSavedRepertoires";
  * first, as rows or as preview boards at the library's two card sizes (CTA-61).
  *
  * It is `views/tools/analysis/saved/SavedAnalyses.tsx` again, over the same
- * saved-list machinery (`views/shared/savedList.ts` and the three
- * `SavedList*.tsx` beside it): the same toggle, the same export bar in the list
- * view only, the same delete control, the same scrolling region. What that
- * screen's header says holds here and is not repeated; the two differences:
+ * saved-list machinery (`views/shared/savedList.ts` and the `SavedList*.tsx`
+ * beside it): the same toggle, the same export bar, the same scrolling
+ * region. What that screen's header says holds here and is not repeated; the
+ * differences:
+ *
+ * - **Deleting is in bulk, and in every view** (CTA-68). No row or card
+ *   carries a delete of its own: each carries a checkbox — the cards too, so
+ *   the export bar (select-all, the count, the download and a delete that
+ *   asks first) shows in all three views, and switching view keeps the picks.
  *
  * - **One destination, and its games.** A repertoire opens on its own view
  *   (`/repertoires/<id>`, the player) — there is no single position to hand
@@ -76,8 +79,8 @@ import { useSavedRepertoires } from "./useSavedRepertoires";
  * - **Folders, one level deep.** The top level lists the folders, then the
  *   Unfiled repertoires; `?folder=<id>` opens one — its repertoires, with its
  *   rename and delete in the top bar and the way back beside its name. A
- *   split lands the reader inside the folder it made. Every repertoire moves
- *   between folders from its own row or card; a folder deleted keeps its
+ *   split lands the reader inside the folder it made. A repertoire moves
+ *   between folders from its settings screen (CTA-68); a folder deleted keeps its
  *   repertoires (they go back to Unfiled). See `lib/savedRepertoireFolders.ts`.
  * - **A card previews where the repertoire branches.** Not the start, which
  *   every 1.e4 repertoire shares, and not any one line's end: the position the
@@ -122,29 +125,6 @@ function SettingsLink({ saved }: { saved: SavedRepertoire }) {
   );
 }
 
-/** "Move to folder" — on both the row and the card; the list owns the dialog. */
-function MoveButton({
-  saved,
-  onMove,
-}: {
-  saved: SavedRepertoire;
-  onMove: (saved: SavedRepertoire) => void;
-}) {
-  const { t } = useTranslation();
-  return (
-    <Tooltip title={t("repertoires.folder.move")}>
-      <IconButton
-        size="small"
-        onClick={() => onMove(saved)}
-        aria-label={t("repertoires.folder.move")}
-        data-testid={`repertoires-move-${saved.id}`}
-      >
-        <DriveFileMoveRoundedIcon fontSize="small" />
-      </IconButton>
-    </Tooltip>
-  );
-}
-
 /** The two caption lines both views print: the name, then its size and date. */
 const useCaption = (saved: SavedRepertoire) => {
   const { t, i18n } = useTranslation();
@@ -168,6 +148,28 @@ const useCaption = (saved: SavedRepertoire) => {
   };
 };
 
+/** The pick — on both the row and the card, over the list's one picked set. */
+function SelectBox({
+  saved,
+  checked,
+  onToggle,
+}: {
+  saved: SavedRepertoire;
+  checked: boolean;
+  onToggle: () => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <Checkbox
+      size="small"
+      checked={checked}
+      onChange={onToggle}
+      slotProps={{ input: { "aria-label": t("repertoires.select") } }}
+      data-testid={`repertoires-select-${saved.id}`}
+    />
+  );
+}
+
 const ellipsis = {
   display: "block",
   overflow: "hidden",
@@ -175,17 +177,13 @@ const ellipsis = {
   whiteSpace: "nowrap",
 } as const;
 
-function RepertoireRow({
-  saved,
-  checked,
-  onToggle,
-  onMove,
-}: {
+type ItemProps = {
   saved: SavedRepertoire;
   checked: boolean;
   onToggle: () => void;
-  onMove: (saved: SavedRepertoire) => void;
-}) {
+};
+
+function RepertoireRow({ saved, checked, onToggle }: ItemProps) {
   const { t } = useTranslation();
   const { primary, secondary } = useCaption(saved);
 
@@ -233,33 +231,14 @@ function RepertoireRow({
           {t("repertoires.open")}
         </Button>
         <RepertoireGamesMenu id={saved.id} testId={`repertoires-games-${saved.id}`} />
-        <MoveButton saved={saved} onMove={onMove} />
         <SettingsLink saved={saved} />
-        <SavedListRemoveButton
-          id={saved.id}
-          onRemove={removeSavedRepertoire}
-          labelKey="repertoires"
-          testIdPrefix="repertoires"
-        />
-        <Checkbox
-          size="small"
-          checked={checked}
-          onChange={onToggle}
-          slotProps={{ input: { "aria-label": t("repertoires.select") } }}
-          data-testid={`repertoires-select-${saved.id}`}
-        />
+        <SelectBox saved={saved} checked={checked} onToggle={onToggle} />
       </Box>
     </ListItem>
   );
 }
 
-function RepertoireCard({
-  saved,
-  onMove,
-}: {
-  saved: SavedRepertoire;
-  onMove: (saved: SavedRepertoire) => void;
-}) {
+function RepertoireCard({ saved, checked, onToggle }: ItemProps) {
   const { t } = useTranslation();
   const { primary, secondary } = useCaption(saved);
 
@@ -290,14 +269,8 @@ function RepertoireCard({
           </Typography>
         </Box>
         <RepertoireGamesMenu id={saved.id} testId={`repertoires-games-${saved.id}`} />
-        <MoveButton saved={saved} onMove={onMove} />
         <SettingsLink saved={saved} />
-        <SavedListRemoveButton
-          id={saved.id}
-          onRemove={removeSavedRepertoire}
-          labelKey="repertoires"
-          testIdPrefix="repertoires"
-        />
+        <SelectBox saved={saved} checked={checked} onToggle={onToggle} />
       </Box>
     </Card>
   );
@@ -329,7 +302,9 @@ function Repertoires() {
     The picks, held as ids and read *through* the rows on screen, so one
     deleted or moved away falls out of the count rather than haunting it —
     and cleared on moving to another folder (adjusted during render, not in
-    an effect), since a count for rows nobody can see is a trap.
+    an effect), since a count for rows nobody can see is a trap. Switching
+    view keeps them: every view has the checkboxes, so the same rows are
+    picked whichever way they are drawn.
   */
   const [picked, setPicked] = useState<ReadonlySet<string>>(new Set());
   const [pickedIn, setPickedIn] = useState<string | null>(folderId);
@@ -353,10 +328,19 @@ function Repertoires() {
         : new Set(visible.map((saved) => saved.id)),
     );
 
-  /* The dialogs: naming a folder, deleting one, moving a repertoire. */
+  /* The dialogs: naming a folder, deleting one, deleting the picks. */
   const [naming, setNaming] = useState<{ folder: RepertoireFolder | null } | null>(null);
   const [deleting, setDeleting] = useState<RepertoireFolder | null>(null);
-  const [moving, setMoving] = useState<SavedRepertoire | null>(null);
+  const [deletingPicked, setDeletingPicked] = useState(false);
+  // The count asked about, held past the confirm so the dialog's closing
+  // transition does not read "Delete 0".
+  const [askedCount, setAskedCount] = useState(0);
+
+  // One write for the lot; the picks go with them.
+  const deletePicked = () => {
+    removeSavedRepertoires(selected.map((saved) => saved.id));
+    setPicked(new Set());
+  };
 
   const saveName = (name: string) => {
     if (naming?.folder) renameRepertoireFolder(naming.folder.id, name);
@@ -489,7 +473,7 @@ function Repertoires() {
             {t("repertoires.add")}
           </Button>
 
-          {view === "list" && visible.length > 0 && (
+          {visible.length > 0 && (
             <SavedListExportBar
               testIdPrefix="repertoires"
               labelKey="repertoires"
@@ -504,15 +488,16 @@ function Repertoires() {
                   selected.map((saved) => saved.pgn),
                 )
               }
+              onDelete={() => {
+                setAskedCount(selected.length);
+                setDeletingPicked(true);
+              }}
             />
           )}
 
           <SavedListViewToggle
             value={view}
-            onChange={(next) => {
-              setView(next);
-              setPicked(new Set());
-            }}
+            onChange={setView}
             labelKey="repertoires"
             testIdPrefix="repertoires"
           />
@@ -543,7 +528,6 @@ function Repertoires() {
                   saved={saved}
                   checked={picked.has(saved.id)}
                   onToggle={() => togglePicked(saved.id)}
-                  onMove={setMoving}
                 />
               ))}
             </List>
@@ -554,7 +538,12 @@ function Repertoires() {
               <RepertoireFolderCard key={folder.id} {...folderViewProps(folder)} />
             ))}
             {visible.map((saved) => (
-              <RepertoireCard key={saved.id} saved={saved} onMove={setMoving} />
+              <RepertoireCard
+                key={saved.id}
+                saved={saved}
+                checked={picked.has(saved.id)}
+                onToggle={() => togglePicked(saved.id)}
+              />
             ))}
           </Box>
         )}
@@ -573,12 +562,11 @@ function Repertoires() {
         onConfirm={() => deleting !== null && deleteFolder(deleting)}
         onClose={() => setDeleting(null)}
       />
-      <RepertoireMoveDialog
-        open={moving !== null}
-        folders={folders}
-        current={moving?.folderId ?? null}
-        onMove={(target) => moving !== null && fileRepertoire(moving.id, target)}
-        onClose={() => setMoving(null)}
+      <RepertoireBulkDeleteDialog
+        open={deletingPicked}
+        count={askedCount}
+        onConfirm={deletePicked}
+        onClose={() => setDeletingPicked(false)}
       />
 
       <RightPanel>

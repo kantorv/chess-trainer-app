@@ -3,7 +3,10 @@ import { act, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import i18n from "../../i18n";
-import { SAVED_REPERTOIRES_STORAGE_KEY } from "../../lib/savedRepertoireStore";
+import {
+  SAVED_REPERTOIRES_STORAGE_KEY,
+  savedRepertoiresSnapshot,
+} from "../../lib/savedRepertoireStore";
 import {
   CARO_TWO_GAMES,
   renderSection,
@@ -73,10 +76,83 @@ describe("the Repertoires list", () => {
     expect(screen.getByTestId("repertoires-item-a")).toBeInTheDocument();
   });
 
-  it("deletes one", async () => {
+  it("carries no per-record delete or move, on a row or a card", async () => {
     store("a", "Caro");
     renderSection("/repertoires");
-    await userEvent.click(screen.getByTestId("repertoires-remove-a"));
+    expect(screen.queryByTestId("repertoires-remove-a")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("repertoires-move-a")).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByTestId("repertoires-view-comfortable"));
+    expect(screen.queryByTestId("repertoires-remove-a")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("repertoires-move-a")).not.toBeInTheDocument();
+  });
+
+  it("deletes the picked repertoires in bulk, after asking", async () => {
+    store("a", "Caro");
+    store("b", "Slav");
+    store("c", "French");
+    renderSection("/repertoires");
+
+    // Nothing picked, nothing to delete.
+    expect(screen.getByTestId("repertoires-delete")).toBeDisabled();
+
+    await userEvent.click(within(screen.getByTestId("repertoires-select-a")).getByRole("checkbox"));
+    await userEvent.click(within(screen.getByTestId("repertoires-select-c")).getByRole("checkbox"));
+    await userEvent.click(screen.getByTestId("repertoires-delete"));
+    expect(screen.getByTestId("repertoires-delete-title")).toHaveTextContent(
+      "Delete 2 repertoires?",
+    );
+    await userEvent.click(screen.getByTestId("repertoires-delete-confirm"));
+
+    expect(savedRepertoiresSnapshot().map((row) => row.id)).toEqual(["b"]);
+    expect(screen.getAllByTestId(/^repertoires-item-/).map((row) => row.dataset.testid)).toEqual(
+      ["repertoires-item-b"],
+    );
+    // The selection went with them.
+    expect(screen.queryByTestId("repertoires-selected-count")).not.toBeInTheDocument();
+    expect(screen.getByTestId("repertoires-delete")).toBeDisabled();
+  });
+
+  it("deletes nothing when the ask is cancelled", async () => {
+    store("a", "Caro");
+    renderSection("/repertoires");
+
+    await userEvent.click(within(screen.getByTestId("repertoires-select-a")).getByRole("checkbox"));
+    await userEvent.click(screen.getByTestId("repertoires-delete"));
+    expect(screen.getByTestId("repertoires-delete-title")).toHaveTextContent(
+      "Delete 1 repertoire?",
+    );
+    await userEvent.click(screen.getByTestId("repertoires-delete-cancel"));
+
+    expect(savedRepertoiresSnapshot().map((row) => row.id)).toEqual(["a"]);
+    expect(screen.getByTestId("repertoires-selected-count")).toHaveTextContent("1");
+  });
+
+  it("picks, downloads and deletes on the cards too, keeping the picks across views", async () => {
+    store("a", "Caro");
+    store("b", "Slav");
+    renderSection("/repertoires");
+
+    await userEvent.click(within(screen.getByTestId("repertoires-select-a")).getByRole("checkbox"));
+    for (const view of ["compact", "comfortable"]) {
+      await userEvent.click(screen.getByTestId(`repertoires-view-${view}`));
+      const card = within(screen.getByTestId("repertoires-grid")).getByTestId(
+        "repertoires-item-a",
+      );
+      expect(within(card).getByRole("checkbox")).toBeChecked();
+      expect(screen.getByTestId("repertoires-selected-count")).toHaveTextContent("1");
+      expect(screen.getByTestId("repertoires-download")).toBeEnabled();
+    }
+
+    // On the big boards: pick the other card too, then delete both.
+    const cardB = within(screen.getByTestId("repertoires-grid")).getByTestId(
+      "repertoires-item-b",
+    );
+    await userEvent.click(within(cardB).getByRole("checkbox"));
+    expect(screen.getByTestId("repertoires-selected-count")).toHaveTextContent("2");
+    await userEvent.click(screen.getByTestId("repertoires-delete"));
+    await userEvent.click(screen.getByTestId("repertoires-delete-confirm"));
+    expect(savedRepertoiresSnapshot()).toEqual([]);
     expect(screen.getByTestId("repertoires-empty")).toBeInTheDocument();
   });
 
@@ -96,8 +172,8 @@ describe("the Repertoires list", () => {
       "data-position",
       BRANCH_FEN,
     );
-    // The export bar belongs to the view with the checkboxes.
-    expect(screen.queryByTestId("repertoires-export")).not.toBeInTheDocument();
+    // The cards carry checkboxes, so the export bar stays.
+    expect(screen.getByTestId("repertoires-export")).toBeInTheDocument();
   });
 
   it("picks rows for export in the list view", async () => {

@@ -3,14 +3,16 @@ import Checkbox from "@mui/material/Checkbox";
 import Chip from "@mui/material/Chip";
 import IconButton from "@mui/material/IconButton";
 import Tooltip from "@mui/material/Tooltip";
+import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
 import { useTranslation } from "react-i18next";
 
 /**
  * The export bar — select-all, the picked count and the download — the one in
- * the top bar of the list view of all three saved screens. The caller decides
- * whether to render it (it belongs beside the view that has the checkboxes it
- * drives, and nothing on the board views does) and hands the tri-state in:
+ * the top bar of the list view of all three saved screens, and of every view
+ * of the Repertoires list (whose cards carry checkboxes too). The caller
+ * decides whether to render it (it belongs beside a view that has the
+ * checkboxes it drives) and hands the tri-state in:
  *
  * - `checked` / `indeterminate` are **the caller's** computation, because the
  *   two screens that keep a flat list compute them over the whole list while
@@ -21,12 +23,16 @@ import { useTranslation } from "react-i18next";
  * - `onClearSelected` is the chip's clear. `onDownload` is the download; it is
  *   enabled exactly when something is picked, which this derives from
  *   `selectedCount`.
+ * - `onDelete` is optional (CTA-68): a screen that deletes in bulk passes it
+ *   and gets a delete button after the download, enabled on the same rule.
+ *   The asking first is the caller's. A screen that passes none renders
+ *   exactly what it did before.
  *
  * The labels are each screen's own: `labelKey` names the screen's catalog
- * block, and `selectAll` / `selected` / `download` resolve under it. The test
- * ids follow the screen's prefix — `${prefix}-export`, `-select-all`,
- * `-selected-count`, `-download` — because the screens' tests are the
- * contract.
+ * block, and `selectAll` / `selected` / `download` (and `deleteSelected`, with
+ * `onDelete`) resolve under it. The test ids follow the screen's prefix —
+ * `${prefix}-export`, `-select-all`, `-selected-count`, `-download`,
+ * `-delete` — because the screens' tests are the contract.
  */
 type SavedListExportBarProps = {
   /** Whether every row the select-all works on is picked. */
@@ -38,6 +44,8 @@ type SavedListExportBarProps = {
   selectedCount: number;
   onClearSelected: () => void;
   onDownload: () => void;
+  /** Delete the picked records — rendered only when passed. */
+  onDelete?: () => void;
   /** The screen's catalog block, holding `selectAll` / `selected` / `download`. */
   labelKey: string;
   /** The screen's test-id prefix. */
@@ -51,6 +59,7 @@ function SavedListExportBar({
   selectedCount,
   onClearSelected,
   onDownload,
+  onDelete,
   labelKey,
   testIdPrefix,
 }: SavedListExportBarProps) {
@@ -94,6 +103,21 @@ function SavedListExportBar({
           </IconButton>
         </Box>
       </Tooltip>
+      {onDelete !== undefined && (
+        <Tooltip title={t(`${labelKey}.deleteSelected`)}>
+          <Box component="span" sx={{ display: "inline-flex" }}>
+            <IconButton
+              size="small"
+              disabled={selectedCount === 0}
+              onClick={onDelete}
+              aria-label={t(`${labelKey}.deleteSelected`)}
+              data-testid={`${testIdPrefix}-delete`}
+            >
+              <DeleteOutlineRoundedIcon fontSize="small" />
+            </IconButton>
+          </Box>
+        </Tooltip>
+      )}
     </Box>
   );
 }

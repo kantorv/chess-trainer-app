@@ -13,7 +13,7 @@ import { renderSection, storeRepertoire } from "./repertoireTestKit";
 /*
   The Repertoires list's folders — one level deep: the top level lists the
   folders and then the Unfiled repertoires, `?folder=` opens one, and every
-  repertoire moves between them. The stores are real (jsdom's localStorage,
+  repertoire moves between them — from its settings screen (CTA-68). The stores are real (jsdom's localStorage,
   cleared between tests by `src/test/setup.ts`); the board is stubbed as
   everywhere (`.claude/rules/chessboard.md` §8).
 */
@@ -52,15 +52,17 @@ describe("repertoire folders on the list", () => {
     );
   });
 
-  it("moves a repertoire into a folder and out again", async () => {
+  it("moves a repertoire into a folder and out again, from its settings", async () => {
     storeRepertoire("a");
     const folder = createRepertoireFolder("Caro")!;
     renderSection("/repertoires");
 
-    await userEvent.click(screen.getByTestId("repertoires-move-a"));
-    await userEvent.click(screen.getByTestId(`repertoire-folder-pick-${folder.id}`));
+    await userEvent.click(screen.getByTestId("repertoires-settings-a"));
+    await userEvent.click(screen.getByTestId(`repertoire-settings-folder-${folder.id}`));
+    await userEvent.click(screen.getByTestId("repertoire-settings-save"));
     expect(findSavedRepertoire("a")?.folderId).toBe(folder.id);
-    // Gone from the top level, counted on the folder.
+    // Back on the list: gone from the top level, counted on the folder.
+    expect(await screen.findByTestId("repertoires-screen")).toBeInTheDocument();
     expect(screen.queryByTestId("repertoires-item-a")).not.toBeInTheDocument();
     expect(screen.getByTestId(`repertoire-folder-${folder.id}`)).toHaveTextContent(
       "1 repertoire",
@@ -69,13 +71,17 @@ describe("repertoire folders on the list", () => {
     // Inside the folder, and back out to Unfiled from there.
     await userEvent.click(screen.getByTestId(`repertoire-folder-open-${folder.id}`));
     expect(screen.getByTestId("repertoires-title")).toHaveTextContent("Caro");
-    await userEvent.click(screen.getByTestId("repertoires-move-a"));
-    expect(screen.getByTestId(`repertoire-folder-pick-${folder.id}`)).toHaveClass(
-      "Mui-selected",
+    await userEvent.click(screen.getByTestId("repertoires-settings-a"));
+    expect(screen.getByTestId(`repertoire-settings-folder-${folder.id}`)).toHaveAttribute(
+      "aria-selected",
+      "true",
     );
-    await userEvent.click(screen.getByTestId("repertoire-folder-pick-unfiled"));
+    await userEvent.click(screen.getByTestId("repertoire-settings-folder-unfiled"));
+    await userEvent.click(screen.getByTestId("repertoire-settings-save"));
     expect(findSavedRepertoire("a")?.folderId).toBeNull();
-    expect(screen.getByTestId("repertoires-empty")).toHaveTextContent("This folder is empty");
+    expect(await screen.findByTestId("repertoires-empty")).toHaveTextContent(
+      "This folder is empty",
+    );
   });
 
   it("shows only its own repertoires inside a folder, with no folders in it, and a way back", async () => {
