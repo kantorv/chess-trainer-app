@@ -640,6 +640,7 @@ const he: typeof en = {
       restart: "התחלה מחדש מעמדת הפתיחה",
       download: "הורדה עם התוספות שלכם כ-PGN",
       back: "חזרה ללוח",
+      arrows: "חצים",
       status: {
         thinking: "המאמן בוחר מסע…",
         yourMove: "תורכם.",

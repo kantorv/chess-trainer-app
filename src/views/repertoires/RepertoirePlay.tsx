@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Box from "@mui/material/Box";
 import CircularProgress from "@mui/material/CircularProgress";
+import FormControlLabel from "@mui/material/FormControlLabel";
 import IconButton from "@mui/material/IconButton";
+import Switch from "@mui/material/Switch";
 import ToggleButton from "@mui/material/ToggleButton";
 import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import Tooltip from "@mui/material/Tooltip";
@@ -11,8 +13,9 @@ import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
 import RestartAltRoundedIcon from "@mui/icons-material/RestartAltRounded";
 import { Link as RouterLink, Navigate, useParams } from "react-router";
 import { useTranslation } from "react-i18next";
+import type { ChessboardOptions } from "react-chessboard";
 
-import { emptyTree, type GameTree } from "../../lib/gameTree";
+import { emptyTree, findNode, type GameTree } from "../../lib/gameTree";
 import { downloadPgn } from "../../lib/pgnExport";
 import { slugify } from "../../lib/pgnLibrary";
 import { extensionIdsOf, nodeIdsOf } from "../../lib/repertoireTrainer";
@@ -25,6 +28,7 @@ import BoardShell from "../dev/core/BoardShell";
 import TreeMoveList from "../dev/core/TreeMoveList";
 import { useBoardCore } from "../dev/core/useBoardCore";
 import { useTrainerModule, type TrainerStatus } from "../dev/core/useTrainerModule";
+import { nextMoveArrowsOf } from "../tools/analysis/nextMoveArrows";
 import { MissingRepertoire } from "./RepertoireBoard";
 import { useSavedRepertoires } from "./useSavedRepertoires";
 
@@ -61,6 +65,13 @@ import { useSavedRepertoires } from "./useSavedRepertoires";
  *   here; leaving the screen drops the extensions. The way out is the
  *   download, which writes the session tree — repertoire, extensions, side
  *   lines and all — as one PGN.
+ *
+ * - **Arrows are the reader's call, and off by default.** A drill should not
+ *   show the answer unless asked, so the header's switch draws the next-move
+ *   arrows (`nextMoveArrowsOf`: the mainline's move in its own colour, the
+ *   side lines in another) for every continuation at the node on screen —
+ *   the repertoire's and the reader's additions alike, and a single one too,
+ *   unlike the reading boards, which draw only where a line branches.
  *
  * What it deliberately does not do yet: count a deviation as a mistake, save
  * the extensions back, or pick the trainer's moves by anything but chance.
@@ -144,6 +155,18 @@ function RepertoirePlayScreen({ saved }: { saved: SavedRepertoire }) {
     };
   }, [loadTree, requestReply, saved]);
 
+  const [showArrows, setShowArrows] = useState(false);
+  const continuations = useMemo(
+    () =>
+      core.nodeId === null
+        ? core.tree.moves
+        : (findNode(core.tree, core.nodeId)?.children ?? []),
+    [core.tree, core.nodeId],
+  );
+  const boardOptions: ChessboardOptions = {
+    arrows: showArrows ? nextMoveArrowsOf(continuations) : [],
+  };
+
   const originalIds = useMemo(() => nodeIdsOf(repertoire), [repertoire]);
   const extensionIds = useMemo(
     () => extensionIdsOf(core.tree, originalIds),
@@ -187,6 +210,7 @@ function RepertoirePlayScreen({ saved }: { saved: SavedRepertoire }) {
         resolvePromotion: trainer.resolvePromotion,
       }}
       showEvalBar={false}
+      boardOptions={boardOptions}
       panel={{
         header: (
           <>
@@ -199,22 +223,35 @@ function RepertoirePlayScreen({ saved }: { saved: SavedRepertoire }) {
               >
                 {saved.name || t("repertoires.untitled")}
               </Typography>
-              <ToggleButtonGroup
-                exclusive
-                size="small"
-                value={side}
-                onChange={(_, next: Side | null) => changeSide(next)}
-                aria-label={t("repertoires.play.side")}
-                data-testid="repertoire-play-side"
-                sx={{ mt: 0.5 }}
-              >
-                <ToggleButton value="white" data-testid="repertoire-play-side-white">
-                  {t("repertoires.play.white")}
-                </ToggleButton>
-                <ToggleButton value="black" data-testid="repertoire-play-side-black">
-                  {t("repertoires.play.black")}
-                </ToggleButton>
-              </ToggleButtonGroup>
+              <Box sx={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 1, mt: 0.5 }}>
+                <ToggleButtonGroup
+                  exclusive
+                  size="small"
+                  value={side}
+                  onChange={(_, next: Side | null) => changeSide(next)}
+                  aria-label={t("repertoires.play.side")}
+                  data-testid="repertoire-play-side"
+                >
+                  <ToggleButton value="white" data-testid="repertoire-play-side-white">
+                    {t("repertoires.play.white")}
+                  </ToggleButton>
+                  <ToggleButton value="black" data-testid="repertoire-play-side-black">
+                    {t("repertoires.play.black")}
+                  </ToggleButton>
+                </ToggleButtonGroup>
+                <FormControlLabel
+                  sx={{ m: 0 }}
+                  control={
+                    <Switch
+                      size="small"
+                      checked={showArrows}
+                      data-testid="repertoire-play-arrows"
+                      onChange={(event) => setShowArrows(event.target.checked)}
+                    />
+                  }
+                  label={t("repertoires.play.arrows")}
+                />
+              </Box>
             </Box>
             {shown === "loading" && (
               <CircularProgress
