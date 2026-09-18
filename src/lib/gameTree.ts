@@ -95,19 +95,58 @@ export const emptyTree = (
 /** Walks over one tree's nodes. The `TreeManager` seam, never a hand-rolled walk. */
 const walker = (tree: GameTree) => new TreeManager<VariationNode>(tree.moves);
 
+/** Where one node sits: itself, and the move it answers (`null` at the root). */
+type Indexed = { node: VariationNode; parent: VariationNode | null };
+
+/**
+ * Every node of a tree by id, built **once per tree** and then read in O(1).
+ *
+ * A board asks "which node is this id" and "how did the game get here" several
+ * times per render — the navigation, the captured strips, the continuations —
+ * and each used to be a walk of the whole tree, `pathTo`'s copying an ancestor
+ * array at every node it passed. On a 9,146-node repertoire that was most of
+ * the cost of a step (CTA-61). Trees are immutable values (the module note),
+ * so the index is cached against the tree's `moves` array: any operation that
+ * changes the tree hands back a new array, and so a new index, while one that
+ * does not (`addMove` replaying a move already there) keeps the old one.
+ * A `WeakMap`, so a tree nobody holds takes its index with it.
+ */
+const indexes = new WeakMap<readonly VariationNode[], Map<string, Indexed>>();
+
+const indexOf = (tree: GameTree): Map<string, Indexed> => {
+  const cached = indexes.get(tree.moves);
+  if (cached !== undefined) return cached;
+
+  const index = new Map<string, Indexed>();
+  for (const root of tree.moves) index.set(root.id, { node: root, parent: null });
+  walker(tree).traverse((node) => {
+    for (const child of node.children) index.set(child.id, { node: child, parent: node });
+  });
+  indexes.set(tree.moves, index);
+  return index;
+};
+
 /** The node with this id, or `null` — including for `null`, which is ply 0. */
 export const findNode = (
   tree: GameTree,
   id: string | null,
 ): VariationNode | null =>
-  id === null ? null : walker(tree).findBy((node) => node.id === id);
+  id === null ? null : (indexOf(tree).get(id)?.node ?? null);
 
 /**
  * The chain of moves from the start position down to `id`, inclusive. Empty for
  * `null` (the start position itself) and for an id the tree does not hold.
  */
-export const pathTo = (tree: GameTree, id: string | null): VariationNode[] =>
-  id === null ? [] : (walker(tree).getPath((node) => node.id === id) ?? []);
+export const pathTo = (tree: GameTree, id: string | null): VariationNode[] => {
+  if (id === null) return [];
+  const index = indexOf(tree);
+  const path: VariationNode[] = [];
+  for (let at = index.get(id); at !== undefined; ) {
+    path.push(at.node);
+    at = at.parent === null ? undefined : index.get(at.parent.id);
+  }
+  return path.reverse();
+};
 
 /**
  * Where a node sits, written as the SAN of every move that leads to it —
