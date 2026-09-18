@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { screen } from "@testing-library/react";
+import { act, screen } from "@testing-library/react";
 
 import i18n from "../../i18n";
 import { renderSection, storeRepertoire } from "./repertoireTestKit";
@@ -58,5 +58,29 @@ describe("the repertoire board is composed, not written", () => {
     const squares = screen.getAllByTestId("the-one-board-square");
     expect(squares).toHaveLength(1);
     expect(squares[0]).toHaveAttribute("data-square-id", "repertoire-board");
+  });
+
+  // The Play repertoire screen (CTA-63) is under the same guarantee: the
+  // trainer is a module, not a panel of its own.
+  it("plays a repertoire on the same shared panel and square", () => {
+    vi.useFakeTimers();
+    try {
+      storeRepertoire("r");
+      renderSection("/repertoires/r/play");
+      act(() => {
+        vi.advanceTimersByTime(0);
+      });
+
+      const panels = screen.getAllByTestId("the-one-board-panel");
+      expect(panels).toHaveLength(1);
+      expect(panels[0]).toHaveAttribute("data-panel-id", "repertoire-play-panel");
+      expect(screen.getByTestId("panel-tab-ids")).toHaveTextContent("moves");
+
+      const squares = screen.getAllByTestId("the-one-board-square");
+      expect(squares).toHaveLength(1);
+      expect(squares[0]).toHaveAttribute("data-square-id", "repertoire-play");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

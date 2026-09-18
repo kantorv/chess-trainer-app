@@ -19,6 +19,13 @@ import { default as RepertoireUploadScreen  } from './views/repertoires/Repertoi
 import { default as RepertoireBoardScreen  } from './views/repertoires/RepertoireBoardMain'
 import { default as RepertoireSettingsScreen  } from './views/repertoires/RepertoireSettingsScreenMain'
 
+/**
+ * Play a repertoire against the trainer (CTA-63). Lazy, so the list and the
+ * board do not carry the drill's code until a reader asks for it; the core it
+ * is composed from is already in the bundle through the board.
+ */
+const RepertoirePlayScreen = lazy(() => import('./views/repertoires/RepertoirePlayMain'))
+
 
 /**
  * Back-compat for the pre-CTA-38 `/pgn/*` URLs. The section is "Library" now
@@ -162,6 +169,15 @@ const routes = createBrowserRouter(
         {
           path: "/repertoires/:id/settings",
           element: <RepertoireSettingsScreen />
+        },
+        // Drill it against the trainer, extend it, download it (CTA-63).
+        {
+          path: "/repertoires/:id/play",
+          element: (
+            <Suspense fallback={null}>
+              <RepertoirePlayScreen />
+            </Suspense>
+          )
         },
         // Pre-CTA-39 the Openings screen lived under `/tools`. Old links redirect.
         {

@@ -15,6 +15,7 @@ import CreateNewFolderRoundedIcon from "@mui/icons-material/CreateNewFolderRound
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import DriveFileMoveRoundedIcon from "@mui/icons-material/DriveFileMoveRounded";
 import DriveFileRenameOutlineRoundedIcon from "@mui/icons-material/DriveFileRenameOutlineRounded";
+import PlayArrowRoundedIcon from "@mui/icons-material/PlayArrowRounded";
 import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
 import { Link as RouterLink, useLocation, useNavigate, useSearchParams } from "react-router";
 import { useTranslation } from "react-i18next";
@@ -115,6 +116,28 @@ function SettingsLink({ saved }: { saved: SavedRepertoire }) {
         data-testid={`repertoires-settings-${saved.id}`}
       >
         <SettingsRoundedIcon fontSize="small" />
+      </IconButton>
+    </Tooltip>
+  );
+}
+
+/**
+ * "Play" — drill it against the trainer (CTA-63), on both the row and the
+ * card. A record from before the one-game rule has no one line to drill, so
+ * the play route sends it on to its own board route and the choice there.
+ */
+function PlayLink({ saved }: { saved: SavedRepertoire }) {
+  const { t } = useTranslation();
+  return (
+    <Tooltip title={t("repertoires.play.open")}>
+      <IconButton
+        size="small"
+        component={RouterLink}
+        to={`${boardPath(saved)}/play`}
+        aria-label={t("repertoires.play.open")}
+        data-testid={`repertoires-play-${saved.id}`}
+      >
+        <PlayArrowRoundedIcon fontSize="small" />
       </IconButton>
     </Tooltip>
   );
@@ -230,6 +253,7 @@ function RepertoireRow({
         >
           {t("repertoires.open")}
         </Button>
+        <PlayLink saved={saved} />
         <MoveButton saved={saved} onMove={onMove} />
         <SettingsLink saved={saved} />
         <SavedListRemoveButton
@@ -286,6 +310,7 @@ function RepertoireCard({
             {secondary}
           </Typography>
         </Box>
+        <PlayLink saved={saved} />
         <MoveButton saved={saved} onMove={onMove} />
         <SettingsLink saved={saved} />
         <SavedListRemoveButton

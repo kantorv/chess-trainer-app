@@ -5,6 +5,7 @@ import CircularProgress from "@mui/material/CircularProgress";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import IconButton from "@mui/material/IconButton";
 import Tooltip from "@mui/material/Tooltip";
+import PlayArrowRoundedIcon from "@mui/icons-material/PlayArrowRounded";
 import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
 import Switch from "@mui/material/Switch";
 import Typography from "@mui/material/Typography";
@@ -136,7 +137,8 @@ function MultiGameRepertoire({ saved }: { saved: SavedRepertoire }) {
   );
 }
 
-function MissingRepertoire() {
+/** An id this browser does not hold — the board's miss, and the play screen's. */
+export function MissingRepertoire() {
   const { t } = useTranslation();
   return (
     <Box data-testid="repertoire-board-missing" sx={{ py: 4, textAlign: "center" }}>
@@ -304,6 +306,19 @@ function RepertoireBoardScreen({ saved }: { saved: SavedRepertoire }) {
                 sx={{ flexShrink: 0 }}
               />
             )}
+            {/* Drill it against the trainer (CTA-63). */}
+            <Tooltip title={t("repertoires.play.open")}>
+              <IconButton
+                size="small"
+                component={RouterLink}
+                to={`/repertoires/${encodeURIComponent(saved.id)}/play`}
+                aria-label={t("repertoires.play.open")}
+                data-testid="repertoire-board-play"
+                sx={{ flexShrink: 0 }}
+              >
+                <PlayArrowRoundedIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
             <Tooltip title={t("repertoires.settings.open")}>
               <IconButton
                 size="small"
