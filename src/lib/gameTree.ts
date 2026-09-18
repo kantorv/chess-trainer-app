@@ -302,6 +302,156 @@ export const addMove = (
   };
 };
 
+/*
+  Editing a tree's structure (CTA-64) — the variations explorer's right-click
+  menu. Every operation below is immutable and keeps every surviving node's id,
+  so the reader's place (a node id) survives an edit, and the move list's
+  memoised tokens, keyed by id, stay put.
+*/
+
+/**
+ * A new tree with the lists along `path` rebuilt from the bottom up: at each
+ * depth, `atLevel` gets the list the path's node sits in (that node already
+ * replaced by its rebuilt self) and returns the list to use instead. Only the
+ * nodes on the path and the lists holding them are copied — an edit deep in a
+ * 9,146-node repertoire copies a few dozen arrays, not the tree.
+ */
+const rebuildAlong = (
+  tree: GameTree,
+  path: readonly VariationNode[],
+  atLevel: (
+    siblings: VariationNode[],
+    node: VariationNode,
+    depth: number,
+  ) => VariationNode[],
+): GameTree => {
+  let node = path[path.length - 1];
+  let list = tree.moves;
+  for (let depth = path.length - 1; depth >= 0; depth -= 1) {
+    const original = path[depth];
+    const siblings = depth === 0 ? tree.moves : path[depth - 1].children;
+    const substituted =
+      node === original
+        ? siblings
+        : siblings.map((sibling) => (sibling.id === original.id ? node : sibling));
+    list = atLevel(substituted, node, depth);
+    if (depth > 0) node = { ...path[depth - 1], children: list };
+  }
+  return { ...tree, moves: list };
+};
+
+/** Whether the node at `depth` of `path` is the first of the list it sits in. */
+const isFirstAt = (
+  tree: GameTree,
+  path: readonly VariationNode[],
+  depth: number,
+): boolean => {
+  const siblings = depth === 0 ? tree.moves : path[depth - 1].children;
+  return siblings[0]?.id === path[depth].id;
+};
+
+/** `node` moved to the front of `siblings`, the others in their order. */
+const toFront = (siblings: VariationNode[], node: VariationNode) => [
+  node,
+  ...siblings.filter((sibling) => sibling.id !== node.id),
+];
+
+/**
+ * Whether a node sits inside a side line — somewhere on the way to it a move
+ * is not `children[0]`. The mainline's own moves, and `null`, are not.
+ */
+export const isInSideLine = (tree: GameTree, id: string | null): boolean => {
+  const path = pathTo(tree, id);
+  return path.some((_, depth) => !isFirstAt(tree, path, depth));
+};
+
+/**
+ * **Promote variation** (lichess's): the line holding `id` moves one level up
+ * — at the closest branch above it (itself included) where it is not the
+ * first continuation, it becomes `children[0]`, and the line that was first
+ * there becomes the first side line. A node already on the mainline, or one
+ * the tree does not hold, leaves the tree as it is (the same reference).
+ */
+export const promoteVariation = (tree: GameTree, id: string): GameTree => {
+  const path = pathTo(tree, id);
+  let target = -1;
+  for (let depth = path.length - 1; depth >= 0; depth -= 1) {
+    if (!isFirstAt(tree, path, depth)) {
+      target = depth;
+      break;
+    }
+  }
+  if (target === -1) return tree;
+  return rebuildAlong(tree, path, (siblings, node, depth) =>
+    depth === target ? toFront(siblings, node) : siblings,
+  );
+};
+
+/**
+ * **Make main line**: {@link promoteVariation} at every level up to the root,
+ * so the path from the start to `id` *is* the mainline. The same reference
+ * back when it already is.
+ */
+export const makeMainline = (tree: GameTree, id: string): GameTree => {
+  const path = pathTo(tree, id);
+  if (path.every((_, depth) => isFirstAt(tree, path, depth))) return tree;
+  return rebuildAlong(tree, path, (siblings, node) => toFront(siblings, node));
+};
+
+/**
+ * **Delete from here**: the tree without `id` and everything after it. When
+ * it was the first continuation, the next side line becomes the first — the
+ * `children[0]` rule, applied to what is left. The same reference back for an
+ * id the tree does not hold.
+ */
+export const deleteFrom = (tree: GameTree, id: string): GameTree => {
+  const path = pathTo(tree, id);
+  if (path.length === 0) return tree;
+  const last = path.length - 1;
+  return rebuildAlong(tree, path, (siblings, node, depth) =>
+    depth === last ? siblings.filter((sibling) => sibling.id !== node.id) : siblings,
+  );
+};
+
+/**
+ * What {@link deleteFrom} would take away: the moves from `id` on (itself
+ * included) and the lines among them — the leaves, each the end of one line.
+ * Zeroes for an id the tree does not hold.
+ */
+export const subtreeCounts = (
+  tree: GameTree,
+  id: string,
+): { moves: number; lines: number } => {
+  const root = findNode(tree, id);
+  if (root === null) return { moves: 0, lines: 0 };
+  let moves = 0;
+  let lines = 0;
+  const stack: VariationNode[] = [root];
+  for (let node = stack.pop(); node !== undefined; node = stack.pop()) {
+    moves += 1;
+    if (node.children.length === 0) lines += 1;
+    stack.push(...node.children);
+  }
+  return { moves, lines };
+};
+
+/**
+ * **Copy variation PGN**: the one line from the start to `id`, as PGN — the
+ * tree's own tags and start position (`SetUp` / `FEN`) kept, its side lines
+ * not. A line stopped at a move is not a finished game, so the tree's
+ * `Result` is not carried: the movetext ends in `*`.
+ */
+export const linePgn = (tree: GameTree, id: string | null): string => {
+  const path = pathTo(tree, id);
+  let moves: VariationNode[] = [];
+  for (let depth = path.length - 1; depth >= 0; depth -= 1) {
+    moves = [{ ...path[depth], children: moves }];
+  }
+  const headers = { ...tree.headers };
+  delete headers.Result;
+  return treeToPgn({ ...tree, headers, moves });
+};
+
 /**
  * Fold several trees into **one** — the "merge" a repertoire file of many
  * games is offered (CTA-61), where each game is one line of the same opening.
