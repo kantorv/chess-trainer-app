@@ -24,8 +24,9 @@ import {
  *   {@link fileRepertoire}, {@link unfileRepertoiresIn} — are here, because
  *   these are the records they change.
  *
- * - **The ceiling is bytes, not rows.** A record is a whole file — the Alapin
- *   example is 800 KB — so the origin's few megabytes run out long before any
+ * - **The ceiling is bytes, not rows.** A record is a whole file — a
+ *   Chessable-style export of a few hundred lines runs to most of a megabyte —
+ *   so the origin's few megabytes run out long before any
  *   row cap would. The cap below is a bound on the list, not a promise that
  *   that many fit; a write past the quota is reported as `"storage"` and the
  *   list stays as it was, which the upload screen says in words.
@@ -36,8 +37,8 @@ export const SAVED_REPERTOIRES_STORAGE_KEY = "chessapp.savedRepertoires.v1";
 
 /**
  * How many repertoires are kept. See the note above: the quota bites first.
- * Generous, because a split makes one record per game — the Alapin example
- * alone is 310 — and a split that would pass it is refused whole
+ * Generous, because a split makes one record per game — a Chessable-style
+ * export can hold a few hundred — and a split that would pass it is refused whole
  * ({@link addRepertoires}) rather than quietly dropping the oldest.
  */
 export const MAX_SAVED_REPERTOIRES = 500;

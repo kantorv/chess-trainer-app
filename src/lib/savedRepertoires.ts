@@ -31,8 +31,8 @@ import {
  * **One mainline, with its side lines branching off it** — the shape a
  * repertoire has on lichess or in a book, and the one the board reads. A file
  * of *many* games is not a repertoire in that sense, however it is labelled: a
- * Chessable-style export writes each line as a game of its own (the Alapin
- * example, 310 games in `"N) "` chapters, none of them with a side line), and
+ * Chessable-style export writes each line as a game of its own (the shipped
+ * 2.c3 sampler: 14 games in `"N) "` chapters, none of them with a side line), and
  * a lichess study writes each chapter as one. Such a text is **not stored as
  * it is.** {@link readRepertoireText} reads it into its games, and the reader
  * picks one of two operations:
@@ -273,7 +273,7 @@ export const readRepertoireText = (text: string): RepertoireReading => {
 /**
  * The position at the end of the moves **every** tree agrees on — walked down
  * them together while there is exactly one move anywhere at that depth. For
- * one tree, that is where it first branches: the Nimzo-Indian example's card
+ * one tree, that is where it first branches: a one-tree repertoire's card
  * shows the position its side lines start from, not the start of the game.
  * Trees that start from different positions share nothing.
  */

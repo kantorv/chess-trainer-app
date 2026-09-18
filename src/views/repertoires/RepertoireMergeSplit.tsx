@@ -79,7 +79,7 @@ function RepertoireMergeSplit({
 
   /*
     A split lands in a folder of its own, named after the text, so a file of
-    310 games does not arrive as 310 loose rows. The folder is made first,
+    hundreds of games does not arrive as hundreds of loose rows. The folder is made first,
     because the records name it; if the records then cannot be written, the
     folder is taken back out rather than left empty.
   */

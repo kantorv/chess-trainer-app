@@ -42,7 +42,7 @@ import {
  * eval, are read by the cell itself from a selection store
  * (`moveSelection.ts`) that the props are written into. So a step re-renders
  * the cell losing the highlight and the cell gaining it, and an engine message
- * streaming in re-renders none of it — where before, on a 9,146-node
+ * streaming in re-renders none of it — where before, on a ~9,000-node
  * repertoire, each of them redrew every move (CTA-61).
  *
  * Presentational on purpose — the selected ply comes in as a prop and goes out
