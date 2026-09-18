@@ -15,8 +15,9 @@ export type ContextMenuNodeHandler = (id: string, anchor: MenuAnchor) => void;
 /**
  * Where to open a menu for a `contextmenu` event. A keyboard's menu key (or
  * Shift+F10) reports the pointer at 0,0, so the menu opens on the token itself.
+ * Any element — the repertoire map's moves are SVG (CTA-67).
  */
-export const menuAnchorOf = (event: MouseEvent<HTMLElement>): MenuAnchor => {
+export const menuAnchorOf = (event: MouseEvent<Element>): MenuAnchor => {
   if (event.clientX !== 0 || event.clientY !== 0) {
     return { top: event.clientY, left: event.clientX };
   }

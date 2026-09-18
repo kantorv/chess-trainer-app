@@ -118,7 +118,8 @@ import { useRepertoireGame } from "./useRepertoireGame";
  *   deletes from it (asking first) or copies its PGN. An edit goes through
  *   the core's `replaceTree`, which keeps the reader where they stand, and is
  *   a session change like any other — the Save button, the strip, the Map
- *   and `?at=` all follow the edited tree.
+ *   and `?at=` all follow the edited tree. The Map's written moves carry the
+ *   same menu (CTA-67), in the tab and full screen, and redraw as it edits.
  * - **Tabs: Moves · (Score) · Map · Settings · Engine.** Settings holds the
  *   side, Autoplay (player only — and the header's **Play** button, a second
  *   control over the same state), the next-move arrows and the engine's
@@ -793,6 +794,9 @@ function RepertoirePlayer({
                         // The player's full-screen map: a dot is a link to its
                         // position. A game's is not — no skipping ahead.
                         onSelectNode={game === undefined ? core.goToNode : undefined}
+                        // And its right-click is the move menu (CTA-67), the
+                        // Moves tab's own; a game's map binds none.
+                        onEditTree={game === undefined ? core.replaceTree : undefined}
                       />
                     ) : (
                       reading || null
