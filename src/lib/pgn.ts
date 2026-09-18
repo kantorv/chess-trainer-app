@@ -1,6 +1,6 @@
 import { Chess, DEFAULT_POSITION } from "chess.js";
 import { gameFromChess, type Game, type GameHeaders } from "./gameModel";
-import { addMove, emptyTree, type GameTree } from "./gameTree";
+import { emptyTree, type GameTree, type VariationNode } from "./gameTree";
 
 /**
  * PGN ingestion: text in, a {@link Game} or a {@link GameTree} out.
@@ -151,6 +151,13 @@ const splitTags = (pgn: string): { headers: GameHeaders; movetext: string } => {
 };
 
 /**
+ * The tag pairs of one game, without reading its moves — what a list of lines
+ * is named from, at the cost of a text scan rather than a parse. The same
+ * reader {@link parsePgnTree} uses, so a name here is the name the tree carries.
+ */
+export const readPgnTags = (pgn: string): GameHeaders => splitTags(pgn).headers;
+
+/**
  * Cut movetext into the tokens the walk below cares about: moves, `(`, `)` and
  * results. Everything PGN allows between them is dropped first —
  * `{ ... }` and `; ...` comments, `< ... >` reserved sections, `$12` NAGs, the
@@ -187,12 +194,12 @@ export const parsePgnTree = (pgn: string, gameNumber?: number): GameTree => {
   const { headers, movetext } = splitTags(pgn);
   const startFen = headers.FEN?.trim() || DEFAULT_POSITION;
 
-  let tree: GameTree;
+  let empty: GameTree;
   try {
     // The start position is validated here rather than on the first move, so a
     // broken `FEN` tag reads as a broken FEN tag.
     new Chess(startFen);
-    tree = emptyTree(startFen, headers);
+    empty = emptyTree(startFen, headers);
   } catch (cause) {
     throw new PgnParseError(
       cause instanceof Error ? cause.message : String(cause),
@@ -200,10 +207,52 @@ export const parsePgnTree = (pgn: string, gameNumber?: number): GameTree => {
     );
   }
 
+  /*
+    The tree is built **in place**, with an id → node index beside it, rather
+    than one `addMove` per move. `addMove` is the right operation for a board —
+    it returns a new tree, so React state can hold one — but it finds the
+    parent by walking the tree and then copies every node on the way back, so a
+    whole file through it is quadratic: the 9,146-node Nimzo-Indian repertoire
+    took seconds. Every node here is minted by this call and handed out only
+    once the walk is over, so there is nothing to protect by copying.
+
+    The result is exactly what the `addMove` loop produced: the same `n<k>` ids
+    in the same order, `children[0]` the first continuation written, and a move
+    already under its parent followed rather than added twice.
+  */
+  const moves: VariationNode[] = [];
+  const byId = new Map<string, VariationNode>();
+  let nextId = empty.nextId;
+
+  const add = (
+    parentId: string | null,
+    move: Omit<VariationNode, "id" | "ply" | "children">,
+  ): string => {
+    const parent = parentId === null ? undefined : byId.get(parentId);
+    const siblings = parent === undefined ? moves : parent.children;
+    // SAN identifies a move uniquely within one position — `addMove`'s own test.
+    const existing = siblings.find((node) => node.san === move.san);
+    if (existing !== undefined) return existing.id;
+
+    const node: VariationNode = {
+      id: `n${nextId}`,
+      ...move,
+      ply: (parent?.ply ?? 0) + 1,
+      children: [],
+    };
+    nextId += 1;
+    siblings.push(node);
+    byId.set(node.id, node);
+    return node.id;
+  };
+
   /** Where the next move goes: under `parentId`, played from `fen`. */
   type Cursor = { parentId: string | null; fen: string };
 
   let cursor: Cursor = { parentId: null, fen: startFen };
+  const chess = new Chess(startFen);
+  /** The position `chess` holds — a failed move leaves it untouched. */
+  let loadedFen = startFen;
   /** The cursor as it stood *before* the last move — what `(` rewinds to. */
   let previous: Cursor | null = null;
   const stack: { cursor: Cursor; previous: Cursor | null }[] = [];
@@ -234,32 +283,37 @@ export const parsePgnTree = (pgn: string, gameNumber?: number): GameTree => {
 
     if (RESULTS.has(token)) continue;
 
-    const chess = new Chess(cursor.fen);
+    // One instance, reloaded only when the walk jumps — into or out of a
+    // variation. Along a line the position is already the one the last move
+    // left, and a FEN parse per move was most of what remained of the cost.
+    // (`loadedFen` is set by the move below: a move that fails throws out of
+    // the parse, so there is no path that loads and does not move.)
+    if (loadedFen !== cursor.fen) chess.load(cursor.fen);
     let move;
     try {
       move = chess.move(token);
+      loadedFen = move.after;
     } catch {
       throw new PgnParseError(`Illegal move "${token}".`, gameNumber);
     }
 
-    const added = addMove(tree, cursor.parentId, {
+    const nodeId = add(cursor.parentId, {
       san: move.san,
       from: move.from,
       to: move.to,
       fen: move.after,
       captured: move.captured,
     });
-    tree = added.tree;
 
     previous = cursor;
-    cursor = { parentId: added.nodeId, fen: move.after };
+    cursor = { parentId: nodeId, fen: move.after };
   }
 
   if (stack.length > 0) {
     throw new PgnParseError("Unclosed '(' in the movetext.", gameNumber);
   }
 
-  return tree;
+  return { ...empty, moves, nextId };
 };
 
 /**
