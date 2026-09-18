@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { pathTo, type GameTree } from "../../../lib/gameTree";
+import { pathTo, type GameTree, type VariationNode } from "../../../lib/gameTree";
 import type { Turn } from "../../../lib/engineAnalysis";
 import {
   judgeDrop,
@@ -68,6 +68,20 @@ import { turnOf, type BoardCore } from "./useBoardCore";
  * later run through the line counts again. The verdict goes out through
  * `onJudged`; what a verdict is worth — a tally today — is the screen's.
  *
+ * ## A required move, and where a move landed — for the games
+ *
+ * Two more seams, both for the repertoire games (`lib/repertoireGames.ts`):
+ *
+ * - **`required`** — the moves the reader must choose from at the node on
+ *   screen (Backtracking: only the ones leading to lines not yet covered). In
+ *   game mode, a repertoire move outside it is refused — snapped back, and
+ *   **not** judged: it is a right move, only a finished one. The screen marks
+ *   the required moves and says why.
+ * - **`arrival`** — the node the last *played* move landed on, reader's or
+ *   trainer's, while it is still on screen; `null` after navigation. A game
+ *   reads "a line was just finished" off it, which navigating onto the end of
+ *   a line must never count as.
+ *
  * ## Designed to be extended, not forked
  *
  * A weighted or spaced-repetition trainer is a new `policy`; a scoring rule is
@@ -108,6 +122,11 @@ export type TrainerModuleStart = {
   drill?: boolean;
   /** Game mode's verdicts — once per position, the first try's. */
   onJudged?: (verdict: DrillVerdict) => void;
+  /**
+   * The moves the reader must choose from at the node on screen — a game's
+   * constraint. In game mode a repertoire move outside it is refused, unjudged.
+   */
+  required?: readonly VariationNode[];
 };
 
 /** A reply owed at a node — `null` is the start position. */
@@ -123,6 +142,7 @@ export const useTrainerModule = ({
   delayMs = 400,
   drill = false,
   onJudged,
+  required,
 }: TrainerModuleStart) => {
   const { nodeId, fen, tree, onPieceDrop, resolvePromotion, playVariation } = core;
 
@@ -137,6 +157,10 @@ export const useTrainerModule = ({
     the route: the render that first stands on the new node is the one that
     decides, so there is no frame in which a stale "owed" can be acted on.
   */
+  /** Where the last played move landed, while it is on screen. */
+  const [arrival, setArrival] = useState<Owed | null>(null);
+  if (arrival !== null && arrival.at !== nodeId) setArrival(null);
+
   /** Game mode: the node a wrong try was just taken back at. */
   const [mistakeAt, setMistakeAt] = useState<Owed | null>(null);
   if (mistakeAt !== null && mistakeAt.at !== nodeId) setMistakeAt(null);
@@ -166,6 +190,7 @@ export const useTrainerModule = ({
     const landed = nodeId !== null && parentIdOf(tree, nodeId) === movedFrom.at;
     setMovedFrom(null);
     setOwed(landed ? { at: nodeId } : null);
+    if (landed) setArrival({ at: nodeId });
   } else if (owed !== null && owed.at !== nodeId) {
     // Navigated away: what was owed there is dropped, not kept for later.
     setOwed(null);
@@ -181,7 +206,10 @@ export const useTrainerModule = ({
     const timer = setTimeout(() => {
       setOwed(null);
       const move = policy(repertoire, nodeId, random);
-      if (move !== undefined) playVariation([move.san]);
+      if (move === undefined) return;
+      playVariation([move.san]);
+      // A repertoire move keeps its id in the session tree: this is where it lands.
+      setArrival({ at: move.id });
     }, delayMs);
     return () => clearTimeout(timer);
   }, [replying, delayMs, nodeId, playVariation, policy, random, repertoire]);
@@ -206,6 +234,14 @@ export const useTrainerModule = ({
           return false;
         }
         if (judgement.kind === "book") {
+          // A finished line's move, where the game requires another: refused,
+          // but a right move all the same — not judged.
+          if (
+            required !== undefined &&
+            !judgement.nodes.some((node) => required.some((open) => open.id === node.id))
+          ) {
+            return false;
+          }
           if (judgement.promotions === undefined) judge("success");
           else pendingPromotions.current = judgement.promotions;
         }
@@ -214,7 +250,7 @@ export const useTrainerModule = ({
       if (accepted) setMovedFrom({ at: nodeId });
       return accepted;
     },
-    [drill, enabled, fen, judge, nodeId, onPieceDrop, repertoire, trainerTurn],
+    [drill, enabled, fen, judge, nodeId, onPieceDrop, repertoire, required, trainerTurn],
   );
 
   /**
@@ -264,6 +300,8 @@ export const useTrainerModule = ({
     onPieceDrop: onReaderDrop,
     resolvePromotion: onReaderPromotion,
     requestReply,
+    /** Where the last played move landed, while it is on screen — `null` otherwise. */
+    arrival,
   };
 };
 

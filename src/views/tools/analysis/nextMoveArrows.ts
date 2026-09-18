@@ -36,6 +36,14 @@ export const SIDELINE_NEXT_MOVE_ARROW_COLOR = "#2196f3";
 export const HOVERED_NEXT_MOVE_ARROW_COLOR = "#f44336";
 
 /**
+ * The colour of a **required** move's arrow — Backtracking's "this is the move
+ * to play here" (CTA-63): the other repertoire moves from this position lead
+ * only to lines already covered. Apart from the green/blue pair on purpose,
+ * since it is an instruction rather than an option.
+ */
+export const REQUIRED_MOVE_ARROW_COLOR = "#9c27b0";
+
+/**
  * The arrows for the continuations of the position on screen — the whole
  * external set, since the board never clears `options.arrows` itself
  * (`chessboard.md` §3.4). `nodes[0]` is the mainline and gets

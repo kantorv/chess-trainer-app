@@ -25,7 +25,7 @@ import Repertoires from "./Repertoires";
 import RepertoireBoard from "./RepertoireBoard";
 import RepertoireUpload from "./RepertoireUpload";
 import RepertoireSettingsScreen from "./RepertoireSettingsScreen";
-import RepertoirePlay from "./RepertoirePlay";
+import RepertoireGame from "./RepertoireGame";
 
 /**
  * A repertoire as the one-game rule wants it: one game, a mainline with a
@@ -91,7 +91,7 @@ export const renderSection = (path: string, extra?: ReactNode) =>
             <Route path="/repertoires/new" element={<RepertoireUpload />} />
             <Route path="/repertoires/:id" element={<RepertoireBoard />} />
             <Route path="/repertoires/:id/settings" element={<RepertoireSettingsScreen />} />
-            <Route path="/repertoires/:id/play" element={<RepertoirePlay />} />
+            <Route path="/repertoires/:id/games/:game" element={<RepertoireGame />} />
           </Routes>
           <RightPanelOutlet />
           {extra}

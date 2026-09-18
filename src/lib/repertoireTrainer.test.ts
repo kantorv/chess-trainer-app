@@ -104,10 +104,14 @@ describe("judgeDrop (game mode)", () => {
   const tree = parsePgnTree(CARO);
   const e5 = afterE5(tree);
 
-  it("calls a repertoire move book, whichever of them it is", () => {
-    expect(judgeDrop(tree, null, tree.startFen, "e2", "e4")).toEqual({ kind: "book" });
-    expect(judgeDrop(tree, e5.id, e5.fen, "c8", "f5")).toEqual({ kind: "book" });
-    expect(judgeDrop(tree, e5.id, e5.fen, "c6", "c5")).toEqual({ kind: "book" });
+  it("calls a repertoire move book, whichever of them it is, and names its node", () => {
+    const [bf5, c5] = e5.children;
+    expect(judgeDrop(tree, null, tree.startFen, "e2", "e4")).toEqual({
+      kind: "book",
+      nodes: [tree.moves[0]],
+    });
+    expect(judgeDrop(tree, e5.id, e5.fen, "c8", "f5")).toEqual({ kind: "book", nodes: [bf5] });
+    expect(judgeDrop(tree, e5.id, e5.fen, "c6", "c5")).toEqual({ kind: "book", nodes: [c5] });
   });
 
   it("calls any other legal move wrong", () => {
@@ -125,6 +129,7 @@ describe("judgeDrop (game mode)", () => {
     const promo = parsePgnTree('[SetUp "1"]\n[FEN "8/P7/8/8/8/8/8/k6K w - - 0 1"]\n\n1. a8=N (1. a8=Q) *');
     expect(judgeDrop(promo, null, promo.startFen, "a7", "a8")).toEqual({
       kind: "book",
+      nodes: promo.moves,
       promotions: new Set(["n", "q"]),
     });
   });

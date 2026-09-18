@@ -18,13 +18,7 @@ import { default as RepertoiresScreen  } from './views/repertoires/RepertoiresMa
 import { default as RepertoireUploadScreen  } from './views/repertoires/RepertoireUploadMain'
 import { default as RepertoireBoardScreen  } from './views/repertoires/RepertoireBoardMain'
 import { default as RepertoireSettingsScreen  } from './views/repertoires/RepertoireSettingsScreenMain'
-
-/**
- * Play a repertoire against the trainer (CTA-63). Lazy, so the list and the
- * board do not carry the drill's code until a reader asks for it; the core it
- * is composed from is already in the bundle through the board.
- */
-const RepertoirePlayScreen = lazy(() => import('./views/repertoires/RepertoirePlayMain'))
+import { default as RepertoireGameScreen  } from './views/repertoires/RepertoireGameMain'
 
 
 /**
@@ -170,14 +164,12 @@ const routes = createBrowserRouter(
           path: "/repertoires/:id/settings",
           element: <RepertoireSettingsScreen />
         },
-        // Drill it against the trainer, extend it, download it (CTA-63).
+        // Its games (CTA-63): `end` (Get to the end) and `backtrack`. The
+        // same player the repertoire's own view is, with a game's rules; an
+        // unknown game is the view's own miss.
         {
-          path: "/repertoires/:id/play",
-          element: (
-            <Suspense fallback={null}>
-              <RepertoirePlayScreen />
-            </Suspense>
-          )
+          path: "/repertoires/:id/games/:game",
+          element: <RepertoireGameScreen />
         },
         // Pre-CTA-39 the Openings screen lived under `/tools`. Old links redirect.
         {
