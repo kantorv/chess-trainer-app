@@ -24,14 +24,14 @@ import { pgnKindOf } from "./pgnKind";
  *
  * | file | recognised by | shape |
  * | --- | --- | --- |
- * | Tame the Sicilian | the **heuristic** — many games, no `StudyName`, `"N) "` `White` tags | a folder of chapter sub-folders |
- * | Nimzo-Indian | a manifest **`kind`** — it has a `StudyName`, so it would otherwise be a study | one folder, its single line in it |
+ * | Sicilian 2.c3 sampler | the **heuristic** — many games, no `StudyName`, `"N) "` `White` tags | a folder of chapter sub-folders |
+ * | Live chess, one tree | a manifest **`kind`** — one game with no `"N) "` chapters, so it would otherwise be `games` | one folder, its single line in it |
  * | 1.d4 repertoire | a manifest **`kind` + `chapters: false`** — its `White` tag is the opening family, not a chapter | one folder, a card per line |
  */
 
 const REPERTOIRES = {
-  tame: "tame-the-sicilian-the-alapin-variation-gm-kasimdzhanov-gm-ganguly",
-  nimzo: "nimzo-indian-repertoire",
+  sampler: "sicilian-2c3-sampler",
+  oneTree: "live-chess-2026-09-18",
   d2d4: "d2d4variations",
 } as const;
 
@@ -71,9 +71,9 @@ describe("the shipped repertoire examples", () => {
       kind alone.
     */
     const root = pgnCatalog.categories.find(
-      (category) => category.path === REPERTOIRES.tame,
+      (category) => category.path === REPERTOIRES.sampler,
     );
-    expect(root?.children?.length ?? 0).toBeGreaterThan(20);
+    expect(root?.children ?? []).toHaveLength(6);
 
     // Every chapter is a repertoire too, so a line inside one opens in the
     // variation viewer — `UserPgnsSection` reads the kind of the line's own
@@ -83,14 +83,20 @@ describe("the shipped repertoire examples", () => {
       expect(linesIn(chapter.path).length).toBeGreaterThan(0);
     }
 
-    // The unnumbered chapters lead, then the `"N) "` ones in their own order.
-    expect(root?.children?.[0]?.label?.en).toBe("Introduction");
-    expect(root?.children?.[1]?.label?.en).toBe("Quickstarter");
-    expect(root?.children?.[2]?.label?.en).toBe("2...Qa5");
+    // The unnumbered chapter leads, then the `"N) "` ones in their own order —
+    // not the file's, which names them 3, 1, 5, 2, 4.
+    expect(root?.children?.map((chapter) => chapter.label?.en)).toEqual([
+      "Overview",
+      "The central strike",
+      "The French-style setup",
+      "Knight to f6",
+      "Knight to c6",
+      "Rare second moves",
+    ]);
   });
 
   it.each([
-    ["nimzo", REPERTOIRES.nimzo],
+    ["oneTree", REPERTOIRES.oneTree],
     ["d2d4", REPERTOIRES.d2d4],
   ])("keeps %s flat — one repertoire, its lines in it", (_name, path) => {
     const root = pgnCatalog.categories.find(
@@ -116,7 +122,7 @@ describe("the shipped repertoire examples", () => {
 
   /*
     Given its own timeout for the same reason the render test is: the
-    Nimzo-Indian line is one 9,146-node tree, and `parsePgnTree` over 58KB of
+    one-tree example is a single 7,859-node tree, and `parsePgnTree` over 49KB of
     deeply nested `( … )` is seconds of work. The size is the data's, not a
     regression — see the note in `views/pgn/repertoireExamples.test.tsx`.
   */
@@ -134,7 +140,7 @@ describe("the shipped repertoire examples", () => {
         0,
       );
 
-    expect(branchy(REPERTOIRES.nimzo)).toBeGreaterThan(20);
+    expect(branchy(REPERTOIRES.oneTree)).toBe(141);
     expect(branchy(REPERTOIRES.d2d4)).toBeGreaterThan(20);
   }, 60000);
 
@@ -145,8 +151,8 @@ describe("the shipped repertoire examples", () => {
     const mine = pgnCatalog.problems.filter(
       (problem) =>
         problem.includes("d2d4Variations") ||
-        problem.includes("nimzo-indian") ||
-        problem.includes("Tame_the_Sicilian"),
+        problem.includes("live-chess-2026-09-18") ||
+        problem.includes("sicilian-2c3-sampler"),
     );
     expect(mine).toEqual([]);
   });

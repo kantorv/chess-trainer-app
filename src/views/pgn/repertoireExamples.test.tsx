@@ -60,8 +60,8 @@ vi.mock("react-chessboard", () => ({
   ),
 }));
 
-const TAME = "tame-the-sicilian-the-alapin-variation-gm-kasimdzhanov-gm-ganguly";
-const NIMZO = "nimzo-indian-repertoire";
+const SAMPLER = "sicilian-2c3-sampler";
+const ONE_TREE = "live-chess-2026-09-18";
 const D2D4 = "d2d4variations";
 
 const renderAt = (path: string) =>
@@ -95,7 +95,7 @@ beforeEach(async () => {
 
 describe("a repertoire line on screen", () => {
   it.each([
-    ["the multi-chapter repertoire", `${TAME}/2-qa5`],
+    ["the multi-chapter repertoire", `${SAMPLER}/the-central-strike`],
     ["the 1.d4 repertoire", D2D4],
   ])("opens %s with its variation tree", (_name, category) => {
     const line = firstLineIn(category);
@@ -121,26 +121,24 @@ describe("a repertoire line on screen", () => {
   });
 
   /*
-    The Nimzo-Indian file is one chapter holding the **entire** repertoire as a
-    single tree: a 56-move mainline with 188 side lines under it, 9,146 nodes
-    in all. That is the data — the lichess study has exactly one chapter, and
-    the whole-study export and the chapter export are byte-identical — so it is
-    kept deliberately, as the section's stress case.
+    The one-tree example is a single game holding the **entire** repertoire as
+    one tree: 141 side lines, 7,859 nodes in all. That is the data, kept
+    deliberately as the section's stress case.
 
     It gets its own test and its own timeout because `VariationTree` renders a
-    button per node — nine thousand of them, about two seconds under jsdom.
+    button per node — about eight thousand of them, seconds under jsdom.
 
     The buttons are counted with `querySelectorAll`, **not** `getAllByRole`:
     a role query computes the accessible role of every candidate element, and
-    over nine thousand buttons that alone took ~16s locally and pushed the test
+    over thousands of buttons that alone took ~16s locally and pushed the test
     past a 60s timeout on CI. The other tests' role queries run over a few
     dozen buttons and stay as they are.
   */
   it(
-    "opens the Nimzo-Indian repertoire — one 9,146-node tree — with its variation tree",
+    "opens the one-tree repertoire — 7,859 nodes — with its variation tree",
     () => {
-      const line = firstLineIn(NIMZO);
-      renderAt(`/library/${NIMZO}/${line.id}`);
+      const line = firstLineIn(ONE_TREE);
+      renderAt(`/library/${ONE_TREE}/${line.id}`);
 
       const tree = screen.getByTestId("variation-tree");
       expect(within(tree).getByTestId("tree-move-start")).toBeInTheDocument();
@@ -162,18 +160,18 @@ describe("a repertoire line on screen", () => {
 
   it("lists the multi-chapter repertoire as chapter folders", async () => {
     // The other shape: folders first, and a line is two clicks away.
-    renderAt(`/library/${TAME}`);
+    renderAt(`/library/${SAMPLER}`);
 
-    expect(await screen.findByText("Introduction")).toBeInTheDocument();
-    expect(screen.getByText("Quickstarter")).toBeInTheDocument();
-    expect(screen.getByText("2...Qa5")).toBeInTheDocument();
+    expect(await screen.findByText("Overview")).toBeInTheDocument();
+    expect(screen.getByText("The central strike")).toBeInTheDocument();
+    expect(screen.getByText("Rare second moves")).toBeInTheDocument();
   });
 
   it("walks from a chapter folder into one of its lines", async () => {
     const user = userEvent.setup();
-    renderAt(`/library/${TAME}/2-qa5`);
+    renderAt(`/library/${SAMPLER}/the-central-strike`);
 
-    const line = firstLineIn(`${TAME}/2-qa5`);
+    const line = firstLineIn(`${SAMPLER}/the-central-strike`);
     await user.click(await screen.findByText(line.name.en!));
 
     expect(await screen.findByTestId("variation-tree")).toBeInTheDocument();

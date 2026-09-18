@@ -91,8 +91,8 @@ describe("sidebar navigation", () => {
     slow test to trim, so the budget is raised instead.
 
     CTA-60 raised it again, and it is worth saying why rather than letting the
-    number drift: the three shipped repertoire examples add ~32 screen nodes
-    between them (the Alapin alone is a folder plus 29 chapter sub-folders),
+    number drift: the three shipped repertoire examples add ~9 screen nodes
+    between them (the 2.c3 sampler is a folder plus 6 chapter sub-folders),
     and the dev-only Development section adds five more under Vitest, where
     `import.meta.env.DEV` is true. Every one of those is another chain to open
     and another click to wait on. The walk is still the right assertion — it is
