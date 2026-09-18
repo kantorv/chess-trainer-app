@@ -713,6 +713,8 @@ const he: typeof en = {
     },
     changes: {
       title: "שינויים שלא נשמרו",
+      saveOpen: "שינויים שלא נשמרו — שמירה או ביטול",
+      saveNothing: "אין שינויים שלא נשמרו",
       added_one: "נוסף מסע אחד",
       added_other: "נוספו {{count}} מסעים",
       update: "עדכון הרפרטואר",
