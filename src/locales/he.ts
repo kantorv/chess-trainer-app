@@ -533,6 +533,38 @@ const he: typeof en = {
   footer: {
     source: "מקור",
   },
+  dev: {
+    folder: "פיתוח",
+    screens: {
+      analysis: "לוח ניתוח v2",
+      play: "משחק מול המנוע v2",
+      masked: "כלים מוסווים v2",
+      openings: "פתיחות v2",
+      repertoire: "רפרטואר v2",
+    },
+    tabs: {
+      moves: "מסעים",
+      engine: "מנוע",
+      position: "עמדה",
+      mask: "הסוואה",
+      tree: "עץ",
+      info: "מידע",
+    },
+    controls: {
+      newGame: "משחק חדש",
+      newBoard: "לוח חדש",
+      save: "שמירה",
+      saved: "נשמר",
+    },
+    book: {
+      title: "המשכים מהספר",
+      empty: "אין המשכים מוכרים מכאן.",
+    },
+    repertoire: {
+      missing: "לא נטען קו רפרטואר.",
+      source: "מתוך הספרייה",
+    },
+  },
 };
 
 export default he;
