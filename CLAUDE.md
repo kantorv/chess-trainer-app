@@ -87,7 +87,7 @@ change by whether it *adds* to that count, not by the exit code.
 | `src/lib/pgnUploads.ts` + `pgnUploadStore.ts` | **The reader's own `.pgn` files** — what an upload is, how it becomes a library under the `uploads` folder (through the same loader), whether a picked file is worth keeping; and the `localStorage` half, whose snapshot is checked against a revision stamp so a megabyte of PGN is not re-read per render. Non-throwing throughout. |
 | `src/lib/savedAnalyses.ts` + `savedAnalysisStore.ts` | **The reader's analysis boards** — what a saved analysis is (the whole tree as PGN, the `AnalysisSettings` it was worked under, where the reader was standing as SAN from the root, and which way the board faced), how it is written and read back, and `savedAnalysisCatalogOf` so `?game=` resolves against it; and the `localStorage` half. The pair above, deliberately, with two differences: `treeToPgn` / `parsePgnTree` rather than the linear writer, because side lines are the point, and a **place in the tree** as part of the record. Non-throwing throughout. |
 | `src/lib/savedRepertoires.ts` + `savedRepertoireStore.ts` | **The reader's repertoires** (CTA-61) — and the rule that **a repertoire is one game**: a mainline with its side lines. `readRepertoireText` is the one reading a file and a paste share (the uploads' size/emptiness rules, line endings normalised, every game parsed as a tree, games with no moves skipped and counted); a text of one game is stored as written (`savedRepertoireOf`), and a text of several is not stored as it is — it is **merged** into one tree (`mergedRepertoireOf`, over `mergeTrees` in `lib/gameTree.ts`: the first game's line the mainline, each later divergence a side line; only when every game shares a start) or **split** into one record per game (`splitRepertoiresOf`, each keeping its own text). A record carries its name (typed, else the tags' `StudyName` / `Event`), `previewFen` (where it first branches), `stats` (moves and side lines, for a caption without a parse), its `settings` (`lib/repertoireSettings.ts` — read back field by field; that file's header is the recipe for adding an option), and the `folderId` it is filed under (`null` is Unfiled). A row from before the rule, still holding several games, is told by `isMultiGameRepertoire` and opens on the choice. The store is `chessapp.savedRepertoires.v1` over `recordStore`, capped at 500 because a split makes a record per game; `addRepertoires` writes a split all-or-nothing, in a replaced record's place when given one, and `updateRepertoireSettings` / `fileRepertoire` edit in place. Non-throwing throughout. |
-| `src/lib/repertoireTrainer.ts` | **The trainer's policy and the session model** (CTA-63) — `TrainerPolicy` (the seam every later trainer is a function of), `pickTrainerMove` (uniform over the repertoire's moves at a node, the random source injectable), `repertoireMovesAt`, and the extension fold: `nodeIdsOf` the repertoire as it arrived, `extensionIdsOf` the session tree against it. Pure; the move is played by `views/dev/core/useTrainerModule.ts`. |
+| `src/lib/repertoireTrainer.ts` | **The trainer's policy and the session model** (CTA-63) — `TrainerPolicy` (the seam every later trainer is a function of), `pickTrainerMove` (uniform over the repertoire's moves at a node, the random source injectable), `repertoireMovesAt`, the extension fold (`nodeIdsOf` the repertoire as it arrived, `extensionIdsOf` the session tree against it), and game mode's pure half: `judgeDrop` (a drop judged book / wrong / unjudged before it is made) and the `DrillScore` tally. Pure; the move is played by `views/dev/core/useTrainerModule.ts`. |
 | `src/lib/savedRepertoireFolders.ts` + `savedRepertoireFolderStore.ts` | **The folders repertoires are filed under — one level**: a folder holds repertoires, never another folder, so it has no `parentId` and none of the tree machinery the games' and openings' folders carry. `repertoiresInFolder` reads a `folderId` naming a missing folder as Unfiled; `sortedRepertoireFolders` orders by name. The store (`chessapp.savedRepertoireFolders.v1`, cap 100) is create (hands the folder back) / rename / delete, and a delete **keeps its repertoires** — `unfileRepertoiresIn`, the repertoire store's half, files them back to Unfiled. A **split** makes a folder of its own, named after the text, and files every split repertoire into it. Non-throwing throughout. |
 | `src/lib/savedOpenings.ts` + `savedOpeningFolders.ts` + the two stores | **The reader's saved openings, and the folders they are filed under** — what a saved opening is (the whole tree as PGN — side lines are the point — plus the orientation it was viewed from, the note it is named by and the folder it is filed under), how it is written and read back, and the folder entity: `OpeningFolder` is a name and a parent id, with the reads over a list of them (cycles cut, dangling parents read as top level). The `localStorage` halves: the openings' store, with an idempotent `saveOpening` and a note edited in place (`updateSavedOpeningNote` keeps the record's place in the list); and the folders' store, where the CRUD lives because every caller must mean the same thing — `moveOpeningFolder` refuses the folder's own subtree, and `removeOpeningFolder` re-parents sub-folders and files the openings back to Unfiled in one write-through. The saved openings are **not** a `LibraryCatalog`: nothing hands one on with `?game=` — reopening is `?openings=<id>`, and the position hand-off is `?fen=` at the end of the mainline. Non-throwing throughout. |
 | `src/lib/recordStore.ts` | **The shared localStorage record-store factory** — the snapshot/subscribe/write machinery every record store (`savedGameStore`, `savedAnalysisStore`, `savedOpeningStore`, `savedOpeningFolderStore`, `pgnUploadStore`) is built over: the try/catch read, the revision-stamped cached snapshot, the `storage`-event subscription, and the write that stamps the revision after the data. A row the normaliser (the `savedGameFrom`-style guard each store passes in) refuses is dropped, not rendered. Pure, non-throwing; one instance per store, each file keeping its own caps, idempotency comparisons and cross-store operations beside it. |
@@ -864,8 +864,8 @@ RepertoirePlay.tsx ── BoardShell / BoardPanel ── TreeMoveList(extensionI
   list tints them (`success.main`, a theme token) through the optional
   `extensionIds` on `TreeMoveList` → `MoveList`, read per token from the
   selection store like the highlight; every other consumer passes none.
-- **Three tabs: Moves · Settings · Engine.** The session's knobs — the side,
-  the arrows and the engine's switch — are in the Settings tab; the Engine
+- **Tabs: Moves · (Score) · Settings · Engine.** The session's knobs — the
+  side, game mode, the arrows and the engine's switch — are in the Settings tab; the Engine
   tab is the other boards' own and is **disabled while the engine is off**
   (`BoardPanel`'s optional per-tab `disabled`). The header keeps the actions
   (restart, download, back). Moves stays mounted while another tab shows.
@@ -889,10 +889,22 @@ RepertoirePlay.tsx ── BoardShell / BoardPanel ── TreeMoveList(extensionI
   — the session tree through `treeToPgn` and `downloadPgn`, named from the
   repertoire.
 
-What is designed for and not built: a **drill mode** (a deviation counted as a
-mistake — an `onDeviation` option on the module), **saving extensions back**,
-and **other policies** (weighted, mainline-first, spaced repetition — each a
-new `TrainerPolicy`). `.claude/rules/chessboard-v2.md` §2.5 is the recipe.
+- **Game mode tests the reader.** A Settings switch (off by default); on, a
+  **Score** tab appears after Moves and opens. The trainer module
+  (`drill`) judges each of the reader's moves at their own turn inside the
+  repertoire *before* it is made (`judgeDrop`): a repertoire move is right; any
+  other legal move is wrong and is **taken back** — refused, so it never
+  becomes an extension — with the status saying "try again". **One verdict
+  per position**, the first try's: retries count nothing, and Restart judges
+  the line afresh. Past the line's end moves are free and extend, as
+  without the mode. The tally (right, wrong, accuracy, a reset) is
+  **session-only**, `DrillScore` in the screen's state.
+
+What is designed for and not built: **saving extensions back**, a **persisted
+score** (per position, per repertoire — the input spaced repetition needs, and
+the screen's `onJudged` is where it goes), and **other policies** (weighted,
+mainline-first, spaced repetition — each a new `TrainerPolicy`).
+`.claude/rules/chessboard-v2.md` §2.5 is the recipe.
 
 ## A mask is a costume, never a rule
 

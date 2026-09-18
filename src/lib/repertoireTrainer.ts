@@ -1,3 +1,4 @@
+import { Chess, type Square } from "chess.js";
 import { findNode, type GameTree, type VariationNode } from "./gameTree";
 
 /**
@@ -35,9 +36,20 @@ import { findNode, type GameTree, type VariationNode } from "./gameTree";
  * every move, and so nothing that can drift from the tree. Everything played
  * under an added node is itself added, so it is an extension too.
  *
- * What this module deliberately does not do: count a deviation as a mistake
- * (a drill mode is a callback on the module, later), or write anything back to
- * the stored repertoire (the screen never modifies the record).
+ * ## Game mode: a move is judged before it is made
+ *
+ * With game mode on, a reader's move at one of *their* turns inside the
+ * repertoire is marked right or wrong **before** it reaches the board
+ * ({@link judgeDrop}): a move the repertoire has is a success, any other legal
+ * move is a failure, and the module takes a failure back by refusing the drop.
+ * So a wrong move never enters the tree and never becomes an extension. It is
+ * judged by the squares the piece moves from and to (every node carries them),
+ * with `chess.js` used only to *read* whether the drop is legal: an illegal drop
+ * snaps back and is not a failure. What a verdict is worth is the screen's
+ * business ({@link DrillScore}).
+ *
+ * What this module deliberately does not do: write anything back to the stored
+ * repertoire (the screen never modifies the record).
  */
 
 /**
@@ -108,4 +120,76 @@ export const extensionIdsOf = (
     stack.push(...node.children);
   }
   return added;
+};
+
+/**
+ * What game mode makes of a drop, before the board applies it.
+ *
+ * - `unjudged` — nothing to judge: the repertoire has no move here (its line
+ *   ended, or the reader left it), or the drop is not a legal move at all;
+ * - `book` — one of the repertoire's moves. For a promotion, `promotions`
+ *   lists the pieces the repertoire promotes to (`"q"`, `"n"`, …), and the
+ *   verdict waits for the picker;
+ * - `wrong` — a legal move the repertoire does not have.
+ */
+export type DropJudgement =
+  | { kind: "unjudged" }
+  | { kind: "book"; promotions?: ReadonlySet<string> }
+  | { kind: "wrong" };
+
+/**
+ * Judge a drop from `from` to `to` in `fen`, the position at `nodeId`, against
+ * the repertoire's moves there. Whose turn it is, is the caller's question —
+ * a drill judges only the reader's own moves.
+ */
+export const judgeDrop = (
+  repertoire: GameTree,
+  nodeId: string | null,
+  fen: string,
+  from: string,
+  to: string,
+): DropJudgement => {
+  const book = repertoireMovesAt(repertoire, nodeId);
+  if (book.length === 0) return { kind: "unjudged" };
+
+  let legal: boolean;
+  try {
+    legal = new Chess(fen)
+      .moves({ square: from as Square, verbose: true })
+      .some((move) => move.to === to);
+  } catch {
+    return { kind: "unjudged" };
+  }
+  if (!legal) return { kind: "unjudged" };
+
+  const matches = book.filter((node) => node.from === from && node.to === to);
+  if (matches.length === 0) return { kind: "wrong" };
+
+  const promotions = new Set(
+    matches.flatMap((node) => {
+      const piece = /=([QRBN])/.exec(node.san)?.[1];
+      return piece === undefined ? [] : [piece.toLowerCase()];
+    }),
+  );
+  return promotions.size > 0 ? { kind: "book", promotions } : { kind: "book" };
+};
+
+/** What one judged position came to. */
+export type DrillVerdict = "success" | "fail";
+
+/** A game-mode session's score: how many positions were got right, and wrong. */
+export type DrillScore = { successes: number; failures: number };
+
+export const EMPTY_DRILL_SCORE: DrillScore = { successes: 0, failures: 0 };
+
+/** The score with one more verdict counted. */
+export const withVerdict = (score: DrillScore, verdict: DrillVerdict): DrillScore =>
+  verdict === "success"
+    ? { ...score, successes: score.successes + 1 }
+    : { ...score, failures: score.failures + 1 };
+
+/** The share of positions got right, 0–100, or `undefined` before the first. */
+export const drillAccuracy = (score: DrillScore): number | undefined => {
+  const total = score.successes + score.failures;
+  return total === 0 ? undefined : Math.round((score.successes / total) * 100);
 };

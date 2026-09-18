@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
 import CircularProgress from "@mui/material/CircularProgress";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import IconButton from "@mui/material/IconButton";
@@ -23,7 +24,15 @@ import {
 import { emptyTree, findNode, type GameTree } from "../../lib/gameTree";
 import { downloadPgn } from "../../lib/pgnExport";
 import { slugify } from "../../lib/pgnLibrary";
-import { extensionIdsOf, nodeIdsOf } from "../../lib/repertoireTrainer";
+import {
+  drillAccuracy,
+  EMPTY_DRILL_SCORE,
+  extensionIdsOf,
+  nodeIdsOf,
+  withVerdict,
+  type DrillScore,
+  type DrillVerdict,
+} from "../../lib/repertoireTrainer";
 import {
   isMultiGameRepertoire,
   repertoireTreeOf,
@@ -73,8 +82,8 @@ import { useSavedRepertoires } from "./useSavedRepertoires";
  *   download, which writes the session tree — repertoire, extensions, side
  *   lines and all — as one PGN.
  *
- * - **Three tabs: Moves · Settings · Engine.** The session's knobs — the side,
- *   the arrows and the engine's switch — live in the Settings tab; the Engine
+ * - **Tabs: Moves · (Score) · Settings · Engine.** The session's knobs — the
+ *   side, game mode, the arrows and the engine's switch — live in the Settings tab; the Engine
  *   tab is the other boards' own (`AnalysisSettings`) and is **disabled while
  *   the engine is off**, since every control in it would be. The header keeps
  *   the actions (restart, download, back).
@@ -92,9 +101,16 @@ import { useSavedRepertoires } from "./useSavedRepertoires";
  *   the repertoire's and the reader's additions alike, and a single one too,
  *   unlike the reading boards, which draw only where a line branches.
  *
- * What it deliberately does not do yet: count a deviation as a mistake, save
- * the extensions back, or pick the trainer's moves by anything but chance.
- * Each is an option on the module or a new policy — `chessboard-v2.md` §5.
+ * - **Game mode** (a Settings switch, off by default) tests the reader: the
+ *   trainer module judges each of their moves inside the repertoire before it
+ *   is made, takes a wrong one back, and reports one verdict per position;
+ *   this screen keeps the tally (`DrillScore`, session-only) in a **Score**
+ *   tab that appears after Moves, and opens, with the mode.
+ *
+ * What it deliberately does not do yet: save the extensions or the score, or
+ * pick the trainer's moves by anything but chance. Each is the screen's
+ * `onJudged`, an option on the module, or a new policy — `chessboard-v2.md`
+ * §2.5.
  *
  * The tree is parsed after a paint, as on the board screen, and for the same
  * 9,146-node reason.
@@ -119,6 +135,7 @@ const STATUS_KEY: Record<TrainerStatus, string> = {
   "trainer-thinking": "repertoires.play.status.thinking",
   "your-move": "repertoires.play.status.yourMove",
   "out-of-book": "repertoires.play.status.outOfBook",
+  "try-again": "repertoires.play.status.tryAgain",
 };
 
 function RepertoirePlay() {
@@ -148,11 +165,25 @@ function RepertoirePlayScreen({ saved }: { saved: SavedRepertoire }) {
   const [repertoire, setRepertoire] = useState<GameTree>(NOTHING_YET);
   const [shown, setShown] = useState<Shown>("loading");
 
+  /*
+    Game mode: the trainer module judges the reader's moves (and takes a wrong
+    one back); what a verdict is worth is this screen's — a session tally, in
+    the Score tab that appears with the mode.
+  */
+  const [gameMode, setGameMode] = useState(false);
+  const [score, setScore] = useState<DrillScore>(EMPTY_DRILL_SCORE);
+  const onJudged = useCallback(
+    (verdict: DrillVerdict) => setScore((current) => withVerdict(current, verdict)),
+    [],
+  );
+
   const trainer = useTrainerModule({
     enabled: shown === "ready",
     core,
     repertoire,
     trainerColor: side === "white" ? "b" : "w",
+    drill: gameMode,
+    onJudged,
   });
   const { requestReply } = trainer;
 
@@ -236,6 +267,12 @@ function RepertoirePlayScreen({ saved }: { saved: SavedRepertoire }) {
     setSide(next);
     setOrientation(next);
     restart();
+  };
+
+  /** Game mode on opens its Score tab; off, the tab goes (the tally stays). */
+  const changeGameMode = (next: boolean) => {
+    setGameMode(next);
+    if (next) setTab("score");
   };
 
   /** The Engine tab's "Clear": the repertoire as the record has it, from the start. */
@@ -337,7 +374,13 @@ function RepertoirePlayScreen({ saved }: { saved: SavedRepertoire }) {
         onPlayVariation: core.playVariation,
         // The Engine tab cannot be switched off from under itself (its switch
         // is in Settings), but a disabled tab is never the one showing.
-        activeTab: tab === "engine" && !engineOn ? "settings" : tab,
+        // Nor is a tab that is not there: Score goes with game mode.
+        activeTab:
+          tab === "engine" && !engineOn
+            ? "settings"
+            : tab === "score" && !gameMode
+              ? "moves"
+              : tab,
         onTabChange: setTab,
         keepMounted: KEEP_MOUNTED,
         tabs: [
@@ -361,6 +404,18 @@ function RepertoirePlayScreen({ saved }: { saved: SavedRepertoire }) {
                 />
               )),
           },
+          // Game mode's tally, present only while the mode is on.
+          ...(gameMode
+            ? [
+                {
+                  id: "score",
+                  label: t("repertoires.play.tabs.score"),
+                  content: (
+                    <PlayScore score={score} onReset={() => setScore(EMPTY_DRILL_SCORE)} />
+                  ),
+                },
+              ]
+            : []),
           {
             id: "settings",
             label: t("repertoires.play.tabs.settings"),
@@ -372,6 +427,8 @@ function RepertoirePlayScreen({ saved }: { saved: SavedRepertoire }) {
                 onShowArrowsChange={setShowArrows}
                 engineOn={engineOn}
                 onEngineOnChange={setEngineOn}
+                gameMode={gameMode}
+                onGameModeChange={changeGameMode}
               />
             ),
           },
@@ -404,7 +461,12 @@ function RepertoirePlayScreen({ saved }: { saved: SavedRepertoire }) {
               sx={{
                 px: 1,
                 py: 0.5,
-                color: trainer.status === "out-of-book" ? "success.main" : "text.secondary",
+                color:
+                  trainer.status === "out-of-book"
+                    ? "success.main"
+                    : trainer.status === "try-again"
+                      ? "error.main"
+                      : "text.secondary",
               }}
             >
               {t(STATUS_KEY[trainer.status])}
@@ -415,13 +477,51 @@ function RepertoirePlayScreen({ saved }: { saved: SavedRepertoire }) {
   );
 }
 
+/** One on/off setting: the switch, and a line on what it does. */
+function SwitchSetting({
+  testId,
+  checked,
+  onChange,
+  label,
+  help,
+}: {
+  testId: string;
+  checked: boolean;
+  onChange: (next: boolean) => void;
+  label: string;
+  help: string;
+}) {
+  return (
+    <Box>
+      <FormControlLabel
+        sx={{ m: 0 }}
+        control={
+          <Switch
+            size="small"
+            checked={checked}
+            data-testid={testId}
+            onChange={(event) => onChange(event.target.checked)}
+          />
+        }
+        label={label}
+      />
+      <Typography variant="caption" sx={{ display: "block", color: "text.secondary" }}>
+        {help}
+      </Typography>
+    </Box>
+  );
+}
+
 /**
- * The Settings tab: the session's knobs — side, arrows, engine — one labelled row each. Presentational
- * — the screen owns the state, since changing side restarts the session.
+ * The Settings tab: the session's knobs — side, game mode, arrows, engine —
+ * one labelled row each. Presentational — the screen owns the state, since
+ * changing side restarts the session and game mode brings its own tab.
  */
 function PlaySettings({
   side,
   onSideChange,
+  gameMode,
+  onGameModeChange,
   showArrows,
   onShowArrowsChange,
   engineOn,
@@ -429,6 +529,8 @@ function PlaySettings({
 }: {
   side: Side;
   onSideChange: (next: Side | null) => void;
+  gameMode: boolean;
+  onGameModeChange: (next: boolean) => void;
   showArrows: boolean;
   onShowArrowsChange: (next: boolean) => void;
   engineOn: boolean;
@@ -464,39 +566,88 @@ function PlaySettings({
           {t("repertoires.play.sideHelp")}
         </Typography>
       </Box>
-      <Box>
-        <FormControlLabel
-          sx={{ m: 0 }}
-          control={
-            <Switch
-              size="small"
-              checked={showArrows}
-              data-testid="repertoire-play-arrows"
-              onChange={(event) => onShowArrowsChange(event.target.checked)}
-            />
-          }
-          label={t("repertoires.play.arrows")}
-        />
-        <Typography variant="caption" sx={{ display: "block", color: "text.secondary" }}>
-          {t("repertoires.play.arrowsHelp")}
-        </Typography>
+      <SwitchSetting
+        testId="repertoire-play-setting-game"
+        checked={gameMode}
+        onChange={onGameModeChange}
+        label={t("repertoires.play.gameMode")}
+        help={t("repertoires.play.gameModeHelp")}
+      />
+      <SwitchSetting
+        testId="repertoire-play-arrows"
+        checked={showArrows}
+        onChange={onShowArrowsChange}
+        label={t("repertoires.play.arrows")}
+        help={t("repertoires.play.arrowsHelp")}
+      />
+      <SwitchSetting
+        testId="repertoire-play-setting-engine"
+        checked={engineOn}
+        onChange={onEngineOnChange}
+        label={t("repertoires.play.engine")}
+        help={t("repertoires.play.engineHelp")}
+      />
+    </Box>
+  );
+}
+
+/** The Score tab: game mode's session tally, and a way to start it over. */
+function PlayScore({ score, onReset }: { score: DrillScore; onReset: () => void }) {
+  const { t } = useTranslation();
+  const accuracy = drillAccuracy(score);
+  const figure = (testId: string, label: string, value: string, color: string) => (
+    <Box sx={{ flex: 1, textAlign: "center" }}>
+      <Typography
+        variant="h4"
+        component="p"
+        dir="ltr"
+        data-testid={testId}
+        sx={{ fontWeight: 700, color }}
+      >
+        {value}
+      </Typography>
+      <Typography variant="caption" sx={{ color: "text.secondary" }}>
+        {label}
+      </Typography>
+    </Box>
+  );
+  return (
+    <Box
+      data-testid="repertoire-play-score"
+      sx={{ display: "flex", flexDirection: "column", gap: 2, p: 1 }}
+    >
+      <Box sx={{ display: "flex", gap: 1 }}>
+        {figure(
+          "repertoire-play-score-successes",
+          t("repertoires.play.score.successes"),
+          String(score.successes),
+          "success.main",
+        )}
+        {figure(
+          "repertoire-play-score-failures",
+          t("repertoires.play.score.failures"),
+          String(score.failures),
+          "error.main",
+        )}
+        {figure(
+          "repertoire-play-score-accuracy",
+          t("repertoires.play.score.accuracy"),
+          accuracy === undefined ? "–" : `${accuracy}%`,
+          "text.primary",
+        )}
       </Box>
+      <Typography variant="caption" sx={{ color: "text.secondary" }}>
+        {t("repertoires.play.score.help")}
+      </Typography>
       <Box>
-        <FormControlLabel
-          sx={{ m: 0 }}
-          control={
-            <Switch
-              size="small"
-              checked={engineOn}
-              data-testid="repertoire-play-setting-engine"
-              onChange={(event) => onEngineOnChange(event.target.checked)}
-            />
-          }
-          label={t("repertoires.play.engine")}
-        />
-        <Typography variant="caption" sx={{ display: "block", color: "text.secondary" }}>
-          {t("repertoires.play.engineHelp")}
-        </Typography>
+        <Button
+          size="small"
+          variant="outlined"
+          onClick={onReset}
+          data-testid="repertoire-play-score-reset"
+        >
+          {t("repertoires.play.score.reset")}
+        </Button>
       </Box>
     </Box>
   );

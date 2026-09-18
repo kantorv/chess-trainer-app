@@ -288,8 +288,10 @@ const trainer = useTrainerModule({
   policy?: TrainerPolicy,           // pickTrainerMove: uniform over the file's moves at the node
   random?: () => number,            // injectable, so a test is deterministic
   delayMs?: number,
+  drill?: boolean,                  // game mode: judge the reader's moves, take a wrong one back
+  onJudged?: (verdict: "success" | "fail") => void,  // once per position — the first try's
 });
-// → { status: "trainer-thinking" | "your-move" | "out-of-book",
+// → { status: "trainer-thinking" | "your-move" | "out-of-book" | "try-again",
 //     onPieceDrop, resolvePromotion,   // hand these to BoardShell in place of the core's
 //     requestReply(at) }               // "the session starts here"
 ```
@@ -308,17 +310,28 @@ A scripted opponent that answers **only from a repertoire**. What it owns:
   the mainline), and never `chess.js` directly.
 - **Asking the original tree.** A node the reader added is not in it, so the
   policy has nothing there — the trainer cannot move inside an extension.
+- **Game mode (`drill`).** At the reader's own turn, where the repertoire has
+  a move, the wrapped drop **judges before the core sees it**
+  (`judgeDrop`, pure, in `lib/repertoireTrainer.ts` — by the from/to squares
+  every node carries, with `chess.js` only *read* for legality): a repertoire
+  move is a success and goes on; any other legal move is a failure and is
+  **taken back** by refusing the drop — it never enters the tree; an illegal
+  drop, or a move past the line's end, is not judged. A promotion is judged
+  by the piece picked. **One verdict per position**: the first try's;
+  retries after a failure count nothing, and `requestReply` (a restart)
+  judges the line afresh. Verdicts go out through `onJudged`; the status is
+  `try-again` while a wrong try stands.
 
-**Adding a policy or a drill mode.** A new trainer (weighted, mainline-first,
-spaced repetition) is a new function of type `TrainerPolicy` in
-`lib/repertoireTrainer.ts`, passed as `policy` — never a branch in
-`pickTrainerMove` or in the module. A drill mode (a deviation counted as a
-mistake, taken back, scored) is a new **option** on this module — an
-`onDeviation(move, expected)` the wrapped drop calls when the reader's move is
-not one of `repertoireMovesAt(repertoire, nodeId)` — and the screen decides
-what a deviation costs. Neither touches `useBoardCore`, and the extension
-marker (`extensionIdsOf`, the move list's `extensionIds`) keeps working
-unchanged, because it is derived from the tree rather than recorded.
+**Adding a policy, a scoring rule or a mode.** A new trainer (weighted,
+mainline-first, spaced repetition) is a new function of type `TrainerPolicy`
+in `lib/repertoireTrainer.ts`, passed as `policy` — never a branch in
+`pickTrainerMove` or in the module. What a verdict is *worth* — the session
+tally today (`DrillScore` / `withVerdict`), a persisted per-position record
+for spaced repetition later — is the screen's `onJudged`, never the
+module's. A further mode is one more option here, beside `drill`. None of it
+touches `useBoardCore`, and the extension marker (`extensionIdsOf`, the move
+list's `extensionIds`) keeps working unchanged, because it is derived from
+the tree rather than recorded.
 
 ---
 
@@ -413,7 +426,7 @@ Every `/dev/*` screen, and exactly what it picks. Nothing else differs.
 | **Masked v2** | `/dev/masked` | Play v2's, verbatim | ✅ switch, **reply** | header line only | ❌ (a mask cannot be restored on `/dev/play`) | Moves · Engine · Mask | Play v2's | Play v2's | `pieces: maskedPieces(mask)` |
 | **Openings v2** | `/dev/openings` | `?fen=`, `?openings=` | ✅ switch, no reply | ✅ continuations + arrows | ❌ **button-triggered save** | Moves · Engine · Tree | opening + Save + switch | the explorer list | book arrows |
 | **Repertoire v2** | `/dev/repertoire` | `?game=library/<path>/<id>` | ✅ switch, no reply | header line only | ❌ (a shipped file is not the reader's work) | Moves · Engine · Tree · Info | opening + switch | next-moves bar | next-move arrows |
-| **Play repertoire** (shipped, CTA-63) | `/repertoires/<id>/play` | `orientation`: the reader's side | ✅ switch, **off by default**, no reply — the opponent is **`useTrainerModule`** (§2.5) | ❌ | ❌ (session-only; leaves by download) | Moves (extensions tinted) · Settings (side, arrows, engine switch) · Engine (disabled while off) | name + restart + download + back | the trainer's status line | next-move arrows, **off by default** |
+| **Play repertoire** (shipped, CTA-63) | `/repertoires/<id>/play` | `orientation`: the reader's side | ✅ switch, **off by default**, no reply — the opponent is **`useTrainerModule`** (§2.5) | ❌ | ❌ (session-only; leaves by download) | Moves (extensions tinted) · Score (only in game mode) · Settings (side, game mode, arrows, engine switch) · Engine (disabled while off) | name + restart + download + back | the trainer's status line | next-move arrows, **off by default** |
 
 **Next-move arrows are one helper.** `nextMoveArrowsOf` (`views/tools/analysis/nextMoveArrows.ts`)
 builds the arrows for a position's continuations — `children[0]`, the
