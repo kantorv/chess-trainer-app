@@ -673,6 +673,8 @@ const he: typeof en = {
         fit: "התאמת העץ כולו למסך",
         close: "סגירת המפה",
         mouseHint: "גללו כדי להגדיל, גררו כדי להזיז",
+        showMoves: "הצגת המסעים",
+        zoomToRead: "הגדילו כדי לקרוא את המסעים",
       },
       score: {
         successes: "נכון",

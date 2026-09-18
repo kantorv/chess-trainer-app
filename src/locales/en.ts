@@ -1008,6 +1008,8 @@ const en = {
         fit: "Fit the whole tree",
         close: "Close the map",
         mouseHint: "Scroll to zoom, drag to move",
+        showMoves: "Show moves",
+        zoomToRead: "Zoom in to read the moves",
       },
       /** Game mode's tally — this session only. */
       score: {

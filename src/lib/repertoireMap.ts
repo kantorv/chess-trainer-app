@@ -227,3 +227,44 @@ export const centerView = (px: number, py: number, k: number, vw: number, vh: nu
   x: vw / 2 - px * k,
   y: vh / 2 - py * k,
 });
+
+/**
+ * The full-screen map's move labels: each move's SAN written just above its
+ * dot, in the drawing's own units, so it scales with the view and never
+ * overlaps its neighbours — at 100% it is too small to read, from about 2.5×
+ * it reads comfortably. Below {@link MAP_LABEL_MIN_K} none are drawn at all.
+ */
+export const MAP_LABEL_FONT = 4.5;
+export const MAP_LABEL_MIN_K = 1.5;
+/** The most labels drawn at once — a guard for a wide view of a huge tree. */
+export const MAP_LABEL_LIMIT = 2000;
+
+export type MapLabel = { id: string; san: string; px: number; py: number };
+
+/**
+ * The moves whose dots fall inside `rect` (drawing coordinates), in the
+ * tree's order, at most `limit` of them — only what is on screen is written,
+ * so a 9,146-node repertoire costs what is visible, not what exists.
+ */
+export const mapLabelsIn = (
+  layout: MapLayout,
+  rect: { left: number; top: number; right: number; bottom: number },
+  limit = MAP_LABEL_LIMIT,
+): MapLabel[] => {
+  const labels: MapLabel[] = [];
+  for (const node of layout.order) {
+    const { px, py } = mapPixel(layout.points.get(node.id)!);
+    if (px < rect.left || px > rect.right || py < rect.top || py > rect.bottom) continue;
+    labels.push({ id: node.id, san: node.san, px, py });
+    if (labels.length >= limit) break;
+  }
+  return labels;
+};
+
+/** What of the drawing a view shows, in drawing coordinates, with a margin. */
+export const visibleRect = (view: MapView, vw: number, vh: number, margin = 20) => ({
+  left: (-view.x) / view.k - margin,
+  top: (-view.y) / view.k - margin,
+  right: (vw - view.x) / view.k + margin,
+  bottom: (vh - view.y) / view.k + margin,
+});
