@@ -141,9 +141,9 @@ describe("a repertoire's own view — the player, on the v2 board", () => {
     expect(screen.getByTestId("repertoire-board-missing")).toBeInTheDocument();
   });
 
-  it("opens the 9,146-node Nimzo-Indian example, reading first and then showing it", async () => {
-    const nimzo = shipped("nimzo-indian-repertoire.pgn");
-    renderSection(`/repertoires/${storeRepertoire("nimzo", nimzo)}`);
+  it("opens the shipped one-tree example (7,859 nodes), reading first and then showing it", async () => {
+    const big = shipped("live-chess-2026-09-18.pgn");
+    renderSection(`/repertoires/${storeRepertoire("big", big)}`);
 
     // The screen is up before the tree is: it says it is reading.
     expect(screen.getByTestId("repertoire-board-panel")).toBeInTheDocument();
@@ -151,12 +151,12 @@ describe("a repertoire's own view — the player, on the v2 board", () => {
 
     await ready();
     expect(screen.getByTestId("repertoire-board-name")).toHaveTextContent(
-      "Complete Nimzo-Indian Repertoire for Black by @hpy",
+      "Live Chess",
     );
 
-    // And it can be stepped through: a move, and the board follows.
+    // And it can be stepped through: a move (1. e4), and the board follows.
     await userEvent.click(screen.getByTestId("board-control-next"));
-    expect(boardOptions().position).toContain("PPP1PPPP");
+    expect(boardOptions().position).toContain("PPPP1PPP");
   }, 30_000);
 });
 

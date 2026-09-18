@@ -24,18 +24,18 @@
       },
       "order": 40
     },
-    "Tame_the_Sicilian_The_Alapin_Variation_GM_Kasimdzhanov__&_GM_Ganguly.pgn": {
+    "sicilian-2c3-sampler.pgn": {
       "label": {
-        "en": "Tame the Sicilian: the Alapin",
-        "he": "לאלף את הסיציליאנית: אלאפין"
+        "en": "Sicilian 2.c3, a chaptered sampler",
+        "he": "סיציליאנית 2.c3, מדגם בפרקים"
       },
       "order": 50
     },
-    "nimzo-indian-repertoire.pgn": {
+    "live-chess-2026-09-18.pgn": {
       "kind": "repertoire",
       "label": {
-        "en": "Nimzo-Indian, complete repertoire for Black",
-        "he": "נימצו-אינדית, רפרטואר מלא לשחור"
+        "en": "Live chess, one-tree repertoire",
+        "he": "שחמט חי, רפרטואר בעץ אחד"
       },
       "order": 60
     },
