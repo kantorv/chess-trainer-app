@@ -331,6 +331,104 @@ describe("playing a repertoire against the trainer", () => {
     expect(screen.getByTestId("move-list")).toBe(list);
   });
 
+  describe("game mode", () => {
+    const gameModeOn = () => {
+      openSettings();
+      fireEvent.click(screen.getByTestId("repertoire-play-setting-game").querySelector("input")!);
+    };
+    const tally = () => [
+      screen.getByTestId("repertoire-play-score-successes").textContent,
+      screen.getByTestId("repertoire-play-score-failures").textContent,
+    ];
+
+    it("brings a Score tab with it, opened, and takes it away again", () => {
+      mount(`/repertoires/${storeRepertoire("r", CARO)}/play`);
+      expect(screen.queryByTestId("repertoire-play-panel-tab-score")).not.toBeInTheDocument();
+
+      gameModeOn();
+      expect(screen.getAllByRole("tab").map((tab) => tab.getAttribute("data-testid"))).toEqual([
+        "repertoire-play-panel-tab-moves",
+        "repertoire-play-panel-tab-score",
+        "repertoire-play-panel-tab-settings",
+        "repertoire-play-panel-tab-engine",
+      ]);
+      expect(screen.getByTestId("repertoire-play-score")).toBeVisible();
+      expect(tally()).toEqual(["0", "0"]);
+      expect(screen.getByTestId("repertoire-play-score-accuracy")).toHaveTextContent("–");
+
+      openSettings();
+      fireEvent.click(screen.getByTestId("repertoire-play-setting-game").querySelector("input")!);
+      expect(screen.queryByTestId("repertoire-play-panel-tab-score")).not.toBeInTheDocument();
+    });
+
+    it("counts a right move, takes a wrong one back, and counts a position once", () => {
+      mount(`/repertoires/${storeRepertoire("r", CARO)}/play`);
+      gameModeOn();
+
+      drop("e2", "e4");
+      wait();
+      expect(tally()).toEqual(["1", "0"]);
+      expect(position()).toBe(fenAfter("e4", "c6"));
+
+      // 2. d3 is not the repertoire's move: refused, counted, not added.
+      drop("d2", "d3");
+      expect(tally()).toEqual(["1", "1"]);
+      expect(position()).toBe(fenAfter("e4", "c6"));
+      expect(document.querySelector('[data-san="d3"]')).toBeNull();
+      expect(status()).toBe("try-again");
+      wait();
+      expect(position()).toBe(fenAfter("e4", "c6"));
+
+      // Retries at the same position count nothing more, wrong or right.
+      drop("c2", "c3");
+      drop("d2", "d4");
+      expect(tally()).toEqual(["1", "1"]);
+      wait();
+      expect(position()).toBe(fenAfter("e4", "c6", "d4", "d5"));
+
+      // An illegal drop is not a move at all.
+      drop("e4", "e6");
+      expect(tally()).toEqual(["1", "1"]);
+
+      // The next position is judged afresh.
+      drop("e4", "e5");
+      expect(tally()).toEqual(["2", "1"]);
+      expect(screen.getByTestId("repertoire-play-score-accuracy")).toHaveTextContent("67%");
+    });
+
+    it("judges only inside the repertoire, and counts again after a restart", () => {
+      mount(`/repertoires/${storeRepertoire("r", CARO)}/play`);
+      gameModeOn();
+      for (const [from, to] of [["e2", "e4"], ["d2", "d4"], ["e4", "e5"], ["g1", "f3"]]) {
+        drop(from, to);
+        wait();
+      }
+      expect(tally()).toEqual(["4", "0"]);
+
+      // Past the end of the line: free play, extending, not judged.
+      drop("e7", "e6");
+      expect(tally()).toEqual(["4", "0"]);
+      expect(screen.getByTestId("move-ply-8")).toHaveAttribute("data-extension", "true");
+
+      fireEvent.click(screen.getByTestId("repertoire-play-restart"));
+      drop("d2", "d4");
+      expect(tally()).toEqual(["4", "1"]);
+
+      fireEvent.click(screen.getByTestId("repertoire-play-panel-tab-score"));
+      fireEvent.click(screen.getByTestId("repertoire-play-score-reset"));
+      expect(tally()).toEqual(["0", "0"]);
+    });
+
+    it("leaves moves unjudged, and extensions allowed, while it is off", () => {
+      mount(`/repertoires/${storeRepertoire("r", CARO)}/play`);
+      drop("e2", "e4");
+      wait();
+      drop("d2", "d3");
+      expect(position()).toBe(fenAfter("e4", "c6", "d3"));
+      expect(status()).toBe("out-of-book");
+    });
+  });
+
   it("restarts at the start position and keeps the extensions", () => {
     mount(`/repertoires/${storeRepertoire("r", CARO)}/play`);
     drop("e2", "e4");

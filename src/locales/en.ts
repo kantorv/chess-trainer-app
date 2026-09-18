@@ -981,14 +981,27 @@ const en = {
       arrows: "Show next-move arrows",
       arrowsHelp:
         "Arrows for the moves that follow the position on the board: the main line in green, side lines in blue.",
+      gameMode: "Game mode",
+      gameModeHelp:
+        "Test yourself: each of your moves is marked right or wrong. A move the repertoire doesn't have is taken back so you can try again, and your score is kept in the Score tab.",
       tabs: {
         settings: "Settings",
+        score: "Score",
+      },
+      /** Game mode's tally — this session only. */
+      score: {
+        successes: "Right",
+        failures: "Wrong",
+        accuracy: "Accuracy",
+        help: "Each position counts once: your first try there. Retries after a wrong move don't count again. The score is for this session only.",
+        reset: "Reset score",
       },
       status: {
         thinking: "The trainer is choosing a move…",
         yourMove: "Your move.",
         outOfBook:
           "The repertoire ends here. Every move you play now adds to it.",
+        tryAgain: "That move isn't in the repertoire. Try again.",
       },
     },
     /** The board a repertoire is read on. */

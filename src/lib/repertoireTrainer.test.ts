@@ -4,10 +4,14 @@ import { Chess } from "chess.js";
 import { addMove, findNode, mainline, treeToPgn, type GameTree } from "./gameTree";
 import { parsePgnTree } from "./pgn";
 import {
+  drillAccuracy,
+  EMPTY_DRILL_SCORE,
   extensionIdsOf,
+  judgeDrop,
   nodeIdsOf,
   pickTrainerMove,
   repertoireMovesAt,
+  withVerdict,
 } from "./repertoireTrainer";
 
 /** `3... Bf5` is the mainline, `3... c5` the side line: two trainer moves at one node. */
@@ -93,5 +97,44 @@ describe("extensionIdsOf", () => {
     play(original, afterE5(original).id, "e6");
     expect(treeToPgn(original)).toBe(pgn);
     expect(nodeIdsOf(original).size).toBe(9);
+  });
+});
+
+describe("judgeDrop (game mode)", () => {
+  const tree = parsePgnTree(CARO);
+  const e5 = afterE5(tree);
+
+  it("calls a repertoire move book, whichever of them it is", () => {
+    expect(judgeDrop(tree, null, tree.startFen, "e2", "e4")).toEqual({ kind: "book" });
+    expect(judgeDrop(tree, e5.id, e5.fen, "c8", "f5")).toEqual({ kind: "book" });
+    expect(judgeDrop(tree, e5.id, e5.fen, "c6", "c5")).toEqual({ kind: "book" });
+  });
+
+  it("calls any other legal move wrong", () => {
+    expect(judgeDrop(tree, null, tree.startFen, "d2", "d4")).toEqual({ kind: "wrong" });
+    expect(judgeDrop(tree, e5.id, e5.fen, "e7", "e6")).toEqual({ kind: "wrong" });
+  });
+
+  it("does not judge an illegal drop, or a position past the repertoire's end", () => {
+    expect(judgeDrop(tree, null, tree.startFen, "e2", "e5")).toEqual({ kind: "unjudged" });
+    const end = mainline(tree).at(-1)!;
+    expect(judgeDrop(tree, end.id, end.fen, "e7", "e6")).toEqual({ kind: "unjudged" });
+  });
+
+  it("names the promotion pieces the repertoire plays, for the picker to be judged by", () => {
+    const promo = parsePgnTree('[SetUp "1"]\n[FEN "8/P7/8/8/8/8/8/k6K w - - 0 1"]\n\n1. a8=N (1. a8=Q) *');
+    expect(judgeDrop(promo, null, promo.startFen, "a7", "a8")).toEqual({
+      kind: "book",
+      promotions: new Set(["n", "q"]),
+    });
+  });
+});
+
+describe("the drill score", () => {
+  it("tallies verdicts and reads an accuracy, none before the first", () => {
+    expect(drillAccuracy(EMPTY_DRILL_SCORE)).toBeUndefined();
+    const score = withVerdict(withVerdict(withVerdict(EMPTY_DRILL_SCORE, "success"), "success"), "fail");
+    expect(score).toEqual({ successes: 2, failures: 1 });
+    expect(drillAccuracy(score)).toBe(67);
   });
 });
