@@ -26,6 +26,9 @@ const en = {
     savedAnalyses: "Saved analyses",
     boardEditor: "Board Editor",
     savedOpenings: "Saved openings",
+    /** The reader's own repertoires (CTA-61), and the screen they come in on. */
+    repertoires: "My repertoires",
+    addRepertoire: "Add repertoire",
     /** Sidebar folders — groupings over the routes, never routes themselves. */
     folders: {
       engine: "Engine",
@@ -34,6 +37,7 @@ const en = {
       tools: "Tools",
       analysisBoard: "Analysis Board",
       openings: "Openings",
+      repertoires: "Repertoires",
       /**
        * The Library section's root (was "User PGNs" before CTA-38). Its
        * sub-folders have no key here and never will: they are generated — one
@@ -824,6 +828,148 @@ const en = {
     leftPanel: {
       ariaLabel: "Other items in {{category}}",
       close: "Close",
+    },
+  },
+  /**
+   * The **Repertoires** section (CTA-61) — the reader's own opening
+   * repertoires, brought in as a `.pgn` file or pasted text, listed like the
+   * saved screens and read on the unified v2 board. The list reuses the
+   * saved-list machinery, which reads `view.*`, `remove`, `select`,
+   * `selectAll`, `selected` and `download` out of this block.
+   */
+  repertoires: {
+    title: "Repertoires",
+    count: "Repertoires: {{count}}",
+    empty:
+      "No repertoires yet. Add one from a .pgn file, or paste its PGN, and it appears here.",
+    hint: "Your own opening repertoires. Open one to read its lines on the board, side lines and all, with the engine beside you.",
+    storage:
+      "Repertoires are kept in this browser only. Clearing site data removes them, and they do not follow you to another device.",
+    /** A repertoire whose tags carry no name and the reader typed none. */
+    untitled: "Untitled repertoire",
+    /** A repertoire's size: its mainline, and the side lines off it. */
+    moves_one: "{{count}} move",
+    moves_other: "{{count}} moves",
+    variations_one: "{{count}} variation",
+    variations_other: "{{count}} variations",
+    /** A record from before the one-game rule, which opens on the choice. */
+    needsChoice: "Several games — open to merge or split",
+    view: {
+      label: "View",
+      list: "List",
+      compact: "Small boards",
+      comfortable: "Big boards",
+    },
+    open: "Open",
+    add: "Add",
+    remove: "Delete this repertoire",
+    select: "Select this repertoire",
+    selectAll: "Select all repertoires",
+    selected: "{{count}} selected",
+    download: "Download selected as PGN",
+    /** The screen a repertoire is brought in on. */
+    upload: {
+      title: "Add a repertoire",
+      intro:
+        "Choose a .pgn file, or paste its text below. Both are read the same way: every line is checked before anything is kept.",
+      name: "Name",
+      nameHelp: "Leave empty to take the name from the file's own tags.",
+      pick: "Choose a .pgn file",
+      paste: "…or paste PGN here",
+      save: "Add pasted PGN",
+      reading: "Reading…",
+      problem: {
+        empty: "That holds no PGN.",
+        "too-large": "That is too large to keep in this browser.",
+        unreadable: "No line in it could be read.",
+        storage:
+          "It could not be saved — this browser's storage is full or unavailable.",
+      },
+    },
+    /**
+     * The per-repertoire settings screen (`/repertoires/<id>/settings`). One
+     * key per control; a new option adds its own here and in `he.ts`
+     * (see `lib/repertoireSettings.ts`, "Adding an option").
+     */
+    settings: {
+      title: "Repertoire settings",
+      open: "Settings",
+      sections: {
+        general: "General",
+        board: "Board",
+      },
+      name: "Title",
+      nameHelp: "Shown in the list and above the board.",
+      description: "Description",
+      descriptionHelp: "Your own notes: what this repertoire covers, what to remember.",
+      color: "Main color",
+      colorHelp: "The side you play this repertoire as. Its board opens facing it.",
+      white: "White",
+      black: "Black",
+      save: "Save",
+      cancel: "Cancel",
+      problem: "It could not be saved — this browser's storage is full or unavailable.",
+    },
+    /**
+     * A text of several games: a repertoire is one game (a mainline with side
+     * lines), so the reader merges them into one or splits them into many.
+     */
+    choice: {
+      title_one: "This PGN holds {{count}} game",
+      title_other: "This PGN holds {{count}} games",
+      explain:
+        "A repertoire is one game: a mainline with its side lines. Choose how to bring these in.",
+      skipped_one: "{{count}} game has no moves or could not be read, and is left out.",
+      skipped_other: "{{count}} games have no moves or could not be read, and are left out.",
+      merge: "Merge into one repertoire",
+      mergeHelp:
+        "One tree: the first game's line is the mainline, and wherever another game leaves it becomes a side line. Comments in the file are not kept.",
+      mergeUnavailable:
+        "These games start from different positions, so they cannot share one tree.",
+      split_one: "Keep as {{count}} repertoire",
+      split_other: "Split into {{count}} repertoires",
+      splitHelp:
+        "Each game becomes a repertoire of its own, named after the game, all in a new folder named after the file.",
+      folderFailed:
+        "Could not make a folder for them — the limit is {{max}} folders, or this browser's storage is full.",
+      tooMany: "That would pass the limit of {{max}} repertoires in this browser.",
+      legacy:
+        "This was saved as several games. A repertoire is one game with side lines — choose how to keep it.",
+    },
+    /**
+     * The folders repertoires are filed under — one level: a folder holds
+     * repertoires, never another folder.
+     */
+    folder: {
+      unfiled: "Unfiled",
+      back: "All repertoires",
+      new: "New folder",
+      newTitle: "New folder",
+      rename: "Rename folder",
+      delete: "Delete folder",
+      download: "Download this folder as PGN",
+      name: "Folder name",
+      save: "Save",
+      cancel: "Cancel",
+      count_one: "{{count}} repertoire",
+      count_other: "{{count}} repertoires",
+      deleteConfirm_one: "Its {{count}} repertoire moves to Unfiled; nothing is deleted.",
+      deleteConfirm_other: "Its {{count}} repertoires move to Unfiled; nothing is deleted.",
+      move: "Move to folder",
+      moveTitle: "Move to folder",
+      empty: "This folder is empty. Move repertoires here from the list.",
+    },
+    /** The board a repertoire is read on. */
+    detail: {
+      missing: "There is no such repertoire in this browser.",
+      back: "Back to repertoires",
+      loading: "Reading this line…",
+      unreadable: "This repertoire could not be read.",
+      tabs: {
+        moves: "Moves",
+        tree: "Tree",
+        engine: "Engine",
+      },
     },
   },
   footer: {

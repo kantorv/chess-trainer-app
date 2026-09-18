@@ -127,14 +127,14 @@ describe("a repertoire line on screen", () => {
     the whole-study export and the chapter export are byte-identical — so it is
     kept deliberately, as the section's stress case.
 
-    It gets its own test and its own timeout because of what that costs:
-    `VariationTree` is a flowing view that renders a button per node, so this
-    one line is nine thousand of them and takes about twenty seconds under
-    jsdom. That is a **pre-existing** property of the shipped viewer, not
-    something this file introduced, and it is worth a follow-up issue — a
-    repertoire this size wants collapsing or virtualising. Asserting it here
-    with an honest timeout is better than dropping the example and pretending
-    the viewer scales.
+    It gets its own test and its own timeout because `VariationTree` renders a
+    button per node — nine thousand of them, about two seconds under jsdom.
+
+    The buttons are counted with `querySelectorAll`, **not** `getAllByRole`:
+    a role query computes the accessible role of every candidate element, and
+    over nine thousand buttons that alone took ~16s locally and pushed the test
+    past a 60s timeout on CI. The other tests' role queries run over a few
+    dozen buttons and stay as they are.
   */
   it(
     "opens the Nimzo-Indian repertoire — one 9,146-node tree — with its variation tree",
@@ -144,9 +144,9 @@ describe("a repertoire line on screen", () => {
 
       const tree = screen.getByTestId("variation-tree");
       expect(within(tree).getByTestId("tree-move-start")).toBeInTheDocument();
-      expect(within(tree).getAllByRole("button").length).toBeGreaterThan(1000);
+      expect(tree.querySelectorAll("button").length).toBeGreaterThan(1000);
     },
-    60000,
+    30000,
   );
 
   it("lists the 1.d4 repertoire as thirteen line cards and no folders", async () => {

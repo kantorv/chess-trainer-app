@@ -1,5 +1,7 @@
 import type { SvgIconComponent } from "@mui/icons-material";
 import HistoryRoundedIcon from "@mui/icons-material/HistoryRounded";
+import LibraryAddRoundedIcon from "@mui/icons-material/LibraryAddRounded";
+import MenuBookRoundedIcon from "@mui/icons-material/MenuBookRounded";
 import SportsEsportsRoundedIcon from "@mui/icons-material/SportsEsportsRounded";
 import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
 import DashboardCustomizeRoundedIcon from "@mui/icons-material/DashboardCustomizeRounded";
@@ -93,6 +95,18 @@ export const navItems = (): readonly NavItem[] => [
     labelKey: "nav.savedOpenings",
     icon: HistoryRoundedIcon,
     folder: "openings",
+  },
+  {
+    to: "/repertoires",
+    labelKey: "nav.repertoires",
+    icon: MenuBookRoundedIcon,
+    folder: "repertoires",
+  },
+  {
+    to: "/repertoires/new",
+    labelKey: "nav.addRepertoire",
+    icon: LibraryAddRoundedIcon,
+    folder: "repertoires",
   },
   /*
     The Development section's five boards (CTA-60) — the same `import.meta.env.DEV`

@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import Box from "@mui/material/Box";
 import Chip from "@mui/material/Chip";
 import Tab from "@mui/material/Tab";
@@ -42,6 +42,16 @@ import BoardControls from "../../shared/BoardControls";
  * **One tab is rendered at a time**, rather than all of them with the inactive
  * ones hidden: a move list scrolls its selection into view, and a hidden copy
  * would be scrolling a zero-height box on every move.
+ *
+ * **Unless the screen names it in `keepMounted`.** A tab listed there is
+ * mounted the first time it is opened and then *stays* mounted, hidden, while
+ * another tab shows — for a body whose mount is the expensive part, like the
+ * move list of a 9,000-node repertoire (CTA-61), where remounting on every
+ * switch back cost most of a second. Each kept tab has a scrolling region of
+ * its own, so it keeps its own place; a hidden token's `scrollIntoView` is a
+ * no-op, so nothing scrolls a zero-height box; and when the tab shows again,
+ * the panel scrolls its current move (`aria-current`) back into view, since
+ * the selection may have moved while it was hidden.
  *
  * **The panel is a non-scrolling flex column and exactly one child scrolls.**
  * The shell's aside does not scroll (`Layout.tsx`) and `RightPanel` portals
@@ -101,6 +111,12 @@ export type BoardPanelProps = {
   mask?: PieceMask;
 
   tabs: readonly BoardPanelTab[];
+  /**
+   * Tab ids that stay mounted once opened, hidden rather than unmounted when
+   * another tab is active. Opt-in, per screen; see the header note. Absent:
+   * every tab unmounts when it is left, as before.
+   */
+  keepMounted?: readonly string[];
   activeTab: string;
   onTabChange: (id: string) => void;
 
@@ -127,6 +143,7 @@ function BoardPanel({
   onPlayVariation,
   mask,
   tabs,
+  keepMounted,
   activeTab,
   onTabChange,
   footer,
@@ -143,6 +160,52 @@ function BoardPanel({
   // A tab id that names nothing falls back to the first tab rather than
   // rendering an empty body: the strip would show a selection with no content.
   const active = tabs.find((tab) => tab.id === activeTab) ?? tabs[0];
+
+  /*
+    The kept tabs that have been opened — mounted from their first visit, not
+    before, so a board a reader never opens the Moves tab on never pays for it.
+    Grown during render (React's "adjust state while rendering" pattern) rather
+    than in an effect, so the first visit renders the tab in the same pass.
+  */
+  const isKept = (id: string) => keepMounted?.includes(id) ?? false;
+  const [opened, setOpened] = useState<ReadonlySet<string>>(() =>
+    active !== undefined && isKept(active.id) ? new Set([active.id]) : new Set(),
+  );
+  if (active !== undefined && isKept(active.id) && !opened.has(active.id)) {
+    setOpened(new Set([...opened, active.id]));
+  }
+
+  /* A kept tab shown again: its current move back into view. */
+  const regionsRef = useRef<HTMLDivElement | null>(null);
+  const activeId = active?.id;
+  const activeIsKept = activeId !== undefined && isKept(activeId);
+  useLayoutEffect(() => {
+    if (!activeIsKept) return;
+    regionsRef.current
+      ?.querySelector(`[data-tab-region="${activeId}"] [aria-current="true"]`)
+      // Optional call: jsdom implements no scrolling.
+      ?.scrollIntoView?.({ block: "nearest" });
+  }, [activeId, activeIsKept]);
+
+  /** One scrolling tab region — the only scrolling child the panel has. */
+  const region = (tab: BoardPanelTab, visible: boolean) => (
+    <Box
+      key={tab.id}
+      role="tabpanel"
+      data-tab-region={tab.id}
+      hidden={!visible}
+      data-testid={`${testId}-content-${tab.id}`}
+      sx={{
+        flexGrow: 1,
+        minHeight: 0,
+        overflow: "auto",
+        // `hidden` alone loses to the `display` MUI's `Box` may set.
+        ...(visible ? {} : { display: "none" }),
+      }}
+    >
+      {tab.content}
+    </Box>
+  );
 
   return (
     <Box
@@ -259,12 +322,26 @@ function BoardPanel({
         </Box>
       )}
 
+      {/*
+        The active tab's region, plus — hidden — every kept tab already
+        opened. In tab order, so a kept tab's region keeps its place in the
+        tree (and its state) as the reader switches around it.
+      */}
       <Box
-        role="tabpanel"
-        data-testid={`${testId}-content-${active?.id ?? "none"}`}
-        sx={{ flexGrow: 1, minHeight: 0, overflow: "auto" }}
+        ref={regionsRef}
+        sx={{ display: "contents" }}
       >
-        {active?.content}
+        {active === undefined ? (
+          <Box
+            role="tabpanel"
+            data-testid={`${testId}-content-none`}
+            sx={{ flexGrow: 1, minHeight: 0, overflow: "auto" }}
+          />
+        ) : (
+          tabs
+            .filter((tab) => tab.id === active.id || (isKept(tab.id) && opened.has(tab.id)))
+            .map((tab) => region(tab, tab.id === active.id))
+        )}
       </Box>
 
       {footer !== undefined && (

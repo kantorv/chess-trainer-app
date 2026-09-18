@@ -383,6 +383,8 @@ export const useBoardCore = ({
     [],
   );
 
+  const pgn = useMemo(() => treeToPgn(tree), [tree]);
+
   return {
     tree,
     ...navigation,
@@ -392,8 +394,12 @@ export const useBoardCore = ({
     liveFen,
     /** Whether the selection *is* that end. */
     isLive,
-    /** The whole game as PGN, side lines included. */
-    pgn: treeToPgn(tree),
+    /**
+     * The whole game as PGN, side lines included. Memoised on the tree: it was
+     * written out on every render, which on a 9,146-node repertoire was a
+     * whole-tree serialisation per step and per engine message (CTA-61).
+     */
+    pgn,
     /** Whose move it is in the position on screen — the picker's colour. */
     turn: turnOf(fen),
     orientation,

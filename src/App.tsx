@@ -14,6 +14,10 @@ import { default as BoardEditorScreen  } from './views/tools/editor/Main'
 import { default as OpeningsScreen  } from './views/tools/openings/Main'
 import { default as SavedOpeningsScreen  } from './views/tools/openings/saved/Main'
 import { default as UserPgnsScreen  } from './views/pgn/Main'
+import { default as RepertoiresScreen  } from './views/repertoires/RepertoiresMain'
+import { default as RepertoireUploadScreen  } from './views/repertoires/RepertoireUploadMain'
+import { default as RepertoireBoardScreen  } from './views/repertoires/RepertoireBoardMain'
+import { default as RepertoireSettingsScreen  } from './views/repertoires/RepertoireSettingsScreenMain'
 
 
 /**
@@ -137,6 +141,27 @@ const routes = createBrowserRouter(
         {
           path: "/openings/saved",
           element: <SavedOpeningsScreen />
+        },
+        // The reader's own repertoires (CTA-61), kept in `localStorage`
+        // (`lib/savedRepertoireStore.ts`): the list, the screen one is brought
+        // in on, and the v2 board one is read on. `new` is a static segment, so
+        // it ranks above `:id` whatever the order here.
+        {
+          path: "/repertoires",
+          element: <RepertoiresScreen />
+        },
+        {
+          path: "/repertoires/new",
+          element: <RepertoireUploadScreen />
+        },
+        {
+          path: "/repertoires/:id",
+          element: <RepertoireBoardScreen />
+        },
+        // A repertoire's title, description and main color (and what comes next).
+        {
+          path: "/repertoires/:id/settings",
+          element: <RepertoireSettingsScreen />
         },
         // Pre-CTA-39 the Openings screen lived under `/tools`. Old links redirect.
         {
