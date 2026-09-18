@@ -416,6 +416,36 @@ describe("the player's map and its permanent link", () => {
     expect(screen.getByTestId(`${MAP}-here`)).toHaveAttribute("data-node-id", "start");
   });
 
+  it("draws the moves the reader adds as they are added, in their own colour", () => {
+    mountIdle(`/repertoires/${storeRepertoire("r", CARO)}`);
+    fireEvent.click(screen.getByTestId("repertoire-board-panel-tab-map"));
+    const dots = (name: string) =>
+      (screen.getByTestId(`${MAP}-${name}`).getAttribute("d") ?? "").match(/h0/g)?.length ?? 0;
+    expect(screen.getByTestId(`${MAP}-added-lines`).getAttribute("d")).toBe("");
+
+    // 1. e4 is the repertoire's; 1... d5 is not — a new line, on the map at once.
+    drop("e2", "e4");
+    drop("d7", "d5");
+    expect(dots("added-moves")).toBe(1);
+    expect(screen.getByTestId(`${MAP}-added-lines`).getAttribute("d")).not.toBe("");
+    expect(screen.getByTestId(`${MAP}-left`)).toHaveTextContent("3 lines, 10 moves · 1 added");
+    // The marker stands on the added move itself, not before it.
+    const here = screen.getByTestId(`${MAP}-here`).getAttribute("data-node-id");
+    expect(here).not.toBe("start");
+    expect(document.querySelector(`[data-testid="tree-move-${here}"]`)).toHaveAttribute(
+      "data-extension",
+      "true",
+    );
+
+    // And it grows with the line.
+    drop("e4", "d5");
+    expect(dots("added-moves")).toBe(2);
+    expect(screen.getByTestId(`${MAP}-left`)).toHaveTextContent("3 lines, 11 moves · 2 added");
+    // Black's 1... d5 is a black dot, White's 2. exd5 a white one.
+    expect(dots("black-ends")).toBe(0);
+    expect(dots("white-ends")).toBe(3);
+  });
+
   it("goes to a dot clicked on the full-screen map, closes it, and links there", () => {
     mountProbed(`/repertoires/${storeRepertoire("r", CARO)}`);
     fireEvent.click(screen.getByTestId("repertoire-board-panel-tab-map"));
