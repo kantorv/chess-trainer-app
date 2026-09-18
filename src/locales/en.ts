@@ -1004,6 +1004,10 @@ const en = {
         zoomIn: "Zoom in",
         zoomOut: "Zoom out",
         zoomReset: "Back to 100%",
+        fullScreen: "Open the map full screen",
+        fit: "Fit the whole tree",
+        close: "Close the map",
+        mouseHint: "Scroll to zoom, drag to move",
       },
       /** Game mode's tally — this session only. */
       score: {

@@ -13,8 +13,12 @@ import {
   mapMoveDots,
   mapPathDots,
   mapPathTo,
+  MAP_VIEW_MAX_K,
   MAP_ZOOM_LEVELS,
+  centerView,
+  fitView,
   nextMapZoom,
+  zoomViewAt,
 } from "./repertoireMap";
 
 // Three lines: 1. e4 e5 2. Nf3 (the mainline) | 2. Bc4 | 1... c5 2. Nf3.
@@ -88,6 +92,19 @@ describe("the repertoire map layout", () => {
     expect(nextMapZoom(1, -1)).toBe(0.8);
     expect(nextMapZoom(MAP_ZOOM_LEVELS[0], -1)).toBe(MAP_ZOOM_LEVELS[0]);
     expect(nextMapZoom(3, 1)).toBe(3);
+  });
+
+  it("zooms the full-screen view about the pointer, fits and centres it", () => {
+    // The point under the pointer (100, 50) stays under it.
+    const view = zoomViewAt({ x: 20, y: 10, k: 1 }, 2, 100, 50);
+    expect(view).toEqual({ k: 2, x: -60, y: -30 });
+    expect((100 - view.x) / view.k).toBe(80);
+    // Clamped at the far end.
+    expect(zoomViewAt({ x: 0, y: 0, k: MAP_VIEW_MAX_K }, 2, 0, 0).k).toBe(MAP_VIEW_MAX_K);
+
+    // A 200 × 100 drawing in a 432 × 432 viewport: width-bound, centred.
+    expect(fitView(200, 100, 432, 432)).toEqual({ k: 2, x: 16, y: 116 });
+    expect(centerView(10, 20, 2, 400, 300)).toEqual({ k: 2, x: 180, y: 110 });
   });
 
   it("lays out an empty tree without dividing by nothing", () => {
