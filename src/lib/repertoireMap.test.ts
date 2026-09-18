@@ -9,8 +9,7 @@ import {
   MAP_PAD,
   mapEdgePaths,
   mapLayoutOf,
-  mapLeafDots,
-  mapMoveDots,
+  mapDots,
   mapPathDots,
   mapPathTo,
   MAP_VIEW_MAX_K,
@@ -55,25 +54,27 @@ describe("the repertoire map layout", () => {
     expect(open).toContain(`M${px(2)} ${py(0)}V${py(1)}H${px(3)}`); // 2. Bc4
   });
 
-  it("splits edges and line ends by coverage", () => {
+  it("splits edges by coverage", () => {
     const layout = mapLayoutOf(tree);
-    const coverage = coverageOf(tree, new Set([nf3.id]));
-    const edges = mapEdgePaths(layout, coverage);
+    const edges = mapEdgePaths(layout, coverageOf(tree, new Set([nf3.id])));
     expect(edges.covered).toBe(`M${px(2)} ${py(0)}H${px(3)}`);
-    const dots = mapLeafDots(layout, coverage);
-    expect(dots.covered).toBe(`M${px(3)} ${py(0)}h0`);
-    expect(dots.open.match(/h0/g)).toHaveLength(2);
   });
 
-  it("puts a dot on every move that is not a line's end, and on the way played", () => {
+  it("colours every dot by the side that moved, a line's end apart", () => {
     const layout = mapLayoutOf(tree);
-    const none = mapMoveDots(layout, coverageOf(tree, new Set()));
-    // e4, e5, c5: the three moves with a continuation.
-    expect(none.open.match(/h0/g)).toHaveLength(3);
-    expect(none.covered).toBe("");
-    // With both e5 lines covered, e5's dot turns; e4 and c5 still lead somewhere.
-    const some = mapMoveDots(layout, coverageOf(tree, new Set([nf3.id, bc4.id])));
-    expect(some.covered).toBe(`M${px(2)} ${py(0)}h0`);
+    const dots = mapDots(layout);
+    const count = (d: string) => d.match(/h0/g)?.length ?? 0;
+    // White: 1. e4 (a move); 2. Nf3, 2. Bc4, 2. Nf3 after c5 (ends).
+    expect(dots.white).toBe(`M${px(1)} ${py(0)}h0`);
+    expect(count(dots.whiteEnds)).toBe(3);
+    // Black: 1... e5 and 1... c5, both moves with a continuation.
+    expect(count(dots.black)).toBe(2);
+    expect(dots.blackEnds).toBe("");
+    // A study from a Black-to-move position opens with a Black move.
+    const fromBlack = parsePgnTree(
+      '[SetUp "1"]\n[FEN "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"]\n\n1... e5 *',
+    );
+    expect(mapDots(mapLayoutOf(fromBlack)).blackEnds).not.toBe("");
     expect(mapPathDots(layout, pathTo(tree, bc4.id))).toBe(
       `M${px(1)} ${py(0)}h0M${px(2)} ${py(0)}h0M${px(3)} ${py(1)}h0`,
     );

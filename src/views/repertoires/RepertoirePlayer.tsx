@@ -13,7 +13,7 @@ import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
 import RestartAltRoundedIcon from "@mui/icons-material/RestartAltRounded";
 import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
-import { Link as RouterLink } from "react-router";
+import { Link as RouterLink, useLocation, useSearchParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import type { Arrow, ChessboardOptions } from "react-chessboard";
 
@@ -30,6 +30,7 @@ import {
   type VariationNode,
 } from "../../lib/gameTree";
 import { downloadPgn } from "../../lib/pgnExport";
+import { atParamOf, nodeAtParam, REPERTOIRE_AT_PARAM } from "../../lib/repertoireLink";
 import { slugify } from "../../lib/pgnLibrary";
 import type { RepertoireGameId } from "../../lib/repertoireGames";
 import {
@@ -84,10 +85,15 @@ import { useRepertoireGame } from "./useRepertoireGame";
  *   the ids the repertoire arrived with, recomputed, never tracked. The
  *   record is never written; the header's download is the way out, and the
  *   Engine tab's "Clear" drops the additions.
- * - **Tabs: Moves · (Score) · (Map) · Settings · Engine.** Settings holds the
+ * - **Tabs: Moves · (Score) · Map · Settings · Engine.** Settings holds the
  *   side, Autoplay (player only), the next-move arrows and the engine's
  *   switch; the Engine tab is disabled while the engine is off; Score is a
- *   game's, and Map Backtracking's.
+ *   game's; the Map (`RepertoireMap.tsx`) is the player's — its full-screen
+ *   dots links to their positions — and Backtracking's, with the coverage.
+ *   Get to the end has none.
+ * - **The player's URL is a permanent link** to the position on screen:
+ *   `?at=<SANs from the start>` (`lib/repertoireLink.ts`), read once when the
+ *   tree lands, written back on every step with history replace.
  * - **Arrows are the reader's call**, off by default: every continuation at
  *   the node on screen, the mainline's move in its own colour
  *   (`nextMoveArrowsOf`). In the player, hovering the next-moves bar draws
@@ -227,9 +233,20 @@ function RepertoirePlayer({
   }, [backTo, goToNode, requestReply]);
 
   /*
+    The player's permanent link: `?at=<the moves from the start>`
+    (`lib/repertoireLink.ts`). Read once — arriving is what mounts the screen
+    — and applied when the tree lands; a game ignores it.
+  */
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [arrivedAt] = useState(() =>
+    game === undefined ? searchParams.get(REPERTOIRE_AT_PARAM) : null,
+  );
+
+  /*
     The parse, behind a timer (the header note). Only the timer's callback
-    writes state. The session starts at the start position with a reply owed
-    there — paid only when the trainer plays and it is its turn.
+    writes state. The session starts where the link says — the start position
+    without one — with a reply owed there, paid only when the trainer plays
+    and it is its turn.
   */
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
@@ -237,15 +254,44 @@ function RepertoirePlayer({
       timer.current = null;
       const parsed = repertoireTreeOf(saved);
       const tree = parsed ?? emptyTree();
+      const at = nodeAtParam(tree, arrivedAt);
       setRepertoire(tree);
       loadTree(tree);
-      requestReply(null);
+      // After `loadTree`, whose own step is to the start: the last one wins.
+      if (at !== null) goToNode(at);
+      requestReply(at);
       setShown(parsed === undefined ? "unreadable" : "ready");
     }, 0);
     return () => {
       if (timer.current !== null) clearTimeout(timer.current);
     };
-  }, [loadTree, requestReply, saved]);
+  }, [arrivedAt, goToNode, loadTree, requestReply, saved]);
+
+  /*
+    …and written back as the reader moves, with history **replace** (the
+    library detail's `?move=` rule), so the address bar is always a permanent
+    link to the position on screen and Back leaves the screen rather than
+    stepping through it. Only once the tree is on the board, or the link it
+    arrived with would be wiped before it was read.
+  */
+  const linkedAt = useMemo(
+    () => (game === undefined && shown === "ready" ? atParamOf(core.tree, core.nodeId) : undefined),
+    [game, shown, core.tree, core.nodeId],
+  );
+  useEffect(() => {
+    if (linkedAt === undefined) return;
+    if ((searchParams.get(REPERTOIRE_AT_PARAM) ?? "") === linkedAt) return;
+    setSearchParams(
+      (current) => {
+        const next = new URLSearchParams(current);
+        if (linkedAt === "") next.delete(REPERTOIRE_AT_PARAM);
+        else next.set(REPERTOIRE_AT_PARAM, linkedAt);
+        return next;
+      },
+      { replace: true },
+    );
+  }, [linkedAt, searchParams, setSearchParams]);
+  const location = useLocation();
 
   const [tab, setTab] = useState(game === undefined ? "moves" : "score");
 
@@ -308,19 +354,21 @@ function RepertoirePlayer({
   );
 
   /*
-    Backtracking's map shows the repertoire, not the session: inside a line
-    the reader added, its marker waits on the last repertoire position before it.
+    The map (the player's and Backtracking's) shows the repertoire, not the
+    session: inside a line the reader added, its marker waits on the last
+    repertoire position before it.
   */
+  const hasMap = game !== "end";
   // The map's zoom is the screen's, so it survives a trip to another tab.
   const [mapZoom, setMapZoom] = useState(MAP_DEFAULT_ZOOM);
   const mapNodeId = useMemo(() => {
-    if (game !== "backtrack") return null;
+    if (!hasMap) return null;
     const path = pathTo(core.tree, core.nodeId);
     for (let index = path.length - 1; index >= 0; index -= 1) {
       if (originalIds.has(path[index].id)) return path[index].id;
     }
     return null;
-  }, [game, core.tree, core.nodeId, originalIds]);
+  }, [hasMap, core.tree, core.nodeId, originalIds]);
 
   /** Back to the start, extensions kept; the trainer answers if it is White. */
   const restart = useCallback(() => {
@@ -475,7 +523,8 @@ function RepertoirePlayer({
                   size="small"
                   component={RouterLink}
                   to={`${boardPath}/settings`}
-                  state={{ from: boardPath }}
+                  // Back to this position, link and all.
+                  state={{ from: `${boardPath}${location.search}` }}
                   aria-label={t("repertoires.settings.open")}
                   data-testid={`${id}-settings`}
                   sx={{ flexShrink: 0 }}
@@ -561,8 +610,9 @@ function RepertoirePlayer({
                 },
               ]
             : []),
-          // Backtracking's map of the whole repertoire: where you are, how much is left.
-          ...(game === "backtrack"
+          // The map of the whole repertoire — the player's, and Backtracking's
+          // with its coverage: where you are, how much is left.
+          ...(hasMap
             ? [
                 {
                   id: "map",
@@ -572,8 +622,11 @@ function RepertoirePlayer({
                       <RepertoireMap
                         testId={`${id}-map`}
                         repertoire={repertoire}
-                        coverage={rules.coverage}
+                        coverage={game === "backtrack" ? rules.coverage : undefined}
                         nodeId={mapNodeId}
+                        // The player's full-screen map: a dot is a link to its
+                        // position. A game's is not — no skipping ahead.
+                        onSelectNode={game === undefined ? core.goToNode : undefined}
                         zoom={mapZoom}
                         onZoomChange={setMapZoom}
                       />

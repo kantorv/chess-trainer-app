@@ -39,8 +39,7 @@ import {
   MAP_LABEL_MIN_K,
   mapEdgePaths,
   mapLayoutOf,
-  mapLeafDots,
-  mapMoveDots,
+  mapDots,
   mapPathDots,
   mapPathTo,
   mapPixel,
@@ -60,10 +59,20 @@ import {
  * play moves. A progress bar and a line count above it answer "how far to the
  * end". The layout is `lib/repertoireMap.ts`; this draws it.
  *
- * Every move is a dot — larger at a line's end, the one Backtracking counts —
- * and the moves on the way to the reader are drawn over in the primary
- * colour. The lines keep their width at every scale (`non-scaling-stroke`) so
- * the tree stays legible zoomed out; the dots scale with the drawing.
+ * Every move is a dot **in the colour of the side that made it** — White's
+ * white, Black's black, each ringed so it shows on either theme — larger at a
+ * line's end; the moves on the way to the reader carry a ring in the primary
+ * colour. Coverage is the lines' colour (a game's), not the dots'. The lines
+ * keep their width at every scale (`non-scaling-stroke`) so the tree stays
+ * legible zoomed out; the dots scale with the drawing.
+ *
+ * **Coverage is optional.** Backtracking passes it, and gets the progress bar
+ * and green lines; the repertoire's own view (the player) passes none — every
+ * line one neutral colour, the header the tree's size — and passes
+ * `onSelectNode` instead: there, with the moves written on the full-screen
+ * map, **a dot is a link** to its position (the dialog closes on it). A drag
+ * that starts on a dot still pans: the pointer is captured, and a click
+ * refused, only once it has moved a few pixels.
  *
  * ## Two views of one drawing
  *
@@ -118,11 +127,27 @@ const drawingSx: SxProps<Theme> = {
     fill: (theme: Theme) => (theme.vars ?? theme).palette.primary.main,
     fontWeight: 700,
   },
+  // Chess colours, not theme ones: a dot says which side moved. The ring under
+  // each is a theme token, so a white dot shows on paper and a black one on
+  // the dark theme's.
+  "& .map-dot-ring": stroke((palette) => palette.text.secondary),
+  "& .map-dot-white": { stroke: "#ffffff" },
+  "& .map-dot-black": { stroke: "#000000" },
+  "& .map-hit": { cursor: "pointer" },
+  "& .map-hit:hover .map-label": {
+    fill: (theme: Theme) => (theme.vars ?? theme).palette.primary.main,
+  },
   "& .map-here": {
     fill: (theme: Theme) => (theme.vars ?? theme).palette.primary.main,
     ...stroke((palette) => palette.background.paper),
   },
 };
+
+/** No game: every line open, so every line is drawn in one neutral colour. */
+const NO_COVERAGE: Coverage = { total: 0, under: () => 1 };
+
+/** How far a pointer may travel and still be a click rather than a drag. */
+const CLICK_SLOP_PX = 4;
 
 /** How much one wheel notch zooms the full-screen view. */
 const WHEEL_ZOOM = 0.0015;
@@ -136,8 +161,7 @@ type Drawing = {
   /** The moves on the reader's way, for the labels to pick out. */
   trailIds: ReadonlySet<string>;
   edges: { covered: string; open: string };
-  ends: { covered: string; open: string };
-  moves: { covered: string; open: string };
+  dots: { white: string; black: string; whiteEnds: string; blackEnds: string };
   trail: { edges: string; dots: string };
   here: { px: number; py: number };
   width: number;
@@ -157,16 +181,18 @@ function MapLayers({
   markerRef?: Ref<SVGCircleElement>;
 }) {
   const { t } = useTranslation();
-  const { edges, ends, moves, trail, here } = drawing;
+  const { edges, dots, trail, here } = drawing;
   return (
     <>
       {/* Lines keep their width at any scale; the dots scale with the drawing. */}
       <path className="map-open" d={edges.open} strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
-      <path className="map-covered" d={edges.covered} strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
-      <path className="map-open" d={moves.open} strokeWidth={4} data-testid={`${testId}-open-moves`} />
-      <path className="map-covered" d={moves.covered} strokeWidth={4} data-testid={`${testId}-covered-moves`} />
-      <path className="map-open" d={ends.open} strokeWidth={6} data-testid={`${testId}-open-ends`} />
-      <path className="map-covered" d={ends.covered} strokeWidth={6} data-testid={`${testId}-covered-ends`} />
+      <path
+        className="map-covered"
+        d={edges.covered}
+        strokeWidth={1.5}
+        vectorEffect="non-scaling-stroke"
+        data-testid={`${testId}-covered-lines`}
+      />
       <path
         className="map-trail"
         d={trail.edges}
@@ -174,7 +200,15 @@ function MapLayers({
         vectorEffect="non-scaling-stroke"
         data-testid={`${testId}-trail`}
       />
-      <path className="map-trail" d={trail.dots} strokeWidth={5} data-testid={`${testId}-trail-moves`} />
+      {/* The way played: a primary ring, under the dots it rings. */}
+      <path className="map-trail" d={trail.dots} strokeWidth={8} data-testid={`${testId}-trail-moves`} />
+      {/* Each dot: a thin ring, then the side's colour over it. */}
+      <path className="map-dot-ring" d={dots.white + dots.black} strokeWidth={5.5} />
+      <path className="map-dot-ring" d={dots.whiteEnds + dots.blackEnds} strokeWidth={7.5} />
+      <path className="map-dot-white" d={dots.white} strokeWidth={4} data-testid={`${testId}-white-moves`} />
+      <path className="map-dot-black" d={dots.black} strokeWidth={4} data-testid={`${testId}-black-moves`} />
+      <path className="map-dot-white" d={dots.whiteEnds} strokeWidth={6} data-testid={`${testId}-white-ends`} />
+      <path className="map-dot-black" d={dots.blackEnds} strokeWidth={6} data-testid={`${testId}-black-ends`} />
       <circle
         ref={markerRef}
         className="map-here"
@@ -234,24 +268,33 @@ function RepertoireMap({
   nodeId,
   zoom = MAP_DEFAULT_ZOOM,
   onZoomChange,
+  onSelectNode,
 }: {
   testId: string;
   /** The repertoire as it arrived. */
   repertoire: GameTree;
-  coverage: Coverage;
+  /** A game's coverage — Backtracking's; none draws every line alike. */
+  coverage?: Coverage;
   /** Where the reader is, on the repertoire; `null` is the start position. */
   nodeId: string | null;
   /** The tab's scale — one of `MAP_ZOOM_LEVELS`. */
   zoom?: number;
   onZoomChange: (zoom: number) => void;
+  /**
+   * Go to a position — the player's; present, the full-screen map's dots are
+   * links while the moves are written on it.
+   */
+  onSelectNode?: (id: string) => void;
 }) {
   const { t } = useTranslation();
   const [fullScreen, setFullScreen] = useState(false);
 
   const layout = useMemo(() => mapLayoutOf(repertoire), [repertoire]);
-  const edges = useMemo(() => mapEdgePaths(layout, coverage), [layout, coverage]);
-  const ends = useMemo(() => mapLeafDots(layout, coverage), [layout, coverage]);
-  const moves = useMemo(() => mapMoveDots(layout, coverage), [layout, coverage]);
+  const edges = useMemo(
+    () => mapEdgePaths(layout, coverage ?? NO_COVERAGE),
+    [layout, coverage],
+  );
+  const dots = useMemo(() => mapDots(layout), [layout]);
   const trail = useMemo(() => {
     const path = pathTo(repertoire, nodeId);
     return {
@@ -265,8 +308,7 @@ function RepertoireMap({
     layout,
     trailIds: trail.ids,
     edges,
-    ends,
-    moves,
+    dots,
     trail,
     here: mapPixel(nodeId === null ? layout.root : (layout.points.get(nodeId) ?? layout.root)),
     width: MAP_PAD * 2 + layout.columns * MAP_DX,
@@ -280,46 +322,63 @@ function RepertoireMap({
     marker.current?.scrollIntoView?.({ block: "nearest", inline: "center" });
   }, [nodeId, zoom]);
 
-  const covered = coverage.total - coverage.under(null);
-  const left = coverage.under(null);
+  const covered = coverage === undefined ? 0 : coverage.total - coverage.under(null);
+  const left = coverage === undefined ? 0 : coverage.under(null);
   const smallest = zoom <= MAP_ZOOM_LEVELS[0];
   const largest = zoom >= MAP_ZOOM_LEVELS[MAP_ZOOM_LEVELS.length - 1];
 
-  const progress = (
-    <>
+  /** The tree's size — what the header says without a game. */
+  const size = t("repertoires.play.map.size", {
+    lines: t("repertoires.play.map.lines", { count: layout.order.length === 0 ? 0 : layout.rows }),
+    moves: t("repertoires.play.map.moves", { count: layout.order.length }),
+  });
+
+  const progress =
+    coverage === undefined ? (
       <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-        {t("repertoires.play.score.covered", { covered, total: coverage.total })}
+        {size}
       </Typography>
-      <Typography variant="caption" sx={{ color: "text.secondary" }}>
-        {left === 0
-          ? t("repertoires.play.map.done")
-          : t("repertoires.play.map.left", { count: left })}
-      </Typography>
-    </>
-  );
+    ) : (
+      <>
+        <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+          {t("repertoires.play.score.covered", { covered, total: coverage.total })}
+        </Typography>
+        <Typography variant="caption" sx={{ color: "text.secondary" }}>
+          {left === 0
+            ? t("repertoires.play.map.done")
+            : t("repertoires.play.map.left", { count: left })}
+        </Typography>
+      </>
+    );
 
   return (
     <Box data-testid={testId} sx={{ display: "flex", flexDirection: "column", gap: 1, p: 1 }}>
       <Box>
-        <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-          {t("repertoires.play.score.covered", { covered, total: coverage.total })}
-        </Typography>
-        <LinearProgress
-          variant="determinate"
-          color="success"
-          value={coverage.total === 0 ? 0 : (covered / coverage.total) * 100}
-          data-testid={`${testId}-progress`}
-          sx={{ my: 0.5, height: 6, borderRadius: 3 }}
-        />
+        {coverage !== undefined && (
+          <>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+              {t("repertoires.play.score.covered", { covered, total: coverage.total })}
+            </Typography>
+            <LinearProgress
+              variant="determinate"
+              color="success"
+              value={coverage.total === 0 ? 0 : (covered / coverage.total) * 100}
+              data-testid={`${testId}-progress`}
+              sx={{ my: 0.5, height: 6, borderRadius: 3 }}
+            />
+          </>
+        )}
         <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
           <Typography
             variant="caption"
             sx={{ color: "text.secondary", flexGrow: 1 }}
             data-testid={`${testId}-left`}
           >
-            {left === 0
-              ? t("repertoires.play.map.done")
-              : t("repertoires.play.map.left", { count: left })}
+            {coverage === undefined
+              ? size
+              : left === 0
+                ? t("repertoires.play.map.done")
+                : t("repertoires.play.map.left", { count: left })}
           </Typography>
           <MapButton
             label={t("repertoires.play.map.zoomOut")}
@@ -391,6 +450,14 @@ function RepertoireMap({
             nodeId={nodeId}
             progress={progress}
             onClose={() => setFullScreen(false)}
+            onSelectNode={
+              onSelectNode === undefined
+                ? undefined
+                : (id) => {
+                    onSelectNode(id);
+                    setFullScreen(false);
+                  }
+            }
           />
         )}
       </Dialog>
@@ -409,12 +476,15 @@ function FullScreenMap({
   nodeId,
   progress,
   onClose,
+  onSelectNode,
 }: {
   testId: string;
   drawing: Drawing;
   nodeId: string | null;
   progress: ReactNode;
   onClose: () => void;
+  /** Present: a written move's dot goes to its position. */
+  onSelectNode?: (id: string) => void;
 }) {
   const { t } = useTranslation();
   const viewport = useRef<HTMLDivElement | null>(null);
@@ -489,8 +559,14 @@ function FullScreenMap({
     [showMoves, readable, drawing.layout, view],
   );
 
-  /** A drag pans: where the pointer went down, and the view it started from. */
+  /*
+    A drag pans: where the pointer went down, and the view it started from.
+    It only becomes a drag — the pointer captured — once it has travelled
+    `CLICK_SLOP_PX`; until then a release is a click, so a dot under it still
+    receives one. `moved` tells that click it came at the end of a drag.
+  */
   const drag = useRef<{ x: number; y: number; view: MapView } | null>(null);
+  const moved = useRef(false);
   const [dragging, setDragging] = useState(false);
 
   /** A button zooms about the middle of the viewport. */
@@ -591,13 +667,19 @@ function FullScreenMap({
         data-testid={`${testId}-viewport`}
         onPointerDown={(event) => {
           if (event.button !== 0) return;
-          event.currentTarget.setPointerCapture?.(event.pointerId);
           drag.current = { x: event.clientX, y: event.clientY, view };
-          setDragging(true);
+          moved.current = false;
         }}
         onPointerMove={(event) => {
           const start = drag.current;
           if (start === null) return;
+          if (!moved.current) {
+            const travel = Math.hypot(event.clientX - start.x, event.clientY - start.y);
+            if (travel < CLICK_SLOP_PX) return;
+            moved.current = true;
+            event.currentTarget.setPointerCapture?.(event.pointerId);
+            setDragging(true);
+          }
           setView({
             ...start.view,
             x: start.view.x + event.clientX - start.x,
@@ -645,20 +727,44 @@ function FullScreenMap({
                 textAnchor="middle"
                 fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
               >
-                {labels.map((label) => (
-                  <text
-                    key={label.id}
-                    x={label.px}
-                    // Above the dot, clear of the line running through it.
-                    y={label.py - MAP_LABEL_FONT * 0.75}
-                    className={
-                      drawing.trailIds.has(label.id) ? "map-label map-label-trail" : "map-label"
-                    }
-                    data-testid={`${testId}-label-${label.id}`}
-                  >
-                    {label.san}
-                  </text>
-                ))}
+                {labels.map((label) => {
+                  const text = (
+                    <text
+                      x={label.px}
+                      // Above the dot, clear of the line running through it.
+                      y={label.py - MAP_LABEL_FONT * 0.75}
+                      className={
+                        drawing.trailIds.has(label.id) ? "map-label map-label-trail" : "map-label"
+                      }
+                      data-testid={`${testId}-label-${label.id}`}
+                    >
+                      {label.san}
+                    </text>
+                  );
+                  if (onSelectNode === undefined) return <g key={label.id}>{text}</g>;
+                  // A link: the move and a target round its dot, as one button.
+                  return (
+                    <g
+                      key={label.id}
+                      className="map-hit"
+                      role="button"
+                      aria-label={t("repertoires.play.map.goTo", { move: label.san })}
+                      data-testid={`${testId}-go-${label.id}`}
+                      onClick={() => {
+                        if (!moved.current) onSelectNode(label.id);
+                      }}
+                    >
+                      <circle
+                        cx={label.px}
+                        cy={label.py}
+                        r={5}
+                        fill="transparent"
+                        pointerEvents="all"
+                      />
+                      {text}
+                    </g>
+                  );
+                })}
               </g>
             )}
           </g>

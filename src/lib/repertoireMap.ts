@@ -1,4 +1,4 @@
-import type { GameTree, VariationNode } from "./gameTree";
+import { plyLabel, type GameTree, type VariationNode } from "./gameTree";
 import type { Coverage } from "./repertoireGames";
 
 /**
@@ -38,6 +38,8 @@ export type MapLayout = {
   order: readonly VariationNode[];
   /** Each node's parent id, `null` for a first move. */
   parents: ReadonlyMap<string, string | null>;
+  /** The moves White made — every other one is Black's. */
+  whiteMoves: ReadonlySet<string>;
 };
 
 /** Pixels per column and per row, and the margin around the drawing. */
@@ -95,10 +97,14 @@ export const mapLayoutOf = (tree: GameTree): MapLayout => {
   }
 
   const points = new Map<string, MapPoint>();
+  const whiteMoves = new Set<string>();
   let columns = 0;
   for (const node of order) {
     points.set(node.id, { x: node.ply, y: rowOf.get(node.id) ?? 0 });
     columns = Math.max(columns, node.ply);
+    // Read off the tree's own start: a study from a Black-to-move position
+    // opens with a Black move.
+    if (plyLabel(tree.startFen, node.ply).isWhiteMove) whiteMoves.add(node.id);
   }
   const first = tree.moves[0];
   return {
@@ -108,6 +114,7 @@ export const mapLayoutOf = (tree: GameTree): MapLayout => {
     rows: Math.max(rows, 1),
     order,
     parents,
+    whiteMoves,
   };
 };
 
@@ -144,37 +151,29 @@ const dotAt = (layout: MapLayout, node: VariationNode): string => {
 };
 
 /**
- * The line ends as dots, split by whether each is covered — drawn larger than
- * the move dots, since a line's end is what Backtracking counts.
+ * Every move as a dot, **coloured by the side that made it** — White's moves
+ * white, Black's black — with a line's end drawn larger. Four path strings,
+ * independent of coverage (the lines carry that), so they are built once per
+ * tree.
  */
-export const mapLeafDots = (
+export const mapDots = (
   layout: MapLayout,
-  coverage: Coverage,
-): { covered: string; open: string } => {
-  const covered: string[] = [];
-  const open: string[] = [];
+): { white: string; black: string; whiteEnds: string; blackEnds: string } => {
+  const white: string[] = [];
+  const black: string[] = [];
+  const whiteEnds: string[] = [];
+  const blackEnds: string[] = [];
   for (const node of layout.order) {
-    if (node.children.length > 0) continue;
-    (coverage.under(node.id) === 0 ? covered : open).push(dotAt(layout, node));
+    const isWhite = layout.whiteMoves.has(node.id);
+    const end = node.children.length === 0;
+    (end ? (isWhite ? whiteEnds : blackEnds) : isWhite ? white : black).push(dotAt(layout, node));
   }
-  return { covered: covered.join(""), open: open.join("") };
-};
-
-/**
- * A dot on every move that is not a line's end — each position a line passes
- * through — split the same way, so the map reads as moves, not only as lines.
- */
-export const mapMoveDots = (
-  layout: MapLayout,
-  coverage: Coverage,
-): { covered: string; open: string } => {
-  const covered: string[] = [];
-  const open: string[] = [];
-  for (const node of layout.order) {
-    if (node.children.length === 0) continue;
-    (coverage.under(node.id) === 0 ? covered : open).push(dotAt(layout, node));
-  }
-  return { covered: covered.join(""), open: open.join("") };
+  return {
+    white: white.join(""),
+    black: black.join(""),
+    whiteEnds: whiteEnds.join(""),
+    blackEnds: blackEnds.join(""),
+  };
 };
 
 /** The moves already played on the way to the reader, as dots. */

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, screen, within } from "@testing-library/react";
 import { Chess } from "chess.js";
+import { useLocation } from "react-router";
 
 import i18n from "../../i18n";
 import { downloadPgn } from "../../lib/pgnExport";
@@ -126,10 +127,11 @@ describe("the repertoire player, Autoplay on", () => {
     expect(screen.getByTestId("repertoire-board-panel-status")).toHaveTextContent(
       i18n.t("analysis.settings.engineOff"),
     );
-    // Moves · Settings · Engine, the Engine tab disabled while its engine is off.
+    // Moves · Map · Settings · Engine, the Engine tab disabled while its engine is off.
     const tabs = screen.getAllByRole("tab");
     expect(tabs.map((tab) => tab.getAttribute("data-testid"))).toEqual([
       "repertoire-board-panel-tab-moves",
+      "repertoire-board-panel-tab-map",
       "repertoire-board-panel-tab-settings",
       "repertoire-board-panel-tab-engine",
     ]);
@@ -382,5 +384,93 @@ describe("the repertoire player, Autoplay on", () => {
     expect(pgns[0]).toContain("(3... c5 4. dxc5)");
 
     expect(localStorage.getItem(SAVED_REPERTOIRES_STORAGE_KEY)).toBe(stored);
+  });
+});
+
+/** Where the router is — the permanent link under test. */
+function LocationProbe() {
+  const location = useLocation();
+  return <div data-testid="location" data-path={location.pathname} data-search={location.search} />;
+}
+const atParam = () =>
+  new URLSearchParams(screen.getByTestId("location").getAttribute("data-search") ?? "").get("at");
+
+/** Mount with the probe beside the screen, and let the tree be read. */
+const mountProbed = (path: string) => {
+  renderSection(path, <LocationProbe />);
+  act(() => {
+    vi.advanceTimersByTime(0);
+  });
+};
+
+describe("the player's map and its permanent link", () => {
+  const MAP = "repertoire-board-map";
+  const FULL = `${MAP}-dialog`;
+
+  it("draws the repertoire without a game: its size, not a progress bar", () => {
+    mountIdle(`/repertoires/${storeRepertoire("r", CARO)}`);
+    fireEvent.click(screen.getByTestId("repertoire-board-panel-tab-map"));
+    expect(screen.queryByTestId(`${MAP}-progress`)).not.toBeInTheDocument();
+    expect(screen.getByTestId(`${MAP}-left`)).toHaveTextContent("2 lines, 9 moves");
+    expect(screen.getByTestId(`${MAP}-covered-lines`).getAttribute("d")).toBe("");
+    expect(screen.getByTestId(`${MAP}-here`)).toHaveAttribute("data-node-id", "start");
+  });
+
+  it("goes to a dot clicked on the full-screen map, closes it, and links there", () => {
+    mountProbed(`/repertoires/${storeRepertoire("r", CARO)}`);
+    fireEvent.click(screen.getByTestId("repertoire-board-panel-tab-map"));
+    fireEvent.click(screen.getByTestId(`${MAP}-fullscreen`));
+    fireEvent.click(screen.getByTestId(`${FULL}-show-moves`));
+    // Not links until they are written — and they are written once readable.
+    expect(screen.queryAllByRole("button", { name: /^Go to / })).toHaveLength(0);
+    fireEvent.click(screen.getByTestId(`${FULL}-zoom-in`));
+    fireEvent.click(screen.getByTestId(`${FULL}-zoom-in`));
+    fireEvent.click(screen.getByTestId(`${FULL}-fit`));
+
+    fireEvent.click(screen.getByRole("button", { name: "Go to c5" }));
+    act(() => {
+      vi.advanceTimersByTime(1_000);
+    });
+    expect(screen.queryByTestId(`${FULL}-view`)).not.toBeInTheDocument();
+    expect(position()).toBe(fenAfter("e4", "c6", "d4", "d5", "e5", "c5"));
+    expect(atParam()).toBe("e4,c6,d4,d5,e5,c5");
+  });
+
+  it("pans, rather than jumps, when a drag starts on a dot", () => {
+    mountIdle(`/repertoires/${storeRepertoire("r", CARO)}`);
+    fireEvent.click(screen.getByTestId("repertoire-board-panel-tab-map"));
+    fireEvent.click(screen.getByTestId(`${MAP}-fullscreen`));
+    fireEvent.click(screen.getByTestId(`${FULL}-show-moves`));
+    fireEvent.click(screen.getByTestId(`${FULL}-fit`));
+    const dot = screen.getByRole("button", { name: "Go to c5" });
+    const viewport = screen.getByTestId(`${FULL}-viewport`);
+    fireEvent.pointerDown(dot, { button: 0, clientX: 100, clientY: 100, pointerId: 1 });
+    fireEvent.pointerMove(viewport, { clientX: 160, clientY: 100, pointerId: 1 });
+    fireEvent.pointerUp(viewport, { pointerId: 1 });
+    fireEvent.click(dot);
+    expect(screen.getByTestId(`${FULL}-view`)).toBeInTheDocument();
+    expect(position()).toBe(new Chess().fen());
+  });
+
+  it("opens at the position a link names, and follows the reader in the address", () => {
+    mountProbed(`/repertoires/${storeRepertoire("r", CARO)}?at=e4,c6,d4,d5,e5,c5`);
+    expect(position()).toBe(fenAfter("e4", "c6", "d4", "d5", "e5", "c5"));
+
+    fireEvent.click(screen.getByTestId("board-control-previous"));
+    expect(atParam()).toBe("e4,c6,d4,d5,e5");
+    fireEvent.click(screen.getByTestId("board-control-first"));
+    // The start position is the bare address.
+    expect(atParam()).toBeNull();
+  });
+
+  it("goes as far as a stale link goes", () => {
+    mountProbed(`/repertoires/${storeRepertoire("r", CARO)}?at=e4,c6,Nf3`);
+    expect(position()).toBe(fenAfter("e4", "c6"));
+    expect(atParam()).toBe("e4,c6");
+  });
+
+  it("is the player's only: a game starts at the start", () => {
+    mountProbed(`/repertoires/${storeRepertoire("r", CARO)}/games/end?at=e4,c6`);
+    expect(position()).toBe(new Chess().fen());
   });
 });
