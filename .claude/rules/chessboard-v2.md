@@ -333,15 +333,20 @@ The slot contract:
 | `engineOn` | `boolean?` | The block renders nothing while off; the status row says so. |
 | `onPlayVariation` | `((sans) => void)?` | Present ⇒ the lines are clickable (CTA-55). Absent ⇒ plain text. |
 | `mask` | `PieceMask?` | Masked notation inside the block. |
-| `tabs` | `readonly { id, label, content }[]` | One tab is rendered at a time, never three with two hidden. |
+| `tabs` | `readonly { id, label, content }[]` | One tab is rendered at a time, never three with two hidden — unless `keepMounted` names it. |
+| `keepMounted` | `readonly string[]?` | Opt-in: these tabs mount on first open and then stay mounted, hidden, while another shows — for a body whose mount is the cost (the Repertoires board keeps `moves`). Each has its own scrolling region; showing one again scrolls its `aria-current` move into view. |
 | `activeTab` / `onTabChange` | | The screen's state — a screen may need to know the tab (CTA-54's arrows). |
 | `footer` | `ReactNode?` | A sibling of the scrolling region, so it stays put while the tab scrolls. |
 | `ply` / `lastPly` / `onSelectPly` / `onFlip` | | Straight through to the shared `BoardControls`. |
 
 Two rules it keeps for every consumer:
 
-- **One tab is rendered at a time.** The move list scrolls its selection into
-  view, and a hidden copy would be scrolling a zero-height box on every move.
+- **One tab is rendered at a time** by default. The move list scrolls its
+  selection into view, and a hidden copy would be scrolling a zero-height box
+  on every move. `keepMounted` is the deliberate exception (CTA-61): a hidden
+  token's `scrollIntoView` is a no-op, and the panel re-scrolls the current
+  move when the tab shows again. Use it for a tab whose mount is expensive,
+  not as a default — every kept tab keeps rendering while hidden.
 - **The panel is a non-scrolling flex column and exactly one child scrolls.**
   The shell's aside does not scroll (`Layout.tsx`), so `flex: 1` +
   `minHeight: 0` + `overflowY: auto` on the tab region is what keeps a long
@@ -480,7 +485,17 @@ what a screen gains:
   the routes are `React.lazy` dynamic imports inside the dead branch so the
   production bundle carries no dev chunk at all. Verified by grepping `dist/`
   after a build: no `/dev/*` path, no `dev-*` test id, no `chessapp.dev.*`
-  storage key, no `BoardPanel`, and no extra chunk.
+  storage key, and no extra chunk.
+
+  **The core is not the Development section, and since CTA-61 it ships.** The
+  Repertoires board (`views/repertoires/RepertoireBoard.tsx`, `/repertoires/<id>`)
+  is the first shipped screen composed from the core, so `useBoardCore`,
+  `useEngineModule`, `BoardShell`, `BoardPanel` and `TreeMoveList` are in the
+  production bundle by design — imported statically from `views/dev/core/`,
+  where they still live. What the gate keeps out is unchanged: the five
+  derived `/dev/*` boards, `devNav.ts` and `devStores.ts` (the dev-prefixed
+  keys), none of which a shipped screen imports. A shipped screen must not
+  import `devStores.ts` or anything outside `core/`.
 
   **The one residue, and why it stays.** The `dev.*` strings in
   `src/locales/en.ts` and `he.ts` *do* ship — a few hundred bytes of text that
@@ -511,4 +526,5 @@ what a screen gains:
 | `src/views/dev/devBoards.test.tsx` | The five boards rendered for real: the shared square, the shared skeleton, and the one thing each board keeps as its own. |
 | `src/views/dev/devPanelPropagation.test.tsx` | The propagation assertion of §0 — `BoardPanel` replaced by a sentinel. |
 | `src/views/dev/core/devStores.test.ts` | The dev/shipped key isolation of §2.4, in both directions. |
+| `src/views/repertoires/RepertoireBoard.tsx` | The first **shipped** board composed from the core (CTA-61) — Repertoire v2 over the reader's own one-game repertoire. `RepertoirePropagation.test.tsx` puts it under the same propagation assertion as the five dev boards. |
 | `src/views/dev/devTestHarness.tsx` | The `Engine` and `<Chessboard>` stand-ins §8 of `chessboard.md` requires, written once for five boards. |

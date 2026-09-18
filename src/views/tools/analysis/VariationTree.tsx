@@ -1,9 +1,14 @@
-import { useEffect, useRef } from "react";
+import { useMemo } from "react";
 import Box from "@mui/material/Box";
 import ButtonBase from "@mui/material/ButtonBase";
 import Typography from "@mui/material/Typography";
 import { useTranslation } from "react-i18next";
 import type { GameTree } from "../../../lib/gameTree";
+import {
+  MoveSelectionContext,
+  useMoveSelectionStore,
+  useScrollWhenCurrent,
+} from "../../shared/moveSelection";
 import { moveSx, selectedTokenSx } from "../../shared/moveTokenSx";
 import { VariationLine } from "../../shared/VariationLine";
 
@@ -29,6 +34,10 @@ import { VariationLine } from "../../shared/VariationLine";
  * RTL emotion cache would flip into the bug it is meant to prevent (see the
  * root `CLAUDE.md`). The indentation is `paddingInlineStart`, which follows
  * the reading direction on its own.
+ *
+ * The tokens are rendered **once per tree**: which one is current is read by
+ * each token from a selection store (`views/shared/moveSelection.ts`), so a
+ * step re-renders the two tokens whose highlight changed, not the tree.
  */
 
 type VariationTreeProps = {
@@ -46,34 +55,16 @@ type VariationTreeProps = {
 
 function VariationTree({ tree, currentId, onSelectNode, emptyText }: VariationTreeProps) {
   const { t } = useTranslation();
-  const activeRef = useRef<HTMLButtonElement | null>(null);
+  const selection = useMoveSelectionStore({
+    nodeId: currentId,
+    ply: -1,
+    evalsByFen: undefined,
+  });
 
-  useEffect(() => {
-    // `block: "nearest"` scrolls the panel's own scrolling box and stops there.
-    // Optional call: jsdom implements no scrolling and leaves this undefined.
-    activeRef.current?.scrollIntoView?.({ block: "nearest" });
-  }, [currentId]);
-
-  return (
-    <Box data-testid="variation-tree">
-      <ButtonBase
-        ref={currentId === null ? activeRef : undefined}
-        data-testid="tree-move-start"
-        aria-current={currentId === null ? "true" : undefined}
-        onClick={() => onSelectNode(null)}
-        sx={{
-          ...moveSx,
-          justifyContent: "flex-start",
-          width: "100%",
-          my: 0.5,
-          fontSize: "0.8125rem",
-          ...(currentId === null ? selectedTokenSx : {}),
-        }}
-      >
-        {t("moveList.startPosition")}
-      </ButtonBase>
-
-      {tree.moves.length === 0 ? (
+  // The structure, once per tree — see the header note.
+  const body = useMemo(
+    () =>
+      tree.moves.length === 0 ? (
         <Typography variant="body2" sx={{ color: "text.secondary" }}>
           {emptyText ?? t("analysis.tree.empty")}
         </Typography>
@@ -91,13 +82,54 @@ function VariationTree({ tree, currentId, onSelectNode, emptyText }: VariationTr
             nodes={tree.moves}
             startFen={tree.startFen}
             forceNumber
-            currentId={currentId}
             onSelectNode={onSelectNode}
-            activeRef={activeRef}
+            groupLabel={t("moveList.variation")}
           />
         </Box>
-      )}
-    </Box>
+      ),
+    [tree, emptyText, t, onSelectNode],
+  );
+
+  return (
+    <MoveSelectionContext.Provider value={selection}>
+      <Box data-testid="variation-tree">
+        <StartToken
+          isCurrent={currentId === null}
+          onSelect={() => onSelectNode(null)}
+        />
+        {body}
+      </Box>
+    </MoveSelectionContext.Provider>
+  );
+}
+
+/** The start-position row. Current when nothing else is. */
+function StartToken({
+  isCurrent,
+  onSelect,
+}: {
+  isCurrent: boolean;
+  onSelect: () => void;
+}) {
+  const { t } = useTranslation();
+  const ref = useScrollWhenCurrent<HTMLButtonElement>(isCurrent);
+  return (
+    <ButtonBase
+      ref={ref}
+      data-testid="tree-move-start"
+      aria-current={isCurrent ? "true" : undefined}
+      onClick={onSelect}
+      sx={{
+        ...moveSx,
+        justifyContent: "flex-start",
+        width: "100%",
+        my: 0.5,
+        fontSize: "0.8125rem",
+        ...(isCurrent ? selectedTokenSx : {}),
+      }}
+    >
+      {t("moveList.startPosition")}
+    </ButtonBase>
   );
 }
 

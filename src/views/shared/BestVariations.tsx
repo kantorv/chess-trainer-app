@@ -4,6 +4,7 @@ import ButtonBase from "@mui/material/ButtonBase";
 import Checkbox from "@mui/material/Checkbox";
 import Chip from "@mui/material/Chip";
 import FormControlLabel from "@mui/material/FormControlLabel";
+import Skeleton from "@mui/material/Skeleton";
 import Typography from "@mui/material/Typography";
 import ExpandMoreRoundedIcon from "@mui/icons-material/ExpandMoreRounded";
 import { useTranslation } from "react-i18next";
@@ -66,6 +67,16 @@ import { moveSx, sanTokenSx } from "./moveTokenSx";
  *   what is disguised. This holds in both states: a move visible is a move
  *   playable, collapsed or expanded.
  *
+ * **The block holds its height while the engine thinks.** It always renders one
+ * row per requested line (`requested`): a rank not in yet is a placeholder row
+ * of exactly a line row's height — the same box, the same text line, a spacer
+ * where the chevron goes — showing "waiting for the engine" in the first row
+ * and a skeleton bar in the others. Stepping to a new position clears the
+ * analysis, and before this the block fell to one line of text and grew back
+ * as the lines landed, jumping everything below it on every step (CTA-61).
+ * The "N of M lines" note lives in the header row for the same reason: a line
+ * under the grid that comes and goes is a jump of its own.
+ *
  * SAN and the scores are Latin text in a panel that mirrors under Hebrew, so
  * every token carries `dir="ltr"` — an **attribute**, never a CSS declaration,
  * which the RTL emotion cache would flip into the bug it is meant to prevent
@@ -104,6 +115,71 @@ const sanSx = {
   fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
   fontSize: "0.8125rem",
 } as const;
+
+/** One line's row box — shared by the real row and its placeholder. */
+const rowSx = {
+  display: "flex",
+  alignItems: "baseline",
+  gap: 1,
+  p: 0.75,
+  borderRadius: 0.5,
+  bgcolor: "action.hover",
+} as const;
+
+/** The score cell's box, shared for the same reason. */
+const scoreSx = {
+  ...sanSx,
+  fontWeight: 700,
+  flexShrink: 0,
+  minWidth: "3.5rem",
+} as const;
+
+/** The chevron's size: its icon plus the button's padding on each side. */
+const CHEVRON_SIZE = "calc(1.125rem + 4px)";
+
+/**
+ * A rank the engine has not reported yet: the row a line will take, the same
+ * height as one, so the block does not grow when the line lands. The same
+ * box and the same two text cells as a line row (so the same line box), and
+ * an invisible spacer the size of the chevron, which is the row's tallest
+ * child. `text` is what the first row says while nothing is in; otherwise
+ * the cells are skeleton bars.
+ */
+function PendingRow({ rank, text }: { rank: number; text?: string }) {
+  return (
+    <Box
+      component="li"
+      data-testid={`variation-${rank}-pending`}
+      aria-busy="true"
+      sx={rowSx}
+    >
+      <Typography component="span" sx={scoreSx}>
+        <Skeleton variant="text" sx={{ display: "inline-block", width: "2.5rem" }} />
+      </Typography>
+      <Typography
+        component="span"
+        sx={{ ...sanSx, color: "text.secondary", minWidth: 0, flexGrow: 1 }}
+        noWrap
+      >
+        {text ?? (
+          <Skeleton
+            variant="text"
+            sx={{ display: "inline-block", width: `${85 - rank * 10}%` }}
+          />
+        )}
+      </Typography>
+      <Box
+        aria-hidden
+        sx={{
+          flexShrink: 0,
+          alignSelf: "flex-start",
+          width: CHEVRON_SIZE,
+          height: CHEVRON_SIZE,
+        }}
+      />
+    </Box>
+  );
+}
 
 /**
  * Which rows the reader has expanded (CTA-56), keyed by `MultiPV` rank and
@@ -177,6 +253,16 @@ function BestVariations({
     (line) => line !== undefined && line.multipv <= requested,
   );
 
+  /*
+    One slot per requested rank, in rank order — the line when it is in, a
+    placeholder of the same height when it is not (see the component note).
+    At least one, so a `requested` of 0 still has somewhere to say it waits.
+  */
+  const slots = Array.from({ length: Math.max(requested, 1) }, (_, index) => ({
+    rank: index + 1,
+    line: lines.find((line) => line.multipv === index + 1),
+  }));
+
   return (
     <Box data-testid="best-variations">
       <Box
@@ -210,6 +296,24 @@ function BestVariations({
           }}
           label={t("variations.title")}
         />
+        {/*
+          A set still filling in says so here, in the header row, rather than
+          on a line under the grid that would appear and vanish (see above).
+          The placeholder rows already show which ranks are missing.
+        */}
+        {showLines && lines.length > 0 && lines.length < requested && (
+          <Typography
+            variant="caption"
+            data-testid="variations-partial"
+            noWrap
+            sx={{ color: "text.secondary", minWidth: 0, flexShrink: 1, marginInlineStart: "auto" }}
+          >
+            {t("variations.partial", {
+              shown: lines.length,
+              requested,
+            })}
+          </Typography>
+        )}
         <Chip
           size="small"
           variant="outlined"
@@ -223,12 +327,7 @@ function BestVariations({
         the waiting line too, not just the lines, because what the reader
         put away is the engine's talk, whatever shape it is in.
       */}
-      {showLines && lines.length === 0 && (
-        <Typography variant="body2" sx={{ color: "text.secondary" }}>
-          {t("variations.thinking")}
-        </Typography>
-      )}
-      {showLines && lines.length > 0 && (
+      {showLines && (
         <Box
           component="ol"
           sx={{
@@ -251,7 +350,17 @@ function BestVariations({
             an expansion from re-laying the grid out — only the one row
             changes.
           */}
-          {lines.map((line) => {
+          {slots.map(({ rank, line }) => {
+            if (line === undefined) {
+              return (
+                <PendingRow
+                  key={`pending-${rank}`}
+                  rank={rank}
+                  // The first row says what is happening; the rest are bars.
+                  text={rank === 1 && lines.length === 0 ? t("variations.thinking") : undefined}
+                />
+              );
+            }
             /*
               What the tokens print: the true SANs, disguised when a mask is in
               force. A click below still hands over the true ones, because the
@@ -273,25 +382,13 @@ function BestVariations({
                 component="li"
                 key={line.multipv}
                 data-testid={`variation-${line.multipv}`}
-                sx={{
-                  display: "flex",
-                  alignItems: "baseline",
-                  gap: 1,
-                  p: 0.75,
-                  borderRadius: 0.5,
-                  bgcolor: "action.hover",
-                }}
+                sx={rowSx}
               >
                 <Typography
                   component="span"
                   dir="ltr"
                   data-testid={`variation-${line.multipv}-score`}
-                  sx={{
-                    ...sanSx,
-                    fontWeight: 700,
-                    flexShrink: 0,
-                    minWidth: "3.5rem",
-                  }}
+                  sx={scoreSx}
                 >
                   {formatScore(line.score)}
                 </Typography>
@@ -400,18 +497,6 @@ function BestVariations({
         </Box>
       )}
 
-      {showLines && lines.length > 0 && lines.length < requested && (
-        <Typography
-          variant="caption"
-          data-testid="variations-partial"
-          sx={{ color: "text.secondary", display: "block", mt: 1 }}
-        >
-          {t("variations.partial", {
-            shown: lines.length,
-            requested,
-          })}
-        </Typography>
-      )}
     </Box>
   );
 }

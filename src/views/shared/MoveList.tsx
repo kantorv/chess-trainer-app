@@ -1,14 +1,21 @@
-import { Fragment, useEffect, useMemo, useRef, type Ref } from "react";
+import { Fragment, memo, useMemo } from "react";
 import Box from "@mui/material/Box";
 import ButtonBase from "@mui/material/ButtonBase";
 import Typography from "@mui/material/Typography";
 import ChatBubbleOutlineRoundedIcon from "@mui/icons-material/ChatBubbleOutlineRounded";
 import { useTranslation } from "react-i18next";
-import { formatScore, type Score } from "../../lib/engineAnalysis";
+import type { Score } from "../../lib/engineAnalysis";
 import { moveRowsOf } from "../../lib/gameNavigation";
 import { initialFenOf, type Game, type GameMove } from "../../lib/gameModel";
 import type { VariationNode } from "../../lib/gameTree";
 import { maskSanLine, type PieceMask } from "../../lib/pieceMask";
+import {
+  MoveSelectionContext,
+  useEvalText,
+  useIsCurrentPly,
+  useMoveSelectionStore,
+  useScrollWhenCurrent,
+} from "./moveSelection";
 import { VariationBlock } from "./VariationLine";
 
 /**
@@ -22,6 +29,14 @@ import { VariationBlock } from "./VariationLine";
  * and once in the tree that used to sit below it. The props are optional on
  * purpose: a linear game renders exactly as before, so every other consumer
  * passes none.
+ *
+ * **The list is rendered once per game, not once per step.** The rows and the
+ * side lines are memoised on the game; which cell is current, and each move's
+ * eval, are read by the cell itself from a selection store
+ * (`moveSelection.ts`) that the props are written into. So a step re-renders
+ * the cell losing the highlight and the cell gaining it, and an engine message
+ * streaming in re-renders none of it — where before, on a 9,146-node
+ * repertoire, each of them redrew every move (CTA-61).
  *
  * Presentational on purpose — the selected ply comes in as a prop and goes out
  * through `onSelectPly`, so `useGameNavigation` owns the state and this renders
@@ -150,34 +165,46 @@ const evalTokenSx = {
 } as const;
 
 /** One clickable SAN cell, or an empty slot when that half of the pair is absent. */
-function MoveCell({
+const MoveCell = memo(function MoveCell({
   move,
   text,
-  isCurrent,
   hasComment,
-  evalText,
   onSelect,
-  activeRef,
 }: {
   move: GameMove | null;
   /** What to print for it — its SAN, or the mask's rewrite of it. */
   text: string;
-  isCurrent: boolean;
   /** Whether the PGN carries an annotation for this move (see `annotatedPlies`). */
   hasComment: boolean;
-  /** The eval of the position after this move, or `undefined` when not scored. */
-  evalText?: string;
   onSelect: (ply: number) => void;
-  activeRef: Ref<HTMLButtonElement>;
 }) {
   if (move === null) {
     // A game that starts with Black to move opens with an empty White slot.
     return <Box aria-hidden sx={{ ...cellSx, visibility: "hidden" }} />;
   }
+  return <FilledCell move={move} text={text} hasComment={hasComment} onSelect={onSelect} />;
+});
+
+/** A cell with a move in it — the hooks live here, behind the empty-slot branch. */
+function FilledCell({
+  move,
+  text,
+  hasComment,
+  onSelect,
+}: {
+  move: GameMove;
+  text: string;
+  hasComment: boolean;
+  onSelect: (ply: number) => void;
+}) {
+  const isCurrent = useIsCurrentPly(move.ply);
+  // The eval of the position after this move, or `undefined` when not scored.
+  const evalText = useEvalText(move.fen);
+  const ref = useScrollWhenCurrent<HTMLButtonElement>(isCurrent);
 
   return (
     <ButtonBase
-      ref={isCurrent ? activeRef : undefined}
+      ref={ref}
       dir="ltr"
       data-testid={`move-ply-${move.ply}`}
       data-has-comment={hasComment ? "true" : undefined}
@@ -211,6 +238,54 @@ function MoveCell({
   );
 }
 
+/** The start-position row: current at ply 0, with the start position's eval. */
+function StartRow({
+  startFen,
+  onSelectPly,
+}: {
+  startFen: string;
+  onSelectPly: (ply: number) => void;
+}) {
+  const { t } = useTranslation();
+  const isCurrent = useIsCurrentPly(0);
+  const evalText = useEvalText(startFen);
+  const ref = useScrollWhenCurrent<HTMLButtonElement>(isCurrent);
+
+  return (
+    <ButtonBase
+      ref={ref}
+      data-testid="move-ply-0"
+      aria-current={isCurrent ? "true" : undefined}
+      onClick={() => onSelectPly(0)}
+      sx={{
+        ...cellSx,
+        my: 0.5,
+        fontSize: "0.8125rem",
+        ...(isCurrent ? selectedCellSx : {}),
+      }}
+    >
+      {t("moveList.startPosition")}
+      {/*
+        The score carries `dir="ltr"` itself: this row is chrome and mirrors
+        under Hebrew, and a signed score in an RTL flow has its sign migrate
+        across the number. The move cells' tokens lean on their row's pin,
+        which this row does not have — see the header note above for why the
+        treatment is the attribute, not a CSS declaration.
+      */}
+      {evalText !== undefined && (
+        <Typography
+          component="span"
+          dir="ltr"
+          data-testid="move-eval-0"
+          sx={evalTokenSx}
+        >
+          {evalText}
+        </Typography>
+      )}
+    </ButtonBase>
+  );
+}
+
 function MoveList({
   game,
   currentPly,
@@ -223,20 +298,16 @@ function MoveList({
   onSelectNode,
 }: MoveListProps) {
   const { t } = useTranslation();
-  const rows = moveRowsOf(game);
+  const rows = useMemo(() => moveRowsOf(game), [game]);
   // The position the list starts from — what ply 0 selects, what the side
   // lines number their first move from, and what the start row's eval looks up.
   const startFen = initialFenOf(game);
 
-  /*
-    The eval of a position the engine has scored, as it is printed — or
-    `undefined` for one it has not, which is the case that must print *nothing*:
-    every unevaluated move showing the no-data dash would drown the list.
-  */
-  const evalTextOf = (fen: string): string | undefined => {
-    const score = evalsByFen?.get(fen);
-    return score === undefined ? undefined : formatScore(score);
-  };
+  const selection = useMoveSelectionStore({
+    nodeId: currentNodeId ?? null,
+    ply: currentPly,
+    evalsByFen,
+  });
 
   /*
     The whole list's text, rewritten in one pass. `maskSanLine` replays the game
@@ -258,158 +329,120 @@ function MoveList({
           ),
     [mask, game, startFen],
   );
-  const textOf = (move: GameMove) => maskedSan?.[move.ply - 1] ?? move.san;
-
-  const activeRef = useRef<HTMLButtonElement | null>(null);
 
   /*
-    The side lines branching from one mainline ply, as indented runs under the
-    row that ply sits in. Ply 0 is the start position's own branch point: its
-    runs hang under the start row, above the grid, rather than in it.
+    The structure — every row, every side line — rendered once per game and
+    handed back by reference until the game (or a callback) changes, so React
+    skips the whole subtree on a step or an engine message. See the header.
   */
-  const branchBlocksAt = (ply: number) =>
-    branches?.get(ply)?.map((node) => (
-      <VariationBlock
-        key={node.id}
-        node={node}
-        startFen={startFen}
-        currentId={currentNodeId ?? null}
-        onSelectNode={onSelectNode}
-        activeRef={activeRef}
-        evalTextOf={evalTextOf}
-      />
-    ));
+  const body = useMemo(() => {
+    const textOf = (move: GameMove) => maskedSan?.[move.ply - 1] ?? move.san;
 
-  useEffect(() => {
     /*
-      `block: "nearest"` scrolls the nearest scrollable ancestor and stops
-      there — the box `LoadPgn` wraps this list in, which is the half of the
-      panel above the ingestion controls. The aside itself does not scroll (see
-      `Layout.tsx`), which is what keeps those controls pinned to its foot while
-      this list moves. Optional call: jsdom implements no scrolling at all and
-      leaves `scrollIntoView` undefined.
+      The side lines branching from one mainline ply, as indented runs under the
+      row that ply sits in. Ply 0 is the start position's own branch point: its
+      runs hang under the start row, above the grid, rather than in it.
     */
-    activeRef.current?.scrollIntoView?.({ block: "nearest" });
-  }, [currentPly, currentNodeId]);
+    const branchBlocksAt = (ply: number) =>
+      branches?.get(ply)?.map((node) => (
+        <VariationBlock
+          key={node.id}
+          node={node}
+          startFen={startFen}
+          onSelectNode={onSelectNode}
+          groupLabel={t("moveList.variation")}
+        />
+      ));
+
+    return (
+      <>
+        {/*
+          Side lines that branch from the start position itself hang under the
+          start row, exactly as the others hang under their pair. A start-position
+          side line implies a mainline exists, so when there are no rows there are
+          none of these either.
+        */}
+        {branchBlocksAt(0)}
+
+        {rows.length === 0 ? (
+          <Typography variant="body2" sx={{ color: "text.secondary" }}>
+            {t("moveList.noMoves")}
+          </Typography>
+        ) : (
+          <Box
+            sx={{
+              display: "grid",
+              // Number, White, Black — the pair wraps into two columns rather
+              // than giving every half-move its own row. A side-line run spans
+              // all three (`gridColumn: "1 / -1"` in `VariationBlock`), which
+              // makes it a row of this grid in its own right, in DOM order
+              // directly under the pair it answers.
+              gridTemplateColumns: "auto 1fr 1fr",
+              alignItems: "center",
+              columnGap: 0.5,
+            }}
+          >
+            {rows.map((row) => (
+              <Fragment key={row.number}>
+                <Box sx={{ display: "contents" }}>
+                  <Typography
+                    component="span"
+                    dir="ltr"
+                    data-testid={`move-number-${row.number}`}
+                    sx={{
+                      ...sanTokenSx,
+                      color: "text.secondary",
+                      paddingInlineEnd: 0.5,
+                      textAlign: "end",
+                    }}
+                  >
+                    {row.number}.
+                  </Typography>
+                  <MoveCell
+                    move={row.white}
+                    text={row.white === null ? "" : textOf(row.white)}
+                    hasComment={
+                      row.white != null &&
+                      (annotatedPlies?.has(row.white.ply) ?? false)
+                    }
+                    onSelect={onSelectPly}
+                  />
+                  <MoveCell
+                    move={row.black}
+                    text={row.black === null ? "" : textOf(row.black)}
+                    hasComment={
+                      row.black != null &&
+                      (annotatedPlies?.has(row.black.ply) ?? false)
+                    }
+                    onSelect={onSelectPly}
+                  />
+                </Box>
+                {/*
+                  The side lines branching from this row's moves, under the row
+                  that holds the move they answer — White's first, Black's after,
+                  the order they branch in.
+                */}
+                {row.white !== null && branchBlocksAt(row.white.ply)}
+                {row.black !== null && branchBlocksAt(row.black.ply)}
+              </Fragment>
+            ))}
+          </Box>
+        )}
+      </>
+    );
+  }, [rows, maskedSan, branches, startFen, onSelectNode, onSelectPly, annotatedPlies, t]);
 
   return (
-    <Box data-testid="move-list">
-      <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-        {t("moveList.title")}
-      </Typography>
-
-      <ButtonBase
-        ref={currentPly === 0 ? activeRef : undefined}
-        data-testid="move-ply-0"
-        aria-current={currentPly === 0 ? "true" : undefined}
-        onClick={() => onSelectPly(0)}
-        sx={{
-          ...cellSx,
-          my: 0.5,
-          fontSize: "0.8125rem",
-          ...(currentPly === 0 ? selectedCellSx : {}),
-        }}
-      >
-        {t("moveList.startPosition")}
-        {/*
-          The score carries `dir="ltr"` itself: this row is chrome and mirrors
-          under Hebrew, and a signed score in an RTL flow has its sign migrate
-          across the number. The move cells' tokens lean on their row's pin,
-          which this row does not have — see the header note above for why the
-          treatment is the attribute, not a CSS declaration.
-        */}
-        {evalsByFen?.has(startFen) && (
-          <Typography
-            component="span"
-            dir="ltr"
-            data-testid="move-eval-0"
-            sx={evalTokenSx}
-          >
-            {formatScore(evalsByFen.get(startFen)!)}
-          </Typography>
-        )}
-      </ButtonBase>
-
-      {/*
-        Side lines that branch from the start position itself hang under the
-        start row, exactly as the others hang under their pair. A start-position
-        side line implies a mainline exists, so when there are no rows there are
-        none of these either.
-      */}
-      {branchBlocksAt(0)}
-
-      {rows.length === 0 ? (
-        <Typography variant="body2" sx={{ color: "text.secondary" }}>
-          {t("moveList.noMoves")}
+    <MoveSelectionContext.Provider value={selection}>
+      <Box data-testid="move-list">
+        <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+          {t("moveList.title")}
         </Typography>
-      ) : (
-        <Box
-          sx={{
-            display: "grid",
-            // Number, White, Black — the pair wraps into two columns rather
-            // than giving every half-move its own row. A side-line run spans
-            // all three (`gridColumn: "1 / -1"` in `VariationBlock`), which
-            // makes it a row of this grid in its own right, in DOM order
-            // directly under the pair it answers.
-            gridTemplateColumns: "auto 1fr 1fr",
-            alignItems: "center",
-            columnGap: 0.5,
-          }}
-        >
-          {rows.map((row) => (
-            <Fragment key={row.number}>
-              <Box sx={{ display: "contents" }}>
-                <Typography
-                  component="span"
-                  dir="ltr"
-                  data-testid={`move-number-${row.number}`}
-                  sx={{
-                    ...sanTokenSx,
-                    color: "text.secondary",
-                    paddingInlineEnd: 0.5,
-                    textAlign: "end",
-                  }}
-                >
-                  {row.number}.
-                </Typography>
-                <MoveCell
-                  move={row.white}
-                  text={row.white === null ? "" : textOf(row.white)}
-                  isCurrent={row.white?.ply === currentPly}
-                  hasComment={
-                    row.white != null &&
-                    (annotatedPlies?.has(row.white.ply) ?? false)
-                  }
-                  evalText={row.white === null ? undefined : evalTextOf(row.white.fen)}
-                  onSelect={onSelectPly}
-                  activeRef={activeRef}
-                />
-                <MoveCell
-                  move={row.black}
-                  text={row.black === null ? "" : textOf(row.black)}
-                  isCurrent={row.black?.ply === currentPly}
-                  hasComment={
-                    row.black != null &&
-                    (annotatedPlies?.has(row.black.ply) ?? false)
-                  }
-                  evalText={row.black === null ? undefined : evalTextOf(row.black.fen)}
-                  onSelect={onSelectPly}
-                  activeRef={activeRef}
-                />
-              </Box>
-              {/*
-                The side lines branching from this row's moves, under the row
-                that holds the move they answer — White's first, Black's after,
-                the order they branch in.
-              */}
-              {row.white !== null && branchBlocksAt(row.white.ply)}
-              {row.black !== null && branchBlocksAt(row.black.ply)}
-            </Fragment>
-          ))}
-        </Box>
-      )}
-    </Box>
+        <StartRow startFen={startFen} onSelectPly={onSelectPly} />
+        {body}
+      </Box>
+    </MoveSelectionContext.Provider>
   );
 }
 
-export default MoveList;
+export default memo(MoveList);

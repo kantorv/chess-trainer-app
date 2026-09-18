@@ -95,19 +95,58 @@ export const emptyTree = (
 /** Walks over one tree's nodes. The `TreeManager` seam, never a hand-rolled walk. */
 const walker = (tree: GameTree) => new TreeManager<VariationNode>(tree.moves);
 
+/** Where one node sits: itself, and the move it answers (`null` at the root). */
+type Indexed = { node: VariationNode; parent: VariationNode | null };
+
+/**
+ * Every node of a tree by id, built **once per tree** and then read in O(1).
+ *
+ * A board asks "which node is this id" and "how did the game get here" several
+ * times per render — the navigation, the captured strips, the continuations —
+ * and each used to be a walk of the whole tree, `pathTo`'s copying an ancestor
+ * array at every node it passed. On a 9,146-node repertoire that was most of
+ * the cost of a step (CTA-61). Trees are immutable values (the module note),
+ * so the index is cached against the tree's `moves` array: any operation that
+ * changes the tree hands back a new array, and so a new index, while one that
+ * does not (`addMove` replaying a move already there) keeps the old one.
+ * A `WeakMap`, so a tree nobody holds takes its index with it.
+ */
+const indexes = new WeakMap<readonly VariationNode[], Map<string, Indexed>>();
+
+const indexOf = (tree: GameTree): Map<string, Indexed> => {
+  const cached = indexes.get(tree.moves);
+  if (cached !== undefined) return cached;
+
+  const index = new Map<string, Indexed>();
+  for (const root of tree.moves) index.set(root.id, { node: root, parent: null });
+  walker(tree).traverse((node) => {
+    for (const child of node.children) index.set(child.id, { node: child, parent: node });
+  });
+  indexes.set(tree.moves, index);
+  return index;
+};
+
 /** The node with this id, or `null` — including for `null`, which is ply 0. */
 export const findNode = (
   tree: GameTree,
   id: string | null,
 ): VariationNode | null =>
-  id === null ? null : walker(tree).findBy((node) => node.id === id);
+  id === null ? null : (indexOf(tree).get(id)?.node ?? null);
 
 /**
  * The chain of moves from the start position down to `id`, inclusive. Empty for
  * `null` (the start position itself) and for an id the tree does not hold.
  */
-export const pathTo = (tree: GameTree, id: string | null): VariationNode[] =>
-  id === null ? [] : (walker(tree).getPath((node) => node.id === id) ?? []);
+export const pathTo = (tree: GameTree, id: string | null): VariationNode[] => {
+  if (id === null) return [];
+  const index = indexOf(tree);
+  const path: VariationNode[] = [];
+  for (let at = index.get(id); at !== undefined; ) {
+    path.push(at.node);
+    at = at.parent === null ? undefined : index.get(at.parent.id);
+  }
+  return path.reverse();
+};
 
 /**
  * Where a node sits, written as the SAN of every move that leads to it —
@@ -261,6 +300,61 @@ export const addMove = (
     },
     nodeId: node.id,
   };
+};
+
+/**
+ * Fold several trees into **one** — the "merge" a repertoire file of many
+ * games is offered (CTA-61), where each game is one line of the same opening.
+ *
+ * The first tree is the spine: its mainline stays the mainline, and every
+ * later tree is walked in and hung on it — a move already there is followed
+ * (SAN identifies a move within a position, `addMove`'s own rule), a move that
+ * is not is appended after the moves already under that position, so it
+ * becomes a side line there. Every tree's own side lines come along the same
+ * way. Ids are minted fresh, `n1`… in the order nodes are first met, and the
+ * headers are the caller's.
+ *
+ * Built **in place** with a flat walk rather than one `addMove` per node,
+ * which copies the tree each time — a 310-game file would be quadratic.
+ *
+ * Every tree must start from `startFen`; a tree that does not is skipped, not
+ * forced (its moves mean nothing from another position). The caller decides
+ * whether merging is offered at all.
+ */
+export const mergeTrees = (
+  trees: readonly GameTree[],
+  startFen: string,
+  headers: GameHeaders = {},
+): GameTree => {
+  const moves: VariationNode[] = [];
+  let nextId = 1;
+
+  const into = (target: VariationNode[], source: readonly VariationNode[], ply: number) => {
+    for (const node of source) {
+      let existing = target.find((candidate) => candidate.san === node.san);
+      if (existing === undefined) {
+        existing = {
+          id: `n${nextId}`,
+          san: node.san,
+          from: node.from,
+          to: node.to,
+          fen: node.fen,
+          ply,
+          captured: node.captured,
+          children: [],
+        };
+        nextId += 1;
+        target.push(existing);
+      }
+      into(existing.children, node.children, ply + 1);
+    }
+  };
+
+  for (const tree of trees) {
+    if (tree.startFen === startFen) into(moves, tree.moves, 1);
+  }
+
+  return { headers: { ...headers }, startFen, moves, nextId };
 };
 
 /** Lift a linear {@link Game} into a tree with that game as its only line. */
