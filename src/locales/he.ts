@@ -129,6 +129,22 @@ const he: typeof en = {
     notationHint:
       "מהלך של כלי מוסווה נרשם כקואורדינטות (g1f3) ברשימת המהלכים ובווריאציות, כדי שהרישום לא יסגיר את מה שהלוח מסתיר.",
   },
+  moveMenu: {
+    promote: "קידום הווריאציה",
+    makeMainline: "הפיכה לקו הראשי",
+    deleteFrom: "מחיקה מכאן",
+    copyPgn: "העתקת ה־PGN של הווריאציה",
+    copied: "ה־PGN של הווריאציה הועתק",
+    copyFailed: "לא ניתן היה להעתיק — הלוח אינו זמין כאן.",
+    deleteTitle: "מחיקה מהמסע",
+    deleteSummary: "יימחקו {{moves}} / {{lines}}.",
+    moves_one: "מסע אחד",
+    moves_other: "{{count}} מסעים",
+    lines_one: "קו אחד",
+    lines_other: "{{count}} קווים",
+    delete: "מחיקה",
+    cancel: "ביטול",
+  },
   moveList: {
     title: "מהלכים",
     /** Ply 0, a selectable entry of its own. */
@@ -717,6 +733,7 @@ const he: typeof en = {
       saveNothing: "אין שינויים שלא נשמרו",
       added_one: "נוסף מסע אחד",
       added_other: "נוספו {{count}} מסעים",
+      edited: "קווים סודרו מחדש או נמחקו",
       update: "עדכון הרפרטואר",
       updateHelp: "הפיכת השינויים לחלק מהרפרטואר הזה.",
       copy: "שמירה כעותק",

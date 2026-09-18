@@ -69,7 +69,7 @@ change by whether it *adds* to that count, not by the exit code.
 | `src/lib/engine.ts` | The Stockfish worker wrapper: search, UCI option discovery, and the protocol discipline that keeps the engine alive (see the chessboard rules §4). |
 | `src/lib/engineAnalysis.ts` | Reading the engine's numbers: `scoreFromUci` (the one place a score is normalised to White's perspective), `formatScore`, `evalBarFraction`, `pvToSan`, `variationNumbering`, plus the `Analysis` / `EngineLine` shape both engine screens collect into and the `withEngineLine` fold. Pure. |
 | `src/lib/gameModel.ts` | **The shared game model** — `Game` / `GameMove` / `GameHeaders`, plus `gameTag` / `initialFenOf` / `finalFenOf` and the `gameFromChess` snapshot. One *line* of play; all three game screens speak it. |
-| `src/lib/gameTree.ts` | **The variation tree** — `GameTree` / `VariationNode`, `addMove` (the branch), `mainline` / `lineOf` / `pathTo` / `fenAtNode`, `treeToPgn`, and the `treeFromGame` ⇄ `mainlineGame` bridge that makes a `Game` a walk over a tree. Also `gameToPgn`, the **linear** game's writer, which is `treeToPgn` over the one-line tree rather than a second copy of the numbering and `SetUp`/`FEN` rules. Read the next section before touching it. |
+| `src/lib/gameTree.ts` | **The variation tree** — `GameTree` / `VariationNode`, `addMove` (the branch), `mainline` / `lineOf` / `pathTo` / `fenAtNode`, `treeToPgn`, the variations explorer's edits (CTA-64: `promoteVariation` / `makeMainline` / `deleteFrom`, immutable and id-preserving, plus `isInSideLine`, `subtreeCounts` and `linePgn`, the one line to a move as PGN), and the `treeFromGame` ⇄ `mainlineGame` bridge that makes a `Game` a walk over a tree. Also `gameToPgn`, the **linear** game's writer, which is `treeToPgn` over the one-line tree rather than a second copy of the numbering and `SetUp`/`FEN` rules. Read the next section before touching it. |
 | `src/lib/pgn.ts` | PGN ingestion only: text in, a `Game` (`parsePgnGames`, mainline only — what `chess.js` gives) or a `GameTree` (`parsePgnTrees`, side lines kept) out. |
 | `src/lib/fen.ts` | FEN ingestion: `parseFen` validates and normalises a pasted position, or throws `FenParseError`. |
 | `src/lib/positionEditor.ts` | A position *being edited*: `fenFields` / `fenFromFields` (the six fields apart and back together, which is what makes the editor's side-to-move, castling and en passant controls round-trip), `enPassantOptions`, and `positionProblems` — **non-throwing** legality reporting, because a half-edited board is illegal by definition. Pure. |
@@ -98,7 +98,7 @@ change by whether it *adds* to that count, not by the exit code.
 | `src/lib/gameReference.ts` | **The `?game=` carrier** — `library/<category path>/<id>` (the key was `pgn` before CTA-38; still resolves), formatted by `gameReferenceOf` and resolved by `resolveGameReference` through the same `resolveLibraryPath`. A game does not fit in a URL, so what travels is a reference into the catalog. |
 | `src/views/library/` | The section-agnostic screens a library section renders: `LibraryList.tsx` (a fixed top bar — the category's name and counts, the name search, the card-size toggle — over the only thing on the screen that scrolls, the card grid: this category's **sub-folders** first, as `LibraryFolderCard.tsx`, then its items as preview boards; its pure `librarySearch.ts` and `cardSize.ts` under it, and the folder's notes — or the hint, when it has none — in the right-hand panel), `LibraryDetail.tsx` (which resolves the URL, renders the miss, and dispatches on the item's kind — and on the `variationMode` flag the section passes for a repertoire line), `LibraryPositionDetail.tsx` (one position, read-only, facing the side to move, with the three `?fen=` hand-offs), `LibraryGameDetail.tsx` (the game replayed over the shared `MoveList` / `BoardControls` / `useGameNavigation`, with the `?game=` and `?fen=` hand-offs), `LibraryVariationDetail.tsx` (a repertoire line replayed with its **variation tree** — `parsePgnTree` + the shared `VariationTree` / `useTreeNavigation`), `LibraryCardFooter.tsx` and its pure `gameSummary.ts` (a card's footer, and the one branch the list screen makes on the item's kind), `BackToCategory.tsx`, `folderNotes.ts` / `pgnFolderNotes.ts` / `LibraryNotes.tsx` (a folder's authored MDX notes — the pure path lookup, the shipped `.mdx` glob, and the panel that styles and scrolls them), and `section.ts`, which is what tells one section from another — route base, catalog, chrome keys, test ids, `?game=` key, folder notes. |
 | `src/views/pgn/` | The Library section: `UserPgnsSection.tsx` is **one component behind every `/library/*` URL** (was "User PGNs" at `/pgn/*`; file path kept), resolving the splat through the catalog, over a catalog whose items are games — and **the one place a PGN kind becomes a screen** (see *What kind of thing a PGN file is* below). Under it, the screens the section's own kinds need: `PgnCollection.tsx` (a multi-study file's index), `PgnCollectionNav.tsx` (its studies in the shell's left rail, while one of them is open), `PgnUploads.tsx` (the reader's own files — the button and the list), the shared two-line `PgnIndexRow.tsx`, the pure `collectionSummary.ts`, and `useUploads.ts` (the `useSyncExternalStore` binding, so `src/lib/` stays free of React). |
-| `src/views/dev/` | **The Development section** (CTA-60) — dev-only, gated on `import.meta.env.DEV` in `navFolders()` / `navItems()` / `App.tsx`, so none of it reaches the deployed build. `core/` is the **unified board core** specified in [`.claude/rules/chessboard-v2.md`](.claude/rules/chessboard-v2.md): the base hook (`useBoardCore.ts` — the `GameTree` as the one game shape, node navigation, the rules oracle, promotion, orientation), the capability modules a board composes rather than is flagged by (`useEngineModule.ts`, whose optional `onBestMove` is the entire Play/Analysis difference; `useOpeningBookModule.ts`; `useTrainerModule.ts`, the repertoire trainer (CTA-63); `useAutosave.ts`; `devStores.ts`, the dev-prefixed `localStorage` keys over the shipped `recordStore` factory and normalisers), and the composition layer that had no owner before — `BoardShell.tsx` (over the shared `EngineBoardSquare`, never a second copy of the `calc()`) and `BoardPanel.tsx`, the one panel skeleton and the one pinned best-variations block, plus `TreeMoveList.tsx`, the merged move list's ply↔node seam. Beside them the five derived boards — `analysis/`, `play/` (whose `usePlayBoard` and `PlayBoardScreen` `masked/` reuses verbatim, adding only the mask), `masked/`, `openings/`, `repertoire/` — and `devNav.ts`. The five shipped board screens are untouched by all of it. **`core/` alone ships** since CTA-61, imported by the Repertoires board; the five derived boards, `devNav.ts` and `devStores.ts` stay behind the gate. |
+| `src/views/dev/` | **The Development section** (CTA-60) — dev-only, gated on `import.meta.env.DEV` in `navFolders()` / `navItems()` / `App.tsx`, so none of it reaches the deployed build. `core/` is the **unified board core** specified in [`.claude/rules/chessboard-v2.md`](.claude/rules/chessboard-v2.md): the base hook (`useBoardCore.ts` — the `GameTree` as the one game shape, node navigation, the rules oracle, promotion, orientation), the capability modules a board composes rather than is flagged by (`useEngineModule.ts`, whose optional `onBestMove` is the entire Play/Analysis difference; `useOpeningBookModule.ts`; `useTrainerModule.ts`, the repertoire trainer (CTA-63); `useAutosave.ts`; `devStores.ts`, the dev-prefixed `localStorage` keys over the shipped `recordStore` factory and normalisers), and the composition layer that had no owner before — `BoardShell.tsx` (over the shared `EngineBoardSquare`, never a second copy of the `calc()`) and `BoardPanel.tsx`, the one panel skeleton and the one pinned best-variations block, plus `TreeMoveList.tsx`, the **variations explorer** (the merged move list of CTA-53 — the shared `MoveList` with every side line hung under its move, over the ply↔node seam) and, given `onEditTree`, its right-click move menu `MoveContextMenu.tsx` (CTA-64). Beside them the five derived boards — `analysis/`, `play/` (whose `usePlayBoard` and `PlayBoardScreen` `masked/` reuses verbatim, adding only the mask), `masked/`, `openings/`, `repertoire/` — and `devNav.ts`. The five shipped board screens are untouched by all of it. **`core/` alone ships** since CTA-61, imported by the Repertoires board; the five derived boards, `devNav.ts` and `devStores.ts` stay behind the gate. |
 | `src/views/repertoires/` | **The Repertoires section** (CTA-61) — the reader's own repertoires. `Repertoires.tsx` is the list (`/repertoires`, over the saved-list machinery; a card previews where the repertoire first branches; `?folder=<id>` opens a folder, and `RepertoireFolderViews.tsx` / `RepertoireFolderDialogs.tsx` are the folder rows and cards and the name / delete / move dialogs, `useRepertoireFolders.ts` their store binding), `RepertoireUpload.tsx` brings one in (`/repertoires/new`, a `.pgn` file or pasted text through **one** function), `RepertoireMergeSplit.tsx` is the merge-or-split choice a text of several games gets (on the upload screen, and on the route of a record saved before the one-game rule), `RepertoireBoard.tsx` is the route of one (`/repertoires/<id>`: the miss, the legacy choice, else the player) and `RepertoireGame.tsx` the route of its games (`/repertoires/<id>/games/<end|backtrack>`), both over **`RepertoirePlayer.tsx`** — the one screen composed from the v2 core that a repertoire is read, drilled and played on (CTA-63; see *Playing a repertoire*), with `useRepertoireGame.ts` (a game's session state), `RepertoireMap.tsx` (the Map tab, the player's and Backtracking's), `RepertoireChangesBar.tsx` (update the repertoire / save a copy / discard, while the session has changes); on a protected repertoire it says so and links to its settings in Update's place and `RepertoireGamesMenu.tsx` (the menu on the player and on every list row and card) beside it — and `RepertoireSettingsScreen.tsx` edits one (`/repertoires/<id>/settings`: a list of sections from `RepertoireSettingsSections.tsx` over one draft, written on Save). `useSavedRepertoires.ts` is the store binding; `repertoireTestKit.tsx` the tests' shared mount and fixtures. |
 | `src/views/main/navFromLibrary.ts` | Building a sidebar subtree — a folder plus a list screen per category, at any depth — out of a library catalog, and merging it into the authored registries. Pure; `userPgnsNavFolder()` / `userPgnsNavItems()` are the shipped use, over a catalog built from `.pgn` files. It is a generator over any `LibraryCatalog`, not a Library-section special case. |
 | `src/lib/treeManager.ts` | Read-only tree walks (`traverse` / `toArray` / `collectIds` / `findBy` / `getPath`). The seam for anything tree-shaped: `navTree.ts` and `libraryCatalog.ts` are its consumers. |
@@ -818,7 +818,7 @@ for the board. Only the differences are written out here:
   option added later reads as its default on every older record; the recipe
   is the header of `lib/repertoireSettings.ts`. The write is in place and
   keeps the list order, `updateSavedOpeningNote`'s rule.
-- **No Tree tab, no Lines tab.** The merged move list already hangs every side
+- **No Tree tab, no Lines tab.** The variations explorer already hangs every side
   line under its move, the CTA-53 reason; and a repertoire is one game. (The
   player's tabs are in the next section.) The Moves tab is kept mounted once opened
   (`BoardPanel`'s opt-in `keepMounted`), so switching tabs never re-mounts a
@@ -985,6 +985,44 @@ lines dropping below their branch point.
   a few pixels. A game's map has no links: it is not a way to skip ahead.
 - The edges and dots are a few path strings, not an element per move, so
   the 9,146-node example lays out in ~10ms.
+
+**The variations explorer** (CTA-64) is the player's Moves tab — the merged
+move list of CTA-53 (`TreeMoveList` over the shared `MoveList` /
+`VariationLine`), renamed for what it has become — with lichess's right-click
+menu on every move, mainline cell and side-line token alike
+(`views/dev/core/MoveContextMenu.tsx`, an MUI `Menu` at the pointer):
+
+- **Promote variation** — the move's line goes one level up: at the closest
+  branch where it is not `children[0]`, it becomes it. **Make main line** —
+  the same at every level, so the path to the move is the mainline. Both only
+  on a move inside a side line.
+- **Delete from here** — the move and everything after it, after a dialog
+  saying how much goes ("N moves / M lines"). Standing on a deleted move, the
+  reader lands on the move it answered.
+- **Copy variation PGN** — the line from the start to the move, the tree's
+  tags and `SetUp` / `FEN` kept, its `Result` not (a line is not a finished
+  game).
+
+Four rules hold it together:
+
+- **The edits are pure**, in `lib/gameTree.ts`: each returns a new tree with
+  every surviving id kept (only the path to the move is copied), and a no-op
+  hands back the same tree — so `core.tree !== repertoire` is still the whole
+  of "changed", and an edit is a session change like a move added: the Save
+  button, the strip (whose summary says "Lines reordered or deleted" when
+  nothing was added), protection, the Map, the extension tint and `?at=` all
+  follow it with no code of their own.
+- **An edit is `replaceTree`, not `loadTree`** (`useBoardCore`): it keeps the
+  node on screen when it survived, else its nearest surviving ancestor, where
+  `loadTree` would step to the start.
+- **The menu is opt-in** — `onEditTree` on `TreeMoveList`, which becomes
+  `onContextMenuPly` / `onContextMenuNode` on `MoveList` → `VariationLine`.
+  Without it nothing is bound and the right-click is the browser's: every
+  other board, and the repertoire **games**, which never write.
+- **It costs the big list nothing.** The handlers the list receives only set
+  `TreeMoveList`'s menu state, so they are stable across steps, and the menu
+  is a sibling of the memoised list rather than inside it — opening one
+  re-renders no token (CTA-61's rule).
 
 **A permanent link to a position**: `/repertoires/<id>?at=e4,c6,d4`
 (`lib/repertoireLink.ts`). A position is the moves from the start as SAN — the
