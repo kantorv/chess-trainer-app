@@ -17,11 +17,30 @@ describe("a repertoire's settings", () => {
     expect(repertoireSettingsFrom({ description: "Mine", color: 7 })).toEqual({
       description: "Mine",
       color: "white",
+      showArrows: true,
+      protected: true,
     });
-    expect(repertoireSettingsFrom({ color: "black" })).toEqual({
+    expect(repertoireSettingsFrom({ color: "black", showArrows: "no" })).toEqual({
       description: "",
       color: "black",
+      showArrows: true,
+      protected: true,
     });
+  });
+
+  it("protect a repertoire by default, and keep a reader's no", () => {
+    expect(DEFAULT_REPERTOIRE_SETTINGS.protected).toBe(true);
+    // A record from before the option is protected.
+    expect(repertoireSettingsFrom({ description: "Old", color: "white" }).protected).toBe(true);
+    expect(repertoireSettingsFrom({ protected: false }).protected).toBe(false);
+    expect(repertoireSettingsFrom({ protected: "no" }).protected).toBe(true);
+  });
+
+  it("draw the next-move arrows by default, and keep a reader's no", () => {
+    expect(DEFAULT_REPERTOIRE_SETTINGS.showArrows).toBe(true);
+    // A record from before the option reads as on.
+    expect(repertoireSettingsFrom({ description: "Old", color: "white" }).showArrows).toBe(true);
+    expect(repertoireSettingsFrom({ showArrows: false }).showArrows).toBe(false);
   });
 
   it("cap a description", () => {
@@ -32,8 +51,10 @@ describe("a repertoire's settings", () => {
   });
 
   it("compare over every field the defaults name", () => {
-    const base = { description: "a", color: "white" as const };
+    const base = { description: "a", color: "white" as const, showArrows: true, protected: true };
     expect(sameRepertoireSettings(base, { ...base })).toBe(true);
+    expect(sameRepertoireSettings(base, { ...base, showArrows: false })).toBe(false);
+    expect(sameRepertoireSettings(base, { ...base, protected: false })).toBe(false);
     expect(sameRepertoireSettings(base, { ...base, color: "black" })).toBe(false);
     expect(sameRepertoireSettings(base, { ...base, description: "b" })).toBe(false);
   });

@@ -54,6 +54,7 @@ import {
   RepertoireMoveDialog,
 } from "./RepertoireFolderDialogs";
 import { RepertoireFolderCard, RepertoireFolderRow } from "./RepertoireFolderViews";
+import RepertoireGamesMenu from "./RepertoireGamesMenu";
 import { useRepertoireFolders } from "./useRepertoireFolders";
 import { useSavedRepertoires } from "./useSavedRepertoires";
 
@@ -67,10 +68,11 @@ import { useSavedRepertoires } from "./useSavedRepertoires";
  * view only, the same delete control, the same scrolling region. What that
  * screen's header says holds here and is not repeated; the two differences:
  *
- * - **One destination.** A repertoire opens on its own board
- *   (`/repertoires/<id>`), and nowhere else — there is no single position to
- *   hand Play with Engine and no single game to hand Load PGN, since a
- *   repertoire is many lines.
+ * - **One destination, and its games.** A repertoire opens on its own view
+ *   (`/repertoires/<id>`, the player) — there is no single position to hand
+ *   Play with Engine and no single game to hand Load PGN, since a repertoire
+ *   is many lines — and each row and card carries the Games menu
+ *   (`RepertoireGamesMenu.tsx`, CTA-63) beside it.
  * - **Folders, one level deep.** The top level lists the folders, then the
  *   Unfiled repertoires; `?folder=<id>` opens one — its repertoires, with its
  *   rename and delete in the top bar and the way back beside its name. A
@@ -230,6 +232,7 @@ function RepertoireRow({
         >
           {t("repertoires.open")}
         </Button>
+        <RepertoireGamesMenu id={saved.id} testId={`repertoires-games-${saved.id}`} />
         <MoveButton saved={saved} onMove={onMove} />
         <SettingsLink saved={saved} />
         <SavedListRemoveButton
@@ -286,6 +289,7 @@ function RepertoireCard({
             {secondary}
           </Typography>
         </Box>
+        <RepertoireGamesMenu id={saved.id} testId={`repertoires-games-${saved.id}`} />
         <MoveButton saved={saved} onMove={onMove} />
         <SettingsLink saved={saved} />
         <SavedListRemoveButton

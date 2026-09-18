@@ -4,6 +4,7 @@ import { plyLabel, type VariationNode } from "../../lib/gameTree";
 import {
   useEvalText,
   useIsCurrentNode,
+  useIsExtensionNode,
   useScrollWhenCurrent,
 } from "./moveSelection";
 
@@ -76,6 +77,11 @@ const Token = styled("button")(({ theme }) => ({
     outline: `2px solid ${(theme.vars ?? theme).palette.primary.main}`,
     outlineOffset: 1,
   },
+  // A move added this session (CTA-63) — `MoveList`'s `extensionCellSx`.
+  // Before the highlight, so being current still wins.
+  '&[data-extension="true"]': {
+    color: (theme.vars ?? theme).palette.success.main,
+  },
   // `selectedTokenSx`.
   '&[aria-current="true"]': {
     backgroundColor: (theme.vars ?? theme).palette.primary.main,
@@ -121,6 +127,7 @@ const MoveToken = memo(function MoveToken({
   onSelect?: (id: string) => void;
 }) {
   const isCurrent = useIsCurrentNode(node.id);
+  const isExtension = useIsExtensionNode(node.id);
   const evalText = useEvalText(node.fen);
   const ref = useScrollWhenCurrent<HTMLButtonElement>(isCurrent);
 
@@ -140,6 +147,7 @@ const MoveToken = memo(function MoveToken({
       dir="ltr"
       data-testid={`tree-move-${node.id}`}
       data-san={node.san}
+      data-extension={isExtension ? "true" : undefined}
       aria-current={isCurrent ? "true" : undefined}
       onClick={() => onSelect?.(node.id)}
     >

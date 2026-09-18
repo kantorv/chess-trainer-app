@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { screen } from "@testing-library/react";
+import { act, screen } from "@testing-library/react";
 
 import i18n from "../../i18n";
 import { renderSection, storeRepertoire } from "./repertoireTestKit";
@@ -53,10 +53,36 @@ describe("the repertoire board is composed, not written", () => {
     expect(panels).toHaveLength(1);
     expect(panels[0]).toHaveAttribute("data-panel-id", "repertoire-board-panel");
     // The slots this screen fills.
-    expect(screen.getByTestId("panel-tab-ids")).toHaveTextContent("moves,engine");
+    expect(screen.getByTestId("panel-tab-ids")).toHaveTextContent("moves,map,settings,engine");
 
     const squares = screen.getAllByTestId("the-one-board-square");
     expect(squares).toHaveLength(1);
     expect(squares[0]).toHaveAttribute("data-square-id", "repertoire-board");
+  });
+
+  // The repertoire games (CTA-63) are under the same guarantee: the trainer
+  // and a game's rules are modules, not a panel of their own.
+  it.each(["end", "backtrack"])("plays the %s game on the same shared panel and square", (game) => {
+    vi.useFakeTimers();
+    try {
+      storeRepertoire("r");
+      renderSection(`/repertoires/r/games/${game}`);
+      act(() => {
+        vi.advanceTimersByTime(0);
+      });
+
+      const panels = screen.getAllByTestId("the-one-board-panel");
+      expect(panels).toHaveLength(1);
+      expect(panels[0]).toHaveAttribute("data-panel-id", "repertoire-game-panel");
+      expect(screen.getByTestId("panel-tab-ids")).toHaveTextContent(
+        game === "backtrack" ? "moves,score,map,settings,engine" : "moves,score,settings,engine",
+      );
+
+      const squares = screen.getAllByTestId("the-one-board-square");
+      expect(squares).toHaveLength(1);
+      expect(squares[0]).toHaveAttribute("data-square-id", "repertoire-game");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

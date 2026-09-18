@@ -274,6 +274,76 @@ reads the shipped snapshots back empty.
 
 ---
 
+### 2.5 `useTrainerModule` — the repertoire trainer
+
+`src/views/dev/core/useTrainerModule.ts` (CTA-63), over the pure
+`src/lib/repertoireTrainer.ts`.
+
+```ts
+const trainer = useTrainerModule({
+  enabled: boolean,                 // off while the tree is being read
+  core,                             // nodeId · fen · tree · onPieceDrop · resolvePromotion · playVariation
+  repertoire: GameTree,             // the tree AS IT ARRIVED — what the trainer answers from
+  trainerColor: "w" | "b",
+  policy?: TrainerPolicy,           // pickTrainerMove: uniform over the file's moves at the node
+  random?: () => number,            // injectable, so a test is deterministic
+  delayMs?: number,
+  drill?: boolean,                  // game mode: judge the reader's moves, take a wrong one back
+  onJudged?: (verdict: "success" | "fail") => void,  // once per position — the first try's
+  required?: VariationNode[],       // a game's constraint: the moves the reader must choose from here
+});
+// → { status: "trainer-thinking" | "your-move" | "out-of-book" | "try-again",
+//     onPieceDrop, resolvePromotion,   // hand these to BoardShell in place of the core's
+//     requestReply(at),                // "the session starts here"
+//     arrival }                        // where the last PLAYED move landed, while on screen
+```
+
+A scripted opponent that answers **only from a repertoire**. What it owns:
+
+- **The reply guard: a move, never a position.** A reply is owed only at the
+  node a reader's move lands on — noted by the wrapped `onPieceDrop` /
+  `resolvePromotion` it hands back — or where the screen calls
+  `requestReply` (the session's start, which is how it moves first as
+  White). Navigating anywhere drops what is owed, in the same render; stepping
+  back to the trainer's turn never moves a piece.
+- **The timer**, cleared on navigation, on a new move and on unmount.
+- **Moving through the core**: `playVariation([san])` under the node on
+  screen, so a move the tree has is followed. Never `appendMove` (the end of
+  the mainline), and never `chess.js` directly.
+- **Asking the original tree.** A node the reader added is not in it, so the
+  policy has nothing there — the trainer cannot move inside an extension.
+- **Game mode (`drill`).** At the reader's own turn, where the repertoire has
+  a move, the wrapped drop **judges before the core sees it**
+  (`judgeDrop`, pure, in `lib/repertoireTrainer.ts` — by the from/to squares
+  every node carries, with `chess.js` only *read* for legality): a repertoire
+  move is a success and goes on; any other legal move is a failure and is
+  **taken back** by refusing the drop — it never enters the tree; an illegal
+  drop, or a move past the line's end, is not judged. A promotion is judged
+  by the piece picked. **One verdict per position**: the first try's;
+  retries after a failure count nothing, and `requestReply` (a restart)
+  judges the line afresh. Verdicts go out through `onJudged`; the status is
+  `try-again` while a wrong try stands.
+- **`required` and `arrival`, for the games.** A repertoire move outside
+  `required` is refused in game mode, unjudged (Backtracking: a right move,
+  but a finished line's). `arrival` is the node the last *played* move —
+  reader's or trainer's — landed on, `null` after navigation, so a game
+  reads "a line was just finished" off it and navigating onto a line's end
+  never counts. The games' rules are `lib/repertoireGames.ts`; their session
+  state is the screen's (`useRepertoireGame`).
+
+**Adding a policy, a scoring rule or a mode.** A new trainer (weighted,
+mainline-first, spaced repetition) is a new function of type `TrainerPolicy`
+in `lib/repertoireTrainer.ts`, passed as `policy` — never a branch in
+`pickTrainerMove` or in the module. What a verdict is *worth* — the session
+tally today (`DrillScore` / `withVerdict`), a persisted per-position record
+for spaced repetition later — is the screen's `onJudged`, never the
+module's. A further mode is one more option here, beside `drill`. None of it
+touches `useBoardCore`, and the extension marker (`extensionIdsOf`, the move
+list's `extensionIds`) keeps working unchanged, because it is derived from
+the tree rather than recorded.
+
+---
+
 ## 3. The shell and the panel
 
 `src/views/dev/core/BoardShell.tsx` and `BoardPanel.tsx`. This is the layer
@@ -333,7 +403,7 @@ The slot contract:
 | `engineOn` | `boolean?` | The block renders nothing while off; the status row says so. |
 | `onPlayVariation` | `((sans) => void)?` | Present ⇒ the lines are clickable (CTA-55). Absent ⇒ plain text. |
 | `mask` | `PieceMask?` | Masked notation inside the block. |
-| `tabs` | `readonly { id, label, content }[]` | One tab is rendered at a time, never three with two hidden — unless `keepMounted` names it. |
+| `tabs` | `readonly { id, label, content, disabled? }[]` | One tab is rendered at a time, never three with two hidden — unless `keepMounted` names it. `disabled` greys a tab out (the Play repertoire screen's Engine tab while its engine is off); the screen keeps `activeTab` off a disabled tab. |
 | `keepMounted` | `readonly string[]?` | Opt-in: these tabs mount on first open and then stay mounted, hidden, while another shows — for a body whose mount is the cost (the Repertoires board keeps `moves`). Each has its own scrolling region; showing one again scrolls its `aria-current` move into view. |
 | `activeTab` / `onTabChange` | | The screen's state — a screen may need to know the tab (CTA-54's arrows). |
 | `footer` | `ReactNode?` | A sibling of the scrolling region, so it stays put while the tab scrolls. |
@@ -365,6 +435,15 @@ Every `/dev/*` screen, and exactly what it picks. Nothing else differs.
 | **Masked v2** | `/dev/masked` | Play v2's, verbatim | ✅ switch, **reply** | header line only | ❌ (a mask cannot be restored on `/dev/play`) | Moves · Engine · Mask | Play v2's | Play v2's | `pieces: maskedPieces(mask)` |
 | **Openings v2** | `/dev/openings` | `?fen=`, `?openings=` | ✅ switch, no reply | ✅ continuations + arrows | ❌ **button-triggered save** | Moves · Engine · Tree | opening + Save + switch | the explorer list | book arrows |
 | **Repertoire v2** | `/dev/repertoire` | `?game=library/<path>/<id>` | ✅ switch, no reply | header line only | ❌ (a shipped file is not the reader's work) | Moves · Engine · Tree · Info | opening + switch | next-moves bar | next-move arrows |
+| **Repertoire player** (shipped, CTA-63) | `/repertoires/<id>`, and `/games/<end\|backtrack>` | `orientation`: the reader's side | ✅ switch, **off by default**, no reply — the opponent is **`useTrainerModule`** (§2.5): behind Autoplay in the player, always in a game (game mode, a game's policy and required moves from `useRepertoireGame`) | ❌ | ❌ (session-only; leaves by download) | Moves (extensions tinted) · Score (games) · Map (the player's; Backtracking's with coverage) · Settings (side, Autoplay, arrows, engine switch) · Engine (disabled while off) | name + opening + Games menu + restart + download + settings link (a game: its title, back) | next-moves bar, or the trainer's status line | next-move arrows (off by default); a required move's arrow |
+
+**Next-move arrows are one helper.** `nextMoveArrowsOf` (`views/tools/analysis/nextMoveArrows.ts`)
+builds the arrows for a position's continuations — `children[0]`, the
+mainline, in `NEXT_MOVE_ARROW_COLOR`, every side line in
+`SIDELINE_NEXT_MOVE_ARROW_COLOR`, the hovered one in the hover colour.
+Analysis, Play, Masked and Repertoire v2 and the two repertoire screens draw
+through it (Openings v2 draws its book arrows), so a change of
+colour reaches them all; the shipped Analysis Board keeps its own copy (§6).
 
 Read the table as the specification of the derived classes. Three things it
 makes visible, which were the drift:
@@ -492,7 +571,8 @@ what a screen gains:
   is the first shipped screen composed from the core, so `useBoardCore`,
   `useEngineModule`, `BoardShell`, `BoardPanel` and `TreeMoveList` are in the
   production bundle by design — imported statically from `views/dev/core/`,
-  where they still live. What the gate keeps out is unchanged: the five
+  where they still live. Since CTA-63 `useTrainerModule` ships too — the
+  repertoire player is a repertoire's own view. What the gate keeps out is unchanged: the five
   derived `/dev/*` boards, `devNav.ts` and `devStores.ts` (the dev-prefixed
   keys), none of which a shipped screen imports. A shipped screen must not
   import `devStores.ts` or anything outside `core/`.
@@ -519,6 +599,7 @@ what a screen gains:
 | `src/views/dev/core/useOpeningBookModule.ts` | §2.2 — the book and its arrows. |
 | `src/views/dev/core/useAutosave.ts` | §2.3 — write-on-change. |
 | `src/views/dev/core/devStores.ts` | §2.4 — the dev-prefixed keys. |
+| `src/views/dev/core/useTrainerModule.ts` + `src/lib/repertoireTrainer.ts` | §2.5 — the repertoire trainer: the reply guard and timer (the module), the policy and the extension fold (pure). |
 | `src/views/dev/core/BoardShell.tsx` | §3.1 — the board square, over the shared `EngineBoardSquare`. |
 | `src/views/dev/core/BoardPanel.tsx` | §3.2 — **the** panel skeleton and the pinned variations block. |
 | `src/views/dev/analysis/` · `play/` · `masked/` · `openings/` · `repertoire/` | §4 — the five derived boards. |
@@ -526,5 +607,6 @@ what a screen gains:
 | `src/views/dev/devBoards.test.tsx` | The five boards rendered for real: the shared square, the shared skeleton, and the one thing each board keeps as its own. |
 | `src/views/dev/devPanelPropagation.test.tsx` | The propagation assertion of §0 — `BoardPanel` replaced by a sentinel. |
 | `src/views/dev/core/devStores.test.ts` | The dev/shipped key isolation of §2.4, in both directions. |
-| `src/views/repertoires/RepertoireBoard.tsx` | The first **shipped** board composed from the core (CTA-61) — Repertoire v2 over the reader's own one-game repertoire. `RepertoirePropagation.test.tsx` puts it under the same propagation assertion as the five dev boards. |
+| `src/views/repertoires/RepertoireBoard.tsx` | The first **shipped** board composed from the core (CTA-61) — Repertoire v2 over the reader's own one-game repertoire; since CTA-63 the route over the player below. `RepertoirePropagation.test.tsx` puts it under the same propagation assertion as the five dev boards. |
+| `src/views/repertoires/RepertoirePlayer.tsx` | Since CTA-63 the screen behind `RepertoireBoard.tsx` and `RepertoireGame.tsx` — the repertoire player and its games, the trainer (§2.5) as the opponent. Both routes are under the same propagation assertion. |
 | `src/views/dev/devTestHarness.tsx` | The `Engine` and `<Chessboard>` stand-ins §8 of `chessboard.md` requires, written once for five boards. |
