@@ -86,6 +86,16 @@ describe("a repertoire's settings screen", () => {
     await waitFor(() => expect(boardOptions().arrows).toEqual([]));
   });
 
+  it("protects a repertoire by default, and saves the reader's no", async () => {
+    store("a");
+    renderSection("/repertoires/a/settings");
+    const toggle = screen.getByTestId("repertoire-settings-protected");
+    expect(toggle).toBeChecked();
+    await userEvent.click(toggle);
+    await userEvent.click(screen.getByTestId("repertoire-settings-save"));
+    expect(findSavedRepertoire("a")?.settings.protected).toBe(false);
+  });
+
   it("drops the draft on Cancel", async () => {
     store("a");
     renderSection("/repertoires");

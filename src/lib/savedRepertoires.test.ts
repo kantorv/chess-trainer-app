@@ -190,12 +190,17 @@ describe("a repertoire changed on its board", () => {
     });
   });
 
-  it("copies into a new record, named, with the original's settings and folder", () => {
+  it("copies into a new record, named, with the original's settings and folder, unprotected", () => {
     const reading = read(ONE);
     const saved = {
       ...savedRepertoireOf("r", reading.games[0], "", reading.name, NOW),
       folderId: "f",
-      settings: { description: "Mine", color: "black" as const, showArrows: false },
+      settings: {
+        description: "Mine",
+        color: "black" as const,
+        showArrows: false,
+        protected: true,
+      },
     };
     const later = new Date("2026-09-19T10:00:00.000Z");
     const copy = repertoireCopyOf(saved, changed(), "c", "My Caro (copy)", later);
@@ -203,7 +208,8 @@ describe("a repertoire changed on its board", () => {
       id: "c",
       name: "My Caro (copy)",
       folderId: "f",
-      settings: saved.settings,
+      // The original's settings — but a copy is made to be edited: unprotected.
+      settings: { ...saved.settings, protected: false },
       savedAt: later.toISOString(),
     });
     expect(copy.pgn).toContain('[Event "My Caro (copy)"]');
@@ -298,7 +304,7 @@ describe("a stored row", () => {
       pgn: "1. e4 *",
       previewFen: DEFAULT_POSITION,
       // A record from before settings existed reads as the defaults.
-      settings: { description: "", color: "white", showArrows: true },
+      settings: { description: "", color: "white", showArrows: true, protected: true },
       folderId: null,
       savedAt: "x",
       updatedAt: "x",

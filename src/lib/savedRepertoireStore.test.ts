@@ -123,6 +123,7 @@ describe("the saved-repertoires store", () => {
         description: "Main line",
         color: "black",
         showArrows: false,
+        protected: true,
       }),
     ).toBeUndefined();
 
@@ -130,7 +131,7 @@ describe("the saved-repertoires store", () => {
     expect(rows.map((row) => row.id)).toEqual(["b", "a"]);
     expect(rows[1]).toMatchObject({
       name: "Caro",
-      settings: { description: "Main line", color: "black", showArrows: false },
+      settings: { description: "Main line", color: "black", showArrows: false, protected: true },
     });
   });
 
@@ -151,7 +152,7 @@ describe("the saved-repertoires store", () => {
     const unsubscribe = subscribeSavedRepertoires(listener);
     saveRepertoire({
       ...record("a"),
-      settings: { description: "", color: "black", showArrows: true },
+      settings: { description: "", color: "black", showArrows: true, protected: true },
     });
     expect(listener).toHaveBeenCalled();
     unsubscribe();
