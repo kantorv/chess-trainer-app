@@ -658,6 +658,14 @@ const he: typeof en = {
       tabs: {
         settings: "הגדרות",
         score: "ניקוד",
+        map: "מפה",
+      },
+      map: {
+        label: "הרפרטואר כעץ: קווים שכוסו בירוק, הדרך שלכם לכאן מודגשת",
+        here: "אתם כאן",
+        left_one: "נותר קו אחד",
+        left_other: "נותרו {{count}} קווים",
+        done: "כל הקווים כוסו.",
       },
       score: {
         successes: "נכון",
