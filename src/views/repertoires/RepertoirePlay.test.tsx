@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, fireEvent, screen } from "@testing-library/react";
+import { act, fireEvent, screen, within } from "@testing-library/react";
 import { Chess } from "chess.js";
 
 import i18n from "../../i18n";
@@ -99,16 +99,25 @@ afterEach(() => {
 });
 
 describe("playing a repertoire against the trainer", () => {
-  it("renders on the shared shell, facing the repertoire's main color, with no engine", () => {
+  it("renders on the shared shell, facing the repertoire's main color, engine off", () => {
     mount(`/repertoires/${storeRepertoire("r", CARO, "Caro")}/play`);
 
     expect(boardOptions().id).toBe("repertoire-play");
     expect(screen.getByTestId("repertoire-play-panel")).toBeInTheDocument();
     expect(screen.getByTestId("repertoire-play-name")).toHaveTextContent("Caro");
     expect(screen.getByTestId("board")).toHaveAttribute("data-orientation", "white");
-    // A drill shows no answer: no engine block, no status score, no worker.
+    // A drill shows no answer until asked: the engine is off — no lines, no
+    // bar, no search — and the status row says so.
+    expect(screen.getByTestId("repertoire-play-setting-engine").querySelector("input")).not.toBeChecked();
     expect(screen.queryByTestId("repertoire-play-panel-variations")).not.toBeInTheDocument();
-    expect(FakeEngine.instances).toHaveLength(0);
+    expect(screen.queryByTestId("eval-bar")).not.toBeInTheDocument();
+    expect(FakeEngine.latest().searches).toEqual([]);
+    expect(screen.getByTestId("repertoire-play-panel-status")).toHaveTextContent(
+      i18n.t("analysis.settings.engineOff"),
+    );
+    for (const tab of ["moves", "engine", "settings"]) {
+      expect(screen.getByTestId(`repertoire-play-panel-tab-${tab}`)).toBeInTheDocument();
+    }
     expect(status()).toBe("your-move");
   });
 
@@ -236,6 +245,52 @@ describe("playing a repertoire against the trainer", () => {
     // And off again.
     fireEvent.click(screen.getByTestId("repertoire-play-arrows").querySelector("input")!);
     expect(boardOptions().arrows).toEqual([]);
+  });
+
+  it("shows the best variations once the engine is switched on, and never moves for it", () => {
+    mount(`/repertoires/${storeRepertoire("r", CARO)}/play`);
+    fireEvent.click(screen.getByTestId("repertoire-play-setting-engine").querySelector("input")!);
+
+    const engine = FakeEngine.latest();
+    expect(engine.lastSearch).toBe(new Chess().fen());
+    act(() => {
+      engine.say({
+        fen: engine.lastSearch,
+        uciMessage: "info",
+        depth: 14,
+        multipv: 1,
+        positionEvaluation: "42",
+        pv: "e2e4 e7e5",
+      });
+    });
+    const block = screen.getByTestId("repertoire-play-panel-variations");
+    expect(within(block).getByText("+0.42")).toBeInTheDocument();
+    expect(screen.getByTestId("eval-bar")).toBeInTheDocument();
+
+    // A bestmove is not a reply: the trainer is the only opponent.
+    act(() => {
+      engine.say({ fen: engine.lastSearch, uciMessage: "bestmove", bestMove: "e2e4" });
+    });
+    wait();
+    expect(position()).toBe(new Chess().fen());
+
+    // The engine's settings are the other boards' own Engine tab.
+    fireEvent.click(screen.getByTestId("repertoire-play-panel-tab-engine"));
+    expect(screen.getByTestId("analysis-settings")).toBeInTheDocument();
+  });
+
+  it("clears the session's additions from the Engine tab", () => {
+    mount(`/repertoires/${storeRepertoire("r", CARO)}/play`);
+    drop("e2", "e4");
+    wait();
+    drop("d2", "d3");
+    expect(document.querySelector('[data-san="d3"]')).not.toBeNull();
+
+    fireEvent.click(screen.getByTestId("repertoire-play-panel-tab-engine"));
+    fireEvent.click(screen.getByTestId("analysis-clear"));
+    fireEvent.click(screen.getByTestId("repertoire-play-panel-tab-moves"));
+    expect(position()).toBe(new Chess().fen());
+    expect(document.querySelector('[data-san="d3"]')).toBeNull();
   });
 
   it("keeps the side and the arrows in a Settings tab beside Moves", () => {
