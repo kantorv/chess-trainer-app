@@ -47,22 +47,6 @@ export const MAP_DX = 14;
 export const MAP_DY = 12;
 export const MAP_PAD = 8;
 
-/**
- * The zoom steps the Map tab offers, as a scale on the drawing; 1 is the
- * layout's own size. The 9,146-node example is ~2,500px square at 1, so the
- * small end is what shows it whole.
- */
-export const MAP_ZOOM_LEVELS = [0.25, 0.4, 0.6, 0.8, 1, 1.25, 1.5, 2, 3] as const;
-export const MAP_DEFAULT_ZOOM = 1;
-
-/** The next zoom step in `direction`, clamped to the ends. */
-export const nextMapZoom = (zoom: number, direction: 1 | -1): number => {
-  const index = MAP_ZOOM_LEVELS.findIndex((level) => level >= zoom);
-  const at = index === -1 ? MAP_ZOOM_LEVELS.length - 1 : index;
-  const next = Math.min(MAP_ZOOM_LEVELS.length - 1, Math.max(0, at + direction));
-  return MAP_ZOOM_LEVELS[next];
-};
-
 /** A place on the map, in pixels. */
 export const mapPixel = (point: MapPoint) => ({
   px: MAP_PAD + point.x * MAP_DX,
@@ -210,13 +194,19 @@ export const mapPathTo = (
 ): string => path.map((node) => edgeTo(layout, node)).join("");
 
 /**
- * The full-screen map's view: the drawing translated by `x`, `y` and scaled by
+ * A map viewport's view (the tab's and the full-screen one's): the drawing translated by `x`, `y` and scaled by
  * `k`, in screen pixels — what the mouse moves (a drag pans, the wheel zooms
  * about the pointer). Pure, so the arithmetic is tested rather than eyeballed.
  */
 export type MapView = { x: number; y: number; k: number };
 
-/** How far the full-screen view zooms, out and in. */
+/**
+ * The scale a map viewport opens at: readable, since the moves are written on
+ * it by default (`MAP_LABEL_MIN_K` below is where they stop being drawn).
+ */
+export const MAP_INITIAL_K = 2.5;
+
+/** How far a map viewport zooms, out and in. */
 export const MAP_VIEW_MIN_K = 0.05;
 export const MAP_VIEW_MAX_K = 8;
 
@@ -251,7 +241,7 @@ export const centerView = (px: number, py: number, k: number, vw: number, vh: nu
 });
 
 /**
- * The full-screen map's move labels: each move's SAN written just above its
+ * The map's move labels: each move's SAN written just above its
  * dot, in the drawing's own units, so it scales with the view and never
  * overlaps its neighbours — at 100% it is too small to read, from about 2.5×
  * it reads comfortably. Below {@link MAP_LABEL_MIN_K} none are drawn at all.

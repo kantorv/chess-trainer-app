@@ -1,15 +1,12 @@
 import {
   useCallback,
   useEffect,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
   type ReactNode,
-  type Ref,
 } from "react";
 import Box from "@mui/material/Box";
-import ButtonBase from "@mui/material/ButtonBase";
 import Dialog from "@mui/material/Dialog";
 import IconButton from "@mui/material/IconButton";
 import LinearProgress from "@mui/material/LinearProgress";
@@ -30,87 +27,81 @@ import type { Coverage } from "../../lib/repertoireGames";
 import {
   MAP_DX,
   MAP_DY,
+  MAP_INITIAL_K,
+  MAP_LABEL_FONT,
+  MAP_LABEL_MIN_K,
   MAP_PAD,
   centerView,
   fitView,
-  mapLabelsIn,
-  visibleRect,
-  MAP_LABEL_FONT,
-  MAP_LABEL_MIN_K,
-  mapEdgePaths,
-  mapLayoutOf,
   mapDots,
+  mapEdgePaths,
+  mapLabelsIn,
+  mapLayoutOf,
   mapPathDots,
   mapPathTo,
   mapPixel,
-  MAP_DEFAULT_ZOOM,
-  MAP_ZOOM_LEVELS,
-  nextMapZoom,
+  visibleRect,
   zoomViewAt,
   type MapLayout,
   type MapView,
 } from "../../lib/repertoireMap";
 
 /**
- * **Backtracking's Map tab** (CTA-63) — the repertoire drawn as a tree, so the
- * reader sees where they are in it and how much is left: lines already
- * covered in green, the rest grey, the way from the start to the position on
- * screen in the primary colour, and a marker on that position, kept in view as
- * play moves. A progress bar and a line count above it answer "how far to the
- * end". The layout is `lib/repertoireMap.ts`; this draws it.
+ * **The Map tab** (CTA-63) — the repertoire drawn as a tree, so the reader
+ * sees where they are in it and how much is left: the player's, and
+ * Backtracking's with its coverage. The layout is `lib/repertoireMap.ts`; this
+ * draws it.
  *
- * Every move is a dot **in the colour of the side that made it** — White's
- * white, Black's black, each ringed so it shows on either theme — larger at a
- * line's end; the moves on the way to the reader carry a ring in the primary
- * colour. Coverage is the lines' colour (a game's), not the dots'. The lines
- * keep their width at every scale (`non-scaling-stroke`) so the tree stays
- * legible zoomed out; the dots scale with the drawing.
+ * ## One viewport, in the tab and full screen
  *
- * **Coverage is optional.** Backtracking passes it, and gets the progress bar
- * and green lines; the repertoire's own view (the player) passes none — every
- * line one neutral colour, the header the tree's size — and passes
- * `onSelectNode` instead: there, with the moves written on the full-screen
- * map, **a dot is a link** to its position (the dialog closes on it). A drag
- * that starts on a dot still pans: the pointer is captured, and a click
- * refused, only once it has moved a few pixels.
+ * The drawing is shown through one interactive viewport ({@link MapViewport}),
+ * rendered twice from the same memoised path strings: filling the tab, and in
+ * a full-screen MUI `Dialog` opened from it, where the panel's width no longer
+ * hides the detail. Both behave alike:
  *
- * ## Two views of one drawing
+ * - the **wheel zooms about the pointer** and a **drag pans** (`MapView`,
+ *   `zoomViewAt` — the arithmetic is pure and tested), with buttons to zoom,
+ *   fit the whole tree and go back to the reader's position;
+ * - they open at a readable scale (`MAP_INITIAL_K`) centred on the reader, and
+ *   **follow** them: when play moves the marker out of view, the view
+ *   re-centres on it, keeping its zoom;
+ * - **Show moves** — on by default, one setting for both — writes each move's
+ *   SAN above its dot, in the drawing's units so labels scale with the view
+ *   and never overlap (not drawn below `MAP_LABEL_MIN_K`, where a hint says
+ *   to zoom in), and only for the dots on screen (`mapLabelsIn`), so a huge
+ *   tree costs what is visible;
+ * - in the player (`onSelectNode`), a written move is a **link** to its
+ *   position — full screen, the dialog closes on it. A drag that starts on a
+ *   dot still pans: the pointer is captured, and the click refused, only once
+ *   it has travelled a few pixels.
  *
- * The drawing ({@link MapLayers}) is rendered in two places, from the same
- * memoised path strings:
+ * Each viewport measures itself (a `ResizeObserver`, a fallback size where
+ * there is none), so the labels culled and the follow are the viewport's own.
  *
- * - **the tab** — the panel's width, scrolled, zoomed by buttons through
- *   `MAP_ZOOM_LEVELS` (the level is the screen's, so it survives a trip to
- *   another tab);
- * - **full screen** — a full-screen MUI `Dialog` opened from the tab, where the
- *   panel's width no longer hides the detail: the **wheel zooms about the
- *   pointer** and a **drag pans** (`MapView`, `zoomViewAt` — the arithmetic is
- *   pure and tested), with buttons to zoom, fit the whole tree, and go back to
- *   the reader's position. It opens centred on that position. **Show moves**
- *   writes each move's SAN above its dot, in the drawing's units so it scales
- *   with the view (readable from about 2.5×, not drawn below 150%), and only
- *   for the dots on screen (`mapLabelsIn` / `visibleRect`), so a huge tree
- *   costs what is visible; the moves on the reader's way are bold and in the
- *   primary colour.
+ * ## What is drawn
  *
- * **What it maps is the screen's.** The player hands it the **session's** tree
- * — the repertoire and every move added this session — with `addedIds`, so a
- * move played off the file appears at once, its line and a ring round its dot
- * in the added colour (the move list's `success.main`, one colour for one
- * idea), and the header counts them. Backtracking hands it the repertoire as
- * it arrived — its coverage is defined on that — and while the reader stands
- * in an added line the marker waits on the last repertoire position before it.
+ * Every move is a dot **in the colour of the side that made it**, ringed so it
+ * shows on either theme, larger at a line's end; the way from the start to the
+ * position on screen is highlighted, its dots ringed in the primary colour,
+ * with a marker on the position. The lines keep their width at every scale
+ * (`non-scaling-stroke`); the dots and labels scale with the drawing.
+ *
+ * **Coverage is optional**: Backtracking passes it — covered lines green, a
+ * progress bar — and the player passes none. **What it maps is the screen's**:
+ * the player hands it the session's tree with `addedIds`, so a move played off
+ * the file appears at once, in the move list's extension colour; Backtracking
+ * hands it the repertoire its coverage is defined on.
  *
  * The drawing is a diagram, not text, so it is pinned left-to-right (`dir`)
- * the way the move numbers are: depth runs the same way in every language.
- * Its colours are theme tokens, so it follows light and dark.
+ * the way the move numbers are. Its colours are theme tokens, but for the
+ * dots' own white and black, which name a side.
  */
 
 const stroke = (pick: (palette: Theme["palette"]) => string) => ({
   stroke: (theme: Theme) => pick((theme.vars ?? theme).palette as Theme["palette"]),
 });
 
-/** The drawing's look, for either `<svg>` it is drawn in. */
+/** The drawing's look, for every `<svg>` it is drawn in. */
 const drawingSx: SxProps<Theme> = {
   display: "block",
   fill: "none",
@@ -154,13 +145,16 @@ const NO_COVERAGE: Coverage = { total: 0, under: () => 1 };
 
 /** How far a pointer may travel and still be a click rather than a drag. */
 const CLICK_SLOP_PX = 4;
-
-/** How much one wheel notch zooms the full-screen view. */
+/** How close to the viewport's edge the marker may come before the view follows it. */
+const FOLLOW_EDGE_PX = 24;
+/** How much one wheel notch zooms. */
 const WHEEL_ZOOM = 0.0015;
-/** How much a zoom button zooms the full-screen view. */
+/** How much a zoom button zooms. */
 const BUTTON_ZOOM = 1.25;
-/** The full-screen toolbar's height, for the first centring before layout. */
+/** The full-screen toolbar's height, for the view before the dialog is measured. */
 const TOOLBAR_ESTIMATE_PX = 64;
+
+type Size = { width: number; height: number };
 
 type Drawing = {
   layout: MapLayout;
@@ -174,17 +168,15 @@ type Drawing = {
   height: number;
 };
 
-/** The drawing itself — the same layers in the tab and full screen. */
+/** The drawing itself — the same layers in every viewport. */
 function MapLayers({
   testId,
   drawing,
   nodeId,
-  markerRef,
 }: {
   testId: string;
   drawing: Drawing;
   nodeId: string | null;
-  markerRef?: Ref<SVGCircleElement>;
 }) {
   const { t } = useTranslation();
   const { edges, dots, trail, here } = drawing;
@@ -225,7 +217,6 @@ function MapLayers({
       <path className="map-dot-white" d={dots.whiteEnds} strokeWidth={6} data-testid={`${testId}-white-ends`} />
       <path className="map-dot-black" d={dots.blackEnds} strokeWidth={6} data-testid={`${testId}-black-ends`} />
       <circle
-        ref={markerRef}
         className="map-here"
         cx={here.px}
         cy={here.py}
@@ -245,67 +236,80 @@ function MapButton({
   label,
   testId,
   onClick,
-  disabled = false,
   pressed,
   children,
 }: {
   label: string;
   testId: string;
   onClick: () => void;
-  disabled?: boolean;
   /** A toggle's state; absent for a plain button. */
   pressed?: boolean;
   children: ReactNode;
 }) {
   return (
     <Tooltip title={label}>
-      <span>
-        <IconButton
-          size="small"
-          disabled={disabled}
-          onClick={onClick}
-          aria-label={label}
-          aria-pressed={pressed}
-          color={pressed ? "primary" : "default"}
-          data-testid={testId}
-        >
-          {children}
-        </IconButton>
-      </span>
+      <IconButton
+        size="small"
+        onClick={onClick}
+        aria-label={label}
+        aria-pressed={pressed}
+        color={pressed ? "primary" : "default"}
+        data-testid={testId}
+      >
+        {children}
+      </IconButton>
     </Tooltip>
   );
 }
+
+/**
+ * A box's size, as a `ResizeObserver` reports it — the fallback until it
+ * does, and where there is none (jsdom). A hidden box (a kept tab, not
+ * showing) reports nothing and keeps the size it had.
+ */
+const useBoxSize = (fallback: () => Size) => {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [size, setSize] = useState<Size>(fallback);
+  useEffect(() => {
+    const box = ref.current;
+    if (box === null || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect;
+      if (width <= 0 || height <= 0) return;
+      setSize((current) =>
+        current.width === width && current.height === height ? current : { width, height },
+      );
+    });
+    observer.observe(box);
+    return () => observer.disconnect();
+  }, []);
+  return { ref, size };
+};
 
 function RepertoireMap({
   testId,
   repertoire,
   coverage,
   nodeId,
-  zoom = MAP_DEFAULT_ZOOM,
-  onZoomChange,
   onSelectNode,
   addedIds,
 }: {
   testId: string;
-  /** The repertoire as it arrived. */
+  /** The tree to draw — the session's in the player, the repertoire in a game. */
   repertoire: GameTree;
   /** A game's coverage — Backtracking's; none draws every line alike. */
   coverage?: Coverage;
-  /** Where the reader is, on the repertoire; `null` is the start position. */
+  /** Where the reader is, on `repertoire`; `null` is the start position. */
   nodeId: string | null;
-  /** The tab's scale — one of `MAP_ZOOM_LEVELS`. */
-  zoom?: number;
-  onZoomChange: (zoom: number) => void;
-  /**
-   * Go to a position — the player's; present, the full-screen map's dots are
-   * links while the moves are written on it.
-   */
+  /** Go to a position — the player's; present, a written move is a link. */
   onSelectNode?: (id: string) => void;
   /** The moves in `repertoire` the reader added this session — the player's. */
   addedIds?: ReadonlySet<string>;
 }) {
   const { t } = useTranslation();
   const [fullScreen, setFullScreen] = useState(false);
+  // One setting for both viewports; on by default.
+  const [showMoves, setShowMoves] = useState(true);
 
   const layout = useMemo(() => mapLayoutOf(repertoire), [repertoire]);
   const edges = useMemo(
@@ -333,17 +337,8 @@ function RepertoireMap({
     height: MAP_PAD * 2 + (layout.rows - 1) * MAP_DY,
   };
 
-  // Keep the marker in view as play moves — both scrolling boxes, the tab's
-  // and this one's. jsdom has no scrolling, hence the optional call.
-  const marker = useRef<SVGCircleElement | null>(null);
-  useLayoutEffect(() => {
-    marker.current?.scrollIntoView?.({ block: "nearest", inline: "center" });
-  }, [nodeId, zoom]);
-
   const covered = coverage === undefined ? 0 : coverage.total - coverage.under(null);
   const left = coverage === undefined ? 0 : coverage.under(null);
-  const smallest = zoom <= MAP_ZOOM_LEVELS[0];
-  const largest = zoom >= MAP_ZOOM_LEVELS[MAP_ZOOM_LEVELS.length - 1];
 
   /** The tree's size — what the header says without a game — and what was added. */
   const added = addedIds?.size ?? 0;
@@ -357,27 +352,19 @@ function RepertoireMap({
     ...(added > 0 ? [t("repertoires.play.map.added", { count: added })] : []),
   ].join(" · ");
 
-  const progress =
-    coverage === undefined ? (
-      <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-        {size}
-      </Typography>
-    ) : (
-      <>
-        <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-          {t("repertoires.play.score.covered", { covered, total: coverage.total })}
-        </Typography>
-        <Typography variant="caption" sx={{ color: "text.secondary" }}>
-          {left === 0
-            ? t("repertoires.play.map.done")
-            : t("repertoires.play.map.left", { count: left })}
-        </Typography>
-      </>
-    );
+  const summary =
+    coverage === undefined
+      ? size
+      : left === 0
+        ? t("repertoires.play.map.done")
+        : t("repertoires.play.map.left", { count: left });
 
   return (
-    <Box data-testid={testId} sx={{ display: "flex", flexDirection: "column", gap: 1, p: 1 }}>
-      <Box>
+    <Box
+      data-testid={testId}
+      sx={{ display: "flex", flexDirection: "column", gap: 1, p: 1, height: "100%", minHeight: 0 }}
+    >
+      <Box sx={{ flexShrink: 0 }}>
         {coverage !== undefined && (
           <>
             <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
@@ -392,45 +379,25 @@ function RepertoireMap({
             />
           </>
         )}
-        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-          <Typography
-            variant="caption"
-            sx={{ color: "text.secondary", flexGrow: 1 }}
-            data-testid={`${testId}-left`}
-          >
-            {coverage === undefined
-              ? size
-              : left === 0
-                ? t("repertoires.play.map.done")
-                : t("repertoires.play.map.left", { count: left })}
-          </Typography>
-          <MapButton
-            label={t("repertoires.play.map.zoomOut")}
-            testId={`${testId}-zoom-out`}
-            disabled={smallest}
-            onClick={() => onZoomChange(nextMapZoom(zoom, -1))}
-          >
-            <ZoomOutRoundedIcon fontSize="small" />
-          </MapButton>
-          {/* The level, and a way back to the drawing's own size. */}
-          <Tooltip title={t("repertoires.play.map.zoomReset")}>
-            <ButtonBase
-              onClick={() => onZoomChange(MAP_DEFAULT_ZOOM)}
-              aria-label={t("repertoires.play.map.zoomReset")}
-              data-testid={`${testId}-zoom`}
-              sx={{ typography: "caption", minWidth: "3.5em", borderRadius: 1, px: 0.5 }}
-            >
-              <span dir="ltr">{`${Math.round(zoom * 100)}%`}</span>
-            </ButtonBase>
-          </Tooltip>
-          <MapButton
-            label={t("repertoires.play.map.zoomIn")}
-            testId={`${testId}-zoom-in`}
-            disabled={largest}
-            onClick={() => onZoomChange(nextMapZoom(zoom, 1))}
-          >
-            <ZoomInRoundedIcon fontSize="small" />
-          </MapButton>
+        <Typography
+          variant="caption"
+          component="p"
+          sx={{ color: "text.secondary" }}
+          data-testid={`${testId}-left`}
+        >
+          {summary}
+        </Typography>
+      </Box>
+
+      <MapViewport
+        testId={testId}
+        drawing={drawing}
+        nodeId={nodeId}
+        showMoves={showMoves}
+        onShowMovesChange={setShowMoves}
+        onSelectNode={onSelectNode}
+        fallbackSize={() => ({ width: 320, height: 360 })}
+        extraButtons={
           <MapButton
             label={t("repertoires.play.map.fullScreen")}
             testId={`${testId}-fullscreen`}
@@ -438,27 +405,9 @@ function RepertoireMap({
           >
             <FullscreenRoundedIcon fontSize="small" />
           </MapButton>
-        </Box>
-      </Box>
-
-      <Box dir="ltr" sx={{ overflowX: "auto" }}>
-        <Box
-          component="svg"
-          role="img"
-          aria-label={t("repertoires.play.map.label")}
-          // Scaled by the zoom; the viewBox keeps the layout's own coordinates.
-          width={drawing.width * zoom}
-          height={drawing.height * zoom}
-          viewBox={`0 0 ${drawing.width} ${drawing.height}`}
-          data-testid={`${testId}-svg`}
-          data-rows={layout.rows}
-          data-columns={layout.columns}
-          data-zoom={zoom}
-          sx={drawingSx}
-        >
-          <MapLayers testId={testId} drawing={drawing} nodeId={nodeId} markerRef={marker} />
-        </Box>
-      </Box>
+        }
+        sx={{ flex: 1, minHeight: 240 }}
+      />
 
       <Dialog
         fullScreen
@@ -468,21 +417,66 @@ function RepertoireMap({
         data-testid={`${testId}-dialog`}
       >
         {fullScreen && (
-          <FullScreenMap
-            testId={`${testId}-dialog`}
-            drawing={drawing}
-            nodeId={nodeId}
-            progress={progress}
-            onClose={() => setFullScreen(false)}
-            onSelectNode={
-              onSelectNode === undefined
-                ? undefined
-                : (id) => {
-                    onSelectNode(id);
-                    setFullScreen(false);
-                  }
-            }
-          />
+          <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+                px: 2,
+                py: 1,
+                borderBottom: "1px solid",
+                borderColor: "divider",
+                flexShrink: 0,
+              }}
+            >
+              <Typography
+                variant="h6"
+                component="h2"
+                id={`${testId}-dialog-title`}
+                sx={{ fontWeight: 700, marginInlineEnd: 1 }}
+              >
+                {t("repertoires.play.tabs.map")}
+              </Typography>
+              <Box sx={{ flexGrow: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
+                {coverage !== undefined && (
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                    {t("repertoires.play.score.covered", { covered, total: coverage.total })}
+                  </Typography>
+                )}
+                <Typography variant="caption" sx={{ color: "text.secondary" }}>
+                  {summary}
+                </Typography>
+              </Box>
+              <MapButton
+                label={t("repertoires.play.map.close")}
+                testId={`${testId}-dialog-close`}
+                onClick={() => setFullScreen(false)}
+              >
+                <CloseRoundedIcon />
+              </MapButton>
+            </Box>
+            <MapViewport
+              testId={`${testId}-dialog`}
+              drawing={drawing}
+              nodeId={nodeId}
+              showMoves={showMoves}
+              onShowMovesChange={setShowMoves}
+              onSelectNode={
+                onSelectNode === undefined
+                  ? undefined
+                  : (id) => {
+                      onSelectNode(id);
+                      setFullScreen(false);
+                    }
+              }
+              fallbackSize={() => ({
+                width: window.innerWidth,
+                height: window.innerHeight - TOOLBAR_ESTIMATE_PX,
+              })}
+              sx={{ flex: 1, minHeight: 0, px: 2, pb: 2 }}
+            />
+          </Box>
         )}
       </Dialog>
     </Box>
@@ -490,60 +484,72 @@ function RepertoireMap({
 }
 
 /**
- * The map full screen: a toolbar over a viewport the drawing is panned and
- * zoomed in with the mouse. Mounted only while the dialog is open, so it
- * measures the viewport it actually has and opens on the reader's position.
+ * The drawing, panned and zoomed with the mouse, under a row of controls —
+ * the tab's and the full-screen dialog's alike. See the header note.
  */
-function FullScreenMap({
+function MapViewport({
   testId,
   drawing,
   nodeId,
-  progress,
-  onClose,
+  showMoves,
+  onShowMovesChange,
   onSelectNode,
+  fallbackSize,
+  extraButtons,
+  sx,
 }: {
   testId: string;
   drawing: Drawing;
   nodeId: string | null;
-  progress: ReactNode;
-  onClose: () => void;
+  showMoves: boolean;
+  onShowMovesChange: (next: boolean) => void;
   /** Present: a written move's dot goes to its position. */
   onSelectNode?: (id: string) => void;
+  /** The size assumed until the viewport is measured. */
+  fallbackSize: () => Size;
+  /** More buttons at the end of the row — the tab's full-screen one. */
+  extraButtons?: ReactNode;
+  sx?: SxProps<Theme>;
 }) {
   const { t } = useTranslation();
-  const viewport = useRef<HTMLDivElement | null>(null);
-
-  /** The viewport's size — jsdom lays nothing out, so the window stands in. */
-  const size = useCallback(() => {
-    const box = viewport.current;
-    return {
-      vw: box?.clientWidth || window.innerWidth,
-      vh: box?.clientHeight || window.innerHeight,
-    };
-  }, []);
+  const { ref: viewport, size } = useBoxSize(fallbackSize);
 
   const centred = useCallback(
-    (k: number): MapView => {
-      const { vw, vh } = size();
-      return centerView(drawing.here.px, drawing.here.py, k, vw, vh);
-    },
+    (k: number, at: Size = size): MapView =>
+      centerView(drawing.here.px, drawing.here.py, k, at.width, at.height),
     [drawing.here.px, drawing.here.py, size],
   );
 
+  // Opens readable, on the reader's position.
+  const [view, setView] = useState<MapView>(() => centred(MAP_INITIAL_K));
+  /** Whether the reader has moved the view — until then, a new size re-centres it. */
+  const [touched, setTouched] = useState(false);
+
   /*
-    Opens on the reader's position, at the drawing's own size. The viewport is
-    not laid out yet on the first render, so the window below the toolbar
-    stands in for it — the one estimate here; "where am I" centres exactly.
+    Two adjustments made during render against what changed, rather than in
+    an effect (`react-hooks/set-state-in-effect`): the first real measurement
+    re-centres an untouched view, and play moving the marker out of view
+    brings the view after it, at the same zoom.
   */
-  const [view, setView] = useState<MapView>(() =>
-    centerView(
-      drawing.here.px,
-      drawing.here.py,
-      1,
-      window.innerWidth,
-      window.innerHeight - TOOLBAR_ESTIMATE_PX,
-    ),
-  );
+  const [measured, setMeasured] = useState(size);
+  if (measured !== size) {
+    setMeasured(size);
+    if (!touched) setView(centred(view.k, size));
+  }
+  const [followed, setFollowed] = useState(nodeId);
+  if (followed !== nodeId) {
+    setFollowed(nodeId);
+    const sx = drawing.here.px * view.k + view.x;
+    const sy = drawing.here.py * view.k + view.y;
+    if (
+      sx < FOLLOW_EDGE_PX ||
+      sy < FOLLOW_EDGE_PX ||
+      sx > size.width - FOLLOW_EDGE_PX ||
+      sy > size.height - FOLLOW_EDGE_PX
+    ) {
+      setView(centred(view.k));
+    }
+  }
 
   /*
     The wheel zooms about the pointer. A native listener, not React's
@@ -557,30 +563,29 @@ function FullScreenMap({
       event.preventDefault();
       const rect = box.getBoundingClientRect();
       const factor = Math.exp(-event.deltaY * WHEEL_ZOOM);
+      setTouched(true);
       setView((current) =>
         zoomViewAt(current, factor, event.clientX - rect.left, event.clientY - rect.top),
       );
     };
     box.addEventListener("wheel", onWheel, { passive: false });
     return () => box.removeEventListener("wheel", onWheel);
-  }, []);
+  }, [viewport]);
 
-  /*
-    Show moves: the labels of the dots on screen, recomputed as the view
-    moves. The viewport is the dialog below its toolbar — the window stands in
-    for it, as for the first centring, so render reads no ref.
-  */
-  const [showMoves, setShowMoves] = useState(false);
+  /** A button zooms about the middle of the viewport. */
+  const zoomBy = (factor: number) => {
+    setTouched(true);
+    setView((current) => zoomViewAt(current, factor, size.width / 2, size.height / 2));
+  };
+
+  /** The labels of the dots on screen, as the view moves. */
   const readable = view.k >= MAP_LABEL_MIN_K;
   const labels = useMemo(
     () =>
       showMoves && readable
-        ? mapLabelsIn(
-            drawing.layout,
-            visibleRect(view, window.innerWidth, window.innerHeight - TOOLBAR_ESTIMATE_PX),
-          )
+        ? mapLabelsIn(drawing.layout, visibleRect(view, size.width, size.height))
         : [],
-    [showMoves, readable, drawing.layout, view],
+    [showMoves, readable, drawing.layout, view, size],
   );
 
   /*
@@ -592,41 +597,21 @@ function FullScreenMap({
   const drag = useRef<{ x: number; y: number; view: MapView } | null>(null);
   const moved = useRef(false);
   const [dragging, setDragging] = useState(false);
-
-  /** A button zooms about the middle of the viewport. */
-  const zoomBy = (factor: number) => {
-    const { vw, vh } = size();
-    setView((current) => zoomViewAt(current, factor, vw / 2, vh / 2));
+  const endDrag = () => {
+    drag.current = null;
+    setDragging(false);
   };
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          gap: 1,
-          px: 2,
-          py: 1,
-          borderBottom: "1px solid",
-          borderColor: "divider",
-          flexShrink: 0,
-        }}
-      >
-        <Typography
-          variant="h6"
-          component="h2"
-          id={`${testId}-title`}
-          sx={{ fontWeight: 700, marginInlineEnd: 1 }}
-        >
-          {t("repertoires.play.tabs.map")}
-        </Typography>
-        <Box sx={{ flexGrow: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
-          {progress}
-        </Box>
+    <Box sx={[{ display: "flex", flexDirection: "column" }, ...(Array.isArray(sx) ? sx : [sx])]}>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 0.25, flexShrink: 0, flexWrap: "wrap" }}>
         <Typography
           variant="caption"
-          sx={{ color: showMoves && !readable ? "warning.main" : "text.secondary" }}
+          sx={{
+            color: showMoves && !readable ? "warning.main" : "text.secondary",
+            flexGrow: 1,
+            minWidth: 0,
+          }}
           data-testid={`${testId}-hint`}
         >
           {showMoves && !readable
@@ -637,16 +622,16 @@ function FullScreenMap({
           label={t("repertoires.play.map.showMoves")}
           testId={`${testId}-show-moves`}
           pressed={showMoves}
-          onClick={() => setShowMoves((current) => !current)}
+          onClick={() => onShowMovesChange(!showMoves)}
         >
-          <AbcRoundedIcon />
+          <AbcRoundedIcon fontSize="small" />
         </MapButton>
         <MapButton
           label={t("repertoires.play.map.zoomOut")}
           testId={`${testId}-zoom-out`}
           onClick={() => zoomBy(1 / BUTTON_ZOOM)}
         >
-          <ZoomOutRoundedIcon />
+          <ZoomOutRoundedIcon fontSize="small" />
         </MapButton>
         <Typography
           variant="caption"
@@ -661,28 +646,26 @@ function FullScreenMap({
           testId={`${testId}-zoom-in`}
           onClick={() => zoomBy(BUTTON_ZOOM)}
         >
-          <ZoomInRoundedIcon />
+          <ZoomInRoundedIcon fontSize="small" />
         </MapButton>
         <MapButton
           label={t("repertoires.play.map.fit")}
           testId={`${testId}-fit`}
           onClick={() => {
-            const { vw, vh } = size();
-            setView(fitView(drawing.width, drawing.height, vw, vh));
+            setTouched(true);
+            setView(fitView(drawing.width, drawing.height, size.width, size.height));
           }}
         >
-          <FitScreenRoundedIcon />
+          <FitScreenRoundedIcon fontSize="small" />
         </MapButton>
         <MapButton
           label={t("repertoires.play.map.here")}
           testId={`${testId}-locate`}
           onClick={() => setView((current) => centred(current.k))}
         >
-          <MyLocationRoundedIcon />
+          <MyLocationRoundedIcon fontSize="small" />
         </MapButton>
-        <MapButton label={t("repertoires.play.map.close")} testId={`${testId}-close`} onClick={onClose}>
-          <CloseRoundedIcon />
-        </MapButton>
+        {extraButtons}
       </Box>
 
       <Box
@@ -703,6 +686,7 @@ function FullScreenMap({
             moved.current = true;
             event.currentTarget.setPointerCapture?.(event.pointerId);
             setDragging(true);
+            setTouched(true);
           }
           setView({
             ...start.view,
@@ -710,18 +694,15 @@ function FullScreenMap({
             y: start.view.y + event.clientY - start.y,
           });
         }}
-        onPointerUp={() => {
-          drag.current = null;
-          setDragging(false);
-        }}
-        onPointerCancel={() => {
-          drag.current = null;
-          setDragging(false);
-        }}
+        onPointerUp={endDrag}
+        onPointerCancel={endDrag}
         sx={{
           flex: 1,
           minHeight: 0,
           overflow: "hidden",
+          border: "1px solid",
+          borderColor: "divider",
+          borderRadius: 1,
           cursor: dragging ? "grabbing" : "grab",
           touchAction: "none",
           userSelect: "none",
@@ -734,6 +715,8 @@ function FullScreenMap({
           width="100%"
           height="100%"
           data-testid={`${testId}-svg`}
+          data-rows={drawing.layout.rows}
+          data-columns={drawing.layout.columns}
           sx={drawingSx}
         >
           <g

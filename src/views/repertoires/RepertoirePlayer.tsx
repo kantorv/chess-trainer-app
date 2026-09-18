@@ -53,7 +53,6 @@ import {
   REQUIRED_MOVE_ARROW_COLOR,
 } from "../tools/analysis/nextMoveArrows";
 import RepertoireGamesMenu from "./RepertoireGamesMenu";
-import { MAP_DEFAULT_ZOOM } from "../../lib/repertoireMap";
 import RepertoireMap from "./RepertoireMap";
 import { useRepertoireGame } from "./useRepertoireGame";
 
@@ -123,9 +122,10 @@ import { useRepertoireGame } from "./useRepertoireGame";
 
 /**
  * The tabs that stay mounted once opened — see `BoardPanel`'s `keepMounted`.
- * The Moves list of a 9,000-node repertoire takes most of a second to mount.
+ * The Moves list of a 9,000-node repertoire takes most of a second to mount;
+ * the Map keeps where the reader panned and zoomed it.
  */
-const KEEP_MOUNTED = ["moves"] as const;
+const KEEP_MOUNTED = ["moves", "map"] as const;
 
 /** How long a finished line stays on screen before Backtracking goes back. */
 export const BACKTRACK_DELAY_MS = 900;
@@ -360,8 +360,6 @@ function RepertoirePlayer({
     line the reader added, its marker waits on the last repertoire position.
   */
   const hasMap = game !== "end";
-  // The map's zoom is the screen's, so it survives a trip to another tab.
-  const [mapZoom, setMapZoom] = useState(MAP_DEFAULT_ZOOM);
   const mapNodeId = useMemo(() => {
     if (!hasMap) return null;
     if (game === undefined) return core.nodeId;
@@ -630,8 +628,6 @@ function RepertoirePlayer({
                         // The player's full-screen map: a dot is a link to its
                         // position. A game's is not — no skipping ahead.
                         onSelectNode={game === undefined ? core.goToNode : undefined}
-                        zoom={mapZoom}
-                        onZoomChange={setMapZoom}
                       />
                     ) : (
                       reading || null

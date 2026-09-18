@@ -13,12 +13,10 @@ import {
   mapPathDots,
   mapPathTo,
   MAP_VIEW_MAX_K,
-  MAP_ZOOM_LEVELS,
   centerView,
   fitView,
   mapLabelsIn,
   visibleRect,
-  nextMapZoom,
   zoomViewAt,
 } from "./repertoireMap";
 
@@ -98,14 +96,7 @@ describe("the repertoire map layout", () => {
     expect(mapPathTo(layout, [])).toBe("");
   });
 
-  it("steps the zoom through its levels and stops at the ends", () => {
-    expect(nextMapZoom(1, 1)).toBe(1.25);
-    expect(nextMapZoom(1, -1)).toBe(0.8);
-    expect(nextMapZoom(MAP_ZOOM_LEVELS[0], -1)).toBe(MAP_ZOOM_LEVELS[0]);
-    expect(nextMapZoom(3, 1)).toBe(3);
-  });
-
-  it("zooms the full-screen view about the pointer, fits and centres it", () => {
+  it("zooms a map view about the pointer, fits and centres it", () => {
     // The point under the pointer (100, 50) stays under it.
     const view = zoomViewAt({ x: 20, y: 10, k: 1 }, 2, 100, 50);
     expect(view).toEqual({ k: 2, x: -60, y: -30 });
