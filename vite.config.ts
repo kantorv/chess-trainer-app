@@ -50,6 +50,22 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
+    /*
+      Vitest's default is 5s per test, which the catalog-heavy screen suites
+      (`views/pgn/`, `views/main/Sidebar`, `views/library/`) sit close to: they
+      render a library of ~630 games across ~70 folders, and under full
+      parallelism the slowest of them cross it — not always the same one, which
+      is the tell that it is scheduling rather than a hang. The suite already
+      had one such test failing on `development` before the repertoire examples
+      were added (CTA-60); those took the margin away entirely.
+
+      Raised rather than papered over per-file: the tests are not wrong and the
+      work is real, so the honest fix is to stop asserting that a render
+      finishes in five seconds on a loaded machine. A genuine hang still fails,
+      three times slower. The two tests that walk the 9,146-node Nimzo-Indian
+      repertoire carry their own longer timeouts, in place, where the reason is.
+    */
+    testTimeout: 20000,
     coverage: {
       provider: 'v8',
       include: ['src/**/*.{ts,tsx}'],

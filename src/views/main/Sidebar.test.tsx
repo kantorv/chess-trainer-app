@@ -89,6 +89,15 @@ describe("sidebar navigation", () => {
     a click per folder, and `userEvent` is deliberately slow. The generated
     User PGNs screens push the count up, which is real coverage rather than a
     slow test to trim, so the budget is raised instead.
+
+    CTA-60 raised it again, and it is worth saying why rather than letting the
+    number drift: the three shipped repertoire examples add ~32 screen nodes
+    between them (the Alapin alone is a folder plus 29 chapter sub-folders),
+    and the dev-only Development section adds five more under Vitest, where
+    `import.meta.env.DEV` is true. Every one of those is another chain to open
+    and another click to wait on. The walk is still the right assertion — it is
+    the only thing checking that what the sidebar *renders* links where the
+    registry *says* — so the budget moves, not the coverage.
   */
   it("links to the route each entry declares", async () => {
     renderAt("/");
@@ -132,7 +141,7 @@ describe("sidebar navigation", () => {
 
       expect(links).toContain(node.to);
     }
-  }, 30000);
+  }, 90000);
 
   it("marks only the current route as the current page", () => {
     renderAt("/tools/analysis/saved");
