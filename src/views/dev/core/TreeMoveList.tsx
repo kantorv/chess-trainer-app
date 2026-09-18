@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { Score } from "../../../lib/engineAnalysis";
 import {
   mainlineGame,
@@ -7,11 +7,14 @@ import {
 } from "../../../lib/gameTree";
 import type { PieceMask } from "../../../lib/pieceMask";
 import MoveList from "../../shared/MoveList";
+import type { MenuAnchor } from "../../shared/moveContextMenu";
+import MoveContextMenu, { type MoveMenuTarget } from "./MoveContextMenu";
 
 /**
- * **The merged move list, for every v2 board** (CTA-53) — the shared
- * `MoveList` over a {@link GameTree}, with each side line hanging as an
- * indented run under the mainline move it branches from.
+ * **The variations explorer, for every v2 board** — the shared `MoveList`
+ * over a {@link GameTree}, with each side line hanging as an indented run
+ * under the mainline move it branches from. (It was "the merged move list"
+ * when CTA-53 introduced it; CTA-64 gave it its move menu and its name.)
  *
  * It exists because of the **ply↔node seam**. The list speaks plies over the
  * mainline; the navigation state is a node id, because a click inside a side
@@ -37,6 +40,17 @@ import MoveList from "../../shared/MoveList";
  * The optional `extensionIds` (CTA-63) cross the same seam: the list tints
  * side-line tokens by node id and numbered cells by ply, so the mainline's
  * share of the set is translated to plies here, once per change.
+ *
+ * **It is also the variations explorer** (CTA-64): given `onEditTree`, a
+ * right-click on any move opens `MoveContextMenu` — promote, make main line,
+ * delete from here, copy the line's PGN — and an edit comes back out as a new
+ * tree for the screen to hand its core (`replaceTree`). The seam again: a
+ * numbered cell reports a ply, translated here to its mainline node. The two
+ * handlers the list receives only set this component's menu state, so they
+ * are stable across steps and the memoised list is not re-rendered by one; the
+ * menu is a sibling of the list, outside its memo. Without `onEditTree` nothing
+ * is bound and a right-click is the browser's — every consumer but the
+ * repertoire player.
  */
 function TreeMoveList({
   tree,
@@ -46,6 +60,7 @@ function TreeMoveList({
   evalsByFen,
   mask,
   extensionIds,
+  onEditTree,
 }: {
   tree: GameTree;
   /** The mainline, already walked by the core — not re-walked here. */
@@ -58,6 +73,8 @@ function TreeMoveList({
   mask?: PieceMask;
   /** Moves to tint as added this session — the Play repertoire screen's. */
   extensionIds?: ReadonlySet<string>;
+  /** Opt-in: the move menu, and where its edits go (CTA-64). */
+  onEditTree?: (next: GameTree) => void;
 }) {
   // Memoised on the tree: the walk reads the whole line, and stepping around
   // inside a side line re-renders the panel without touching it.
@@ -102,7 +119,26 @@ function TreeMoveList({
     [mainlineNodes, onSelectNode],
   );
 
-  return (
+  const [menu, setMenu] = useState<MoveMenuTarget | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const editable = onEditTree !== undefined;
+
+  const openMenuAtNode = useCallback((id: string, anchor: MenuAnchor) => {
+    setMenu({ nodeId: id, anchor });
+    setMenuOpen(true);
+  }, []);
+
+  const openMenuAtPly = useCallback(
+    (ply: number, anchor: MenuAnchor) => {
+      const node = mainlineNodes[ply - 1];
+      if (node !== undefined) openMenuAtNode(node.id, anchor);
+    },
+    [mainlineNodes, openMenuAtNode],
+  );
+
+  const closeMenu = useCallback(() => setMenuOpen(false), []);
+
+  const list = (
     <MoveList
       game={game}
       currentPly={mainlinePly}
@@ -114,7 +150,23 @@ function TreeMoveList({
       mask={mask}
       extensionIds={extensionIds}
       extensionPlies={extensionPlies}
+      onContextMenuPly={editable ? openMenuAtPly : undefined}
+      onContextMenuNode={editable ? openMenuAtNode : undefined}
     />
+  );
+
+  if (!editable) return list;
+  return (
+    <>
+      {list}
+      <MoveContextMenu
+        tree={tree}
+        target={menu}
+        open={menuOpen}
+        onClose={closeMenu}
+        onEditTree={onEditTree}
+      />
+    </>
   );
 }
 

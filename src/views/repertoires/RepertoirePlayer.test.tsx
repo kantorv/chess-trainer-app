@@ -701,3 +701,119 @@ describe("keeping a session's changes", () => {
     expect(screen.queryByTestId("repertoire-game-changes")).not.toBeInTheDocument();
   });
 });
+
+describe("the variations explorer's move menu (CTA-64)", () => {
+  const MENU = "move-menu";
+  const token = (san: string) => document.querySelector<HTMLElement>(`[data-san="${san}"]`)!;
+  /** Right-click a move where the pointer is. */
+  const rightClick = (element: HTMLElement) =>
+    fireEvent.contextMenu(element, { clientX: 40, clientY: 60 });
+  /** Let the menu's and the dialog's transitions finish. */
+  const settle = () =>
+    act(() => {
+      vi.advanceTimersByTime(1_000);
+    });
+  const mainlineText = () =>
+    [1, 2, 3, 4, 5, 6, 7]
+      .map((ply) => screen.queryByTestId(`move-ply-${ply}`)?.textContent ?? "")
+      .join(" ")
+      .trim();
+
+  it("offers promote and make main line on a side-line move, and edits the session's tree", () => {
+    mountIdle(`/repertoires/${storeRepertoire("r", CARO)}`);
+    expect(screen.getByTestId("repertoire-board-save")).toBeDisabled();
+
+    rightClick(token("c5"));
+    const menu = within(screen.getByRole("menu"));
+    expect(screen.getByTestId(`${MENU}-move`)).toHaveTextContent("3… c5");
+    expect(screen.getByTestId(`${MENU}-move`)).toHaveAttribute("dir", "ltr");
+    expect(menu.getByTestId(`${MENU}-promote`)).toBeInTheDocument();
+    expect(menu.getByTestId(`${MENU}-copy`)).toBeInTheDocument();
+
+    fireEvent.click(menu.getByTestId(`${MENU}-mainline`));
+    settle();
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    expect(mainlineText()).toBe("e4 c6 d4 d5 e5 c5 dxc5");
+
+    // A session change like any other: Save lights up, and the strip says what.
+    expect(screen.getByTestId("repertoire-board-save")).toBeEnabled();
+    fireEvent.click(screen.getByTestId("repertoire-board-save"));
+    expect(screen.getByTestId("repertoire-board-changes-summary")).toHaveTextContent(
+      "Lines reordered or deleted",
+    );
+  });
+
+  it("offers neither on a mainline move", () => {
+    mountIdle(`/repertoires/${storeRepertoire("r", CARO)}`);
+    rightClick(screen.getByTestId("move-ply-6"));
+    expect(screen.getByTestId(`${MENU}-move`)).toHaveTextContent("3… Bf5");
+    expect(screen.queryByTestId(`${MENU}-promote`)).not.toBeInTheDocument();
+    expect(screen.queryByTestId(`${MENU}-mainline`)).not.toBeInTheDocument();
+    expect(screen.getByTestId(`${MENU}-delete`)).toBeInTheDocument();
+  });
+
+  it("keeps the reader where they stand when a line is promoted", () => {
+    mountProbed(`/repertoires/${storeRepertoire("r", CARO)}?at=e4,c6,d4,d5,e5,c5,dxc5`);
+    rightClick(token("dxc5"));
+    fireEvent.click(screen.getByTestId(`${MENU}-promote`));
+    settle();
+    expect(position()).toBe(fenAfter("e4", "c6", "d4", "d5", "e5", "c5", "dxc5"));
+    expect(atParam()).toBe("e4,c6,d4,d5,e5,c5,dxc5");
+  });
+
+  it("deletes from a move after saying how much goes, and steps back off what went", () => {
+    mountProbed(`/repertoires/${storeRepertoire("r", CARO)}?at=e4,c6,d4,d5,e5,Bf5,Nf3`);
+    rightClick(screen.getByTestId("move-ply-5"));
+    fireEvent.click(screen.getByTestId(`${MENU}-delete`));
+    settle();
+
+    const dialog = within(screen.getByRole("dialog"));
+    expect(dialog.getByTestId(`${MENU}-delete-summary`)).toHaveTextContent(
+      "5 moves / 2 lines will be deleted.",
+    );
+    // Cancelling changes nothing.
+    fireEvent.click(dialog.getByTestId(`${MENU}-delete-cancel`));
+    settle();
+    expect(mainlineText()).toBe("e4 c6 d4 d5 e5 Bf5 Nf3");
+
+    rightClick(screen.getByTestId("move-ply-5"));
+    fireEvent.click(screen.getByTestId(`${MENU}-delete`));
+    settle();
+    fireEvent.click(screen.getByTestId(`${MENU}-delete-confirm`));
+    settle();
+    expect(mainlineText()).toBe("e4 c6 d4 d5");
+    expect(token("c5")).toBeNull();
+    // The reader stood on a deleted move: now on the move it answered.
+    expect(position()).toBe(fenAfter("e4", "c6", "d4", "d5"));
+    expect(atParam()).toBe("e4,c6,d4,d5");
+    expect(screen.getByTestId("repertoire-board-save")).toBeEnabled();
+  });
+
+  it("copies the line from the start to the move as PGN", async () => {
+    const writeText = vi.fn(() => Promise.resolve());
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      configurable: true,
+    });
+    mountIdle(`/repertoires/${storeRepertoire("r", CARO)}`);
+    rightClick(token("dxc5"));
+    await act(async () => {
+      fireEvent.click(screen.getByTestId(`${MENU}-copy`));
+    });
+    expect(writeText).toHaveBeenCalledWith(
+      '[Event "My Caro"]\n\n1. e4 c6 2. d4 d5 3. e5 c5 4. dxc5 *',
+    );
+    expect(screen.getByTestId(`${MENU}-copied`)).toHaveTextContent("Variation PGN copied");
+    // Copying is not an edit.
+    expect(screen.getByTestId("repertoire-board-save")).toBeDisabled();
+  });
+
+  it("is the player's only: a game's move list leaves the right-click to the browser", () => {
+    mountIdle(`/repertoires/${storeRepertoire("r", CARO)}/games/end`);
+    drop("e2", "e4");
+    wait();
+    fireEvent.click(screen.getByTestId("repertoire-game-panel-tab-moves"));
+    expect(fireEvent.contextMenu(screen.getByTestId("move-ply-1"))).toBe(true);
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+  });
+});

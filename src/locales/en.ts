@@ -174,6 +174,27 @@ const en = {
     notationHint:
       "A move by a masked piece is written as coordinates (g1f3) in the move list and the variations, so the notation does not name what the board is hiding.",
   },
+  /**
+   * The variations explorer's right-click menu on a move (CTA-64) — shared by
+   * whichever board passes `onEditTree` to `TreeMoveList`.
+   */
+  moveMenu: {
+    promote: "Promote variation",
+    makeMainline: "Make main line",
+    deleteFrom: "Delete from here",
+    copyPgn: "Copy variation PGN",
+    copied: "Variation PGN copied",
+    copyFailed: "Could not copy — the clipboard is not available here.",
+    deleteTitle: "Delete from",
+    /** `moves` and `lines` are the two counts below, already worded. */
+    deleteSummary: "{{moves}} / {{lines}} will be deleted.",
+    moves_one: "{{count}} move",
+    moves_other: "{{count}} moves",
+    lines_one: "{{count}} line",
+    lines_other: "{{count}} lines",
+    delete: "Delete",
+    cancel: "Cancel",
+  },
   moveList: {
     title: "Moves",
     /** Ply 0, a selectable entry of its own. */
@@ -1059,6 +1080,8 @@ const en = {
       saveNothing: "No unsaved changes",
       added_one: "{{count}} move added",
       added_other: "{{count}} moves added",
+      /** The changes are edits alone — lines promoted or deleted, none added. */
+      edited: "Lines reordered or deleted",
       update: "Update repertoire",
       updateHelp: "Make these changes part of this repertoire.",
       copy: "Save as copy",

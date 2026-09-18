@@ -111,6 +111,12 @@ import { useRepertoireGame } from "./useRepertoireGame";
  *   position on screen, the original untouched: how a shipped repertoire
  *   becomes one's own) and **Discard**. A reload with changes unsaved asks
  *   first. Nothing is ever written unasked.
+ * - **The Moves tab is the variations explorer** (CTA-64, the player's
+ *   only): a right-click on a move promotes its line, makes it the main line,
+ *   deletes from it (asking first) or copies its PGN. An edit goes through
+ *   the core's `replaceTree`, which keeps the reader where they stand, and is
+ *   a session change like any other — the Save button, the strip, the Map
+ *   and `?at=` all follow the edited tree.
  * - **Tabs: Moves · (Score) · Map · Settings · Engine.** Settings holds the
  *   side, Autoplay (player only), the next-move arrows and the engine's
  *   switch; the Engine tab is disabled while the engine is off; Score is a
@@ -706,6 +712,9 @@ function RepertoirePlayer({
                   onSelectNode={core.goToNode}
                   extensionIds={extensionIds}
                   evalsByFen={engine.evalsByFen}
+                  // The variations explorer's move menu (CTA-64): the
+                  // player's only — a game never writes.
+                  onEditTree={game === undefined ? core.replaceTree : undefined}
                 />
               )),
           },
@@ -812,7 +821,12 @@ function RepertoirePlayer({
               {changed && changesOpen && (
                 <RepertoireChangesBar
                   testId={`${id}-changes`}
-                  summary={t("repertoires.changes.added", { count: extensionIds.size })}
+                  summary={
+                    // An edit alone (a line promoted or deleted) adds nothing.
+                    extensionIds.size === 0
+                      ? t("repertoires.changes.edited")
+                      : t("repertoires.changes.added", { count: extensionIds.size })
+                  }
                   problem={saveProblem}
                   // A protected repertoire (its settings' default): no
                   // Update — its settings instead, where that is switched off.

@@ -7,6 +7,7 @@ import {
   useIsExtensionNode,
   useScrollWhenCurrent,
 } from "./moveSelection";
+import { menuAnchorOf, type ContextMenuNodeHandler } from "./moveContextMenu";
 
 /**
  * The pieces a side line is drawn with: one clickable move token, and the
@@ -16,7 +17,8 @@ import {
  * flowing variation tree (`VariationTree.tsx` — the Openings explorer and the
  * Library repertoire viewer) and the shared move list (`MoveList.tsx`), which
  * prints each side line as an indented run directly under the row holding the
- * move it branches from. Same tokens, same clicks, same numbering, one
+ * move it branches from — the variations explorer, behind `TreeMoveList`.
+ * Same tokens, same clicks, same numbering, one
  * implementation — so the two cannot drift apart the way a copy of this would.
  *
  * Presentational, like everything around it: the selected node comes in as a
@@ -41,6 +43,13 @@ import {
  * everything here is memoised on the tree's own nodes — so a list renders its
  * structure once per game, and a step re-renders the two tokens whose
  * highlight changed rather than every token in a 9,146-node tree (CTA-61).
+ *
+ * **A right-click is opt-in** (CTA-64, the variations explorer's move menu):
+ * with `onContextMenuNode` a token reports the node and where the pointer was,
+ * and the browser's own menu is held back; without it — every consumer but the
+ * repertoire player — nothing is bound and a right-click is the browser's. The
+ * handler is threaded like `onSelectNode` and must be as stable, or the
+ * memoised blocks re-render.
  */
 
 /*
@@ -120,11 +129,13 @@ const MoveToken = memo(function MoveToken({
   startFen,
   forceNumber,
   onSelect,
+  onContextMenu,
 }: {
   node: VariationNode;
   startFen: string;
   forceNumber: boolean;
   onSelect?: (id: string) => void;
+  onContextMenu?: ContextMenuNodeHandler;
 }) {
   const isCurrent = useIsCurrentNode(node.id);
   const isExtension = useIsExtensionNode(node.id);
@@ -150,6 +161,14 @@ const MoveToken = memo(function MoveToken({
       data-extension={isExtension ? "true" : undefined}
       aria-current={isCurrent ? "true" : undefined}
       onClick={() => onSelect?.(node.id)}
+      onContextMenu={
+        onContextMenu === undefined
+          ? undefined
+          : (event) => {
+              event.preventDefault();
+              onContextMenu(node.id, menuAnchorOf(event));
+            }
+      }
     >
       {`${prefix}${node.san}`}
       {evalText !== undefined && (
@@ -162,6 +181,8 @@ const MoveToken = memo(function MoveToken({
 type LineProps = {
   startFen: string;
   onSelectNode?: (id: string) => void;
+  /** A right-click on a move — opt-in; see the header. */
+  onContextMenuNode?: ContextMenuNodeHandler;
   /**
    * A side line's accessible name (`moveList.variation`), translated once by
    * the list rather than by each of what can be thousands of blocks — the
@@ -178,6 +199,7 @@ export const VariationBlock = memo(function VariationBlock({
   node,
   startFen,
   onSelectNode,
+  onContextMenuNode,
   groupLabel,
 }: LineProps & {
   /** The side line's first move; its children continue it, and branch in turn. */
@@ -195,6 +217,7 @@ export const VariationBlock = memo(function VariationBlock({
         startFen={startFen}
         forceNumber
         onSelectNode={onSelectNode}
+        onContextMenuNode={onContextMenuNode}
         groupLabel={groupLabel}
       />
     </Block>
@@ -215,6 +238,7 @@ export const VariationLine = memo(function VariationLine({
   startFen,
   forceNumber,
   onSelectNode,
+  onContextMenuNode,
   groupLabel,
 }: LineProps & {
   /** The alternatives at this point; `nodes[0]` is the line, the rest side lines. */
@@ -236,6 +260,7 @@ export const VariationLine = memo(function VariationLine({
         startFen={startFen}
         forceNumber={restate}
         onSelect={onSelectNode}
+        onContextMenu={onContextMenuNode}
       />,
     );
     for (const side of sides) {
@@ -245,6 +270,7 @@ export const VariationLine = memo(function VariationLine({
           node={side}
           startFen={startFen}
           onSelectNode={onSelectNode}
+          onContextMenuNode={onContextMenuNode}
           groupLabel={groupLabel}
         />,
       );
