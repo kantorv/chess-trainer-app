@@ -914,7 +914,11 @@ when play — not navigation — reaches a leaf of the repertoire (the module's
   right, a row per line, the mainline on the top row and side lines dropping
   below their branch point — with covered lines green, the rest grey, the way
   from the start to the position on screen highlighted and a marker there,
-  kept in view as play moves; a progress bar and "N lines left" above it. The
+  kept in view as play moves; a progress bar and "N lines left" above it.
+  Every move is a dot (larger at a line's end), the moves played on the way
+  are dotted in the primary colour, and zoom buttons step the drawing through
+  `MAP_ZOOM_LEVELS` (25%–300%; the label resets to 100%), the lines keeping
+  their width at any zoom. The
   edges are a few path strings, not an element per move, so the 9,146-node
   example lays out in ~10ms. It maps the repertoire, not the session: inside
   a line the reader added, the marker waits on the last repertoire position.

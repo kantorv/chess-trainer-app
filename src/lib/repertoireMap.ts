@@ -45,6 +45,22 @@ export const MAP_DX = 14;
 export const MAP_DY = 12;
 export const MAP_PAD = 8;
 
+/**
+ * The zoom steps the Map tab offers, as a scale on the drawing; 1 is the
+ * layout's own size. The 9,146-node example is ~2,500px square at 1, so the
+ * small end is what shows it whole.
+ */
+export const MAP_ZOOM_LEVELS = [0.25, 0.4, 0.6, 0.8, 1, 1.25, 1.5, 2, 3] as const;
+export const MAP_DEFAULT_ZOOM = 1;
+
+/** The next zoom step in `direction`, clamped to the ends. */
+export const nextMapZoom = (zoom: number, direction: 1 | -1): number => {
+  const index = MAP_ZOOM_LEVELS.findIndex((level) => level >= zoom);
+  const at = index === -1 ? MAP_ZOOM_LEVELS.length - 1 : index;
+  const next = Math.min(MAP_ZOOM_LEVELS.length - 1, Math.max(0, at + direction));
+  return MAP_ZOOM_LEVELS[next];
+};
+
 /** A place on the map, in pixels. */
 export const mapPixel = (point: MapPoint) => ({
   px: MAP_PAD + point.x * MAP_DX,
@@ -121,9 +137,15 @@ export const mapEdgePaths = (
   return { covered: covered.join(""), open: open.join("") };
 };
 
+/** A dot: a zero-length segment, drawn with round caps. */
+const dotAt = (layout: MapLayout, node: VariationNode): string => {
+  const { px, py } = mapPixel(layout.points.get(node.id)!);
+  return `M${px} ${py}h0`;
+};
+
 /**
- * The line ends as dots — a zero-length segment per leaf, drawn with round
- * caps — split by whether each is covered.
+ * The line ends as dots, split by whether each is covered — drawn larger than
+ * the move dots, since a line's end is what Backtracking counts.
  */
 export const mapLeafDots = (
   layout: MapLayout,
@@ -133,11 +155,31 @@ export const mapLeafDots = (
   const open: string[] = [];
   for (const node of layout.order) {
     if (node.children.length > 0) continue;
-    const { px, py } = mapPixel(layout.points.get(node.id)!);
-    (coverage.under(node.id) === 0 ? covered : open).push(`M${px} ${py}h0`);
+    (coverage.under(node.id) === 0 ? covered : open).push(dotAt(layout, node));
   }
   return { covered: covered.join(""), open: open.join("") };
 };
+
+/**
+ * A dot on every move that is not a line's end — each position a line passes
+ * through — split the same way, so the map reads as moves, not only as lines.
+ */
+export const mapMoveDots = (
+  layout: MapLayout,
+  coverage: Coverage,
+): { covered: string; open: string } => {
+  const covered: string[] = [];
+  const open: string[] = [];
+  for (const node of layout.order) {
+    if (node.children.length === 0) continue;
+    (coverage.under(node.id) === 0 ? covered : open).push(dotAt(layout, node));
+  }
+  return { covered: covered.join(""), open: open.join("") };
+};
+
+/** The moves already played on the way to the reader, as dots. */
+export const mapPathDots = (layout: MapLayout, path: readonly VariationNode[]): string =>
+  path.map((node) => dotAt(layout, node)).join("");
 
 /** The path from the start position to `nodeId`, as one path string. */
 export const mapPathTo = (

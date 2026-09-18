@@ -300,6 +300,39 @@ describe("Backtracking", () => {
     expect(screen.getByTestId(`${map}-here`)).toHaveAttribute("data-node-id", end!);
   });
 
+  it("dots every move, marks the ones played, and zooms in steps", () => {
+    mount(`/repertoires/${storeRepertoire("r", CARO)}/games/backtrack`);
+    const map = `${ID}-map`;
+    fireEvent.click(screen.getByTestId(`${ID}-panel-tab-map`));
+    const dots = (name: string) =>
+      (screen.getByTestId(`${map}-${name}`).getAttribute("d") ?? "").match(/h0/g)?.length ?? 0;
+
+    // Seven moves that are not a line's end (1. e4 … 3... Bf5, and 3... c5).
+    expect(dots("open-moves")).toBe(7);
+    expect(dots("trail-moves")).toBe(0);
+
+    play(["e2", "e4"], ["d2", "d4"]);
+    // Four moves played, four dots on the way.
+    expect(dots("trail-moves")).toBe(4);
+
+    const svg = screen.getByTestId(`${map}-svg`);
+    const width = Number(svg.getAttribute("width"));
+    expect(screen.getByTestId(`${map}-zoom`)).toHaveTextContent("100%");
+    fireEvent.click(screen.getByTestId(`${map}-zoom-in`));
+    expect(screen.getByTestId(`${map}-zoom`)).toHaveTextContent("125%");
+    expect(Number(screen.getByTestId(`${map}-svg`).getAttribute("width"))).toBeCloseTo(width * 1.25);
+    for (let step = 0; step < 10; step += 1) fireEvent.click(screen.getByTestId(`${map}-zoom-out`));
+    expect(screen.getByTestId(`${map}-zoom`)).toHaveTextContent("25%");
+    expect(screen.getByTestId(`${map}-zoom-out`)).toBeDisabled();
+
+    // The zoom is kept across a trip to another tab, and the label resets it.
+    fireEvent.click(screen.getByTestId(`${ID}-panel-tab-moves`));
+    fireEvent.click(screen.getByTestId(`${ID}-panel-tab-map`));
+    expect(screen.getByTestId(`${map}-zoom`)).toHaveTextContent("25%");
+    fireEvent.click(screen.getByTestId(`${map}-zoom`));
+    expect(screen.getByTestId(`${map}-zoom`)).toHaveTextContent("100%");
+  });
+
   it("has no map in Get to the end", () => {
     mount(`/repertoires/${storeRepertoire("r", CARO)}/games/end`);
     expect(screen.queryByTestId(`${ID}-panel-tab-map`)).not.toBeInTheDocument();

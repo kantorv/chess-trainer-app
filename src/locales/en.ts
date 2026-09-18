@@ -1001,6 +1001,9 @@ const en = {
         left_one: "{{count}} line left",
         left_other: "{{count}} lines left",
         done: "Every line is covered.",
+        zoomIn: "Zoom in",
+        zoomOut: "Zoom out",
+        zoomReset: "Back to 100%",
       },
       /** Game mode's tally — this session only. */
       score: {
