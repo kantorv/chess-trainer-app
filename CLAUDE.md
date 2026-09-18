@@ -986,6 +986,15 @@ lines dropping below their branch point.
   clicking its dot goes to that position (and closes the dialog). A drag that starts on a dot still pans —
   the pointer is captured, and the click refused, only after it has travelled
   a few pixels. A game's map has no links: it is not a way to skip ahead.
+- **And a right-click on a written move is the variations explorer's menu**
+  (CTA-67, below) — the player's only, in the tab and full screen. One menu
+  serves both views and opens above the full-screen dialog, which an edit
+  leaves open, so the reader watches the map redraw from the edited tree: a
+  promoted line moving up, a deleted one gone. The view keeps its zoom and
+  pan; it moves only by the follow rule, which watches where the marker is
+  drawn as well as which node it is on, since an edit can move one without
+  the other. Only a move is bound (the right button never pans); below the
+  label zoom there are no targets, and a game's map binds nothing.
 - The edges and dots are a few path strings, not an element per move, so
   a ~9,000-node repertoire lays out in ~10ms.
 
@@ -993,7 +1002,8 @@ lines dropping below their branch point.
 move list of CTA-53 (`TreeMoveList` over the shared `MoveList` /
 `VariationLine`), renamed for what it has become — with lichess's right-click
 menu on every move, mainline cell and side-line token alike
-(`views/dev/core/MoveContextMenu.tsx`, an MUI `Menu` at the pointer):
+(`views/dev/core/MoveContextMenu.tsx`, an MUI `Menu` at the pointer) — and,
+since CTA-67, on every written move of the player's Map:
 
 - **Promote variation** — the move's line goes one level up: at the closest
   branch where it is not `children[0]`, it becomes it. **Make main line** —
@@ -1022,6 +1032,7 @@ Four rules hold it together:
   `onContextMenuPly` / `onContextMenuNode` on `MoveList` → `VariationLine`.
   Without it nothing is bound and the right-click is the browser's: every
   other board, and the repertoire **games**, which never write.
+  `RepertoireMap` takes the same `onEditTree` and holds its own menu.
 - **It costs the big list nothing.** The handlers the list receives only set
   `TreeMoveList`'s menu state, so they are stable across steps, and the menu
   is a sibling of the memoised list rather than inside it — opening one

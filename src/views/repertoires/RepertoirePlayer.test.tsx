@@ -818,6 +818,112 @@ describe("the variations explorer's move menu (CTA-64)", () => {
   });
 });
 
+describe("the move menu on the player's map (CTA-67)", () => {
+  const MAP = "repertoire-board-map";
+  const FULL = `${MAP}-dialog`;
+  const MENU = "move-menu";
+  const settle = () =>
+    act(() => {
+      vi.advanceTimersByTime(1_000);
+    });
+  /** A written move on a map, by its SAN — the link round its dot. */
+  const move = (viewport: string, san: string) =>
+    within(screen.getByTestId(`${viewport}-viewport`)).getByRole("button", {
+      name: `Go to ${san}`,
+    });
+  const idOf = (viewport: string, hit: HTMLElement) =>
+    hit.getAttribute("data-testid")!.slice(`${viewport}-go-`.length);
+  const labelY = (viewport: string, id: string) =>
+    screen.getByTestId(`${viewport}-label-${id}`).getAttribute("y");
+  const view = (viewport: string) => {
+    const g = screen.getByTestId(`${viewport}-view`);
+    return ["data-x", "data-y", "data-k"].map((name) => g.getAttribute(name));
+  };
+  /** Open the full-screen map. */
+  const openFullScreen = () => {
+    mountIdle(`/repertoires/${storeRepertoire("r", CARO)}`);
+    fireEvent.click(screen.getByTestId("repertoire-board-panel-tab-map"));
+    fireEvent.click(screen.getByTestId(`${MAP}-fullscreen`));
+  };
+
+  it("opens on a move right-clicked in the tab's map, in place of the browser's, and never pans", () => {
+    mountIdle(`/repertoires/${storeRepertoire("r", CARO)}`);
+    fireEvent.click(screen.getByTestId("repertoire-board-panel-tab-map"));
+    const before = view(MAP);
+    const e4 = move(MAP, "e4");
+
+    // The right button does not start a drag, nor follow the link.
+    fireEvent.pointerDown(e4, { button: 2, clientX: 100, clientY: 100, pointerId: 1 });
+    fireEvent.pointerMove(screen.getByTestId(`${MAP}-viewport`), {
+      clientX: 180,
+      clientY: 100,
+      pointerId: 1,
+    });
+    expect(fireEvent.contextMenu(e4, { clientX: 100, clientY: 100 })).toBe(false);
+    expect(view(MAP)).toEqual(before);
+    expect(position()).toBe(new Chess().fen());
+
+    // The Moves tab's menu, with its rules: a mainline move is neither promoted nor made main.
+    expect(screen.getByTestId(`${MENU}-move`)).toHaveTextContent("1. e4");
+    expect(screen.queryByTestId(`${MENU}-promote`)).not.toBeInTheDocument();
+    expect(screen.queryByTestId(`${MENU}-mainline`)).not.toBeInTheDocument();
+    expect(screen.getByTestId(`${MENU}-delete`)).toBeInTheDocument();
+    expect(screen.getByTestId(`${MENU}-copy`)).toBeInTheDocument();
+
+    // Anywhere but a move, the right-click stays the browser's.
+    expect(fireEvent.contextMenu(screen.getByTestId(`${MAP}-viewport`))).toBe(true);
+  });
+
+  it("makes a side line the main line from the full-screen map, which stays open and redraws at once", () => {
+    openFullScreen();
+    const c5 = idOf(FULL, move(FULL, "c5"));
+    const e4 = idOf(FULL, move(FULL, "e4"));
+    expect(labelY(FULL, c5)).not.toBe(labelY(FULL, e4));
+    const before = view(FULL);
+
+    fireEvent.contextMenu(move(FULL, "c5"), { clientX: 200, clientY: 200 });
+    expect(screen.getByTestId(`${MENU}-move`)).toHaveTextContent("3… c5");
+    fireEvent.click(screen.getByTestId(`${MENU}-mainline`));
+    settle();
+
+    // Still full screen, the view where it was, and c5 on the top row now.
+    expect(screen.getByTestId(`${FULL}-view`)).toBeInTheDocument();
+    expect(view(FULL)).toEqual(before);
+    expect(labelY(FULL, c5)).toBe(labelY(FULL, e4));
+    // A session change like one from the move list.
+    expect(screen.getByTestId("repertoire-board-save")).toBeEnabled();
+  });
+
+  it("deletes from a move on the full-screen map after asking, and the line leaves the map", () => {
+    openFullScreen();
+    expect(screen.getByTestId(`${FULL}-svg`)).toHaveAttribute("data-rows", "2");
+    const c5 = idOf(FULL, move(FULL, "c5"));
+
+    fireEvent.contextMenu(move(FULL, "c5"), { clientX: 200, clientY: 200 });
+    fireEvent.click(screen.getByTestId(`${MENU}-delete`));
+    settle();
+    expect(screen.getByTestId(`${MENU}-delete-summary`)).toHaveTextContent(
+      "2 moves / 1 line will be deleted.",
+    );
+    fireEvent.click(screen.getByTestId(`${MENU}-delete-confirm`));
+    settle();
+
+    expect(screen.getByTestId(`${FULL}-view`)).toBeInTheDocument();
+    expect(screen.getByTestId(`${FULL}-svg`)).toHaveAttribute("data-rows", "1");
+    expect(screen.queryByTestId(`${FULL}-label-${c5}`)).not.toBeInTheDocument();
+    expect(screen.getByTestId(`${MAP}-left`)).toHaveTextContent("1 line, 7 moves");
+  });
+
+  it("is the player's only: a game's map leaves the right-click to the browser", () => {
+    mountIdle(`/repertoires/${storeRepertoire("r", CARO)}/games/backtrack`);
+    fireEvent.click(screen.getByTestId("repertoire-game-panel-tab-map"));
+    const label = document.querySelector<SVGElement>('[data-testid^="repertoire-game-map-label-"]')!;
+    expect(label).not.toBeNull();
+    expect(fireEvent.contextMenu(label)).toBe(true);
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+  });
+});
+
 describe("the header's Play button (CTA-65)", () => {
   const play = () => screen.getByTestId("repertoire-board-play");
   const settingsSwitch = () =>

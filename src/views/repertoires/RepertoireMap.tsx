@@ -24,6 +24,8 @@ import { useTranslation } from "react-i18next";
 
 import { pathTo, type GameTree } from "../../lib/gameTree";
 import type { Coverage } from "../../lib/repertoireGames";
+import MoveContextMenu, { type MoveMenuTarget } from "../dev/core/MoveContextMenu";
+import { menuAnchorOf, type ContextMenuNodeHandler } from "../shared/moveContextMenu";
 import {
   MAP_DX,
   MAP_DY,
@@ -74,6 +76,15 @@ import {
  *   position — full screen, the dialog closes on it. A drag that starts on a
  *   dot still pans: the pointer is captured, and the click refused, only once
  *   it has travelled a few pixels.
+ * - in the player (`onEditTree`, CTA-67), a right-click on a written move
+ *   opens the variations explorer's move menu (`MoveContextMenu`) at the
+ *   pointer — promote, make main line, delete from here, copy the line's PGN.
+ *   One menu serves both viewports and renders above the full-screen dialog,
+ *   which an edit leaves open: the edited tree is what `repertoire` becomes,
+ *   so the map redraws from it at once, and the view keeps its zoom and pan
+ *   (it follows the marker only when the marker leaves it — the rule play
+ *   already keeps). Only a move is bound; elsewhere the right-click is the
+ *   browser's, and a game passes nothing.
  *
  * Each viewport measures itself (a `ResizeObserver`, a fallback size where
  * there is none), so the labels culled and the follow are the viewport's own.
@@ -292,6 +303,7 @@ function RepertoireMap({
   coverage,
   nodeId,
   onSelectNode,
+  onEditTree,
   addedIds,
 }: {
   testId: string;
@@ -303,6 +315,8 @@ function RepertoireMap({
   nodeId: string | null;
   /** Go to a position — the player's; present, a written move is a link. */
   onSelectNode?: (id: string) => void;
+  /** Opt-in: the move menu on a written move, and where its edits go — the player's. */
+  onEditTree?: (next: GameTree) => void;
   /** The moves in `repertoire` the reader added this session — the player's. */
   addedIds?: ReadonlySet<string>;
 }) {
@@ -310,6 +324,16 @@ function RepertoireMap({
   const [fullScreen, setFullScreen] = useState(false);
   // One setting for both viewports; on by default.
   const [showMoves, setShowMoves] = useState(true);
+  // The move menu — one for both viewports, above either.
+  const [menu, setMenu] = useState<MoveMenuTarget | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const openMenu: ContextMenuNodeHandler | undefined =
+    onEditTree === undefined
+      ? undefined
+      : (id, anchor) => {
+          setMenu({ nodeId: id, anchor });
+          setMenuOpen(true);
+        };
 
   const layout = useMemo(() => mapLayoutOf(repertoire), [repertoire]);
   const edges = useMemo(
@@ -396,6 +420,7 @@ function RepertoireMap({
         showMoves={showMoves}
         onShowMovesChange={setShowMoves}
         onSelectNode={onSelectNode}
+        onContextMenuNode={openMenu}
         fallbackSize={() => ({ width: 320, height: 360 })}
         extraButtons={
           <MapButton
@@ -470,6 +495,7 @@ function RepertoireMap({
                       setFullScreen(false);
                     }
               }
+              onContextMenuNode={openMenu}
               fallbackSize={() => ({
                 width: window.innerWidth,
                 height: window.innerHeight - TOOLBAR_ESTIMATE_PX,
@@ -479,6 +505,16 @@ function RepertoireMap({
           </Box>
         )}
       </Dialog>
+
+      {onEditTree !== undefined && (
+        <MoveContextMenu
+          tree={repertoire}
+          target={menu}
+          open={menuOpen}
+          onClose={() => setMenuOpen(false)}
+          onEditTree={onEditTree}
+        />
+      )}
     </Box>
   );
 }
@@ -494,6 +530,7 @@ function MapViewport({
   showMoves,
   onShowMovesChange,
   onSelectNode,
+  onContextMenuNode,
   fallbackSize,
   extraButtons,
   sx,
@@ -505,6 +542,8 @@ function MapViewport({
   onShowMovesChange: (next: boolean) => void;
   /** Present: a written move's dot goes to its position. */
   onSelectNode?: (id: string) => void;
+  /** Present: a right-click on a written move opens its menu there. */
+  onContextMenuNode?: ContextMenuNodeHandler;
   /** The size assumed until the viewport is measured. */
   fallbackSize: () => Size;
   /** More buttons at the end of the row — the tab's full-screen one. */
@@ -536,9 +575,12 @@ function MapViewport({
     setMeasured(size);
     if (!touched) setView(centred(view.k, size));
   }
-  const [followed, setFollowed] = useState(nodeId);
-  if (followed !== nodeId) {
-    setFollowed(nodeId);
+  // Keyed on where the marker is drawn as well as on its node: an edit to the
+  // tree (CTA-67) can move the marker without the reader moving.
+  const marker = `${nodeId ?? ""}@${drawing.here.px},${drawing.here.py}`;
+  const [followed, setFollowed] = useState(marker);
+  if (followed !== marker) {
+    setFollowed(marker);
     const sx = drawing.here.px * view.k + view.x;
     const sy = drawing.here.py * view.k + view.y;
     if (
@@ -673,6 +715,7 @@ function MapViewport({
         dir="ltr"
         data-testid={`${testId}-viewport`}
         onPointerDown={(event) => {
+          // The left button only: a right-click is the move menu's, never a pan.
           if (event.button !== 0) return;
           drag.current = { x: event.clientX, y: event.clientY, view };
           moved.current = false;
@@ -748,18 +791,33 @@ function MapViewport({
                       {label.san}
                     </text>
                   );
-                  if (onSelectNode === undefined) return <g key={label.id}>{text}</g>;
-                  // A link: the move and a target round its dot, as one button.
+                  if (onSelectNode === undefined && onContextMenuNode === undefined) {
+                    return <g key={label.id}>{text}</g>;
+                  }
+                  // A link: the move and a target round its dot, as one button —
+                  // and, given a menu, what a right-click opens it on.
                   return (
                     <g
                       key={label.id}
                       className="map-hit"
-                      role="button"
-                      aria-label={t("repertoires.play.map.goTo", { move: label.san })}
+                      role={onSelectNode === undefined ? undefined : "button"}
+                      aria-label={
+                        onSelectNode === undefined
+                          ? undefined
+                          : t("repertoires.play.map.goTo", { move: label.san })
+                      }
                       data-testid={`${testId}-go-${label.id}`}
                       onClick={() => {
-                        if (!moved.current) onSelectNode(label.id);
+                        if (!moved.current) onSelectNode?.(label.id);
                       }}
+                      onContextMenu={
+                        onContextMenuNode === undefined
+                          ? undefined
+                          : (event) => {
+                              event.preventDefault();
+                              onContextMenuNode(label.id, menuAnchorOf(event));
+                            }
+                      }
                     >
                       <circle
                         cx={label.px}
