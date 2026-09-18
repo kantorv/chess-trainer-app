@@ -933,18 +933,22 @@ lines dropping below their branch point.
 - **Coverage is the lines' colour, and a game's.** Backtracking passes it —
   covered lines green, a progress bar and "N lines left"; the player passes
   none — every line one neutral colour, and the tree's size in the header.
-- **Zoom** in the tab steps through `MAP_ZOOM_LEVELS` (25%–300%; the label
-  resets to 100%), lines keeping their width at any zoom. A **full-screen**
-  button opens the same drawing in a full-screen MUI `Dialog`: the wheel zooms
-  about the pointer and a drag pans (a native non-passive wheel listener; the
-  arithmetic — `zoomViewAt`, `fitView`, `centerView` — is pure), with zoom,
-  fit-all and "where am I" buttons. **Show moves** writes each move's SAN
-  above its dot, in the drawing's units so labels scale with the view and
+- **One interactive viewport, in the tab and full screen.** The tab's map
+  and the full-screen MUI `Dialog` opened from it are the same component
+  (`MapViewport`): the wheel zooms about the pointer and a drag pans (a native
+  non-passive wheel listener; the arithmetic — `zoomViewAt`, `fitView`,
+  `centerView` — is pure), with zoom, fit-all and "where am I" buttons. Both
+  open at a readable 250% (`MAP_INITIAL_K`) centred on the reader and
+  **follow** them — when play moves the marker out of view, the view
+  re-centres on it at the same zoom. Each measures itself (`ResizeObserver`).
+  The Map tab is kept mounted, so its view survives a trip to another tab.
+- **Show moves is on by default** (one setting for both views): each move's
+  SAN above its dot, in the drawing's units so labels scale with the view and
   never overlap (not drawn below 150%, where a hint says to zoom in), and only
   for the dots on screen (`mapLabelsIn` / `visibleRect`, capped at
   `MAP_LABEL_LIMIT`).
-- **In the player, a written move is a link**: clicking its dot goes to that
-  position and closes the dialog. A drag that starts on a dot still pans —
+- **In the player, a written move is a link** — in the tab and full screen:
+  clicking its dot goes to that position (and closes the dialog). A drag that starts on a dot still pans —
   the pointer is captured, and the click refused, only after it has travelled
   a few pixels. A game's map has no links: it is not a way to skip ahead.
 - The edges and dots are a few path strings, not an element per move, so

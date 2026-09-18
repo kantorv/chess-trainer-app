@@ -1003,7 +1003,6 @@ const en = {
         done: "Every line is covered.",
         zoomIn: "Zoom in",
         zoomOut: "Zoom out",
-        zoomReset: "Back to 100%",
         fullScreen: "Open the map full screen",
         fit: "Fit the whole tree",
         close: "Close the map",

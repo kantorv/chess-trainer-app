@@ -300,7 +300,7 @@ describe("Backtracking", () => {
     expect(screen.getByTestId(`${map}-here`)).toHaveAttribute("data-node-id", end!);
   });
 
-  it("dots every move in its side's colour, rings the ones played, and zooms in steps", () => {
+  it("dots every move in its side's colour, and rings the ones played", () => {
     mount(`/repertoires/${storeRepertoire("r", CARO)}/games/backtrack`);
     const map = `${ID}-map`;
     fireEvent.click(screen.getByTestId(`${ID}-panel-tab-map`));
@@ -319,22 +319,66 @@ describe("Backtracking", () => {
     // Four moves played, four dots on the way.
     expect(dots("trail-moves")).toBe(4);
 
-    const svg = screen.getByTestId(`${map}-svg`);
-    const width = Number(svg.getAttribute("width"));
-    expect(screen.getByTestId(`${map}-zoom`)).toHaveTextContent("100%");
-    fireEvent.click(screen.getByTestId(`${map}-zoom-in`));
-    expect(screen.getByTestId(`${map}-zoom`)).toHaveTextContent("125%");
-    expect(Number(screen.getByTestId(`${map}-svg`).getAttribute("width"))).toBeCloseTo(width * 1.25);
-    for (let step = 0; step < 10; step += 1) fireEvent.click(screen.getByTestId(`${map}-zoom-out`));
-    expect(screen.getByTestId(`${map}-zoom`)).toHaveTextContent("25%");
-    expect(screen.getByTestId(`${map}-zoom-out`)).toBeDisabled();
+    // Written on it by default, at a readable scale, in the tab itself.
+    expect(screen.getByTestId(`${map}-show-moves`)).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByTestId(`${map}-zoom`)).toHaveTextContent("250%");
+    expect(within(screen.getByTestId(`${map}-labels`)).getByText("e4")).toBeInTheDocument();
+  });
 
-    // The zoom is kept across a trip to another tab, and the label resets it.
+  it("zooms and pans the map in the tab as full screen does, and keeps it across tabs", () => {
+    mount(`/repertoires/${storeRepertoire("r", CARO)}/games/backtrack`);
+    const map = `${ID}-map`;
+    fireEvent.click(screen.getByTestId(`${ID}-panel-tab-map`));
+    const view = () => {
+      const g = screen.getByTestId(`${map}-view`);
+      return { x: Number(g.getAttribute("data-x")), y: Number(g.getAttribute("data-y")), k: Number(g.getAttribute("data-k")) };
+    };
+    const viewport = screen.getByTestId(`${map}-viewport`);
+
+    const before = view();
+    fireEvent.wheel(viewport, { deltaY: -200, clientX: 100, clientY: 80 });
+    const after = view();
+    expect(after.k).toBeGreaterThan(before.k);
+    expect((100 - after.x) / after.k).toBeCloseTo((100 - before.x) / before.k);
+
+    fireEvent.pointerDown(viewport, { button: 0, clientX: 50, clientY: 50, pointerId: 1 });
+    fireEvent.pointerMove(viewport, { clientX: 20, clientY: 90, pointerId: 1 });
+    fireEvent.pointerUp(viewport, { pointerId: 1 });
+    expect(view().x).toBeCloseTo(after.x - 30);
+    expect(view().y).toBeCloseTo(after.y + 40);
+
+    fireEvent.click(screen.getByTestId(`${map}-zoom-in`));
+    expect(view().k).toBeCloseTo(after.k * 1.25);
+    const kept = view();
+
+    // Kept mounted: a trip to another tab leaves the view where it was.
     fireEvent.click(screen.getByTestId(`${ID}-panel-tab-moves`));
     fireEvent.click(screen.getByTestId(`${ID}-panel-tab-map`));
-    expect(screen.getByTestId(`${map}-zoom`)).toHaveTextContent("25%");
-    fireEvent.click(screen.getByTestId(`${map}-zoom`));
-    expect(screen.getByTestId(`${map}-zoom`)).toHaveTextContent("100%");
+    expect(view()).toEqual(kept);
+  });
+
+  it("follows the reader when play leaves the view", () => {
+    mount(`/repertoires/${storeRepertoire("r", CARO)}/games/backtrack`);
+    const map = `${ID}-map`;
+    fireEvent.click(screen.getByTestId(`${ID}-panel-tab-map`));
+    const viewport = screen.getByTestId(`${map}-viewport`);
+    // Dragged far away: the marker is off screen.
+    fireEvent.pointerDown(viewport, { button: 0, clientX: 0, clientY: 0, pointerId: 1 });
+    fireEvent.pointerMove(viewport, { clientX: 3000, clientY: 3000, pointerId: 1 });
+    fireEvent.pointerUp(viewport, { pointerId: 1 });
+    play(["e2", "e4"]);
+    // The view came back to it (centred on 1. e4; the trainer's 1... c6, a
+    // column on, was already in view): the marker is inside the viewport.
+    const g = screen.getByTestId(`${map}-view`);
+    const here = screen.getByTestId(`${map}-here`);
+    const k = Number(g.getAttribute("data-k"));
+    const sx = Number(here.getAttribute("cx")) * k + Number(g.getAttribute("data-x"));
+    const sy = Number(here.getAttribute("cy")) * k + Number(g.getAttribute("data-y"));
+    // The tab's fallback viewport (jsdom measures nothing) is 320 × 360.
+    expect(sx).toBeGreaterThan(24);
+    expect(sx).toBeLessThan(320 - 24);
+    expect(sy).toBeGreaterThan(24);
+    expect(sy).toBeLessThan(360 - 24);
   });
 
   it("opens the map full screen, zoomed with the wheel and moved by dragging", () => {
@@ -349,20 +393,20 @@ describe("Backtracking", () => {
       const g = screen.getByTestId(`${full}-view`);
       return { x: Number(g.getAttribute("data-x")), y: Number(g.getAttribute("data-y")), k: Number(g.getAttribute("data-k")) };
     };
-    // The same drawing, with the reader on it, at the drawing's own size.
+    // The same drawing, with the reader on it, at the readable scale.
     expect(screen.getByTestId(`${full}-here`)).toHaveAttribute(
       "data-node-id",
       screen.getByTestId(`${map}-here`).getAttribute("data-node-id")!,
     );
-    expect(view().k).toBe(1);
-    expect(screen.getByTestId(`${full}-zoom`)).toHaveTextContent("100%");
+    expect(view().k).toBe(2.5);
+    expect(screen.getByTestId(`${full}-zoom`)).toHaveTextContent("250%");
 
     // The wheel zooms about the pointer: the drawing point under it stays put.
     const viewport = screen.getByTestId(`${full}-viewport`);
     const before = view();
     fireEvent.wheel(viewport, { deltaY: -200, clientX: 300, clientY: 200 });
     const after = view();
-    expect(after.k).toBeGreaterThan(1);
+    expect(after.k).toBeGreaterThan(2.5);
     expect((300 - after.x) / after.k).toBeCloseTo((300 - before.x) / before.k);
 
     // A drag moves it by exactly the pointer's travel.
@@ -391,29 +435,27 @@ describe("Backtracking", () => {
     expect(screen.queryByTestId(`${full}-view`)).not.toBeInTheDocument();
   });
 
-  it("writes the moves on the full-screen map, once zoomed in, for the dots on screen", () => {
+  it("writes the moves on the full-screen map by default, for the dots on screen", () => {
     mount(`/repertoires/${storeRepertoire("r", CARO)}/games/backtrack`);
     const full = `${ID}-map-dialog`;
     fireEvent.click(screen.getByTestId(`${ID}-panel-tab-map`));
     play(["e2", "e4"]);
     fireEvent.click(screen.getByTestId(`${ID}-map-fullscreen`));
 
+    // On by default, at a readable scale: the moves around the reader, theirs picked out.
     const toggle = screen.getByTestId(`${full}-show-moves`);
-    expect(toggle).toHaveAttribute("aria-pressed", "false");
-    fireEvent.click(toggle);
     expect(toggle).toHaveAttribute("aria-pressed", "true");
-    // At 100% the moves would be too small to read: none, and a hint says so.
-    expect(screen.queryByTestId(`${full}-labels`)).not.toBeInTheDocument();
-    expect(screen.getByTestId(`${full}-hint`)).toHaveTextContent("Zoom in to read the moves");
-
-    // Zoomed in: the moves around the reader are written, theirs picked out.
-    fireEvent.click(screen.getByTestId(`${full}-zoom-in`));
-    fireEvent.click(screen.getByTestId(`${full}-zoom-in`));
     const labels = within(screen.getByTestId(`${full}-labels`));
-    const e4 = labels.getByText("e4");
-    expect(e4).toHaveClass("map-label-trail");
+    expect(labels.getByText("e4")).toHaveClass("map-label-trail");
     expect(labels.getByText("Bf5")).not.toHaveClass("map-label-trail");
     expect(screen.getByTestId(`${full}-hint`)).toHaveTextContent("Scroll to zoom, drag to move");
+
+    // Zoomed out past reading: none, and a hint says so.
+    for (let step = 0; step < 3; step += 1) fireEvent.click(screen.getByTestId(`${full}-zoom-out`));
+    expect(screen.queryByTestId(`${full}-labels`)).not.toBeInTheDocument();
+    expect(screen.getByTestId(`${full}-hint`)).toHaveTextContent("Zoom in to read the moves");
+    for (let step = 0; step < 3; step += 1) fireEvent.click(screen.getByTestId(`${full}-zoom-in`));
+    expect(screen.getByTestId(`${full}-labels`)).toBeInTheDocument();
 
     // Dragged far off the drawing: nothing on screen, nothing written.
     const viewport = screen.getByTestId(`${full}-viewport`);
@@ -422,12 +464,13 @@ describe("Backtracking", () => {
     fireEvent.pointerUp(viewport, { pointerId: 1 });
     expect(screen.queryByTestId(`${full}-labels`)).not.toBeInTheDocument();
 
-    // And off again. (A game's map is not a way to skip ahead: no links.)
+    // Back, and off — one setting for both views. (A game's map has no links.)
     fireEvent.click(screen.getByTestId(`${full}-locate`));
     expect(screen.getByTestId(`${full}-labels`)).toBeInTheDocument();
     expect(screen.queryAllByRole("button", { name: /^Go to / })).toHaveLength(0);
     fireEvent.click(toggle);
     expect(screen.queryByTestId(`${full}-labels`)).not.toBeInTheDocument();
+    expect(screen.getByTestId(`${ID}-map-show-moves`)).toHaveAttribute("aria-pressed", "false");
   });
 
   it("has no map in Get to the end", () => {

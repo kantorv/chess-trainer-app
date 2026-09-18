@@ -668,7 +668,6 @@ const he: typeof en = {
         done: "כל הקווים כוסו.",
         zoomIn: "הגדלה",
         zoomOut: "הקטנה",
-        zoomReset: "חזרה ל-100%",
         fullScreen: "פתיחת המפה במסך מלא",
         fit: "התאמת העץ כולו למסך",
         close: "סגירת המפה",

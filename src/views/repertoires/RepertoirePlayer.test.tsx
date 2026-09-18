@@ -446,18 +446,22 @@ describe("the player's map and its permanent link", () => {
     expect(dots("white-ends")).toBe(3);
   });
 
+  it("goes to a dot clicked in the tab's map, and links there", () => {
+    mountProbed(`/repertoires/${storeRepertoire("r", CARO)}`);
+    fireEvent.click(screen.getByTestId("repertoire-board-panel-tab-map"));
+    const tab = within(screen.getByTestId(`${MAP}-viewport`));
+    fireEvent.click(tab.getByRole("button", { name: "Go to e4" }));
+    expect(position()).toBe(fenAfter("e4"));
+    expect(atParam()).toBe("e4");
+  });
+
   it("goes to a dot clicked on the full-screen map, closes it, and links there", () => {
     mountProbed(`/repertoires/${storeRepertoire("r", CARO)}`);
     fireEvent.click(screen.getByTestId("repertoire-board-panel-tab-map"));
     fireEvent.click(screen.getByTestId(`${MAP}-fullscreen`));
-    fireEvent.click(screen.getByTestId(`${FULL}-show-moves`));
-    // Not links until they are written — and they are written once readable.
-    expect(screen.queryAllByRole("button", { name: /^Go to / })).toHaveLength(0);
-    fireEvent.click(screen.getByTestId(`${FULL}-zoom-in`));
-    fireEvent.click(screen.getByTestId(`${FULL}-zoom-in`));
-    fireEvent.click(screen.getByTestId(`${FULL}-fit`));
+    const full = within(screen.getByTestId(`${FULL}-viewport`));
 
-    fireEvent.click(screen.getByRole("button", { name: "Go to c5" }));
+    fireEvent.click(full.getByRole("button", { name: "Go to c5" }));
     act(() => {
       vi.advanceTimersByTime(1_000);
     });
@@ -470,9 +474,9 @@ describe("the player's map and its permanent link", () => {
     mountIdle(`/repertoires/${storeRepertoire("r", CARO)}`);
     fireEvent.click(screen.getByTestId("repertoire-board-panel-tab-map"));
     fireEvent.click(screen.getByTestId(`${MAP}-fullscreen`));
-    fireEvent.click(screen.getByTestId(`${FULL}-show-moves`));
-    fireEvent.click(screen.getByTestId(`${FULL}-fit`));
-    const dot = screen.getByRole("button", { name: "Go to c5" });
+    const dot = within(screen.getByTestId(`${FULL}-viewport`)).getByRole("button", {
+      name: "Go to c5",
+    });
     const viewport = screen.getByTestId(`${FULL}-viewport`);
     fireEvent.pointerDown(dot, { button: 0, clientX: 100, clientY: 100, pointerId: 1 });
     fireEvent.pointerMove(viewport, { clientX: 160, clientY: 100, pointerId: 1 });
