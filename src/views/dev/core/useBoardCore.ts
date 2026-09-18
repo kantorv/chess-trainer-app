@@ -4,7 +4,9 @@ import { parseFen } from "../../../lib/fen";
 import {
   addMove,
   emptyTree,
+  findNode,
   mainline,
+  pathTo,
   treeToPgn,
   type GameTree,
 } from "../../../lib/gameTree";
@@ -351,6 +353,32 @@ export const useBoardCore = ({
   );
 
   /**
+   * Replace the tree with an **edit of itself** (CTA-64 — promote, make main
+   * line, delete from here), staying where the reader is: the node on screen
+   * when the edit kept it, else the nearest ancestor that survived, else the
+   * start. Not `loadTree`, whose step to the start is right for a new game and
+   * wrong for a line just promoted under the reader's feet. An edit is the
+   * reader's own work, so it marks the board dirty.
+   */
+  const replaceTree = useCallback(
+    (next: GameTree) => {
+      const path = pathTo(tree, nodeId);
+      let keep: string | null = null;
+      for (let depth = path.length - 1; depth >= 0; depth -= 1) {
+        if (findNode(next, path[depth].id) !== null) {
+          keep = path[depth].id;
+          break;
+        }
+      }
+      setTree(next);
+      setPromotion(null);
+      goToNode(keep);
+      setDirty(true);
+    },
+    [goToNode, nodeId, tree],
+  );
+
+  /**
    * Set a position up from a pasted FEN. Throws `FenParseError` on bad input.
    *
    * It also turns the board to the side to move: a position arriving as a FEN
@@ -412,6 +440,7 @@ export const useBoardCore = ({
     appendMove,
     playVariation,
     loadTree,
+    replaceTree,
     loadFen,
     reset,
     dirty,
