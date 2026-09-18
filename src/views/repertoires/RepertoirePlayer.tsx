@@ -13,7 +13,7 @@ import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
 import RestartAltRoundedIcon from "@mui/icons-material/RestartAltRounded";
 import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
-import { Link as RouterLink, useLocation, useSearchParams } from "react-router";
+import { Link as RouterLink, useLocation, useNavigate, useSearchParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import type { Arrow, ChessboardOptions } from "react-chessboard";
 
@@ -39,7 +39,18 @@ import {
   nodeIdsOf,
   type DrillScore,
 } from "../../lib/repertoireTrainer";
-import { repertoireTreeOf, type SavedRepertoire } from "../../lib/savedRepertoires";
+import {
+  newSavedRepertoireId,
+  repertoireCopyOf,
+  repertoireTreeOf,
+  withRepertoireTree,
+  type SavedRepertoire,
+} from "../../lib/savedRepertoires";
+import {
+  addRepertoires,
+  saveRepertoire,
+  type SavedRepertoireProblem,
+} from "../../lib/savedRepertoireStore";
 import BoardShell from "../dev/core/BoardShell";
 import TreeMoveList from "../dev/core/TreeMoveList";
 import { useBoardCore } from "../dev/core/useBoardCore";
@@ -52,6 +63,7 @@ import {
   nextMoveArrowsOf,
   REQUIRED_MOVE_ARROW_COLOR,
 } from "../tools/analysis/nextMoveArrows";
+import RepertoireChangesBar from "./RepertoireChangesBar";
 import RepertoireGamesMenu from "./RepertoireGamesMenu";
 import RepertoireMap from "./RepertoireMap";
 import { useRepertoireGame } from "./useRepertoireGame";
@@ -81,9 +93,18 @@ import { useRepertoireGame } from "./useRepertoireGame";
  *   start and **keep** what the reader added.
  * - **Every move the repertoire does not have is an extension** — added under
  *   the node on screen and tinted in the move list; `extensionIdsOf` against
- *   the ids the repertoire arrived with, recomputed, never tracked. The
- *   record is never written; the header's download is the way out, and the
- *   Engine tab's "Clear" drops the additions.
+ *   the ids the repertoire arrived with (or last saved), recomputed, never
+ *   tracked. The header's download writes them out; the Engine tab's "Clear"
+ *   drops them.
+ * - **Changes are kept on the reader's say-so** (the player's; a game never
+ *   writes). While the session's tree differs from the record, a strip above
+ *   the footer (`RepertoireChangesBar.tsx`) offers **Update this repertoire**
+ *   (`withRepertoireTree`, in place — the session becomes the record, and the
+ *   additions stop being additions), **Save as a copy** (`repertoireCopyOf` —
+ *   a new record with the original's settings and folder, opened at the
+ *   position on screen, the original untouched: how a shipped repertoire
+ *   becomes one's own) and **Discard**. A reload with changes unsaved asks
+ *   first. Nothing is ever written unasked.
  * - **Tabs: Moves · (Score) · Map · Settings · Engine.** Settings holds the
  *   side, Autoplay (player only), the next-move arrows and the engine's
  *   switch; the Engine tab is disabled while the engine is off; Score is a
@@ -250,11 +271,18 @@ function RepertoirePlayer({
     without one — with a reply owed there, paid only when the trainer plays
     and it is its turn.
   */
+  /*
+    The record as the screen opened it — parsed once. Saving the session's
+    changes writes a new record under the same id (the route hands it back as
+    `saved`), and re-parsing that would put the reader back at the start with
+    fresh ids for the tree they are standing in.
+  */
+  const [opened] = useState(saved);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     timer.current = setTimeout(() => {
       timer.current = null;
-      const parsed = repertoireTreeOf(saved);
+      const parsed = repertoireTreeOf(opened);
       const tree = parsed ?? emptyTree();
       const at = nodeAtParam(tree, arrivedAt);
       setRepertoire(tree);
@@ -267,7 +295,7 @@ function RepertoirePlayer({
     return () => {
       if (timer.current !== null) clearTimeout(timer.current);
     };
-  }, [arrivedAt, goToNode, loadTree, requestReply, saved]);
+  }, [arrivedAt, goToNode, loadTree, requestReply, opened]);
 
   /*
     …and written back as the reader moves, with history **replace** (the
@@ -394,6 +422,64 @@ function RepertoirePlayer({
     setAutoplay(next);
     if (next) requestReply(core.nodeId);
   };
+
+  /*
+    The session's changes, and what to do with them (the player's; a game
+    never writes). "Changed" is the tree not being the one last opened or
+    saved: every edit to a tree makes a new one, and replaying a move that is
+    there does not (`addMove`), so this holds for the moves added today and
+    for any edit that comes later, with nothing to keep in step.
+  */
+  const navigate = useNavigate();
+  const changed = game === undefined && shown === "ready" && core.tree !== repertoire;
+  const [saveProblem, setSaveProblem] = useState<SavedRepertoireProblem | null>(null);
+
+  /** Make the changes part of this repertoire; the session is the record now. */
+  const updateRecord = () => {
+    const problem = saveRepertoire(withRepertoireTree(saved, core.tree));
+    setSaveProblem(problem ?? null);
+    if (problem === undefined) setRepertoire(core.tree);
+  };
+
+  /** Keep this repertoire as it is; save a copy with the changes, and go on in it. */
+  const saveCopy = () => {
+    const copyId = newSavedRepertoireId();
+    const name = t("repertoires.changes.copyName", {
+      name: saved.name || t("repertoires.untitled"),
+    });
+    const problem = addRepertoires([repertoireCopyOf(saved, core.tree, copyId, name)]);
+    setSaveProblem(problem ?? null);
+    if (problem !== undefined) return;
+    const at = atParamOf(core.tree, core.nodeId);
+    const query = at === "" ? "" : `?${new URLSearchParams({ [REPERTOIRE_AT_PARAM]: at })}`;
+    navigate(`/repertoires/${encodeURIComponent(copyId)}${query}`);
+  };
+
+  /** Drop the changes, standing on the last repertoire position on the way here. */
+  const discard = () => {
+    const path = pathTo(core.tree, core.nodeId);
+    let back: string | null = null;
+    for (let index = path.length - 1; index >= 0; index -= 1) {
+      if (originalIds.has(path[index].id)) {
+        back = path[index].id;
+        break;
+      }
+    }
+    loadTree(repertoire);
+    if (back !== null) goToNode(back);
+    requestReply(back);
+    setSaveProblem(null);
+  };
+
+  // Leaving with changes unsaved — a reload, a closed tab — asks first.
+  useEffect(() => {
+    if (!changed) return;
+    const warn = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [changed]);
 
   /** The Engine tab's "Clear": the repertoire as the record has it, from the start. */
   const clear = () => {
@@ -681,19 +767,29 @@ function RepertoirePlayer({
         // The trainer's status while it plays; otherwise, reading the file,
         // the moves on offer from here (CTA-54).
         footer:
-          shown !== "ready"
-            ? undefined
-            : game !== undefined || autoplay
-              ? statusLine
-              : tab === "moves"
-                ? (
-                    <NextMovesBar
-                      nodes={continuations}
-                      onSelect={core.goToNode}
-                      onHover={setHovered}
-                    />
-                  )
-                : undefined,
+          shown !== "ready" ? undefined : (
+            <>
+              {changed && (
+                <RepertoireChangesBar
+                  testId={`${id}-changes`}
+                  summary={t("repertoires.changes.added", { count: extensionIds.size })}
+                  problem={saveProblem}
+                  onUpdate={updateRecord}
+                  onCopy={saveCopy}
+                  onDiscard={discard}
+                />
+              )}
+              {game !== undefined || autoplay ? (
+                statusLine
+              ) : tab === "moves" ? (
+                <NextMovesBar
+                  nodes={continuations}
+                  onSelect={core.goToNode}
+                  onHover={setHovered}
+                />
+              ) : null}
+            </>
+          ),
       }}
     />
   );

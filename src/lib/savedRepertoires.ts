@@ -377,6 +377,51 @@ export const splitRepertoiresOf = (
   }));
 
 /**
+ * **A repertoire changed on its board** (CTA-63) — the record with its one
+ * game replaced by `tree`: the PGN written out by `treeToPgn`, and the
+ * preview and size read off it again, so the list's card and caption follow.
+ * Its id, name, settings, folder and `savedAt` are its own still; `updatedAt`
+ * is now. Whatever the change was — moves added today, a line deleted or a
+ * side line promoted later — it is a new tree, and this is the one way it
+ * becomes the record.
+ */
+export const withRepertoireTree = (
+  saved: SavedRepertoire,
+  tree: GameTree,
+  now: Date = new Date(),
+): SavedRepertoire => ({
+  ...saved,
+  pgn: treeToPgn(tree),
+  previewFen: repertoireTrunkFen([tree]),
+  stats: repertoireStatsOf(tree),
+  updatedAt: now.toISOString(),
+});
+
+/**
+ * **A copy of a repertoire, with its changes** (CTA-63) — a new record under
+ * `id` and `name`, holding `tree`, keeping the original's settings and folder,
+ * so a shipped or borrowed repertoire can be made one's own without
+ * overwriting it. The PGN's `Event` is the copy's name, so a download of it
+ * says which one it is.
+ */
+export const repertoireCopyOf = (
+  saved: SavedRepertoire,
+  tree: GameTree,
+  id: string,
+  name: string,
+  now: Date = new Date(),
+): SavedRepertoire => ({
+  ...withRepertoireTree(
+    saved,
+    name === "" ? tree : { ...tree, headers: { ...tree.headers, Event: name } },
+    now,
+  ),
+  id,
+  name,
+  savedAt: now.toISOString(),
+});
+
+/**
  * The name a split's folder takes: the reader's, else the text's own — the
  * caller supplies a fallback for a text that has neither.
  */

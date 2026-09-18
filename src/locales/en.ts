@@ -1045,6 +1045,25 @@ const en = {
         required: "Play the marked move: the other lines from here are already covered.",
       },
     },
+    /**
+     * What to do with a session's changes to a repertoire (CTA-63) — the strip
+     * the player shows while there are any.
+     */
+    changes: {
+      title: "Unsaved changes",
+      added_one: "{{count}} move added",
+      added_other: "{{count}} moves added",
+      update: "Update repertoire",
+      updateHelp: "Make these changes part of this repertoire.",
+      copy: "Save as copy",
+      copyHelp: "Keep this repertoire as it is, and save a copy with your changes.",
+      discard: "Discard",
+      copyName: "{{name}} (copy)",
+      problem: {
+        storage: "It could not be saved — this browser's storage is full or unavailable.",
+        "too-many": "There is no room for another repertoire in this browser.",
+      },
+    },
     /** The board a repertoire is read on. */
     detail: {
       missing: "There is no such repertoire in this browser.",
