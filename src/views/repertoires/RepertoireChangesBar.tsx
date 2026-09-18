@@ -2,6 +2,7 @@ import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
+import { Link as RouterLink } from "react-router";
 import { useTranslation } from "react-i18next";
 
 import type { SavedRepertoireProblem } from "../../lib/savedRepertoireStore";
@@ -11,6 +12,11 @@ import type { SavedRepertoireProblem } from "../../lib/savedRepertoireStore";
  * shows above its footer while the session's tree differs from the record:
  * make them part of this repertoire, keep the repertoire as it is and save
  * a copy with them (and go on in the copy), or drop them.
+ *
+ * **A protected repertoire** (its settings; on by default) cannot be updated
+ * from here: the strip says so, and in Update's place offers a link to its
+ * settings, where protection is switched off — Save as copy (unprotected)
+ * stays beside it. No dialog: the strip is where the choice already is.
  *
  * Presentational: the player decides what "changed" means (its tree is not
  * the one it opened, or last saved) and what each action does
@@ -22,6 +28,7 @@ function RepertoireChangesBar({
   testId,
   summary,
   problem,
+  protectedBy,
   onUpdate,
   onCopy,
   onDiscard,
@@ -31,6 +38,11 @@ function RepertoireChangesBar({
   summary: string;
   /** Why the last save did not happen, if it did not. */
   problem: SavedRepertoireProblem | null;
+  /**
+   * Set when the repertoire is protected: its settings screen, and where that
+   * screen comes back to. Update is replaced by a link there.
+   */
+  protectedBy?: { settingsPath: string; from: string };
   onUpdate: () => void;
   onCopy: () => void;
   onDiscard: () => void;
@@ -62,18 +74,40 @@ function RepertoireChangesBar({
           {summary}
         </Typography>
       </Typography>
+      {protectedBy !== undefined && (
+        <Typography
+          variant="caption"
+          data-testid={`${testId}-protected`}
+          sx={{ display: "block", color: "text.secondary", mt: 0.25 }}
+        >
+          {t("repertoires.changes.protected.note")}
+        </Typography>
+      )}
       <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mt: 0.75 }}>
-        <Tooltip title={t("repertoires.changes.updateHelp")}>
+        {protectedBy === undefined ? (
+          <Tooltip title={t("repertoires.changes.updateHelp")}>
+            <Button
+              size="small"
+              variant="contained"
+              color="success"
+              onClick={onUpdate}
+              data-testid={`${testId}-update`}
+            >
+              {t("repertoires.changes.update")}
+            </Button>
+          </Tooltip>
+        ) : (
           <Button
             size="small"
-            variant="contained"
-            color="success"
-            onClick={onUpdate}
-            data-testid={`${testId}-update`}
+            variant="outlined"
+            component={RouterLink}
+            to={protectedBy.settingsPath}
+            state={{ from: protectedBy.from }}
+            data-testid={`${testId}-settings`}
           >
-            {t("repertoires.changes.update")}
+            {t("repertoires.changes.protected.settings")}
           </Button>
-        </Tooltip>
+        )}
         <Tooltip title={t("repertoires.changes.copyHelp")}>
           <Button size="small" variant="outlined" onClick={onCopy} data-testid={`${testId}-copy`}>
             {t("repertoires.changes.copy")}
