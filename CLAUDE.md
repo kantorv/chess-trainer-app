@@ -918,7 +918,12 @@ when play — not navigation — reaches a leaf of the repertoire (the module's
   Every move is a dot (larger at a line's end), the moves played on the way
   are dotted in the primary colour, and zoom buttons step the drawing through
   `MAP_ZOOM_LEVELS` (25%–300%; the label resets to 100%), the lines keeping
-  their width at any zoom. The
+  their width at any zoom. A full-screen button opens the same drawing in a
+  full-screen MUI `Dialog`, where the **wheel zooms about the pointer** and a
+  **drag pans** (a native non-passive wheel listener, so the page neither
+  scrolls nor zooms under it; the view arithmetic — `zoomViewAt`, `fitView`,
+  `centerView` — is pure, in `lib/repertoireMap.ts`), with zoom, fit-all and
+  "where am I" buttons; it opens centred on the reader's position. The
   edges are a few path strings, not an element per move, so the 9,146-node
   example lays out in ~10ms. It maps the repertoire, not the session: inside
   a line the reader added, the marker waits on the last repertoire position.

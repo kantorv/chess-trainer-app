@@ -333,6 +333,60 @@ describe("Backtracking", () => {
     expect(screen.getByTestId(`${map}-zoom`)).toHaveTextContent("100%");
   });
 
+  it("opens the map full screen, zoomed with the wheel and moved by dragging", () => {
+    mount(`/repertoires/${storeRepertoire("r", CARO)}/games/backtrack`);
+    const map = `${ID}-map`;
+    const full = `${map}-dialog`;
+    fireEvent.click(screen.getByTestId(`${ID}-panel-tab-map`));
+    play(["e2", "e4"]);
+
+    fireEvent.click(screen.getByTestId(`${map}-fullscreen`));
+    const view = () => {
+      const g = screen.getByTestId(`${full}-view`);
+      return { x: Number(g.getAttribute("data-x")), y: Number(g.getAttribute("data-y")), k: Number(g.getAttribute("data-k")) };
+    };
+    // The same drawing, with the reader on it, at the drawing's own size.
+    expect(screen.getByTestId(`${full}-here`)).toHaveAttribute(
+      "data-node-id",
+      screen.getByTestId(`${map}-here`).getAttribute("data-node-id")!,
+    );
+    expect(view().k).toBe(1);
+    expect(screen.getByTestId(`${full}-zoom`)).toHaveTextContent("100%");
+
+    // The wheel zooms about the pointer: the drawing point under it stays put.
+    const viewport = screen.getByTestId(`${full}-viewport`);
+    const before = view();
+    fireEvent.wheel(viewport, { deltaY: -200, clientX: 300, clientY: 200 });
+    const after = view();
+    expect(after.k).toBeGreaterThan(1);
+    expect((300 - after.x) / after.k).toBeCloseTo((300 - before.x) / before.k);
+
+    // A drag moves it by exactly the pointer's travel.
+    fireEvent.pointerDown(viewport, { button: 0, clientX: 100, clientY: 100, pointerId: 1 });
+    fireEvent.pointerMove(viewport, { clientX: 140, clientY: 70, pointerId: 1 });
+    fireEvent.pointerUp(viewport, { pointerId: 1 });
+    expect(view().x).toBeCloseTo(after.x + 40);
+    expect(view().y).toBeCloseTo(after.y - 30);
+    // Released: moving the pointer no longer pans.
+    fireEvent.pointerMove(viewport, { clientX: 500, clientY: 500, pointerId: 1 });
+    expect(view().x).toBeCloseTo(after.x + 40);
+
+    // The buttons: zoom, fit the whole tree, and back to the reader.
+    fireEvent.click(screen.getByTestId(`${full}-zoom-out`));
+    expect(view().k).toBeCloseTo(after.k / 1.25);
+    fireEvent.click(screen.getByTestId(`${full}-fit`));
+    const fitted = view();
+    expect(fitted.k).toBeGreaterThan(1); // a small tree, blown up to the screen
+    fireEvent.click(screen.getByTestId(`${full}-locate`));
+    expect(view().k).toBe(fitted.k);
+
+    fireEvent.click(screen.getByTestId(`${full}-close`));
+    act(() => {
+      vi.advanceTimersByTime(1_000);
+    });
+    expect(screen.queryByTestId(`${full}-view`)).not.toBeInTheDocument();
+  });
+
   it("has no map in Get to the end", () => {
     mount(`/repertoires/${storeRepertoire("r", CARO)}/games/end`);
     expect(screen.queryByTestId(`${ID}-panel-tab-map`)).not.toBeInTheDocument();

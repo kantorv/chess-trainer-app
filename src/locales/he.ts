@@ -669,6 +669,10 @@ const he: typeof en = {
         zoomIn: "הגדלה",
         zoomOut: "הקטנה",
         zoomReset: "חזרה ל-100%",
+        fullScreen: "פתיחת המפה במסך מלא",
+        fit: "התאמת העץ כולו למסך",
+        close: "סגירת המפה",
+        mouseHint: "גללו כדי להגדיל, גררו כדי להזיז",
       },
       score: {
         successes: "נכון",

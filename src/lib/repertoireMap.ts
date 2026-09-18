@@ -186,3 +186,44 @@ export const mapPathTo = (
   layout: MapLayout,
   path: readonly VariationNode[],
 ): string => path.map((node) => edgeTo(layout, node)).join("");
+
+/**
+ * The full-screen map's view: the drawing translated by `x`, `y` and scaled by
+ * `k`, in screen pixels — what the mouse moves (a drag pans, the wheel zooms
+ * about the pointer). Pure, so the arithmetic is tested rather than eyeballed.
+ */
+export type MapView = { x: number; y: number; k: number };
+
+/** How far the full-screen view zooms, out and in. */
+export const MAP_VIEW_MIN_K = 0.05;
+export const MAP_VIEW_MAX_K = 8;
+
+const clampK = (k: number) => Math.min(MAP_VIEW_MAX_K, Math.max(MAP_VIEW_MIN_K, k));
+
+/** Zoom by `factor` keeping the screen point `cx`, `cy` fixed under the pointer. */
+export const zoomViewAt = (view: MapView, factor: number, cx: number, cy: number): MapView => {
+  const k = clampK(view.k * factor);
+  const ratio = k / view.k;
+  return { k, x: cx - (cx - view.x) * ratio, y: cy - (cy - view.y) * ratio };
+};
+
+/** The whole drawing (`width` × `height`) fitted and centred in a `vw` × `vh` viewport. */
+export const fitView = (
+  width: number,
+  height: number,
+  vw: number,
+  vh: number,
+  margin = 16,
+): MapView => {
+  const k = clampK(
+    Math.min((vw - 2 * margin) / Math.max(width, 1), (vh - 2 * margin) / Math.max(height, 1)),
+  );
+  return { k, x: (vw - width * k) / 2, y: (vh - height * k) / 2 };
+};
+
+/** The drawing's point `px`, `py` in the middle of the viewport, at scale `k`. */
+export const centerView = (px: number, py: number, k: number, vw: number, vh: number): MapView => ({
+  k,
+  x: vw / 2 - px * k,
+  y: vh / 2 - py * k,
+});
