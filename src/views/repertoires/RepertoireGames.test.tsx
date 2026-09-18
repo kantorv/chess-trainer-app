@@ -267,6 +267,44 @@ describe("Backtracking", () => {
     expect(status()).toBe("all-covered");
   });
 
+  it("draws the repertoire as a map, with where the reader is and what is covered", () => {
+    mount(`/repertoires/${storeRepertoire("r", CARO)}/games/backtrack`);
+    const map = `${ID}-map`;
+    // Get to the end has no map; Backtracking has, beside the Score.
+    fireEvent.click(screen.getByTestId(`${ID}-panel-tab-map`));
+    expect(screen.getByTestId(`${map}-svg`)).toHaveAttribute("data-rows", "2");
+    expect(screen.getByTestId(`${map}-here`)).toHaveAttribute("data-node-id", "start");
+    expect(screen.getByTestId(`${map}-left`)).toHaveTextContent("2 lines left");
+    expect(screen.getByTestId(`${map}-covered-ends`).getAttribute("d")).toBe("");
+
+    play(["e2", "e4"], ["d2", "d4"], ["e4", "e5"]);
+    // The marker follows play: after 3... Bf5, six plies in, on the top row.
+    const here = screen.getByTestId(`${map}-here`);
+    expect(here.getAttribute("data-node-id")).not.toBe("start");
+    expect(screen.getByTestId(`${map}-trail`).getAttribute("d")).not.toBe("");
+
+    drop("g1", "f3");
+    expect(screen.getByTestId(`${map}-left`)).toHaveTextContent("1 line left");
+    expect(screen.getByTestId(`${map}-covered-ends`).getAttribute("d")).toMatch(/h0$/);
+    expect(screen.getByTestId(`${map}-progress`)).toHaveAttribute("aria-valuenow", "50");
+
+    backtrack();
+    drop("d4", "c5");
+    expect(screen.getByTestId(`${map}-left`)).toHaveTextContent("Every line is covered.");
+
+    // A move the repertoire lacks is not on the map: the marker waits on the
+    // last repertoire position before it.
+    const end = screen.getByTestId(`${map}-here`).getAttribute("data-node-id");
+    drop("e7", "e6");
+    expect(position()).toBe(fenAfter("e4", "c6", "d4", "d5", "e5", "c5", "dxc5", "e6"));
+    expect(screen.getByTestId(`${map}-here`)).toHaveAttribute("data-node-id", end!);
+  });
+
+  it("has no map in Get to the end", () => {
+    mount(`/repertoires/${storeRepertoire("r", CARO)}/games/end`);
+    expect(screen.queryByTestId(`${ID}-panel-tab-map`)).not.toBeInTheDocument();
+  });
+
   it("starts over with nothing covered", () => {
     mount(`/repertoires/${storeRepertoire("f", WHITE_FORK)}/games/backtrack`);
     play(["e2", "e4"]);

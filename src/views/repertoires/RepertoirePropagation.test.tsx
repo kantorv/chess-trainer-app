@@ -74,7 +74,9 @@ describe("the repertoire board is composed, not written", () => {
       const panels = screen.getAllByTestId("the-one-board-panel");
       expect(panels).toHaveLength(1);
       expect(panels[0]).toHaveAttribute("data-panel-id", "repertoire-game-panel");
-      expect(screen.getByTestId("panel-tab-ids")).toHaveTextContent("moves,score,settings,engine");
+      expect(screen.getByTestId("panel-tab-ids")).toHaveTextContent(
+        game === "backtrack" ? "moves,score,map,settings,engine" : "moves,score,settings,engine",
+      );
 
       const squares = screen.getAllByTestId("the-one-board-square");
       expect(squares).toHaveLength(1);

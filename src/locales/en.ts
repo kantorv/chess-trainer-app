@@ -992,6 +992,15 @@ const en = {
       tabs: {
         settings: "Settings",
         score: "Score",
+        map: "Map",
+      },
+      /** Backtracking's Map tab — the repertoire as a tree. */
+      map: {
+        label: "The repertoire as a tree: covered lines in green, your way here highlighted",
+        here: "You are here",
+        left_one: "{{count}} line left",
+        left_other: "{{count}} lines left",
+        done: "Every line is covered.",
       },
       /** Game mode's tally — this session only. */
       score: {

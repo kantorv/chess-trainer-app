@@ -22,7 +22,13 @@ import {
   DEFAULT_ANALYSIS_SETTINGS,
   type AnalysisSettings,
 } from "../../lib/analysisSettings";
-import { emptyTree, findNode, type GameTree, type VariationNode } from "../../lib/gameTree";
+import {
+  emptyTree,
+  findNode,
+  pathTo,
+  type GameTree,
+  type VariationNode,
+} from "../../lib/gameTree";
 import { downloadPgn } from "../../lib/pgnExport";
 import { slugify } from "../../lib/pgnLibrary";
 import type { RepertoireGameId } from "../../lib/repertoireGames";
@@ -46,6 +52,7 @@ import {
   REQUIRED_MOVE_ARROW_COLOR,
 } from "../tools/analysis/nextMoveArrows";
 import RepertoireGamesMenu from "./RepertoireGamesMenu";
+import RepertoireMap from "./RepertoireMap";
 import { useRepertoireGame } from "./useRepertoireGame";
 
 /**
@@ -76,9 +83,10 @@ import { useRepertoireGame } from "./useRepertoireGame";
  *   the ids the repertoire arrived with, recomputed, never tracked. The
  *   record is never written; the header's download is the way out, and the
  *   Engine tab's "Clear" drops the additions.
- * - **Tabs: Moves · (Score) · Settings · Engine.** Settings holds the side,
- *   Autoplay (player only), the next-move arrows and the engine's switch; the
- *   Engine tab is disabled while the engine is off; Score is a game's.
+ * - **Tabs: Moves · (Score) · (Map) · Settings · Engine.** Settings holds the
+ *   side, Autoplay (player only), the next-move arrows and the engine's
+ *   switch; the Engine tab is disabled while the engine is off; Score is a
+ *   game's, and Map Backtracking's.
  * - **Arrows are the reader's call**, off by default: every continuation at
  *   the node on screen, the mainline's move in its own colour
  *   (`nextMoveArrowsOf`). In the player, hovering the next-moves bar draws
@@ -98,7 +106,9 @@ import { useRepertoireGame } from "./useRepertoireGame";
  *   those are **required** — a purple arrow and a status line say so, and a
  *   finished line's move is refused (not a failure). When a line ends, play
  *   goes **back** to the deepest position with an uncovered line under it, and
- *   goes on from there until every line is covered.
+ *   goes on from there until every line is covered. A **Map** tab draws the
+ *   repertoire as a tree (`RepertoireMap.tsx`): covered lines, the rest, and
+ *   where the reader is.
  *
  * The tree is parsed after a paint, behind a `setTimeout(0)`: the 9,146-node
  * example takes about a second.
@@ -295,6 +305,19 @@ function RepertoirePlayer({
     () => extensionIdsOf(core.tree, originalIds),
     [core.tree, originalIds],
   );
+
+  /*
+    Backtracking's map shows the repertoire, not the session: inside a line
+    the reader added, its marker waits on the last repertoire position before it.
+  */
+  const mapNodeId = useMemo(() => {
+    if (game !== "backtrack") return null;
+    const path = pathTo(core.tree, core.nodeId);
+    for (let index = path.length - 1; index >= 0; index -= 1) {
+      if (originalIds.has(path[index].id)) return path[index].id;
+    }
+    return null;
+  }, [game, core.tree, core.nodeId, originalIds]);
 
   /** Back to the start, extensions kept; the trainer answers if it is White. */
   const restart = useCallback(() => {
@@ -532,6 +555,26 @@ function RepertoirePlayer({
                       }
                     />
                   ),
+                },
+              ]
+            : []),
+          // Backtracking's map of the whole repertoire: where you are, how much is left.
+          ...(game === "backtrack"
+            ? [
+                {
+                  id: "map",
+                  label: t("repertoires.play.tabs.map"),
+                  content:
+                    shown === "ready" ? (
+                      <RepertoireMap
+                        testId={`${id}-map`}
+                        repertoire={repertoire}
+                        coverage={rules.coverage}
+                        nodeId={mapNodeId}
+                      />
+                    ) : (
+                      reading || null
+                    ),
                 },
               ]
             : []),
