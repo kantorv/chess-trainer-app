@@ -526,5 +526,5 @@ what a screen gains:
 | `src/views/dev/devBoards.test.tsx` | The five boards rendered for real: the shared square, the shared skeleton, and the one thing each board keeps as its own. |
 | `src/views/dev/devPanelPropagation.test.tsx` | The propagation assertion of §0 — `BoardPanel` replaced by a sentinel. |
 | `src/views/dev/core/devStores.test.ts` | The dev/shipped key isolation of §2.4, in both directions. |
-| `src/views/repertoires/RepertoireBoard.tsx` | The first **shipped** board composed from the core (CTA-61) — Repertoire v2 plus a Lines tab. `RepertoirePropagation.test.tsx` puts it under the same propagation assertion as the five dev boards. |
+| `src/views/repertoires/RepertoireBoard.tsx` | The first **shipped** board composed from the core (CTA-61) — Repertoire v2 over the reader's own one-game repertoire. `RepertoirePropagation.test.tsx` puts it under the same propagation assertion as the five dev boards. |
 | `src/views/dev/devTestHarness.tsx` | The `Engine` and `<Chessboard>` stand-ins §8 of `chessboard.md` requires, written once for five boards. |
