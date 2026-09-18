@@ -675,6 +675,12 @@ const he: typeof en = {
         mouseHint: "גללו כדי להגדיל, גררו כדי להזיז",
         showMoves: "הצגת המסעים",
         zoomToRead: "הגדילו כדי לקרוא את המסעים",
+        goTo: "מעבר אל {{move}}",
+        size: "{{lines}} ו-{{moves}}",
+        lines_one: "קו אחד",
+        lines_other: "{{count}} קווים",
+        moves_one: "מסע אחד",
+        moves_other: "{{count}} מסעים",
       },
       score: {
         successes: "נכון",

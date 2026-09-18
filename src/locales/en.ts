@@ -1010,6 +1010,12 @@ const en = {
         mouseHint: "Scroll to zoom, drag to move",
         showMoves: "Show moves",
         zoomToRead: "Zoom in to read the moves",
+        goTo: "Go to {{move}}",
+        size: "{{lines}}, {{moves}}",
+        lines_one: "{{count}} line",
+        lines_other: "{{count}} lines",
+        moves_one: "{{count}} move",
+        moves_other: "{{count}} moves",
       },
       /** Game mode's tally — this session only. */
       score: {

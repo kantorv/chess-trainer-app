@@ -275,7 +275,7 @@ describe("Backtracking", () => {
     expect(screen.getByTestId(`${map}-svg`)).toHaveAttribute("data-rows", "2");
     expect(screen.getByTestId(`${map}-here`)).toHaveAttribute("data-node-id", "start");
     expect(screen.getByTestId(`${map}-left`)).toHaveTextContent("2 lines left");
-    expect(screen.getByTestId(`${map}-covered-ends`).getAttribute("d")).toBe("");
+    expect(screen.getByTestId(`${map}-covered-lines`).getAttribute("d")).toBe("");
 
     play(["e2", "e4"], ["d2", "d4"], ["e4", "e5"]);
     // The marker follows play: after 3... Bf5, six plies in, on the top row.
@@ -285,7 +285,7 @@ describe("Backtracking", () => {
 
     drop("g1", "f3");
     expect(screen.getByTestId(`${map}-left`)).toHaveTextContent("1 line left");
-    expect(screen.getByTestId(`${map}-covered-ends`).getAttribute("d")).toMatch(/h0$/);
+    expect(screen.getByTestId(`${map}-covered-lines`).getAttribute("d")).not.toBe("");
     expect(screen.getByTestId(`${map}-progress`)).toHaveAttribute("aria-valuenow", "50");
 
     backtrack();
@@ -300,15 +300,19 @@ describe("Backtracking", () => {
     expect(screen.getByTestId(`${map}-here`)).toHaveAttribute("data-node-id", end!);
   });
 
-  it("dots every move, marks the ones played, and zooms in steps", () => {
+  it("dots every move in its side's colour, rings the ones played, and zooms in steps", () => {
     mount(`/repertoires/${storeRepertoire("r", CARO)}/games/backtrack`);
     const map = `${ID}-map`;
     fireEvent.click(screen.getByTestId(`${ID}-panel-tab-map`));
     const dots = (name: string) =>
       (screen.getByTestId(`${map}-${name}`).getAttribute("d") ?? "").match(/h0/g)?.length ?? 0;
 
-    // Seven moves that are not a line's end (1. e4 … 3... Bf5, and 3... c5).
-    expect(dots("open-moves")).toBe(7);
+    // Every move a dot in its side's colour: White's e4, d4, e5; Black's c6,
+    // d5, Bf5 and c5; both lines end on a White move (Nf3, dxc5).
+    expect(dots("white-moves")).toBe(3);
+    expect(dots("black-moves")).toBe(4);
+    expect(dots("white-ends")).toBe(2);
+    expect(dots("black-ends")).toBe(0);
     expect(dots("trail-moves")).toBe(0);
 
     play(["e2", "e4"], ["d2", "d4"]);
@@ -418,9 +422,10 @@ describe("Backtracking", () => {
     fireEvent.pointerUp(viewport, { pointerId: 1 });
     expect(screen.queryByTestId(`${full}-labels`)).not.toBeInTheDocument();
 
-    // And off again.
+    // And off again. (A game's map is not a way to skip ahead: no links.)
     fireEvent.click(screen.getByTestId(`${full}-locate`));
     expect(screen.getByTestId(`${full}-labels`)).toBeInTheDocument();
+    expect(screen.queryAllByRole("button", { name: /^Go to / })).toHaveLength(0);
     fireEvent.click(toggle);
     expect(screen.queryByTestId(`${full}-labels`)).not.toBeInTheDocument();
   });
