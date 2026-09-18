@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { memo, useEffect, useRef } from "react";
 import List from "@mui/material/List";
 import ListItemButton from "@mui/material/ListItemButton";
 import ListItemText from "@mui/material/ListItemText";
@@ -25,7 +25,16 @@ type RepertoireLinesProps = {
   onSelect: (index: number) => void;
 };
 
-function RepertoireLines({ chapters, selected, onSelect }: RepertoireLinesProps) {
+/*
+  Memoised: the board re-renders on every step and every engine message, and
+  310 list rows re-rendering with it cost more than the board did (CTA-61).
+  The screen hands a stable `onSelect`, so only a new pick re-renders this.
+*/
+const RepertoireLines = memo(function RepertoireLines({
+  chapters,
+  selected,
+  onSelect,
+}: RepertoireLinesProps) {
   const selectedRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     // jsdom has no layout, and no `scrollIntoView` either.
@@ -66,6 +75,6 @@ function RepertoireLines({ chapters, selected, onSelect }: RepertoireLinesProps)
       ))}
     </List>
   );
-}
+});
 
 export default RepertoireLines;

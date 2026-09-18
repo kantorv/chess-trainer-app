@@ -786,6 +786,18 @@ Repertoire v2 again for the board. Only the differences are written out here:
   `setTimeout(0)` and shows that it is reading.
 - **Nothing on the board writes.** A repertoire is the file; a move tried
   against it is exploration, and the Engine tab's clear puts the line back.
+- **Three tabs: Lines · Moves · Engine.** No Tree tab: the merged move list
+  already hangs every side line under its move, the CTA-53 reason.
+- **A move list renders its structure once per game.** `MoveList`,
+  `VariationLine` and `VariationTree` memoise the rows and side lines, and each
+  token reads "am I current" and "what is my eval" from a selection store
+  (`views/shared/moveSelection.ts`) whose subscriptions are keyed by node, ply
+  and FEN. A step re-renders two tokens and an engine message re-renders none.
+  Before, both redrew every token, which on the 9,146-node example was ~0.9s
+  each — the engine's streamed lines alone kept the list redrawing faster than
+  the reader could step. `findNode` / `pathTo` read a per-tree index
+  (`lib/gameTree.ts`) instead of walking the tree, and the core memoises its
+  `pgn`. Keep new per-token state in that store, not in the list's props.
 
 ## A mask is a costume, never a rule
 

@@ -32,7 +32,6 @@ import {
   HOVERED_NEXT_MOVE_ARROW_COLOR,
   NEXT_MOVE_ARROW_COLOR,
 } from "../tools/analysis/nextMoveArrows";
-import VariationTree from "../tools/analysis/VariationTree";
 import RepertoireLines from "./RepertoireLines";
 import { useSavedRepertoires } from "./useSavedRepertoires";
 
@@ -49,6 +48,11 @@ import { useSavedRepertoires } from "./useSavedRepertoires";
  * navigation level, and the engine worker is not rebuilt between lines. The
  * eval bar, the captured strips, the pinned best-variations block, the tab
  * strip and the board controls are all the core's; this file supplies slots.
+ *
+ * Three tabs, not Repertoire v2's four: **Lines · Moves · Engine**. The merged
+ * move list (CTA-53) already hangs every side line under the move it answers,
+ * so a flowing Tree tab would draw the same tree a second time — the reason
+ * the Analysis Board dropped its own in CTA-53.
  *
  * | Capability | Taken | Because |
  * | --- | --- | --- |
@@ -141,12 +145,16 @@ function RepertoireBoardScreen({ saved }: { saved: SavedRepertoire }) {
     };
   }, [firstLine, load]);
 
-  const selectLine = (index: number) => {
-    const line = lines.find((candidate) => candidate.index === index);
-    if (line === undefined) return;
-    setShown({ index, state: "loading" });
-    load(line);
-  };
+  // Stable, so the memoised Lines tab does not re-render on every step.
+  const selectLine = useCallback(
+    (index: number) => {
+      const line = lines.find((candidate) => candidate.index === index);
+      if (line === undefined) return;
+      setShown({ index, state: "loading" });
+      load(line);
+    },
+    [lines, load],
+  );
 
   const [settings, setSettings] = useState<AnalysisSettings>(
     DEFAULT_ANALYSIS_SETTINGS,
@@ -305,17 +313,6 @@ function RepertoireBoardScreen({ saved }: { saved: SavedRepertoire }) {
                 nodeId={core.nodeId}
                 onSelectNode={core.goToNode}
                 evalsByFen={engine.evalsByFen}
-              />
-            ),
-          },
-          {
-            id: "tree",
-            label: t("repertoires.detail.tabs.tree"),
-            content: notReady ?? (
-              <VariationTree
-                tree={core.tree}
-                currentId={core.nodeId}
-                onSelectNode={core.goToNode}
               />
             ),
           },
