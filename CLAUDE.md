@@ -787,7 +787,9 @@ Repertoire v2 again for the board. Only the differences are written out here:
 - **Nothing on the board writes.** A repertoire is the file; a move tried
   against it is exploration, and the Engine tab's clear puts the line back.
 - **Three tabs: Lines · Moves · Engine.** No Tree tab: the merged move list
-  already hangs every side line under its move, the CTA-53 reason.
+  already hangs every side line under its move, the CTA-53 reason. The Moves
+  tab is kept mounted once opened (`BoardPanel`'s opt-in `keepMounted`), so
+  Lines ↔ Moves switches without re-mounting a 9,000-move list.
 - **A move list renders its structure once per game.** `MoveList`,
   `VariationLine` and `VariationTree` memoise the rows and side lines, and each
   token reads "am I current" and "what is my eval" from a selection store
