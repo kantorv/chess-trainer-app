@@ -1,6 +1,7 @@
 import Box from "@mui/material/Box";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import Switch from "@mui/material/Switch";
+import type { ReactNode } from "react";
 import TextField from "@mui/material/TextField";
 import ToggleButton from "@mui/material/ToggleButton";
 import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
@@ -39,6 +40,40 @@ export type RepertoireSettingsSectionProps = {
   }) => void;
 };
 
+/** One on/off option, with a line on what it does. */
+function SwitchOption({
+  checked,
+  onChange,
+  label,
+  help,
+  testId,
+}: {
+  checked: boolean;
+  onChange: (next: boolean) => void;
+  label: ReactNode;
+  help: ReactNode;
+  testId: string;
+}) {
+  return (
+    <Box>
+      <FormControlLabel
+        sx={{ m: 0 }}
+        control={
+          <Switch
+            checked={checked}
+            onChange={(event) => onChange(event.target.checked)}
+            slotProps={{ input: { "data-testid": testId } as object }}
+          />
+        }
+        label={label}
+      />
+      <Typography variant="caption" sx={{ display: "block", color: "text.secondary" }}>
+        {help}
+      </Typography>
+    </Box>
+  );
+}
+
 /** Title and description — what the repertoire is called and what it is. */
 export function GeneralSection({ draft, onChange }: RepertoireSettingsSectionProps) {
   const { t } = useTranslation();
@@ -70,6 +105,13 @@ export function GeneralSection({ draft, onChange }: RepertoireSettingsSectionPro
             dir: "auto",
           },
         }}
+      />
+      <SwitchOption
+        checked={draft.settings.protected}
+        onChange={(next) => onChange({ settings: { protected: next } })}
+        label={t("repertoires.settings.protected")}
+        help={t("repertoires.settings.protectedHelp")}
+        testId="repertoire-settings-protected"
       />
     </Box>
   );
@@ -114,26 +156,13 @@ export function BoardSection({ draft, onChange }: RepertoireSettingsSectionProps
           {t("repertoires.settings.colorHelp")}
         </Typography>
       </Box>
-      <Box>
-        <FormControlLabel
-          sx={{ m: 0 }}
-          control={
-            <Switch
-              checked={draft.settings.showArrows}
-              onChange={(event) =>
-                onChange({ settings: { showArrows: event.target.checked } })
-              }
-              slotProps={{
-                input: { "data-testid": "repertoire-settings-show-arrows" } as object,
-              }}
-            />
-          }
-          label={t("repertoires.settings.showArrows")}
-        />
-        <Typography variant="caption" sx={{ display: "block", color: "text.secondary" }}>
-          {t("repertoires.settings.showArrowsHelp")}
-        </Typography>
-      </Box>
+      <SwitchOption
+        checked={draft.settings.showArrows}
+        onChange={(next) => onChange({ settings: { showArrows: next } })}
+        label={t("repertoires.settings.showArrows")}
+        help={t("repertoires.settings.showArrowsHelp")}
+        testId="repertoire-settings-show-arrows"
+      />
     </Box>
   );
 }

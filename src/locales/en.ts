@@ -904,6 +904,9 @@ const en = {
       descriptionHelp: "Your own notes: what this repertoire covers, what to remember.",
       color: "Main color",
       colorHelp: "The side you play this repertoire as. Its board opens facing it.",
+      protected: "Protected",
+      protectedHelp:
+        "Changes made on its board can't be written into it — only saved as a copy — until this is off. Copies are never protected.",
       showArrows: "Show next-move arrows",
       showArrowsHelp:
         "The board opens with arrows for the moves that follow the position on it: the main line in green, side lines in blue. You can still switch them for a session. Games always start without them.",
@@ -1059,6 +1062,13 @@ const en = {
       copyHelp: "Keep this repertoire as it is, and save a copy with your changes.",
       discard: "Discard",
       copyName: "{{name}} (copy)",
+      /** Update, on a protected repertoire. */
+      protected: {
+        title: "This repertoire is protected",
+        body: "Its settings protect it from being changed. Save your changes as a copy — the copy isn't protected, so you can go on editing it — or open its settings to switch protection off. Opening the settings leaves this board, and the changes you haven't saved are lost.",
+        settings: "Open settings",
+        cancel: "Cancel",
+      },
       problem: {
         storage: "It could not be saved — this browser's storage is full or unavailable.",
         "too-many": "There is no room for another repertoire in this browser.",

@@ -64,6 +64,7 @@ import {
   REQUIRED_MOVE_ARROW_COLOR,
 } from "../tools/analysis/nextMoveArrows";
 import RepertoireChangesBar from "./RepertoireChangesBar";
+import RepertoireProtectedDialog from "./RepertoireProtectedDialog";
 import RepertoireGamesMenu from "./RepertoireGamesMenu";
 import RepertoireMap from "./RepertoireMap";
 import { useRepertoireGame } from "./useRepertoireGame";
@@ -100,7 +101,10 @@ import { useRepertoireGame } from "./useRepertoireGame";
  *   writes). While the session's tree differs from the record, a strip above
  *   the footer (`RepertoireChangesBar.tsx`) offers **Update this repertoire**
  *   (`withRepertoireTree`, in place — the session becomes the record, and the
- *   additions stop being additions), **Save as a copy** (`repertoireCopyOf` —
+ *   additions stop being additions; on a **protected** repertoire — its
+ *   settings, on by default — a dialog asks instead:
+ *   `RepertoireProtectedDialog.tsx`, open its settings or save a copy),
+ *   **Save as a copy** (`repertoireCopyOf` —
  *   a new record with the original's settings and folder, opened at the
  *   position on screen, the original untouched: how a shipped repertoire
  *   becomes one's own) and **Discard**. A reload with changes unsaved asks
@@ -434,8 +438,19 @@ function RepertoirePlayer({
   const changed = game === undefined && shown === "ready" && core.tree !== repertoire;
   const [saveProblem, setSaveProblem] = useState<SavedRepertoireProblem | null>(null);
 
+  /*
+    A protected repertoire (its settings; on by default) is not written by
+    Update: the reader is asked to unprotect it in its settings, or to save a
+    copy — which is unprotected, and opens where they were.
+  */
+  const [asking, setAsking] = useState(false);
+
   /** Make the changes part of this repertoire; the session is the record now. */
   const updateRecord = () => {
+    if (saved.settings.protected) {
+      setAsking(true);
+      return;
+    }
     const problem = saveRepertoire(withRepertoireTree(saved, core.tree));
     setSaveProblem(problem ?? null);
     if (problem === undefined) setRepertoire(core.tree);
@@ -443,6 +458,7 @@ function RepertoirePlayer({
 
   /** Keep this repertoire as it is; save a copy with the changes, and go on in it. */
   const saveCopy = () => {
+    setAsking(false);
     const copyId = newSavedRepertoireId();
     const name = t("repertoires.changes.copyName", {
       name: saved.name || t("repertoires.untitled"),
@@ -769,6 +785,14 @@ function RepertoirePlayer({
         footer:
           shown !== "ready" ? undefined : (
             <>
+              <RepertoireProtectedDialog
+                open={asking}
+                testId={`${id}-protected`}
+                settingsPath={`${boardPath}/settings`}
+                from={`${boardPath}${location.search}`}
+                onCopy={saveCopy}
+                onClose={() => setAsking(false)}
+              />
               {changed && (
                 <RepertoireChangesBar
                   testId={`${id}-changes`}

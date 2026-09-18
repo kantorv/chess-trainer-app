@@ -1,7 +1,8 @@
 /**
  * **A saved repertoire's settings** — what the reader can say about a
- * repertoire beyond its text: a description, the side it is played from, and
- * whether its board draws the next-move arrows.
+ * repertoire beyond its text: a description, the side it is played from,
+ * whether its board draws the next-move arrows, and whether it is protected
+ * from being changed.
  *
  * One object on the record (`SavedRepertoire.settings`), read back through
  * {@link repertoireSettingsFrom}, which fills **each field on its own** from
@@ -48,12 +49,22 @@ export type RepertoireSettings = {
    * them whatever this says, since a drill must not show the answer.
    */
   showArrows: boolean;
+  /**
+   * Whether the repertoire is **protected** from its own board's "Update"
+   * (CTA-63): changes made on it can still be saved as a copy, but writing
+   * them into this record asks the reader to switch protection off in its
+   * settings first. On by default, so a repertoire brought in — a shipped or
+   * borrowed one above all — is not overwritten by a stray click. A copy
+   * (`repertoireCopyOf`) is made unprotected: it exists to be edited.
+   */
+  protected: boolean;
 };
 
 export const DEFAULT_REPERTOIRE_SETTINGS: RepertoireSettings = {
   description: "",
   color: "white",
   showArrows: true,
+  protected: true,
 };
 
 /** The most a description may hold — a paragraph or two, not a file. */
@@ -76,6 +87,10 @@ export const repertoireSettingsFrom = (value: unknown): RepertoireSettings => {
       typeof row.showArrows === "boolean"
         ? row.showArrows
         : DEFAULT_REPERTOIRE_SETTINGS.showArrows,
+    protected:
+      typeof row.protected === "boolean"
+        ? row.protected
+        : DEFAULT_REPERTOIRE_SETTINGS.protected,
   };
 };
 

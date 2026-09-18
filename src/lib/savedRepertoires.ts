@@ -401,8 +401,9 @@ export const withRepertoireTree = (
  * **A copy of a repertoire, with its changes** (CTA-63) — a new record under
  * `id` and `name`, holding `tree`, keeping the original's settings and folder,
  * so a shipped or borrowed repertoire can be made one's own without
- * overwriting it. The PGN's `Event` is the copy's name, so a download of it
- * says which one it is.
+ * overwriting it — and **unprotected** whatever the original was: a copy
+ * exists to go on being edited. The PGN's `Event` is the copy's name, so a
+ * download of it says which one it is.
  */
 export const repertoireCopyOf = (
   saved: SavedRepertoire,
@@ -418,6 +419,7 @@ export const repertoireCopyOf = (
   ),
   id,
   name,
+  settings: { ...saved.settings, protected: false },
   savedAt: now.toISOString(),
 });
 
