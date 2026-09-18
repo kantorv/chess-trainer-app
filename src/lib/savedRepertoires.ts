@@ -4,6 +4,11 @@ import type { GameTree, VariationNode } from "./gameTree";
 import { PgnParseError, parsePgnTree, readPgnTags, splitPgnGames } from "./pgn";
 import { chapterPrefix } from "./pgnLibrary";
 import { MAX_UPLOAD_CHARS } from "./pgnUploads";
+import {
+  DEFAULT_REPERTOIRE_SETTINGS,
+  repertoireSettingsFrom,
+  type RepertoireSettings,
+} from "./repertoireSettings";
 
 /**
  * **The reader's own repertoires** — what one is when it is written down, how
@@ -60,6 +65,12 @@ export type SavedRepertoire = {
    * agrees. What a preview board draws; see {@link repertoireTrunkFen}.
    */
   previewFen: string;
+  /**
+   * The reader's settings for it — description, the side it is played from,
+   * and whatever is added next ([`repertoireSettings.ts`](./repertoireSettings.ts)).
+   * A record written before a setting existed reads as that setting's default.
+   */
+  settings: RepertoireSettings;
   /** Always `null` for now: Unfiled. See the module note. */
   folderId: string | null;
   /** ISO 8601, when it was brought in. */
@@ -206,6 +217,7 @@ export const savedRepertoireOf = (
     name: typedName.trim() || repertoireNameOf(pgn) || "",
     pgn,
     previewFen,
+    settings: DEFAULT_REPERTOIRE_SETTINGS,
     folderId: null,
     savedAt: now.toISOString(),
     updatedAt: now.toISOString(),
@@ -361,7 +373,8 @@ export const repertoireLineTree = (line: RepertoireLine): GameTree | undefined =
  * One stored row, normalised, or `undefined` for one that is not a repertoire.
  * The id and the text are required — a row without them has nothing to show —
  * and everything else falls back: an unreadable `previewFen` to the start
- * position, an unreadable `folderId` to Unfiled, a missing name to empty.
+ * position, an unreadable `folderId` to Unfiled, a missing name to empty, and
+ * each setting to its default.
  */
 export const savedRepertoireFrom = (
   value: unknown,
@@ -382,6 +395,9 @@ export const savedRepertoireFrom = (
       typeof row.previewFen === "string" && row.previewFen !== ""
         ? row.previewFen
         : DEFAULT_POSITION,
+    // Field by field, so an older record — or one with a single unreadable
+    // setting — keeps everything it can.
+    settings: repertoireSettingsFrom(row.settings),
     folderId:
       typeof row.folderId === "string" && row.folderId !== ""
         ? row.folderId

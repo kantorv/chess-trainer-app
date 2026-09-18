@@ -883,6 +883,30 @@ const en = {
           "It could not be saved — this browser's storage is full or unavailable.",
       },
     },
+    /**
+     * The per-repertoire settings screen (`/repertoires/<id>/settings`). One
+     * key per control; a new option adds its own here and in `he.ts`
+     * (see `lib/repertoireSettings.ts`, "Adding an option").
+     */
+    settings: {
+      title: "Repertoire settings",
+      open: "Settings",
+      sections: {
+        general: "General",
+        board: "Board",
+      },
+      name: "Title",
+      nameHelp: "Shown in the list and above the board.",
+      description: "Description",
+      descriptionHelp: "Your own notes: what this repertoire covers, what to remember.",
+      color: "Main color",
+      colorHelp: "The side you play this repertoire as. Its board opens facing it.",
+      white: "White",
+      black: "Black",
+      save: "Save",
+      cancel: "Cancel",
+      problem: "It could not be saved — this browser's storage is full or unavailable.",
+    },
     /** The board a repertoire is read on. */
     detail: {
       missing: "There is no such repertoire in this browser.",

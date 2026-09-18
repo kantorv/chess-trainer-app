@@ -3,6 +3,9 @@ import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import CircularProgress from "@mui/material/CircularProgress";
 import FormControlLabel from "@mui/material/FormControlLabel";
+import IconButton from "@mui/material/IconButton";
+import Tooltip from "@mui/material/Tooltip";
+import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
 import Switch from "@mui/material/Switch";
 import Typography from "@mui/material/Typography";
 import { Link as RouterLink, useParams } from "react-router";
@@ -56,7 +59,7 @@ import { useSavedRepertoires } from "./useSavedRepertoires";
  *
  * | Capability | Taken | Because |
  * | --- | --- | --- |
- * | Base | `useBoardCore()` | both colours move from any node: a reader tries a move against the file |
+ * | Base | `useBoardCore({ orientation })` | facing the repertoire's main color (its settings); both colours move from any node: a reader tries a move against the file |
  * | Engine | switch, **no reply** | a repertoire viewer never moves a piece by itself |
  * | Book | header line only | the file *is* the book here |
  * | Autosave | ❌ | reading is not writing: the record is the file, and trying a move must not rewrite it |
@@ -111,7 +114,9 @@ function RepertoireBoardScreen({ saved }: { saved: SavedRepertoire }) {
   );
   const firstLine = lines.at(0);
 
-  const core = useBoardCore();
+  // Facing the side the repertoire is played from (its settings) — read once,
+  // like every arrival: coming back from the settings screen remounts this.
+  const core = useBoardCore({ orientation: saved.settings.color });
   const { loadTree } = core;
 
   const [shown, setShown] = useState<Shown>({
@@ -275,6 +280,19 @@ function RepertoireBoardScreen({ saved }: { saved: SavedRepertoire }) {
                 sx={{ flexShrink: 0 }}
               />
             )}
+            <Tooltip title={t("repertoires.settings.open")}>
+              <IconButton
+                size="small"
+                component={RouterLink}
+                to={`/repertoires/${encodeURIComponent(saved.id)}/settings`}
+                state={{ from: `/repertoires/${encodeURIComponent(saved.id)}` }}
+                aria-label={t("repertoires.settings.open")}
+                data-testid="repertoire-board-settings"
+                sx={{ flexShrink: 0 }}
+              >
+                <SettingsRoundedIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
             <FormControlLabel
               sx={{ flexShrink: 0 }}
               control={
@@ -302,11 +320,32 @@ function RepertoireBoardScreen({ saved }: { saved: SavedRepertoire }) {
             id: "lines",
             label: t("repertoires.detail.tabs.lines"),
             content: (
-              <RepertoireLines
-                chapters={chapters}
-                selected={shown.index}
-                onSelect={selectLine}
-              />
+              <>
+                {/* The reader's own notes on it, above the lines they describe. */}
+                {saved.settings.description !== "" && (
+                  <Typography
+                    variant="body2"
+                    dir="auto"
+                    data-testid="repertoire-board-description"
+                    sx={{
+                      color: "text.secondary",
+                      whiteSpace: "pre-wrap",
+                      px: 1,
+                      py: 0.75,
+                      mb: 0.5,
+                      borderBottom: "1px solid",
+                      borderColor: "divider",
+                    }}
+                  >
+                    {saved.settings.description}
+                  </Typography>
+                )}
+                <RepertoireLines
+                  chapters={chapters}
+                  selected={shown.index}
+                  onSelect={selectLine}
+                />
+              </>
             ),
           },
           {
