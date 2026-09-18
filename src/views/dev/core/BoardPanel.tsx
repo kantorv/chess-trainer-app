@@ -81,6 +81,13 @@ export type BoardPanelTab = {
   label: string;
   /** Its body. Rendered only while this tab is the active one. */
   content: ReactNode;
+  /**
+   * Greyed out and unclickable — a tab whose subject is switched off (the
+   * Play repertoire screen's Engine tab while its engine is off, CTA-63).
+   * Optional: every other screen passes none. A screen that disables the
+   * active tab also moves `activeTab` off it.
+   */
+  disabled?: boolean;
 };
 
 export type BoardPanelProps = {
@@ -285,6 +292,7 @@ function BoardPanel({
             key={tab.id}
             value={tab.id}
             label={tab.label}
+            disabled={tab.disabled}
             data-testid={`${testId}-tab-${tab.id}`}
           />
         ))}

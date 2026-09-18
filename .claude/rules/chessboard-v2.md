@@ -381,7 +381,7 @@ The slot contract:
 | `engineOn` | `boolean?` | The block renders nothing while off; the status row says so. |
 | `onPlayVariation` | `((sans) => void)?` | Present ⇒ the lines are clickable (CTA-55). Absent ⇒ plain text. |
 | `mask` | `PieceMask?` | Masked notation inside the block. |
-| `tabs` | `readonly { id, label, content }[]` | One tab is rendered at a time, never three with two hidden — unless `keepMounted` names it. |
+| `tabs` | `readonly { id, label, content, disabled? }[]` | One tab is rendered at a time, never three with two hidden — unless `keepMounted` names it. `disabled` greys a tab out (the Play repertoire screen's Engine tab while its engine is off); the screen keeps `activeTab` off a disabled tab. |
 | `keepMounted` | `readonly string[]?` | Opt-in: these tabs mount on first open and then stay mounted, hidden, while another shows — for a body whose mount is the cost (the Repertoires board keeps `moves`). Each has its own scrolling region; showing one again scrolls its `aria-current` move into view. |
 | `activeTab` / `onTabChange` | | The screen's state — a screen may need to know the tab (CTA-54's arrows). |
 | `footer` | `ReactNode?` | A sibling of the scrolling region, so it stays put while the tab scrolls. |
@@ -413,7 +413,7 @@ Every `/dev/*` screen, and exactly what it picks. Nothing else differs.
 | **Masked v2** | `/dev/masked` | Play v2's, verbatim | ✅ switch, **reply** | header line only | ❌ (a mask cannot be restored on `/dev/play`) | Moves · Engine · Mask | Play v2's | Play v2's | `pieces: maskedPieces(mask)` |
 | **Openings v2** | `/dev/openings` | `?fen=`, `?openings=` | ✅ switch, no reply | ✅ continuations + arrows | ❌ **button-triggered save** | Moves · Engine · Tree | opening + Save + switch | the explorer list | book arrows |
 | **Repertoire v2** | `/dev/repertoire` | `?game=library/<path>/<id>` | ✅ switch, no reply | header line only | ❌ (a shipped file is not the reader's work) | Moves · Engine · Tree · Info | opening + switch | next-moves bar | next-move arrows |
-| **Play repertoire** (shipped, CTA-63) | `/repertoires/<id>/play` | `orientation`: the reader's side | ✅ switch, **off by default**, no reply — the opponent is **`useTrainerModule`** (§2.5) | ❌ | ❌ (session-only; leaves by download) | Moves (extensions tinted) · Engine · Settings (side, arrows) | name + engine switch + restart + download + back | the trainer's status line | next-move arrows, **off by default** |
+| **Play repertoire** (shipped, CTA-63) | `/repertoires/<id>/play` | `orientation`: the reader's side | ✅ switch, **off by default**, no reply — the opponent is **`useTrainerModule`** (§2.5) | ❌ | ❌ (session-only; leaves by download) | Moves (extensions tinted) · Settings (side, arrows, engine switch) · Engine (disabled while off) | name + restart + download + back | the trainer's status line | next-move arrows, **off by default** |
 
 **Next-move arrows are one helper.** `nextMoveArrowsOf` (`views/tools/analysis/nextMoveArrows.ts`)
 builds the arrows for a position's continuations — `children[0]`, the

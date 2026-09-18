@@ -73,11 +73,11 @@ import { useSavedRepertoires } from "./useSavedRepertoires";
  *   download, which writes the session tree — repertoire, extensions, side
  *   lines and all — as one PGN.
  *
- * - **Three tabs: Moves · Engine · Settings.** The session's knobs — the side
- *   and the arrows — live in the Settings tab; the Engine tab is the other
- *   boards' own (`AnalysisSettings`), and the engine's switch sits in the
- *   header, where the other boards keep it, so it is reachable from any tab.
- *   The header also keeps the actions (restart, download, back).
+ * - **Three tabs: Moves · Settings · Engine.** The session's knobs — the side,
+ *   the arrows and the engine's switch — live in the Settings tab; the Engine
+ *   tab is the other boards' own (`AnalysisSettings`) and is **disabled while
+ *   the engine is off**, since every control in it would be. The header keeps
+ *   the actions (restart, download, back).
  * - **The engine is off until the reader turns it on.** On, it searches the
  *   position on screen and fills the pinned best-variations block above the
  *   tabs, exactly as on the repertoire board; a line clicked there is played
@@ -292,18 +292,6 @@ function RepertoirePlayScreen({ saved }: { saved: SavedRepertoire }) {
                 sx={{ flexShrink: 0 }}
               />
             )}
-            <FormControlLabel
-              sx={{ flexShrink: 0, m: 0 }}
-              control={
-                <Switch
-                  size="small"
-                  checked={engineOn}
-                  data-testid="repertoire-play-setting-engine"
-                  onChange={(event) => setEngineOn(event.target.checked)}
-                />
-              }
-              label={t("repertoires.play.engine")}
-            />
             <Tooltip title={t("repertoires.play.restart")}>
               <IconButton
                 size="small"
@@ -347,7 +335,9 @@ function RepertoirePlayScreen({ saved }: { saved: SavedRepertoire }) {
         requestedMultiPv: settings.multiPv,
         engineOn,
         onPlayVariation: core.playVariation,
-        activeTab: tab,
+        // The Engine tab cannot be switched off from under itself (its switch
+        // is in Settings), but a disabled tab is never the one showing.
+        activeTab: tab === "engine" && !engineOn ? "settings" : tab,
         onTabChange: setTab,
         keepMounted: KEEP_MOUNTED,
         tabs: [
@@ -372,8 +362,24 @@ function RepertoirePlayScreen({ saved }: { saved: SavedRepertoire }) {
               )),
           },
           {
+            id: "settings",
+            label: t("repertoires.play.tabs.settings"),
+            content: (
+              <PlaySettings
+                side={side}
+                onSideChange={changeSide}
+                showArrows={showArrows}
+                onShowArrowsChange={setShowArrows}
+                engineOn={engineOn}
+                onEngineOnChange={setEngineOn}
+              />
+            ),
+          },
+          {
             id: "engine",
             label: t("repertoires.detail.tabs.engine"),
+            // Its subject is switched off in Settings until the reader asks.
+            disabled: !engineOn,
             content: (
               <AnalysisSettingsPanel
                 settings={settings}
@@ -385,18 +391,6 @@ function RepertoirePlayScreen({ saved }: { saved: SavedRepertoire }) {
                 showEvalBar={showEvalBar}
                 onShowEvalBarChange={setShowEvalBar}
                 onClear={clear}
-              />
-            ),
-          },
-          {
-            id: "settings",
-            label: t("repertoires.play.tabs.settings"),
-            content: (
-              <PlaySettings
-                side={side}
-                onSideChange={changeSide}
-                showArrows={showArrows}
-                onShowArrowsChange={setShowArrows}
               />
             ),
           },
@@ -422,7 +416,7 @@ function RepertoirePlayScreen({ saved }: { saved: SavedRepertoire }) {
 }
 
 /**
- * The Settings tab: the session's knobs, one labelled row each. Presentational
+ * The Settings tab: the session's knobs — side, arrows, engine — one labelled row each. Presentational
  * — the screen owns the state, since changing side restarts the session.
  */
 function PlaySettings({
@@ -430,11 +424,15 @@ function PlaySettings({
   onSideChange,
   showArrows,
   onShowArrowsChange,
+  engineOn,
+  onEngineOnChange,
 }: {
   side: Side;
   onSideChange: (next: Side | null) => void;
   showArrows: boolean;
   onShowArrowsChange: (next: boolean) => void;
+  engineOn: boolean;
+  onEngineOnChange: (next: boolean) => void;
 }) {
   const { t } = useTranslation();
   return (
@@ -481,6 +479,23 @@ function PlaySettings({
         />
         <Typography variant="caption" sx={{ display: "block", color: "text.secondary" }}>
           {t("repertoires.play.arrowsHelp")}
+        </Typography>
+      </Box>
+      <Box>
+        <FormControlLabel
+          sx={{ m: 0 }}
+          control={
+            <Switch
+              size="small"
+              checked={engineOn}
+              data-testid="repertoire-play-setting-engine"
+              onChange={(event) => onEngineOnChange(event.target.checked)}
+            />
+          }
+          label={t("repertoires.play.engine")}
+        />
+        <Typography variant="caption" sx={{ display: "block", color: "text.secondary" }}>
+          {t("repertoires.play.engineHelp")}
         </Typography>
       </Box>
     </Box>

@@ -78,6 +78,12 @@ const drop = (from: string, to: string) =>
 const openSettings = () =>
   fireEvent.click(screen.getByTestId("repertoire-play-panel-tab-settings"));
 
+/** Switch the engine on — its switch is in the Settings tab. */
+const engineOn = () => {
+  openSettings();
+  fireEvent.click(screen.getByTestId("repertoire-play-setting-engine").querySelector("input")!);
+};
+
 /** Long enough for the trainer to have replied, if it is going to. */
 const wait = () =>
   act(() => {
@@ -108,16 +114,25 @@ describe("playing a repertoire against the trainer", () => {
     expect(screen.getByTestId("board")).toHaveAttribute("data-orientation", "white");
     // A drill shows no answer until asked: the engine is off — no lines, no
     // bar, no search — and the status row says so.
-    expect(screen.getByTestId("repertoire-play-setting-engine").querySelector("input")).not.toBeChecked();
     expect(screen.queryByTestId("repertoire-play-panel-variations")).not.toBeInTheDocument();
     expect(screen.queryByTestId("eval-bar")).not.toBeInTheDocument();
     expect(FakeEngine.latest().searches).toEqual([]);
     expect(screen.getByTestId("repertoire-play-panel-status")).toHaveTextContent(
       i18n.t("analysis.settings.engineOff"),
     );
-    for (const tab of ["moves", "engine", "settings"]) {
-      expect(screen.getByTestId(`repertoire-play-panel-tab-${tab}`)).toBeInTheDocument();
-    }
+    // Moves · Settings · Engine, the Engine tab disabled while its engine is off.
+    const tabs = screen.getAllByRole("tab");
+    expect(tabs.map((tab) => tab.getAttribute("data-testid"))).toEqual([
+      "repertoire-play-panel-tab-moves",
+      "repertoire-play-panel-tab-settings",
+      "repertoire-play-panel-tab-engine",
+    ]);
+    expect(screen.getByTestId("repertoire-play-panel-tab-engine")).toBeDisabled();
+    // Its switch is in Settings, and off.
+    openSettings();
+    expect(
+      screen.getByTestId("repertoire-play-setting-engine").querySelector("input"),
+    ).not.toBeChecked();
     expect(status()).toBe("your-move");
   });
 
@@ -249,7 +264,8 @@ describe("playing a repertoire against the trainer", () => {
 
   it("shows the best variations once the engine is switched on, and never moves for it", () => {
     mount(`/repertoires/${storeRepertoire("r", CARO)}/play`);
-    fireEvent.click(screen.getByTestId("repertoire-play-setting-engine").querySelector("input")!);
+    engineOn();
+    expect(screen.getByTestId("repertoire-play-panel-tab-engine")).toBeEnabled();
 
     const engine = FakeEngine.latest();
     expect(engine.lastSearch).toBe(new Chess().fen());
@@ -286,6 +302,7 @@ describe("playing a repertoire against the trainer", () => {
     drop("d2", "d3");
     expect(document.querySelector('[data-san="d3"]')).not.toBeNull();
 
+    engineOn();
     fireEvent.click(screen.getByTestId("repertoire-play-panel-tab-engine"));
     fireEvent.click(screen.getByTestId("analysis-clear"));
     fireEvent.click(screen.getByTestId("repertoire-play-panel-tab-moves"));
