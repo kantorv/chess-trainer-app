@@ -21,6 +21,8 @@ const he: typeof en = {
     savedAnalyses: "ניתוחים שמורים",
     boardEditor: "עורך העמדות",
     savedOpenings: "פתיחות שמורות",
+    repertoires: "הרפרטוארים שלי",
+    addRepertoire: "הוספת רפרטואר",
     folders: {
       engine: "מנוע",
       maskedPieces: "כלים מוסווים",
@@ -29,6 +31,7 @@ const he: typeof en = {
       library: "ספרייה",
       analysisBoard: "לוח ניתוח",
       openings: "פתיחות",
+      repertoires: "רפרטוארים",
     },
   },
   home: {
@@ -528,6 +531,62 @@ const he: typeof en = {
     leftPanel: {
       ariaLabel: "פריטים נוספים ב{{category}}",
       close: "סגירה",
+    },
+  },
+  repertoires: {
+    title: "רפרטוארים",
+    count: "רפרטוארים: {{count}}",
+    empty:
+      "אין עדיין רפרטוארים. הוסיפו אחד מקובץ ‎.pgn, או הדביקו את ה-PGN שלו, והוא יופיע כאן.",
+    hint: "רפרטוארי הפתיחות שלכם. פתחו אחד כדי לקרוא את הקווים שלו על הלוח, כולל קווי הצד, עם המנוע לצדכם.",
+    storage:
+      "הרפרטוארים נשמרים בדפדפן הזה בלבד. ניקוי נתוני האתר מוחק אותם, והם לא עוברים איתכם למכשיר אחר.",
+    untitled: "רפרטואר ללא שם",
+    lines_one: "קו אחד",
+    lines_other: "{{count}} קווים",
+    chapters_one: "פרק אחד",
+    chapters_other: "{{count}} פרקים",
+    view: {
+      label: "תצוגה",
+      list: "רשימה",
+      compact: "לוחות קטנים",
+      comfortable: "לוחות גדולים",
+    },
+    open: "פתיחה",
+    add: "הוספה",
+    remove: "מחיקת הרפרטואר",
+    select: "בחירת הרפרטואר",
+    selectAll: "בחירת כל הרפרטוארים",
+    selected: "{{count}} נבחרו",
+    download: "הורדת הנבחרים כקובץ PGN",
+    upload: {
+      title: "הוספת רפרטואר",
+      intro:
+        "בחרו קובץ ‎.pgn, או הדביקו את הטקסט שלו למטה. שתי הדרכים נקראות אותו דבר: כל קו נבדק לפני שמשהו נשמר.",
+      name: "שם",
+      nameHelp: "השאירו ריק כדי לקחת את השם מהתגיות של הקובץ עצמו.",
+      pick: "בחירת קובץ ‎.pgn",
+      paste: "…או הדביקו PGN כאן",
+      save: "הוספת ה-PGN שהודבק",
+      reading: "קורא…",
+      problem: {
+        empty: "אין בזה PGN.",
+        "too-large": "זה גדול מכדי להישמר בדפדפן הזה.",
+        unreadable: "אף קו בו לא נקרא.",
+        storage: "לא ניתן היה לשמור — האחסון של הדפדפן מלא או לא זמין.",
+      },
+    },
+    detail: {
+      missing: "אין רפרטואר כזה בדפדפן הזה.",
+      back: "חזרה לרפרטוארים",
+      loading: "קורא את הקו…",
+      unreadableLine: "לא ניתן היה לקרוא את הקו הזה.",
+      tabs: {
+        lines: "קווים",
+        moves: "מסעים",
+        tree: "עץ",
+        engine: "מנוע",
+      },
     },
   },
   footer: {
