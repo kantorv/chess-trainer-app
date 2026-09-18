@@ -502,3 +502,66 @@ describe("the best variations view", () => {
     expect(onSelectMove).toHaveBeenLastCalledWith(["Nf3", "Nf6", "Nc3"]);
   });
 });
+
+describe("the space the variations take while the engine thinks", () => {
+  /*
+    Stepping to a new position clears the analysis, and the lines land one rank
+    at a time. The block must hold its height through all of it (CTA-61): one
+    row per requested line in every state — a line when it is in, a same-shaped
+    placeholder when it is not. jsdom has no layout to measure, so what is
+    asserted is the invariant the height rests on: the row count, and that the
+    placeholder is the line row's box (`li` in the same list) rather than a
+    loose line of text.
+  */
+  const rows = () => screen.getByTestId("best-variations").querySelectorAll("ol > li");
+
+  it("reserves every requested row before the first result, waiting text in the first", () => {
+    renderVariations({ fen: DEFAULT_POSITION, depth: 0, lines: [] }, 3);
+
+    expect(rows()).toHaveLength(3);
+    expect(screen.getByTestId("variation-1-pending")).toHaveTextContent(
+      "Waiting for the engine…",
+    );
+    expect(screen.getByTestId("variation-2-pending")).toHaveAttribute("aria-busy", "true");
+    expect(screen.getByTestId("variation-3-pending")).toBeInTheDocument();
+  });
+
+  it("keeps the row count while the set fills in, each line taking its own rank's place", () => {
+    const lines: EngineLine[] = [];
+    lines[1] = line(2, -5, "d2d4");
+    const { rerender } = renderVariations({ fen: DEFAULT_POSITION, depth: 14, lines }, 3);
+
+    expect(rows()).toHaveLength(3);
+    expect([...rows()].map((row) => row.getAttribute("data-testid"))).toEqual([
+      "variation-1-pending",
+      "variation-2",
+      "variation-3-pending",
+    ]);
+    // Once a line is in, the waiting text is gone — the gaps are bars.
+    expect(screen.getByTestId("best-variations")).not.toHaveTextContent(
+      "Waiting for the engine…",
+    );
+
+    rerender(
+      <AppThemeWithLang>
+        <BestVariations
+          analysis={{
+            fen: DEFAULT_POSITION,
+            depth: 16,
+            lines: [line(1, 30, "e2e4"), line(2, 20, "d2d4"), line(3, 10, "c2c4")],
+          }}
+          requested={3}
+        />
+      </AppThemeWithLang>,
+    );
+    expect(rows()).toHaveLength(3);
+    expect(screen.queryByTestId(/-pending$/)).not.toBeInTheDocument();
+  });
+
+  it("says a set is partial in the header row, not on a line under the rows", () => {
+    renderVariations({ fen: DEFAULT_POSITION, depth: 14, lines: [line(1, 30, "e2e4")] }, 3);
+
+    const partial = screen.getByTestId("variations-partial");
+    expect(partial.parentElement).toContainElement(screen.getByTestId("analysis-depth"));
+  });
+});
