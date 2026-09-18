@@ -7,6 +7,7 @@ import TravelExploreRoundedIcon from "@mui/icons-material/TravelExploreRounded";
 import VisibilityOffRoundedIcon from "@mui/icons-material/VisibilityOffRounded";
 
 import type { LocalizedText } from "../../lib/libraryCatalog";
+import { devNavFolder } from "../dev/devNav";
 import { userPgnsNavFolder } from "./navFromLibrary";
 
 /**
@@ -111,4 +112,13 @@ export const navFolders = (): readonly NavFolder[] => [
     // view leaves the sidebar entirely — it is the saved list's New button.
     singleEntry: true,
   },
+  /*
+    The Development section (CTA-60) — the boards composed from the unified
+    board core, `.claude/rules/chessboard-v2.md`. Dev-only, and this is the
+    whole of the gate on the folder: in a production build Vite replaces
+    `import.meta.env.DEV` with `false`, the spread is dead code, and rollup
+    drops `views/dev/devNav.ts` and its icons with it. The gate is cheap
+    because this was already a function — see the note above.
+  */
+  ...(import.meta.env.DEV ? [devNavFolder()] : []),
 ];

@@ -123,6 +123,24 @@ export type PgnManifestEntry = {
    * {@link PgnManifestKind}; an unknown value is reported and ignored.
    */
   kind?: PgnManifestKind;
+  /**
+   * Whether a `repertoire` splits into chapter sub-folders on its `White` tag.
+   * Defaults to **true**, which is the shape a Chessable-style export wants:
+   * `"1) 2...Qa5"` names a chapter holding several lines.
+   *
+   * Set `false` for a repertoire whose `White` tag is *not* a chapter — a file
+   * that carries the opening family there (`"QGD"`, `"Slav"`, `"KID"`) and the
+   * variation on `Black` (`"Exchange I"`, `"Furman"`). Grouping such a file
+   * gives a folder per line, and splits each line's name in half across the
+   * folder and the card ("Anti-" holding "Benoni"). Flat, its lines are named
+   * by the ordinary {@link gameDisplayName} joiner — `"QGD – Exchange I"` —
+   * and a line is one click away instead of two.
+   *
+   * It is deliberately only about the *shape*, never the kind: the file is a
+   * repertoire either way, so its lines still open in the variation-tree
+   * viewer with their `( … )` branches intact.
+   */
+  chapters?: boolean;
 };
 
 /** The manifest `kind` values a file may legitimately declare. */
@@ -273,6 +291,11 @@ export const readPgnManifest = (
             ? { order: value.order }
             : {}),
           ...(kind !== undefined ? { kind } : {}),
+          // Absent reads as "chapters on", so every file written before this
+          // field existed keeps the shape it had.
+          ...(typeof value.chapters === "boolean"
+            ? { chapters: value.chapters }
+            : {}),
         };
       }
     }
@@ -577,6 +600,19 @@ export const loadPgnLibrary = (
 
       const lineName = (game: Game, gameNumber: number): string =>
         gameTag(game.headers, "Black") ?? gameDisplayName(game, gameNumber);
+
+      /*
+        A repertoire whose `White` tag is the opening family rather than a
+        chapter (`chapters: false`): every line goes straight into the file's
+        own folder, named by the ordinary joiner, because splitting it would
+        give a folder per line and cut each name in half. Still a repertoire —
+        only the folder shape differs, and the lines open in the variation-tree
+        viewer either way. See {@link PgnManifestEntry.chapters}.
+      */
+      if (entry?.chapters === false) {
+        addGames(path, parsed);
+        continue;
+      }
 
       /*
         Group by the `White`-tag chapter, then order it: chapters with no

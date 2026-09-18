@@ -6,6 +6,7 @@ import DashboardCustomizeRoundedIcon from "@mui/icons-material/DashboardCustomiz
 import VisibilityOffRoundedIcon from "@mui/icons-material/VisibilityOffRounded";
 
 import type { LocalizedText } from "../../lib/libraryCatalog";
+import { devNavItems } from "../dev/devNav";
 import type { NavFolderId } from "./navFolders";
 import { userPgnsNavItems } from "./navFromLibrary";
 
@@ -93,6 +94,13 @@ export const navItems = (): readonly NavItem[] => [
     icon: HistoryRoundedIcon,
     folder: "openings",
   },
+  /*
+    The Development section's five boards (CTA-60) — the same `import.meta.env.DEV`
+    gate the folder and the routes carry, and for the same reason: in a
+    production build the spread is dead code and rollup drops the module behind
+    it. See `views/dev/devNav.ts`.
+  */
+  ...(import.meta.env.DEV ? devNavItems() : []),
 ];
 
 /** The screens filed under one folder, in registration order. */
