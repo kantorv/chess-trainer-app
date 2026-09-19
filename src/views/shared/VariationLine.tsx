@@ -141,6 +141,7 @@ const MoveToken = memo(function MoveToken({
   startFen,
   forceNumber,
   markComments,
+  showEvals = true,
   onSelect,
   onContextMenu,
 }: {
@@ -148,13 +149,14 @@ const MoveToken = memo(function MoveToken({
   startFen: string;
   forceNumber: boolean;
   markComments?: boolean;
+  showEvals?: boolean;
   onSelect?: (id: string) => void;
   onContextMenu?: ContextMenuNodeHandler;
 }) {
   const hasComment = markComments === true && hasComments(node);
   const isCurrent = useIsCurrentNode(node.id);
   const isExtension = useIsExtensionNode(node.id);
-  const evalText = useEvalText(node.fen);
+  const evalText = useEvalText(showEvals ? node.fen : null);
   const ref = useScrollWhenCurrent<HTMLButtonElement>(isCurrent);
 
   const { number, isWhiteMove } = plyLabel(startFen, node.ply);
@@ -214,6 +216,12 @@ type LineProps = {
    * the flowing tree's screens as they were.
    */
   markComments?: boolean;
+  /**
+   * Print each move's eval beside it — the default. The variations explorer
+   * passes `false` (CTA-69): the evals stay on the mainline's numbered cells,
+   * and the side lines read as lines, not as a column of numbers.
+   */
+  showEvals?: boolean;
 };
 
 /**
@@ -227,6 +235,7 @@ export const VariationBlock = memo(function VariationBlock({
   onContextMenuNode,
   groupLabel,
   markComments,
+  showEvals,
 }: LineProps & {
   /** The side line's first move; its children continue it, and branch in turn. */
   node: VariationNode;
@@ -246,6 +255,7 @@ export const VariationBlock = memo(function VariationBlock({
         onContextMenuNode={onContextMenuNode}
         groupLabel={groupLabel}
         markComments={markComments}
+        showEvals={showEvals}
       />
     </Block>
   );
@@ -268,6 +278,7 @@ export const VariationLine = memo(function VariationLine({
   onContextMenuNode,
   groupLabel,
   markComments,
+  showEvals,
 }: LineProps & {
   /** The alternatives at this point; `nodes[0]` is the line, the rest side lines. */
   nodes: readonly VariationNode[];
@@ -288,6 +299,7 @@ export const VariationLine = memo(function VariationLine({
         startFen={startFen}
         forceNumber={restate}
         markComments={markComments}
+        showEvals={showEvals}
         onSelect={onSelectNode}
         onContextMenu={onContextMenuNode}
       />,
@@ -302,6 +314,7 @@ export const VariationLine = memo(function VariationLine({
           onContextMenuNode={onContextMenuNode}
           groupLabel={groupLabel}
           markComments={markComments}
+          showEvals={showEvals}
         />,
       );
     }

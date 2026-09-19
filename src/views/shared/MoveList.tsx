@@ -80,6 +80,12 @@ type MoveListProps = {
    */
   markCommentedNodes?: boolean;
   /**
+   * Print evals on the numbered (mainline) cells only — the side lines'
+   * tokens carry none (CTA-69, the variations explorer). Without it both do,
+   * as the Analysis Board's list always has.
+   */
+  mainlineEvalsOnly?: boolean;
+  /**
    * The engine's scores for the positions it has finished searching, keyed by
    * the FEN they describe (CTA-50) — Play with Engine's live accumulation, and
    * what the list prints beside each move lichess-style: the SAN leads, the
@@ -356,6 +362,7 @@ function MoveList({
   mask,
   annotatedPlies,
   markCommentedNodes,
+  mainlineEvalsOnly,
   evalsByFen,
   branches,
   currentNodeId,
@@ -423,6 +430,7 @@ function MoveList({
           onContextMenuNode={onContextMenuNode}
           groupLabel={t("moveList.variation")}
           markComments={markCommentedNodes}
+          showEvals={!mainlineEvalsOnly}
         />
       ));
 
@@ -515,6 +523,7 @@ function MoveList({
     onContextMenuPly,
     annotatedPlies,
     markCommentedNodes,
+    mainlineEvalsOnly,
     t,
   ]);
 

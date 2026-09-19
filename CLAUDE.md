@@ -821,7 +821,11 @@ for the board. Only the differences are written out here:
   variations explorer marks a commented move with a comment icon
   (`hasComments`: a comment after it or opening its line; `TreeMoveList`
   passes the mainline's plies as `annotatedPlies` and `markCommentedNodes`
-  for the side lines — opt-in, so the flowing `VariationTree` marks nothing),
+  for the side lines — opt-in, so the flowing `VariationTree` marks nothing).
+  The explorer also prints the engine's evals on the **mainline's cells
+  only** (`mainlineEvalsOnly` on `MoveList` → `showEvals={false}` on the
+  side-line tokens, which then do not subscribe to the evals at all); the
+  shipped Analysis Board's list keeps them on both,
   and the player shows what is written at the position on screen in a
   **comment block** above its footer, where the changes strip sits
   (`RepertoireAnnotationsBar.tsx`, over the pure `lib/moveAnnotations.ts`):

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import i18n from "../../../i18n";
 import AppThemeWithLang from "../../../theme/AppThemeWithLang";
+import type { Score } from "../../../lib/engineAnalysis";
 import { parsePgnTree } from "../../../lib/pgn";
 import { mainline, nodeAtSanPath, type GameTree } from "../../../lib/gameTree";
 import VariationTree from "../../tools/analysis/VariationTree";
@@ -64,5 +65,30 @@ describe("the variations explorer marks commented moves", () => {
       </AppThemeWithLang>,
     );
     expect(screen.queryAllByTestId(/comment-icon/)).toHaveLength(0);
+  });
+});
+
+describe("the variations explorer's evals", () => {
+  it("are printed on the mainline only, even for a side-line position the engine scored", () => {
+    const f4 = tree.moves[0].children[0].children[1];
+    const nf3 = mainline(tree)[2];
+    const evalsByFen = new Map<string, Score>([
+      [nf3.fen, { kind: "cp", value: 20 }],
+      [f4.fen, { kind: "cp", value: -35 }],
+    ]);
+    render(
+      <AppThemeWithLang>
+        <TreeMoveList
+          tree={tree}
+          mainlineNodes={mainline(tree)}
+          nodeId={null}
+          onSelectNode={vi.fn()}
+          evalsByFen={evalsByFen}
+        />
+      </AppThemeWithLang>,
+    );
+    expect(screen.getByTestId("move-eval-3")).toHaveTextContent("+0.20");
+    expect(screen.getByTestId(`tree-move-${f4.id}`)).toBeInTheDocument();
+    expect(screen.queryAllByTestId(/^tree-eval-/)).toHaveLength(0);
   });
 });

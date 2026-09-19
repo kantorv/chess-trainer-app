@@ -210,13 +210,16 @@ export const useIsExtensionPly = (ply: number): boolean => {
  * The eval printed beside a move, or `undefined` for a position the engine has
  * not finished — which prints nothing, not the no-data dash.
  */
-export const useEvalText = (fen: string): string | undefined => {
+export const useEvalText = (fen: string | null): string | undefined => {
   const store = useContext(MoveSelectionContext);
+  // `null`: a token that prints no eval — it does not subscribe either, so an
+  // engine message re-renders none of them (the explorer's side lines, CTA-69).
   const subscribe = useCallback(
-    (onChange: () => void) => store.subscribeFen(fen, onChange),
+    (onChange: () => void) => (fen === null ? () => {} : store.subscribeFen(fen, onChange)),
     [store, fen],
   );
   const read = () => {
+    if (fen === null) return undefined;
     const score = store.read().evalsByFen?.get(fen);
     return score === undefined ? undefined : formatScore(score);
   };

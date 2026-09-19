@@ -40,7 +40,9 @@ import MoveContextMenu, { type MoveMenuTarget } from "./MoveContextMenu";
  *
  * A move carrying a PGN comment is marked with the comment icon (CTA-69):
  * the mainline's by ply (`annotatedPlies`, built here), a side line's off its
- * own node (`markCommentedNodes`).
+ * own node (`markCommentedNodes`). And the engine's evals are printed on
+ * the mainline's cells only (`mainlineEvalsOnly`): a side line reads as a
+ * line of moves, not as a column of scores.
  *
  * The optional `extensionIds` (CTA-63) cross the same seam: the list tints
  * side-line tokens by node id and numbered cells by ply, so the mainline's
@@ -167,6 +169,7 @@ function TreeMoveList({
       extensionPlies={extensionPlies}
       annotatedPlies={annotatedPlies}
       markCommentedNodes
+      mainlineEvalsOnly
       onContextMenuPly={editable ? openMenuAtPly : undefined}
       onContextMenuNode={editable ? openMenuAtNode : undefined}
     />
