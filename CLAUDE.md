@@ -163,6 +163,18 @@ The rules the whole thing rests on:
   line does not move along the current line, it changes *which line is current* —
   "ply 3" cannot say that. `useTreeNavigation` therefore holds the id and derives
   the ply, which is what lets the shared `BoardControls` drive a tree unmodified.
+- **The keys walk the tree, not only the line** (`useTreeNavigation`, every
+  board over a tree — the Analysis Board, the v2 boards, the repertoire
+  player and its games): ← / → step along the line, **Home / End** jump to
+  its start and end, and **↑ / ↓ cycle through the sibling moves** of the
+  move on screen — the other continuations from the same position, in
+  `children` order, wrapping around (`siblingOf`); nothing at the start or on
+  a move with no alternatives (CTA-69 — they were a second Home / End). With
+  the repertoire player's Autoplay on, that is how the reader swaps the
+  trainer's reply for another of the file's: a navigation owes no reply, so
+  the trainer waits, and the reader's next move sets it going from there.
+  The linear screens (`useGameNavigation`) keep ↑ / ↓ as Home / End — a line
+  has no siblings.
 - **`chess.js` `loadPgn` discards `( ... )` side lines.** So there are two
   parsers: `parsePgnGames` (mainline, for the Load PGN screen) and
   `parsePgnTrees` (side lines kept), and only the second round-trips with

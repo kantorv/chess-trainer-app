@@ -11,6 +11,7 @@ import {
   findNode,
   lineOf,
   mainline,
+  pathTo,
   type GameTree,
   type VariationNode,
 } from "../../../lib/gameTree";
@@ -35,6 +36,18 @@ import { isTextEntry } from "../../shared/useGameNavigation";
  * `lastPly` index into {@link TreeNavigation.line}, and `goToPly` walks it. The
  * controls and the arrow keys therefore behave exactly as they do on the other
  * two screens, while "the line" quietly follows the reader into a variation.
+ *
+ * ## The keys
+ *
+ * ← / → step along the line; **Home / End** jump to its start and end; and
+ * **↑ / ↓ cycle through the sibling moves** of the move on screen — the other
+ * continuations from the same position, in `children` order, wrapping around
+ * (CTA-69; they used to be a second Home / End). Nothing happens at the start
+ * position or on a move with no alternatives. What it is for: with the
+ * repertoire player's Autoplay on, the reader swaps the trainer's reply for
+ * another of the file's, and moving from there sets the trainer going again
+ * — navigation drops nothing it owes, since a reply is owed only after the
+ * reader's own move (`useTrainerModule`).
  */
 
 export type TreeNavigation = {
@@ -54,6 +67,20 @@ export type TreeNavigation = {
   goToNode: (id: string | null) => void;
   /** Select by position along the current line. Out-of-range values clamp. */
   goToPly: (ply: number) => void;
+};
+
+/**
+ * The move beside `id` among its siblings — `step` 1 the next, -1 the
+ * previous, wrapping around; `null` when it has none, or for the start.
+ */
+export const siblingOf = (tree: GameTree, id: string | null, step: 1 | -1): string | null => {
+  if (id === null) return null;
+  const path = pathTo(tree, id);
+  const siblings = path.length <= 1 ? tree.moves : (path.at(-2)?.children ?? []);
+  if (siblings.length < 2) return null;
+  const at = siblings.findIndex((node) => node.id === id);
+  if (at === -1) return null;
+  return siblings[(at + step + siblings.length) % siblings.length].id;
 };
 
 export const useTreeNavigation = (
@@ -128,13 +155,19 @@ export const useTreeNavigation = (
           goToPly(ply + 1);
           break;
         case "Home":
-        case "ArrowUp":
           goToPly(0);
           break;
         case "End":
-        case "ArrowDown":
           goToPly(lastPly);
           break;
+        case "ArrowUp":
+        case "ArrowDown": {
+          // No alternative: nothing moves, but the key is still ours, so the
+          // panel does not scroll under the reader instead.
+          const next = siblingOf(tree, selected, event.key === "ArrowDown" ? 1 : -1);
+          if (next !== null) setNodeId(next);
+          break;
+        }
         default:
           // Not ours: no preventDefault, so the panel's own scrolling and every
           // browser shortcut survive.
@@ -146,7 +179,7 @@ export const useTreeNavigation = (
 
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [goToPly, lastPly, ply]);
+  }, [goToPly, lastPly, ply, tree, selected]);
 
   const current = findNode(tree, selected);
 
