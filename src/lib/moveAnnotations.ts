@@ -1,5 +1,6 @@
 import { findNode, type GameTree } from "./gameTree";
 import { reflowComment } from "./pgnComments";
+import { formatPercent, playChanceInText, withoutPlayChance } from "./playChance";
 
 /**
  * **What a move's annotations say, ready to read** (CTA-69) — the comments
@@ -15,6 +16,8 @@ import { reflowComment } from "./pgnComments";
  * - **An engine's evaluation**, the shape analysis exports end a comment
  *   with — `+/= +1.31 (21 ply)`, `= 0.00 (27 ply)` — as `assessment`,
  *   `eval` and `depth`; and `-+ mate-in-12` as `assessment` and `mate`.
+ * - **A play chance**, lichess-tools' `prc:40` (or `[%prc 40]`) — as `prc`,
+ *   `"40%"` (`lib/playChance.ts`, where what it does is written down).
  *
  * Pure: the tree is the model, this is only a reading of it. What the tree
  * stores is never changed — a written PGN keeps the comment as it came.
@@ -57,7 +60,10 @@ const MATE_IN = new RegExp(String.raw`(?:^|\s)(?:${ASSESSMENT}\s+)?mate-in-(\d+)
 export const readComment = (raw: string): ReadComment => {
   const attributes: AnnotationAttribute[] = [];
 
-  let text = raw.replace(COMMAND, (_, key: string, value: string) => {
+  const chance = playChanceInText(raw);
+  if (chance !== undefined) attributes.push({ key: "prc", value: `${formatPercent(chance)}%` });
+
+  let text = withoutPlayChance(raw).replace(COMMAND, (_, key: string, value: string) => {
     attributes.push({ key, value: value.trim() });
     return " ";
   });

@@ -1,5 +1,6 @@
 import { Chess, type Square } from "chess.js";
 import { findNode, type GameTree, type VariationNode } from "./gameTree";
+import { pickByChance, playChances } from "./playChance";
 
 /**
  * **Playing a repertoire against a trainer** (CTA-63) — the trainer's policy
@@ -21,7 +22,8 @@ import { findNode, type GameTree, type VariationNode } from "./gameTree";
  * ## A policy is a function, not a mode
  *
  * {@link TrainerPolicy} is the seam every later trainer goes through: a
- * weighted pick, mainline-first, spaced repetition. Each is a new function of
+ * weighted pick (as {@link playChancePolicy} is), mainline-first, spaced
+ * repetition. Each is a new function of
  * this one type, handed to the module in place of {@link pickTrainerMove} —
  * never a branch inside it. The random source is a parameter for the same
  * reason the policy is: a test fixes it, and a later policy may not use one.
@@ -86,6 +88,22 @@ export const pickTrainerMove: TrainerPolicy = (
   nodeId,
   random = Math.random,
 ) => pickUniform(repertoireMovesAt(repertoire, nodeId), random);
+
+/**
+ * **The play-chance policy** (CTA-69) — the repertoire's moves at the node,
+ * picked by the lichess-tools rules (`lib/playChance.ts`): `prc:N` marks in
+ * the moves' comments, scaled; with none, each move weighed by its lines in
+ * the next 8 plies. The repertoire player's and *Get to the end*'s policy.
+ * `markOf` reads a move's mark — the player passes one over its session tree
+ * (`marksFrom`), so a chance just changed counts before it is saved, while
+ * the moves themselves still come from the repertoire as it was saved.
+ */
+export const playChancePolicy =
+  (markOf?: (node: VariationNode) => number | undefined): TrainerPolicy =>
+  (repertoire, nodeId, random = Math.random) => {
+    const moves = repertoireMovesAt(repertoire, nodeId);
+    return pickByChance(moves, playChances(moves, markOf), random);
+  };
 
 /** One of `moves`, each equally likely; `undefined` when there are none. */
 export const pickUniform = (

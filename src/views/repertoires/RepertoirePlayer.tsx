@@ -240,6 +240,7 @@ function RepertoirePlayer({
   const rules = useRepertoireGame({
     game,
     repertoire,
+    session: core.tree,
     nodeId: core.nodeId,
     turn: core.turn,
     trainerColor,

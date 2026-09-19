@@ -184,6 +184,7 @@ const en = {
     deleteFrom: "Delete from here",
     copyPgn: "Copy variation PGN",
     addComment: "Add comment",
+    playChances: "Play chances…",
     copied: "Variation PGN copied",
     copyFailed: "Could not copy — the clipboard is not available here.",
     deleteTitle: "Delete from",
@@ -194,6 +195,25 @@ const en = {
     lines_one: "{{count}} line",
     lines_other: "{{count}} lines",
     delete: "Delete",
+    cancel: "Cancel",
+  },
+  /**
+   * How likely the trainer is to play each move at a branch (CTA-69) —
+   * lichess-tools' `prc:N`, set per branch. The rules: `lib/playChance.ts`.
+   */
+  playChance: {
+    title: "Play chances after",
+    titleStart: "Play chances at the start",
+    help: "How often the trainer plays each move here. Leave a field empty for automatic: moves with more lines in the next 8 plies are played more often. Numbers are scaled to 100%; 0 means never. Saved as prc:N in the move's comment, as lichess-tools writes it.",
+    move: "Move",
+    mark: "Chance",
+    lines: "Lines",
+    chance: "Played",
+    auto: "Auto",
+    /** The sum of the numbers typed, before scaling. */
+    total: "Set: {{total}}% — scaled to 100%, the rest shared by the automatic moves.",
+    invalid: "A chance is a number from 0 to 100.",
+    save: "Save",
     cancel: "Cancel",
   },
   /** Adding or editing one comment on a move (CTA-69). */
@@ -1115,6 +1135,7 @@ const en = {
         emt: "Time spent",
         cal: "Arrows",
         csl: "Squares",
+        prc: "Play chance",
       },
     },
     /**

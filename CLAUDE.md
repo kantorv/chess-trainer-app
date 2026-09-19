@@ -87,7 +87,8 @@ change by whether it *adds* to that count, not by the exit code.
 | `src/lib/pgnUploads.ts` + `pgnUploadStore.ts` | **The reader's own `.pgn` files** — what an upload is, how it becomes a library under the `uploads` folder (through the same loader), whether a picked file is worth keeping; and the `localStorage` half, whose snapshot is checked against a revision stamp so a megabyte of PGN is not re-read per render. Non-throwing throughout. |
 | `src/lib/savedAnalyses.ts` + `savedAnalysisStore.ts` | **The reader's analysis boards** — what a saved analysis is (the whole tree as PGN, the `AnalysisSettings` it was worked under, where the reader was standing as SAN from the root, and which way the board faced), how it is written and read back, and `savedAnalysisCatalogOf` so `?game=` resolves against it; and the `localStorage` half. The pair above, deliberately, with two differences: `treeToPgn` / `parsePgnTree` rather than the linear writer, because side lines are the point, and a **place in the tree** as part of the record. Non-throwing throughout. |
 | `src/lib/savedRepertoires.ts` + `savedRepertoireStore.ts` | **The reader's repertoires** (CTA-61) — and the rule that **a repertoire is one game**: a mainline with its side lines. `readRepertoireText` is the one reading a file and a paste share (the uploads' size/emptiness rules, line endings normalised, every game parsed as a tree, games with no moves skipped and counted); a text of one game is stored as written (`savedRepertoireOf`), and a text of several is not stored as it is — it is **merged** into one tree (`mergedRepertoireOf`, over `mergeTrees` in `lib/gameTree.ts`: the first game's line the mainline, each later divergence a side line; only when every game shares a start) or **split** into one record per game (`splitRepertoiresOf`, each keeping its own text). A record carries its name (typed, else the tags' `StudyName` / `Event`), `previewFen` (where it first branches), `stats` (moves and side lines, for a caption without a parse), its `settings` (`lib/repertoireSettings.ts` — read back field by field; that file's header is the recipe for adding an option), and the `folderId` it is filed under (`null` is Unfiled). A row from before the rule, still holding several games, is told by `isMultiGameRepertoire` and opens on the choice. The store is `chessapp.savedRepertoires.v1` over `recordStore`, capped at 500 because a split makes a record per game; `addRepertoires` writes a split all-or-nothing, in a replaced record's place when given one, and `updateRepertoireSettings` / `fileRepertoire` edit in place. A tree changed on the board becomes a record through `withRepertoireTree` (the record, its game replaced — Update) or `repertoireCopyOf` (a new record with the original's settings and folder — Save as copy) (CTA-63). Non-throwing throughout. |
-| `src/lib/repertoireTrainer.ts` | **The trainer's policy and the session model** (CTA-63) — `TrainerPolicy` (the seam every later trainer is a function of), `pickTrainerMove` (uniform over the repertoire's moves at a node, the random source injectable), `repertoireMovesAt`, the extension fold (`nodeIdsOf` the repertoire as it arrived, `extensionIdsOf` the session tree against it), and game mode's pure half: `judgeDrop` (a drop judged book / wrong / unjudged before it is made) and the `DrillScore` tally. Pure; the move is played by `views/dev/core/useTrainerModule.ts`. |
+| `src/lib/repertoireTrainer.ts` | **The trainer's policy and the session model** (CTA-63) — `TrainerPolicy` (the seam every later trainer is a function of), `playChancePolicy` (CTA-69: by the lichess-tools play chances, `lib/playChance.ts` — the player's and *Get to the end*'s), `pickTrainerMove` (uniform over the repertoire's moves at a node, the random source injectable), `repertoireMovesAt`, the extension fold (`nodeIdsOf` the repertoire as it arrived, `extensionIdsOf` the session tree against it), and game mode's pure half: `judgeDrop` (a drop judged book / wrong / unjudged before it is made) and the `DrillScore` tally. Pure; the move is played by `views/dev/core/useTrainerModule.ts`. |
+| `src/lib/playChance.ts` | **Play chances** (CTA-69) — lichess-tools' `prc:N`: reading (`playChanceInText` / `playChanceOf`) and writing (`commentsWithPlayChance`, `setPlayChances`) the mark in a move's comment, the default weight (`linesWithin`, lines in the next 8 plies), the four rules at a branch (`playChances`), `pickByChance`, and `marksFrom` (marks read off the session's tree). Its header is the reference for the rules. Pure. |
 | `src/lib/repertoireGames.ts` | **The repertoire games** (CTA-63) — `RepertoireGameId` (`end`, `backtrack`) and the menu's order, `repertoireGamePath`, and Backtracking's pure half: `coverageOf` (uncovered lines under every position — one post-order walk), `backtrackingPolicy` (a `TrainerPolicy` steering to uncovered lines), `requiredMovesAt` (the reader's moves that still lead somewhere new, when that is only some of them) and `backtrackTarget` (where play goes back to when a line ends). A line is a leaf of the repertoire as it arrived. |
 | `src/lib/repertoireMap.ts` | **The repertoire map's layout** (CTA-63) — `mapLayoutOf` (a column per ply, a row per line, a position on its first child's row, so the mainline runs along the top; which moves are White's), and what is drawn from it: `mapEdgePaths` (split by coverage), `mapDots` (by the side that moved), `mapPathTo` / `mapPathDots` (the way to the reader), `mapLabelsIn` / `visibleRect` (the move labels, culled to the view), and the viewport's `MapView` arithmetic (`zoomViewAt`, `fitView`, `centerView`, `MAP_INITIAL_K`). Pure; `views/repertoires/RepertoireMap.tsx` draws it. |
 | `src/lib/moveAnnotations.ts` | **A position's annotations, read for display** (CTA-69) — `annotationsAt` (the comments before and after the move on screen, or the game's at the start, and its NAGs; `null` when there are none), `readComment` (a comment's prose in paragraphs, through `pgnComments.ts`'s `reflowComment`, and the attributes inside it: `[%key value]` commands and an engine's trailing evaluation), and `nagGlyph`. Pure; the repertoire player's comment block is its consumer. |
@@ -903,7 +904,8 @@ RepertoireGame.tsx ──┴─▶ RepertoirePlayer.tsx ── download: treeToP
 - **The trainer answers only from the repertoire as it arrived**, behind the
   **Autoplay** setting — **off by default**, so opening a repertoire reads
   like a board and the reader moves both sides. On, it plays one of the file's
-  moves at its turn (uniformly: `children[0]` is not favoured), and only in
+  moves at its turn **by its play chance** (*Play chances*, below; with none
+  set, the move with more lines under it is played more often), and only in
   reply to a move — stepping back to its turn never moves a piece
   (`useTrainerModule`: the wrapped drop owes a reply where the move lands;
   navigating drops it). It asks the *original* tree, so it never moves inside
@@ -977,7 +979,8 @@ per position**, the first try's; Restart judges afresh. A line is *finished*
 when play — not navigation — reaches a leaf of the repertoire (the module's
 `arrival`). The score (right, wrong, accuracy, a reset) is session-only.
 
-- **Get to the end** (`end`) — the trainer picks at random; reaching a line's
+- **Get to the end** (`end`) — the trainer picks by the play chances, as in
+  the player; reaching a line's
   end finishes it ("N lines finished"), and Restart starts another. Past the
   end play is free, extending, unjudged.
 - **Backtracking** (`backtrack`) — every line is to be covered. The trainer
@@ -1096,11 +1099,54 @@ still matches, so a link into a line added in a session and never saved
 reopens on the last repertoire move before it. The settings link carries it
 back. A game ignores it and starts at the start.
 
+**Play chances** (CTA-69) — how often the trainer plays each move at a
+branch, the rules of the **lichess-tools** extension's random-next-move /
+"play all variations" feature, so a study prepared for one behaves the same
+in the other. `lib/playChance.ts` is the whole of the logic, and its header
+is the reference; in short:
+
+- **Where it is written: `prc:N` in the comment of the move it is about** —
+  the branch's own move, the first move of its variation, never the move
+  before the branch (lichess-tools ignores it there, and so does this; its
+  users' classic mistake). `N` is 0–100, a decimal allowed, above 100 read
+  as 100; `[%prc N]` is read too; the first mark on a move wins. Stored as
+  comment text because that is what PGN (and a lichess study) can carry, so
+  the file works in both tools — and nothing new is added to the model.
+- **The rules, at one branch** (`playChances`):
+  1. *No move marked* — lichess-tools' default: each move weighs **its lines
+     within the next 8 plies** (`linesWithin`: the move itself the first ply;
+     a path that ends, or reaches the eighth ply, is one line). Its manual's
+     example: `1. e4 (1. d4 d5 2. Nc3 (2. Nf3)) 1... e5 2. Nf3` plays d4 2/3.
+  2. *Every move marked* — the marks **scaled** to 100% (the forum's
+     8 × `prc:5` + `prc:50` gives the last 50/90 ≈ 44%).
+  3. *Some marked* — undocumented upstream, so **ours**: the marked take
+     their percentages, the unmarked share what is left of 100 in proportion
+     to their lines; nothing left, they get 0 and the marks are scaled.
+  4. *`prc:0`* — never played; if every move comes to 0, rule 1 decides.
+- **Who follows them**: the player's Autoplay and *Get to the end*
+  (`playChancePolicy` in `lib/repertoireTrainer.ts`, from
+  `useRepertoireGame`). Backtracking keeps steering to uncovered lines. The
+  moves come from the repertoire as it was saved (the trainer's rule), but
+  the **marks are read off the session's tree** (`marksFrom` — ids survive
+  every edit), so a chance just changed counts before it is saved.
+- **How they are set: per branch, not per move.** The move menu's *Play
+  chances…* — on any move with alternatives, list or map — opens
+  `PlayChanceDialog.tsx` over that move's branch: every move there, a %
+  field each (empty: automatic), its line count, and the chance it will be
+  played, worked out live by the same `playChances`. A dialog over the branch
+  cannot put a mark on the move before it. Saving is `setPlayChances` (each
+  move's comments rewritten by `commentsWithPlayChance`: the mark appended to
+  its last comment, `{ … prc:40 }` as a lichess move carries it, an old one
+  replaced, a comment left empty dropped) through `replaceTree` — a session
+  change like any other. A typed `prc:40` in the comment dialog is the same
+  text and works the same. The comment block shows a mark as a **Play
+  chance** chip, not as prose (`readComment`).
+
 What is designed for and not built: **saving extensions back**, a **persisted
 score or coverage** (per position, per repertoire — what spaced repetition
 needs; it goes where `useRepertoireGame` keeps them today), and **other
-policies** (weighted, mainline-first, spaced repetition — each a new
-`TrainerPolicy`). A new game is an id in `REPERTOIRE_GAMES`, its rules in
+policies** (mainline-first, spaced repetition — each a new `TrainerPolicy`;
+the play chances are the first weighted one). A new game is an id in `REPERTOIRE_GAMES`, its rules in
 `lib/repertoireGames.ts`, its state in `useRepertoireGame`, and a title key.
 `.claude/rules/chessboard-v2.md` §2.5 is the module's recipe.
 
