@@ -113,14 +113,34 @@ export const hasComments = (node: VariationNode): boolean =>
   (node.comments?.length ?? 0) > 0 || (node.preComments?.length ?? 0) > 0;
 
 /**
- * `extra` appended to `into`, a text already there not added again — how a
- * merge joins what several games say about the same move. Returns `into`
+ * What makes two comments **the same comment**: their words, whitespace
+ * aside. PGN hard-wraps comments near column 80, so one sentence reaches a
+ * file wrapped at different places in different chapters — the Alapin
+ * course carries ~145 such pairs — and reads identically once reflowed.
+ */
+export const commentKey = (text: string): string => text.split(/\s+/).join(" ").trim();
+
+/** Whether `list` already holds `text`, whitespace aside. */
+export const holdsComment = (list: readonly string[], text: string): boolean => {
+  const key = commentKey(text);
+  return list.some((existing) => commentKey(existing) === key);
+};
+
+/**
+ * `extra` appended to `into`, an item already there not added again — how a
+ * merge joins what several games say about the same move. `same` is what
+ * "already there" means: equality for NAGs, {@link holdsComment} for
+ * comments, where the first wording is the one kept. Returns `into`
  * (created when absent) so a caller can assign it.
  */
-const appendUnique = <T>(into: T[] | undefined, extra: readonly T[] | undefined): T[] | undefined => {
+const appendUnique = <T>(
+  into: T[] | undefined,
+  extra: readonly T[] | undefined,
+  same: (list: readonly T[], item: T) => boolean = (list, item) => list.includes(item),
+): T[] | undefined => {
   if (extra === undefined || extra.length === 0) return into;
   const list = into ?? [];
-  for (const item of extra) if (!list.includes(item)) list.push(item);
+  for (const item of extra) if (!same(list, item)) list.push(item);
   return list;
 };
 
@@ -575,8 +595,9 @@ export const linePgn = (tree: GameTree, id: string | null): string => {
  * whether merging is offered at all.
  *
  * **Annotations come along** (CTA-69). Where several games annotate the same
- * move, a text they share is kept once and different ones are joined in file
- * order; NAGs are unioned. The first game's opening comment is the merged
+ * move, a text they share is kept once — whitespace aside, so the same
+ * sentence wrapped differently is one comment ({@link commentKey}) — and
+ * different ones are joined in file order; NAGs are unioned. The first game's opening comment is the merged
  * tree's; a later game's opens **its own line** — the comment before the
  * first move that game added, where its side line begins — or, when it adds
  * no move of its own, joins the tree's. Nothing a file says is lost.
@@ -610,9 +631,9 @@ export const mergeTrees = (
         target.push(existing);
         added.first ??= existing;
       }
-      const joinedComments = appendUnique(existing.comments, node.comments);
+      const joinedComments = appendUnique(existing.comments, node.comments, holdsComment);
       if (joinedComments !== undefined) existing.comments = joinedComments;
-      const joinedPre = appendUnique(existing.preComments, node.preComments);
+      const joinedPre = appendUnique(existing.preComments, node.preComments, holdsComment);
       if (joinedPre !== undefined) existing.preComments = joinedPre;
       const joinedNags = appendUnique(existing.nags, node.nags);
       if (joinedNags !== undefined) existing.nags = joinedNags;
@@ -627,10 +648,14 @@ export const mergeTrees = (
     into(moves, tree.moves, 1);
     const firstAdded = added.first as VariationNode | undefined;
     if (first || firstAdded === undefined) {
-      comments = appendUnique(comments, tree.comments);
+      comments = appendUnique(comments, tree.comments, holdsComment);
     } else {
       // The game's own comment came first in its text, so it goes first.
-      const opening = appendUnique(appendUnique(undefined, tree.comments), firstAdded.preComments);
+      const opening = appendUnique(
+        appendUnique(undefined, tree.comments, holdsComment),
+        firstAdded.preComments,
+        holdsComment,
+      );
       if (opening !== undefined) firstAdded.preComments = opening;
     }
     first = false;

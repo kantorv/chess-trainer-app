@@ -810,10 +810,13 @@ for the board. Only the differences are written out here:
   `GameTree`, all optional and absent when empty — and `treeToPgn` writes
   them back, so a merge, Update and Save as copy lose none of them, and every
   edit keeps them on the moves that survive. `mergeTrees` keeps a text said
-  twice about one move once, joins different ones in file order, unions
+  twice about one move once — whitespace aside (`commentKey`: a course
+  wraps one sentence differently in different chapters; the parser drops
+  such a repeat on one move too, so an export merged before that reads
+  clean) — joins different ones in file order, unions
   NAGs, and hangs each later game's opening comment before the first move
   that game added (the tree's own, when it added none): the 310-game Alapin
-  course merges with all ~4,450 comments, less exact duplicates. The
+  course merges with all ~4,450 comments, less duplicates (2,511 kept). The
   variations explorer marks a commented move with a comment icon
   (`hasComments`: a comment after it or opening its line; `TreeMoveList`
   passes the mainline's plies as `annotatedPlies` and `markCommentedNodes`

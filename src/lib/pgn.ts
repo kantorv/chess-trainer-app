@@ -1,6 +1,6 @@
 import { Chess, DEFAULT_POSITION } from "chess.js";
 import { gameFromChess, type Game, type GameHeaders } from "./gameModel";
-import { emptyTree, type GameTree, type VariationNode } from "./gameTree";
+import { emptyTree, holdsComment, type GameTree, type VariationNode } from "./gameTree";
 
 /**
  * PGN ingestion: text in, a {@link Game} or a {@link GameTree} out.
@@ -287,12 +287,18 @@ export const parsePgnTree = (pgn: string, gameNumber?: number): GameTree => {
     annotated: VariationNode | null;
   }[] = [];
 
+  /*
+    A comment already on the same move, whitespace aside, is not added again:
+    the file says the same thing twice (`holdsComment` — a merged export
+    carries the same sentence wrapped two ways), and a record stored before
+    the merge knew that reads clean from here on.
+  */
   const addComment = (raw: string) => {
     const text = commentText(raw);
     if (text === undefined) return;
-    if (annotated !== null) (annotated.comments ??= []).push(text);
-    else if (stack.length === 0) gameComments.push(text);
-    else pending.push(text);
+    const list =
+      annotated !== null ? (annotated.comments ??= []) : stack.length === 0 ? gameComments : pending;
+    if (!holdsComment(list, text)) list.push(text);
   };
 
   const addNag = (nag: number | undefined) => {
@@ -343,7 +349,8 @@ export const parsePgnTree = (pgn: string, gameNumber?: number): GameTree => {
       annotated = outer.annotated;
       // A variation of nothing but a comment: kept on the move it answers.
       if (pending.length > 0 && annotated !== null) {
-        (annotated.comments ??= []).push(...pending);
+        const after = (annotated.comments ??= []);
+        for (const text of pending) if (!holdsComment(after, text)) after.push(text);
       }
       pending = [];
       continue;
@@ -377,7 +384,8 @@ export const parsePgnTree = (pgn: string, gameNumber?: number): GameTree => {
       captured: move.captured,
     });
     if (pending.length > 0) {
-      (node.preComments ??= []).push(...pending);
+      const before = (node.preComments ??= []);
+      for (const text of pending) if (!holdsComment(before, text)) before.push(text);
       pending = [];
     }
     annotated = node;

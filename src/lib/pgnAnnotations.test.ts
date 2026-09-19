@@ -236,3 +236,26 @@ describe("setComments — editing a move's comments", () => {
     expect(setComments(tree, "nope", "comments", ["x"])).toBe(tree);
   });
 });
+
+describe("the same comment wrapped two ways is one comment", () => {
+  const WRAPPED_A = "We grab the center. Now\nBlack has various moves.";
+  const WRAPPED_B = "We grab the center. Now Black has\nvarious moves.";
+
+  it("a merge keeps it once, in the first game's wording", () => {
+    const trees = parsePgnTrees(
+      `[Event "1"]\n\n1. e4 c5 2. c3 {${WRAPPED_A}} *\n\n[Event "2"]\n\n1. e4 c5 2. c3 {${WRAPPED_B}} d6 *`,
+    );
+    const merged = mergeTrees(trees, trees[0].startFen);
+    expect(at(merged, "e4", "c5", "c3").comments).toEqual([WRAPPED_A]);
+  });
+
+  it("a parse keeps it once on one move — an export written before that reads clean", () => {
+    const tree = parsePgnTree(`1. e4 c5 2. c3 {Other.} {${WRAPPED_A}} {${WRAPPED_B}} *`);
+    expect(at(tree, "e4", "c5", "c3").comments).toEqual(["Other.", WRAPPED_A]);
+  });
+
+  it("but different words are still two comments", () => {
+    const tree = parsePgnTree("1. e4 {Good.} {Good!} *");
+    expect(at(tree, "e4").comments).toEqual(["Good.", "Good!"]);
+  });
+});
