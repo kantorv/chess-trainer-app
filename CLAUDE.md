@@ -69,7 +69,7 @@ change by whether it *adds* to that count, not by the exit code.
 | `src/lib/engine.ts` | The Stockfish worker wrapper: search, UCI option discovery, and the protocol discipline that keeps the engine alive (see the chessboard rules §4). |
 | `src/lib/engineAnalysis.ts` | Reading the engine's numbers: `scoreFromUci` (the one place a score is normalised to White's perspective), `formatScore`, `evalBarFraction`, `pvToSan`, `variationNumbering`, plus the `Analysis` / `EngineLine` shape both engine screens collect into and the `withEngineLine` fold. Pure. |
 | `src/lib/gameModel.ts` | **The shared game model** — `Game` / `GameMove` / `GameHeaders`, plus `gameTag` / `initialFenOf` / `finalFenOf` and the `gameFromChess` snapshot. One *line* of play; all three game screens speak it. |
-| `src/lib/gameTree.ts` | **The variation tree** — `GameTree` / `VariationNode`, `addMove` (the branch), `mainline` / `lineOf` / `pathTo` / `fenAtNode`, `treeToPgn`, the variations explorer's edits (CTA-64: `promoteVariation` / `makeMainline` / `deleteFrom`, immutable and id-preserving, plus `isInSideLine`, `subtreeCounts` and `linePgn`, the one line to a move as PGN), and the `treeFromGame` ⇄ `mainlineGame` bridge that makes a `Game` a walk over a tree. Also `gameToPgn`, the **linear** game's writer, which is `treeToPgn` over the one-line tree rather than a second copy of the numbering and `SetUp`/`FEN` rules. Read the next section before touching it. |
+| `src/lib/gameTree.ts` | **The variation tree** — `GameTree` / `VariationNode`, `addMove` (the branch), `mainline` / `lineOf` / `pathTo` / `fenAtNode`, `treeToPgn`, the variations explorer's edits (CTA-64: `promoteVariation` / `makeMainline` / `deleteFrom`, immutable and id-preserving, plus `isInSideLine`, `subtreeCounts` and `linePgn`, the one line to a move as PGN), the PGN annotations a node and a tree carry (CTA-69: optional `comments` / `preComments` / `nags`, written back by `treeToPgn`, joined by `mergeTrees`), and the `treeFromGame` ⇄ `mainlineGame` bridge that makes a `Game` a walk over a tree. Also `gameToPgn`, the **linear** game's writer, which is `treeToPgn` over the one-line tree rather than a second copy of the numbering and `SetUp`/`FEN` rules. Read the next section before touching it. |
 | `src/lib/pgn.ts` | PGN ingestion only: text in, a `Game` (`parsePgnGames`, mainline only — what `chess.js` gives) or a `GameTree` (`parsePgnTrees`, side lines kept) out. |
 | `src/lib/fen.ts` | FEN ingestion: `parseFen` validates and normalises a pasted position, or throws `FenParseError`. |
 | `src/lib/positionEditor.ts` | A position *being edited*: `fenFields` / `fenFromFields` (the six fields apart and back together, which is what makes the editor's side-to-move, castling and en passant controls round-trip), `enPassantOptions`, and `positionProblems` — **non-throwing** legality reporting, because a half-edited board is illegal by definition. Pure. |
@@ -87,9 +87,11 @@ change by whether it *adds* to that count, not by the exit code.
 | `src/lib/pgnUploads.ts` + `pgnUploadStore.ts` | **The reader's own `.pgn` files** — what an upload is, how it becomes a library under the `uploads` folder (through the same loader), whether a picked file is worth keeping; and the `localStorage` half, whose snapshot is checked against a revision stamp so a megabyte of PGN is not re-read per render. Non-throwing throughout. |
 | `src/lib/savedAnalyses.ts` + `savedAnalysisStore.ts` | **The reader's analysis boards** — what a saved analysis is (the whole tree as PGN, the `AnalysisSettings` it was worked under, where the reader was standing as SAN from the root, and which way the board faced), how it is written and read back, and `savedAnalysisCatalogOf` so `?game=` resolves against it; and the `localStorage` half. The pair above, deliberately, with two differences: `treeToPgn` / `parsePgnTree` rather than the linear writer, because side lines are the point, and a **place in the tree** as part of the record. Non-throwing throughout. |
 | `src/lib/savedRepertoires.ts` + `savedRepertoireStore.ts` | **The reader's repertoires** (CTA-61) — and the rule that **a repertoire is one game**: a mainline with its side lines. `readRepertoireText` is the one reading a file and a paste share (the uploads' size/emptiness rules, line endings normalised, every game parsed as a tree, games with no moves skipped and counted); a text of one game is stored as written (`savedRepertoireOf`), and a text of several is not stored as it is — it is **merged** into one tree (`mergedRepertoireOf`, over `mergeTrees` in `lib/gameTree.ts`: the first game's line the mainline, each later divergence a side line; only when every game shares a start) or **split** into one record per game (`splitRepertoiresOf`, each keeping its own text). A record carries its name (typed, else the tags' `StudyName` / `Event`), `previewFen` (where it first branches), `stats` (moves and side lines, for a caption without a parse), its `settings` (`lib/repertoireSettings.ts` — read back field by field; that file's header is the recipe for adding an option), and the `folderId` it is filed under (`null` is Unfiled). A row from before the rule, still holding several games, is told by `isMultiGameRepertoire` and opens on the choice. The store is `chessapp.savedRepertoires.v1` over `recordStore`, capped at 500 because a split makes a record per game; `addRepertoires` writes a split all-or-nothing, in a replaced record's place when given one, and `updateRepertoireSettings` / `fileRepertoire` edit in place. A tree changed on the board becomes a record through `withRepertoireTree` (the record, its game replaced — Update) or `repertoireCopyOf` (a new record with the original's settings and folder — Save as copy) (CTA-63). Non-throwing throughout. |
-| `src/lib/repertoireTrainer.ts` | **The trainer's policy and the session model** (CTA-63) — `TrainerPolicy` (the seam every later trainer is a function of), `pickTrainerMove` (uniform over the repertoire's moves at a node, the random source injectable), `repertoireMovesAt`, the extension fold (`nodeIdsOf` the repertoire as it arrived, `extensionIdsOf` the session tree against it), and game mode's pure half: `judgeDrop` (a drop judged book / wrong / unjudged before it is made) and the `DrillScore` tally. Pure; the move is played by `views/dev/core/useTrainerModule.ts`. |
+| `src/lib/repertoireTrainer.ts` | **The trainer's policy and the session model** (CTA-63) — `TrainerPolicy` (the seam every later trainer is a function of), `playChancePolicy` (CTA-69: by the lichess-tools play chances, `lib/playChance.ts` — the player's and *Get to the end*'s), `pickTrainerMove` (uniform over the repertoire's moves at a node, the random source injectable), `repertoireMovesAt`, the extension fold (`nodeIdsOf` the repertoire as it arrived, `extensionIdsOf` the session tree against it), and game mode's pure half: `judgeDrop` (a drop judged book / wrong / unjudged before it is made) and the `DrillScore` tally. Pure; the move is played by `views/dev/core/useTrainerModule.ts`. |
+| `src/lib/playChance.ts` | **Play chances** (CTA-69) — lichess-tools' `prc:N`: reading (`playChanceInText` / `playChanceOf`) and writing (`commentsWithPlayChance`, `setPlayChances`) the mark in a move's comment, the default weight (`linesWithin`, lines in the next 8 plies), the four rules at a branch (`playChances`), `pickByChance`, and `marksFrom` (marks read off the session's tree). Its header is the reference for the rules. Pure. |
 | `src/lib/repertoireGames.ts` | **The repertoire games** (CTA-63) — `RepertoireGameId` (`end`, `backtrack`) and the menu's order, `repertoireGamePath`, and Backtracking's pure half: `coverageOf` (uncovered lines under every position — one post-order walk), `backtrackingPolicy` (a `TrainerPolicy` steering to uncovered lines), `requiredMovesAt` (the reader's moves that still lead somewhere new, when that is only some of them) and `backtrackTarget` (where play goes back to when a line ends). A line is a leaf of the repertoire as it arrived. |
 | `src/lib/repertoireMap.ts` | **The repertoire map's layout** (CTA-63) — `mapLayoutOf` (a column per ply, a row per line, a position on its first child's row, so the mainline runs along the top; which moves are White's), and what is drawn from it: `mapEdgePaths` (split by coverage), `mapDots` (by the side that moved), `mapPathTo` / `mapPathDots` (the way to the reader), `mapLabelsIn` / `visibleRect` (the move labels, culled to the view), and the viewport's `MapView` arithmetic (`zoomViewAt`, `fitView`, `centerView`, `MAP_INITIAL_K`). Pure; `views/repertoires/RepertoireMap.tsx` draws it. |
+| `src/lib/moveAnnotations.ts` | **A position's annotations, read for display** (CTA-69) — `annotationsAt` (the comments before and after the move on screen, or the game's at the start, and its NAGs; `null` when there are none), `readComment` (a comment's prose in paragraphs, through `pgnComments.ts`'s `reflowComment`, and the attributes inside it: `[%key value]` commands and an engine's trailing evaluation), and `nagGlyph`. Pure; the repertoire player's comment block is its consumer. |
 | `src/lib/repertoireLink.ts` | **A permanent link to a position in a repertoire** (CTA-63) — `?at=` on `/repertoires/<id>`: `atParamOf` (the moves from the start as comma-joined SAN) and `nodeAtParam` (back to a node, as far as the path still matches). Pure. |
 | `src/lib/savedRepertoireFolders.ts` + `savedRepertoireFolderStore.ts` | **The folders repertoires are filed under — one level**: a folder holds repertoires, never another folder, so it has no `parentId` and none of the tree machinery the games' and openings' folders carry. `repertoiresInFolder` reads a `folderId` naming a missing folder as Unfiled; `sortedRepertoireFolders` orders by name. The store (`chessapp.savedRepertoireFolders.v1`, cap 100) is create (hands the folder back) / rename / delete, and a delete **keeps its repertoires** — `unfileRepertoiresIn`, the repertoire store's half, files them back to Unfiled. A **split** makes a folder of its own, named after the text, and files every split repertoire into it. Non-throwing throughout. |
 | `src/lib/savedOpenings.ts` + `savedOpeningFolders.ts` + the two stores | **The reader's saved openings, and the folders they are filed under** — what a saved opening is (the whole tree as PGN — side lines are the point — plus the orientation it was viewed from, the note it is named by and the folder it is filed under), how it is written and read back, and the folder entity: `OpeningFolder` is a name and a parent id, with the reads over a list of them (cycles cut, dangling parents read as top level). The `localStorage` halves: the openings' store, with an idempotent `saveOpening` and a note edited in place (`updateSavedOpeningNote` keeps the record's place in the list); and the folders' store, where the CRUD lives because every caller must mean the same thing — `moveOpeningFolder` refuses the folder's own subtree, and `removeOpeningFolder` re-parents sub-folders and files the openings back to Unfiled in one write-through. The saved openings are **not** a `LibraryCatalog`: nothing hands one on with `?game=` — reopening is `?openings=<id>`, and the position hand-off is `?fen=` at the end of the mainline. Non-throwing throughout. |
@@ -161,6 +163,18 @@ The rules the whole thing rests on:
   line does not move along the current line, it changes *which line is current* —
   "ply 3" cannot say that. `useTreeNavigation` therefore holds the id and derives
   the ply, which is what lets the shared `BoardControls` drive a tree unmodified.
+- **The keys walk the tree, not only the line** (`useTreeNavigation`, every
+  board over a tree — the Analysis Board, the v2 boards, the repertoire
+  player and its games): ← / → step along the line, **Home / End** jump to
+  its start and end, and **↑ / ↓ cycle through the sibling moves** of the
+  move on screen — the other continuations from the same position, in
+  `children` order, wrapping around (`siblingOf`); nothing at the start or on
+  a move with no alternatives (CTA-69 — they were a second Home / End). With
+  the repertoire player's Autoplay on, that is how the reader swaps the
+  trainer's reply for another of the file's: a navigation owes no reply, so
+  the trainer waits, and the reader's next move sets it going from there.
+  The linear screens (`useGameNavigation`) keep ↑ / ↓ as Home / End — a line
+  has no siblings.
 - **`chess.js` `loadPgn` discards `( ... )` side lines.** So there are two
   parsers: `parsePgnGames` (mainline, for the Load PGN screen) and
   `parsePgnTrees` (side lines kept), and only the second round-trips with
@@ -783,8 +797,8 @@ for the board. Only the differences are written out here:
   sampler: 14 games, none with a side line), and a lichess study writes each
   chapter as one. The reader picks: **merge** them into one tree (the first
   game's line is the mainline, each later divergence a side line — the sampler
-  becomes one 230-node tree with 13 side lines; only offered when every game shares a start, and the file's
-  comments are not kept), or **split** them into one repertoire per game, each
+  becomes one 230-node tree with 13 side lines; only offered when every game shares a start; the file's
+  annotations are kept — see the next bullet but one), or **split** them into one repertoire per game, each
   keeping its own text and named by the game, **all filed in a new folder**
   named after the text — and the reader lands inside it.
   `RepertoireMergeSplit.tsx` is that choice, shown on upload and on the route
@@ -802,6 +816,44 @@ for the board. Only the differences are written out here:
   count, the download and a delete — works in every view, the picks kept
   across a view switch. The delete asks first ("Delete N repertoires?") and
   goes in one write (`removeSavedRepertoires`) (CTA-68).
+- **Annotations survive the tree** (CTA-69). `parsePgnTree` keeps a file's
+  `{ comments }` (and `;` ones), `$N` NAGs and the `!`/`?` marks (read as
+  NAGs 1–6) on the tree — `comments` / `preComments` (the text opening a
+  variation) / `nags` on `VariationNode`, `comments` (before move 1) on
+  `GameTree`, all optional and absent when empty — and `treeToPgn` writes
+  them back, so a merge, Update and Save as copy lose none of them, and every
+  edit keeps them on the moves that survive. `mergeTrees` keeps a text said
+  twice about one move once — whitespace aside (`commentKey`: a course
+  wraps one sentence differently in different chapters; the parser drops
+  such a repeat on one move too, so an export merged before that reads
+  clean) — joins different ones in file order, unions
+  NAGs, and hangs each later game's opening comment before the first move
+  that game added (the tree's own, when it added none): the 310-game Alapin
+  course merges with all ~4,450 comments, less duplicates (2,511 kept). The
+  variations explorer marks a commented move with a comment icon
+  (`hasComments`: a comment after it or opening its line; `TreeMoveList`
+  passes the mainline's plies as `annotatedPlies` and `markCommentedNodes`
+  for the side lines — opt-in, so the flowing `VariationTree` marks nothing).
+  The explorer also prints the engine's evals on the **mainline's cells
+  only** (`mainlineEvalsOnly` on `MoveList` → `showEvals={false}` on the
+  side-line tokens, which then do not subscribe to the evals at all); the
+  shipped Analysis Board's list keeps them on both,
+  and the player shows what is written at the position on screen in a
+  **comment block** above its footer, where the changes strip sits
+  (`RepertoireAnnotationsBar.tsx`, over the pure `lib/moveAnnotations.ts`):
+  the move with its marks, the comment opening its line, the comments after
+  it, and the **attributes** read out of them as chips — `[%key value]`
+  commands (`[%eval]`, `[%clk]`, `[%cal]`, any other by its own name) and an
+  analysis export's trailing `+/= +1.31 (21 ply)` / `mate-in-12` (as
+  assessment, eval, depth, mate). The stored comment is never rewritten.
+  A game shows no block: a comment would give its answer away.
+  **Comments are editable in the player**: the block adds one to the move
+  on screen and edits or deletes each (the stored text, `[%…]` commands
+  and all, in `CommentDialog.tsx`), and the move menu's *Add comment* adds
+  one to any move — list or map. Each is `setComments` (`lib/gameTree.ts`:
+  pure, id-preserving, the same tree back for a no-op) through the core's
+  `replaceTree`, so it is a session change like a move added: Save lights
+  up, the strip keeps it or Discard drops it. A game offers none.
 - **A file and a paste are one record.** Both go through `readRepertoireText`
   and the same constructors. Line endings are normalised and a file name is
   never read, so the two routes cannot drift apart. `RepertoireUpload.test.tsx`
@@ -868,7 +920,8 @@ RepertoireGame.tsx ──┴─▶ RepertoirePlayer.tsx ── download: treeToP
 - **The trainer answers only from the repertoire as it arrived**, behind the
   **Autoplay** setting — **off by default**, so opening a repertoire reads
   like a board and the reader moves both sides. On, it plays one of the file's
-  moves at its turn (uniformly: `children[0]` is not favoured), and only in
+  moves at its turn **by its play chance** (*Play chances*, below; with none
+  set, the move with more lines under it is played more often), and only in
   reply to a move — stepping back to its turn never moves a piece
   (`useTrainerModule`: the wrapped drop owes a reply where the move lands;
   navigating drops it). It asks the *original* tree, so it never moves inside
@@ -942,7 +995,8 @@ per position**, the first try's; Restart judges afresh. A line is *finished*
 when play — not navigation — reaches a leaf of the repertoire (the module's
 `arrival`). The score (right, wrong, accuracy, a reset) is session-only.
 
-- **Get to the end** (`end`) — the trainer picks at random; reaching a line's
+- **Get to the end** (`end`) — the trainer picks by the play chances, as in
+  the player; reaching a line's
   end finishes it ("N lines finished"), and Restart starts another. Past the
   end play is free, extending, unjudged.
 - **Backtracking** (`backtrack`) — every line is to be covered. The trainer
@@ -1024,6 +1078,8 @@ since CTA-67, on every written move of the player's Map:
 - **Copy variation PGN** — the line from the start to the move, the tree's
   tags and `SetUp` / `FEN` kept, its `Result` not (a line is not a finished
   game).
+- **Add comment** (CTA-69) — a comment after the move, in a dialog;
+  `setComments`, appended after the ones it has.
 
 Four rules hold it together:
 
@@ -1059,11 +1115,54 @@ still matches, so a link into a line added in a session and never saved
 reopens on the last repertoire move before it. The settings link carries it
 back. A game ignores it and starts at the start.
 
+**Play chances** (CTA-69) — how often the trainer plays each move at a
+branch, the rules of the **lichess-tools** extension's random-next-move /
+"play all variations" feature, so a study prepared for one behaves the same
+in the other. `lib/playChance.ts` is the whole of the logic, and its header
+is the reference; in short:
+
+- **Where it is written: `prc:N` in the comment of the move it is about** —
+  the branch's own move, the first move of its variation, never the move
+  before the branch (lichess-tools ignores it there, and so does this; its
+  users' classic mistake). `N` is 0–100, a decimal allowed, above 100 read
+  as 100; `[%prc N]` is read too; the first mark on a move wins. Stored as
+  comment text because that is what PGN (and a lichess study) can carry, so
+  the file works in both tools — and nothing new is added to the model.
+- **The rules, at one branch** (`playChances`):
+  1. *No move marked* — lichess-tools' default: each move weighs **its lines
+     within the next 8 plies** (`linesWithin`: the move itself the first ply;
+     a path that ends, or reaches the eighth ply, is one line). Its manual's
+     example: `1. e4 (1. d4 d5 2. Nc3 (2. Nf3)) 1... e5 2. Nf3` plays d4 2/3.
+  2. *Every move marked* — the marks **scaled** to 100% (the forum's
+     8 × `prc:5` + `prc:50` gives the last 50/90 ≈ 44%).
+  3. *Some marked* — undocumented upstream, so **ours**: the marked take
+     their percentages, the unmarked share what is left of 100 in proportion
+     to their lines; nothing left, they get 0 and the marks are scaled.
+  4. *`prc:0`* — never played; if every move comes to 0, rule 1 decides.
+- **Who follows them**: the player's Autoplay and *Get to the end*
+  (`playChancePolicy` in `lib/repertoireTrainer.ts`, from
+  `useRepertoireGame`). Backtracking keeps steering to uncovered lines. The
+  moves come from the repertoire as it was saved (the trainer's rule), but
+  the **marks are read off the session's tree** (`marksFrom` — ids survive
+  every edit), so a chance just changed counts before it is saved.
+- **How they are set: per branch, not per move.** The move menu's *Play
+  chances…* — on any move with alternatives, list or map — opens
+  `PlayChanceDialog.tsx` over that move's branch: every move there, a %
+  field each (empty: automatic), its line count, and the chance it will be
+  played, worked out live by the same `playChances`. A dialog over the branch
+  cannot put a mark on the move before it. Saving is `setPlayChances` (each
+  move's comments rewritten by `commentsWithPlayChance`: the mark appended to
+  its last comment, `{ … prc:40 }` as a lichess move carries it, an old one
+  replaced, a comment left empty dropped) through `replaceTree` — a session
+  change like any other. A typed `prc:40` in the comment dialog is the same
+  text and works the same. The comment block shows a mark as a **Play
+  chance** chip, not as prose (`readComment`).
+
 What is designed for and not built: **saving extensions back**, a **persisted
 score or coverage** (per position, per repertoire — what spaced repetition
 needs; it goes where `useRepertoireGame` keeps them today), and **other
-policies** (weighted, mainline-first, spaced repetition — each a new
-`TrainerPolicy`). A new game is an id in `REPERTOIRE_GAMES`, its rules in
+policies** (mainline-first, spaced repetition — each a new `TrainerPolicy`;
+the play chances are the first weighted one). A new game is an id in `REPERTOIRE_GAMES`, its rules in
 `lib/repertoireGames.ts`, its state in `useRepertoireGame`, and a title key.
 `.claude/rules/chessboard-v2.md` §2.5 is the module's recipe.
 

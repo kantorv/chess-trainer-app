@@ -73,6 +73,19 @@ type MoveListProps = {
    */
   annotatedPlies?: ReadonlySet<number>;
   /**
+   * Mark the side-line moves carrying a PGN comment with the same marker
+   * (CTA-69) — read off each node, so it needs no set. The variations explorer
+   * passes it with `annotatedPlies` for its mainline; without it no side-line
+   * move is marked.
+   */
+  markCommentedNodes?: boolean;
+  /**
+   * Print evals on the numbered (mainline) cells only — the side lines'
+   * tokens carry none (CTA-69, the variations explorer). Without it both do,
+   * as the Analysis Board's list always has.
+   */
+  mainlineEvalsOnly?: boolean;
+  /**
    * The engine's scores for the positions it has finished searching, keyed by
    * the FEN they describe (CTA-50) — Play with Engine's live accumulation, and
    * what the list prints beside each move lichess-style: the SAN leads, the
@@ -348,6 +361,8 @@ function MoveList({
   onSelectPly,
   mask,
   annotatedPlies,
+  markCommentedNodes,
+  mainlineEvalsOnly,
   evalsByFen,
   branches,
   currentNodeId,
@@ -414,6 +429,8 @@ function MoveList({
           onSelectNode={onSelectNode}
           onContextMenuNode={onContextMenuNode}
           groupLabel={t("moveList.variation")}
+          markComments={markCommentedNodes}
+          showEvals={!mainlineEvalsOnly}
         />
       ));
 
@@ -505,6 +522,8 @@ function MoveList({
     onContextMenuNode,
     onContextMenuPly,
     annotatedPlies,
+    markCommentedNodes,
+    mainlineEvalsOnly,
     t,
   ]);
 

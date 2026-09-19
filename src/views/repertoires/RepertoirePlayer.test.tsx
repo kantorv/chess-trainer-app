@@ -739,7 +739,7 @@ describe("the variations explorer's move menu (CTA-64)", () => {
     expect(screen.getByTestId("repertoire-board-save")).toBeEnabled();
     fireEvent.click(screen.getByTestId("repertoire-board-save"));
     expect(screen.getByTestId("repertoire-board-changes-summary")).toHaveTextContent(
-      "Lines reordered or deleted",
+      "Lines or comments edited",
     );
   });
 

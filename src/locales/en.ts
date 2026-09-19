@@ -183,6 +183,8 @@ const en = {
     makeMainline: "Make main line",
     deleteFrom: "Delete from here",
     copyPgn: "Copy variation PGN",
+    addComment: "Add comment",
+    playChances: "Play chances…",
     copied: "Variation PGN copied",
     copyFailed: "Could not copy — the clipboard is not available here.",
     deleteTitle: "Delete from",
@@ -193,6 +195,34 @@ const en = {
     lines_one: "{{count}} line",
     lines_other: "{{count}} lines",
     delete: "Delete",
+    cancel: "Cancel",
+  },
+  /**
+   * How likely the trainer is to play each move at a branch (CTA-69) —
+   * lichess-tools' `prc:N`, set per branch. The rules: `lib/playChance.ts`.
+   */
+  playChance: {
+    title: "Play chances after",
+    titleStart: "Play chances at the start",
+    help: "How often the trainer plays each move here. Leave a field empty for automatic: moves with more lines in the next 8 plies are played more often. Numbers are scaled to 100%; 0 means never. Saved as prc:N in the move's comment, as lichess-tools writes it.",
+    move: "Move",
+    mark: "Chance",
+    lines: "Lines",
+    chance: "Played",
+    auto: "Auto",
+    /** The sum of the numbers typed, before scaling. */
+    total: "Set: {{total}}% — scaled to 100%, the rest shared by the automatic moves.",
+    invalid: "A chance is a number from 0 to 100.",
+    save: "Save",
+    cancel: "Cancel",
+  },
+  /** Adding or editing one comment on a move (CTA-69). */
+  commentDialog: {
+    addTitle: "Comment on",
+    editTitle: "Edit the comment on",
+    placeholder: "What is there to say about this move?",
+    help: "Saved with the repertoire's changes. Ctrl+Enter saves. [%eval …]-style commands are kept as written.",
+    save: "Save",
     cancel: "Cancel",
   },
   moveList: {
@@ -961,7 +991,7 @@ const en = {
       skipped_other: "{{count}} games have no moves or could not be read, and are left out.",
       merge: "Merge into one repertoire",
       mergeHelp:
-        "One tree: the first game's line is the mainline, and wherever another game leaves it becomes a side line. Comments in the file are not kept.",
+        "One tree: the first game's line is the mainline, and wherever another game leaves it becomes a side line. The file's comments and move marks are kept.",
       mergeUnavailable:
         "These games start from different positions, so they cannot share one tree.",
       split_one: "Keep as {{count}} repertoire",
@@ -1082,6 +1112,33 @@ const en = {
       },
     },
     /**
+     * The comment block (CTA-69): what the PGN says at the position on
+     * screen — its comments, and the attributes read out of them.
+     */
+    annotations: {
+      title: "Comment",
+      /** The comment opening a variation, above the ones after its move. */
+      before: "Before this move",
+      add: "Add a comment",
+      edit: "Edit this comment",
+      delete: "Delete this comment",
+      /**
+       * An attribute's name. `[%key value]` commands the app does not know
+       * print their own key; these are the ones it does.
+       */
+      keys: {
+        eval: "Eval",
+        depth: "Depth",
+        mate: "Mate in",
+        assessment: "Assessment",
+        clk: "Clock",
+        emt: "Time spent",
+        cal: "Arrows",
+        csl: "Squares",
+        prc: "Play chance",
+      },
+    },
+    /**
      * What to do with a session's changes to a repertoire (CTA-63) — the strip
      * the player shows while there are any.
      */
@@ -1093,7 +1150,7 @@ const en = {
       added_one: "{{count}} move added",
       added_other: "{{count}} moves added",
       /** The changes are edits alone — lines promoted or deleted, none added. */
-      edited: "Lines reordered or deleted",
+      edited: "Lines or comments edited",
       update: "Update repertoire",
       updateHelp: "Make these changes part of this repertoire.",
       copy: "Save as copy",

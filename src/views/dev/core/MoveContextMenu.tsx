@@ -11,22 +11,29 @@ import ListSubheader from "@mui/material/ListSubheader";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import Snackbar from "@mui/material/Snackbar";
+import AddCommentOutlinedIcon from "@mui/icons-material/AddCommentOutlined";
 import ArrowUpwardRoundedIcon from "@mui/icons-material/ArrowUpwardRounded";
+import CasinoOutlinedIcon from "@mui/icons-material/CasinoOutlined";
 import ContentCopyRoundedIcon from "@mui/icons-material/ContentCopyRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import VerticalAlignTopRoundedIcon from "@mui/icons-material/VerticalAlignTopRounded";
 import { useTranslation } from "react-i18next";
 import {
+  commentsAt,
   deleteFrom,
   findNode,
   isInSideLine,
   linePgn,
   makeMainline,
+  pathTo,
   plyLabel,
   promoteVariation,
+  setComments,
   subtreeCounts,
   type GameTree,
 } from "../../../lib/gameTree";
+import CommentDialog, { type CommentDraft } from "./CommentDialog";
+import PlayChanceDialog, { type PlayChanceTarget } from "./PlayChanceDialog";
 import type { MenuAnchor } from "../../shared/moveContextMenu";
 
 /** The move a menu was opened on, and where. */
@@ -35,7 +42,11 @@ export type MoveMenuTarget = { nodeId: string; anchor: MenuAnchor };
 /**
  * **The variations explorer's move menu** (CTA-64) — lichess's right-click on
  * a move of the analysis board: promote the variation, make it the main line,
- * delete from here, copy the line's PGN.
+ * delete from here, copy the line's PGN — and, since CTA-69, add a comment to
+ * the move (`CommentDialog`; `setComments`, appended after the ones it has),
+ * and, on a move with alternatives, set the **play chances** of the branch
+ * it belongs to (`PlayChanceDialog`; lichess-tools' `prc:N`,
+ * `lib/playChance.ts`).
  *
  * Opened by `TreeMoveList` when its consumer passes `onEditTree`, at the
  * pointer (`anchorReference="anchorPosition"`). Every edit is a pure tree
@@ -69,10 +80,16 @@ function MoveContextMenu({
   // What the last copy did — kept past the snackbar's close, for its fade.
   const [copied, setCopied] = useState<"copied" | "failed">("copied");
   const [copyNoticeOpen, setCopyNoticeOpen] = useState(false);
+  const [commenting, setCommenting] = useState<string | null>(null);
+  const [chancesAt, setChancesAt] = useState<PlayChanceTarget | null>(null);
 
   // A target the tree no longer holds (an edit landed first) opens nothing.
   const node = target === null ? null : findNode(tree, target.nodeId);
   const sideLine = node !== null && isInSideLine(tree, node.id);
+  // The branch the move is one of — its parent's continuations, or the start's.
+  const branchParent = node === null ? null : (pathTo(tree, node.id).at(-2) ?? null);
+  const branchSize =
+    node === null ? 0 : branchParent === null ? tree.moves.length : branchParent.children.length;
   const deletingNode = deleting === null ? null : findNode(tree, deleting);
   const counts = deletingNode === null ? null : subtreeCounts(tree, deletingNode.id);
 
@@ -81,6 +98,23 @@ function MoveContextMenu({
     const { number, isWhiteMove } = plyLabel(tree.startFen, at.ply);
     return `${number}${isWhiteMove ? "." : "…"} ${at.san}`;
   };
+
+  // Built on each render, so the save edits the tree as it is then.
+  const commentingNode = commenting === null ? null : findNode(tree, commenting);
+  const commentDraft: CommentDraft | null =
+    commentingNode === null
+      ? null
+      : {
+          label: moveText(commentingNode),
+          initial: "",
+          onSave: (text) => {
+            const next = setComments(tree, commentingNode.id, "comments", [
+              ...commentsAt(tree, commentingNode.id, "comments"),
+              text,
+            ]);
+            if (next !== tree) onEditTree(next);
+          },
+        };
 
   const edit = (operation: (tree: GameTree, id: string) => GameTree) => {
     if (node === null) return;
@@ -146,6 +180,33 @@ function MoveContextMenu({
           </ListItemIcon>
           <ListItemText>{t("moveMenu.deleteFrom")}</ListItemText>
         </MenuItem>
+        <MenuItem
+          data-testid="move-menu-comment"
+          onClick={() => {
+            if (node === null) return;
+            setCommenting(node.id);
+            onClose();
+          }}
+        >
+          <ListItemIcon>
+            <AddCommentOutlinedIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>{t("moveMenu.addComment")}</ListItemText>
+        </MenuItem>
+        {branchSize > 1 && (
+          <MenuItem
+            data-testid="move-menu-chances"
+            onClick={() => {
+              setChancesAt({ parentId: branchParent?.id ?? null });
+              onClose();
+            }}
+          >
+            <ListItemIcon>
+              <CasinoOutlinedIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>{t("moveMenu.playChances")}</ListItemText>
+          </MenuItem>
+        )}
         <MenuItem data-testid="move-menu-copy" onClick={copy}>
           <ListItemIcon>
             <ContentCopyRoundedIcon fontSize="small" />
@@ -189,6 +250,14 @@ function MoveContextMenu({
           </Button>
         </DialogActions>
       </Dialog>
+
+      <CommentDialog draft={commentDraft} onClose={() => setCommenting(null)} />
+      <PlayChanceDialog
+        tree={tree}
+        target={chancesAt}
+        onClose={() => setChancesAt(null)}
+        onEditTree={onEditTree}
+      />
 
       <Snackbar
         open={copyNoticeOpen}

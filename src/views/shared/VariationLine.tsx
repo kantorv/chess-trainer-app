@@ -1,6 +1,7 @@
 import { memo, type ReactNode } from "react";
+import ChatBubbleOutlineRoundedIcon from "@mui/icons-material/ChatBubbleOutlineRounded";
 import { styled } from "@mui/material/styles";
-import { plyLabel, type VariationNode } from "../../lib/gameTree";
+import { hasComments, plyLabel, type VariationNode } from "../../lib/gameTree";
 import {
   useEvalText,
   useIsCurrentNode,
@@ -108,6 +109,17 @@ const Token = styled("button")(({ theme }) => ({
 const EvalText = styled("span")({ fontSize: "0.6875rem", opacity: 0.75 });
 
 /**
+ * The comment marker (CTA-69): a move whose PGN carries a comment. The icon
+ * and size `MoveList`'s numbered cells use for theirs, styled once rather than
+ * per token for the reason in the note above.
+ */
+const CommentIcon = styled(ChatBubbleOutlineRoundedIcon)({
+  fontSize: "0.75rem",
+  opacity: 0.7,
+  flexShrink: 0,
+});
+
+/**
  * A side line's block: its own row, indented from the line it branches off.
  * Inside the move list it is a grid item among the numbered pairs instead, so
  * it spans all three columns; the flex container the flowing tree wraps it in
@@ -128,18 +140,23 @@ const MoveToken = memo(function MoveToken({
   node,
   startFen,
   forceNumber,
+  markComments,
+  showEvals = true,
   onSelect,
   onContextMenu,
 }: {
   node: VariationNode;
   startFen: string;
   forceNumber: boolean;
+  markComments?: boolean;
+  showEvals?: boolean;
   onSelect?: (id: string) => void;
   onContextMenu?: ContextMenuNodeHandler;
 }) {
+  const hasComment = markComments === true && hasComments(node);
   const isCurrent = useIsCurrentNode(node.id);
   const isExtension = useIsExtensionNode(node.id);
-  const evalText = useEvalText(node.fen);
+  const evalText = useEvalText(showEvals ? node.fen : null);
   const ref = useScrollWhenCurrent<HTMLButtonElement>(isCurrent);
 
   const { number, isWhiteMove } = plyLabel(startFen, node.ply);
@@ -158,6 +175,7 @@ const MoveToken = memo(function MoveToken({
       dir="ltr"
       data-testid={`tree-move-${node.id}`}
       data-san={node.san}
+      data-has-comment={hasComment ? "true" : undefined}
       data-extension={isExtension ? "true" : undefined}
       aria-current={isCurrent ? "true" : undefined}
       onClick={() => onSelect?.(node.id)}
@@ -171,6 +189,9 @@ const MoveToken = memo(function MoveToken({
       }
     >
       {`${prefix}${node.san}`}
+      {hasComment && (
+        <CommentIcon aria-hidden data-testid={`tree-comment-icon-${node.id}`} />
+      )}
       {evalText !== undefined && (
         <EvalText data-testid={`tree-eval-${node.id}`}>{evalText}</EvalText>
       )}
@@ -189,6 +210,18 @@ type LineProps = {
    * list's memo already follows the language, so a switch still reaches it.
    */
   groupLabel: string;
+  /**
+   * Opt-in: mark a move carrying a PGN comment with the comment icon — the
+   * variations explorer's (CTA-69). Without it nothing is marked, which keeps
+   * the flowing tree's screens as they were.
+   */
+  markComments?: boolean;
+  /**
+   * Print each move's eval beside it — the default. The variations explorer
+   * passes `false` (CTA-69): the evals stay on the mainline's numbered cells,
+   * and the side lines read as lines, not as a column of numbers.
+   */
+  showEvals?: boolean;
 };
 
 /**
@@ -201,6 +234,8 @@ export const VariationBlock = memo(function VariationBlock({
   onSelectNode,
   onContextMenuNode,
   groupLabel,
+  markComments,
+  showEvals,
 }: LineProps & {
   /** The side line's first move; its children continue it, and branch in turn. */
   node: VariationNode;
@@ -219,6 +254,8 @@ export const VariationBlock = memo(function VariationBlock({
         onSelectNode={onSelectNode}
         onContextMenuNode={onContextMenuNode}
         groupLabel={groupLabel}
+        markComments={markComments}
+        showEvals={showEvals}
       />
     </Block>
   );
@@ -240,6 +277,8 @@ export const VariationLine = memo(function VariationLine({
   onSelectNode,
   onContextMenuNode,
   groupLabel,
+  markComments,
+  showEvals,
 }: LineProps & {
   /** The alternatives at this point; `nodes[0]` is the line, the rest side lines. */
   nodes: readonly VariationNode[];
@@ -259,6 +298,8 @@ export const VariationLine = memo(function VariationLine({
         node={main}
         startFen={startFen}
         forceNumber={restate}
+        markComments={markComments}
+        showEvals={showEvals}
         onSelect={onSelectNode}
         onContextMenu={onContextMenuNode}
       />,
@@ -272,6 +313,8 @@ export const VariationLine = memo(function VariationLine({
           onSelectNode={onSelectNode}
           onContextMenuNode={onContextMenuNode}
           groupLabel={groupLabel}
+          markComments={markComments}
+          showEvals={showEvals}
         />,
       );
     }

@@ -27,11 +27,16 @@ import {
 } from "../../lib/analysisSettings";
 import {
   emptyTree,
+  commentsAt,
   findNode,
   pathTo,
+  plyLabel,
+  setComments,
+  type CommentKind,
   type GameTree,
   type VariationNode,
 } from "../../lib/gameTree";
+import { annotationsAt } from "../../lib/moveAnnotations";
 import { downloadPgn } from "../../lib/pgnExport";
 import { atParamOf, nodeAtParam, REPERTOIRE_AT_PARAM } from "../../lib/repertoireLink";
 import { slugify } from "../../lib/pgnLibrary";
@@ -55,6 +60,7 @@ import {
   type SavedRepertoireProblem,
 } from "../../lib/savedRepertoireStore";
 import BoardShell from "../dev/core/BoardShell";
+import CommentDialog, { type CommentDraft } from "../dev/core/CommentDialog";
 import TreeMoveList from "../dev/core/TreeMoveList";
 import { useBoardCore } from "../dev/core/useBoardCore";
 import { useEngineModule } from "../dev/core/useEngineModule";
@@ -66,6 +72,7 @@ import {
   nextMoveArrowsOf,
   REQUIRED_MOVE_ARROW_COLOR,
 } from "../tools/analysis/nextMoveArrows";
+import RepertoireAnnotationsBar, { type CommentEditing } from "./RepertoireAnnotationsBar";
 import RepertoireChangesBar from "./RepertoireChangesBar";
 import RepertoireGamesMenu from "./RepertoireGamesMenu";
 import RepertoireMap from "./RepertoireMap";
@@ -233,6 +240,7 @@ function RepertoirePlayer({
   const rules = useRepertoireGame({
     game,
     repertoire,
+    session: core.tree,
     nodeId: core.nodeId,
     turn: core.turn,
     trainerColor,
@@ -446,6 +454,66 @@ function RepertoirePlayer({
     there does not (`addMove`), so this holds for the moves added today and
     for any edit that comes later, with nothing to keep in step.
   */
+  /*
+    What the PGN says at the position on screen (CTA-69): the comment block
+    above the footer. The player's only — a game is a test, and "better is
+    14...b4" would answer it.
+  */
+  const annotations = useMemo(
+    () => (game === undefined && shown === "ready" ? annotationsAt(core.tree, core.nodeId) : null),
+    [game, shown, core.tree, core.nodeId],
+  );
+  const annotatedLabel = useMemo(() => {
+    const node = findNode(core.tree, core.nodeId);
+    if (node === null) return t("moveList.startPosition");
+    const { number, isWhiteMove } = plyLabel(core.tree.startFen, node.ply);
+    return `${number}${isWhiteMove ? "." : "…"} ${node.san}`;
+  }, [core.tree, core.nodeId, t]);
+
+  /*
+    Editing a comment (CTA-69) — the block's add, edit and delete. Each is a
+    `setComments` edit through the core's `replaceTree`, the path every other
+    edit to the tree takes: the Save button lights up, the strip offers to
+    keep it, Discard takes it back, and the reader stays where they are.
+    The dialog's target names the node, so its save edits the tree as it is
+    when it lands (the draft is built here, on each render).
+  */
+  const [commentEdit, setCommentEdit] = useState<{
+    nodeId: string | null;
+    kind: CommentKind;
+    /** `null` adds one after the move's others. */
+    index: number | null;
+  } | null>(null);
+  const editComments = useCallback(
+    (nodeId: string | null, kind: CommentKind, next: (list: string[]) => string[]) => {
+      const edited = setComments(core.tree, nodeId, kind, next([...commentsAt(core.tree, nodeId, kind)]));
+      if (edited !== core.tree) core.replaceTree(edited);
+    },
+    [core],
+  );
+  const commentDraft: CommentDraft | null =
+    commentEdit === null
+      ? null
+      : {
+          label: annotatedLabel,
+          initial:
+            commentEdit.index === null
+              ? ""
+              : (commentsAt(core.tree, commentEdit.nodeId, commentEdit.kind)[commentEdit.index] ?? ""),
+          onSave: (text) =>
+            editComments(commentEdit.nodeId, commentEdit.kind, (list) =>
+              commentEdit.index === null
+                ? [...list, text]
+                : list.map((old, index) => (index === commentEdit.index ? text : old)),
+            ),
+        };
+  const commentEditing: CommentEditing = {
+    onAdd: () => setCommentEdit({ nodeId: core.nodeId, kind: "comments", index: null }),
+    onEdit: (kind, index) => setCommentEdit({ nodeId: core.nodeId, kind, index }),
+    onDelete: (kind, index) =>
+      editComments(core.nodeId, kind, (list) => list.filter((_, at) => at !== index)),
+  };
+
   const navigate = useNavigate();
   const changed = game === undefined && shown === "ready" && core.tree !== repertoire;
   const [saveProblem, setSaveProblem] = useState<SavedRepertoireProblem | null>(null);
@@ -846,6 +914,15 @@ function RepertoirePlayer({
         footer:
           shown !== "ready" ? undefined : (
             <>
+              {annotations !== null && (
+                <RepertoireAnnotationsBar
+                  testId={`${id}-annotations`}
+                  label={annotatedLabel}
+                  annotations={annotations}
+                  editing={commentEditing}
+                />
+              )}
+              <CommentDialog draft={commentDraft} onClose={() => setCommentEdit(null)} />
               {changed && changesOpen && (
                 <RepertoireChangesBar
                   testId={`${id}-changes`}

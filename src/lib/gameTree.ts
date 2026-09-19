@@ -61,6 +61,22 @@ export type VariationNode = {
    * also is.
    */
   captured?: string;
+  /**
+   * The PGN `{ comments }` written after this move, in file order, each
+   * trimmed. Absent — not empty — on a move with none (see *Annotations*).
+   */
+  comments?: string[];
+  /**
+   * The comments written **before** this move — `( {…} 12... Nc6 )`, the
+   * text that opens a variation. Anywhere else a comment belongs to the move
+   * before it, so a parsed tree carries these only on a variation's first move.
+   */
+  preComments?: string[];
+  /**
+   * The move's NAGs (`$1`, `$14`, …), the `!`/`?` suffixes read as theirs
+   * (`!` 1, `?` 2, `!!` 3, `??` 4, `!?` 5, `?!` 6), each once, in file order.
+   */
+  nags?: number[];
   /** Continuations. `children[0]` is the mainline; the rest are variations. */
   children: VariationNode[];
 };
@@ -74,6 +90,58 @@ export type GameTree = {
   moves: VariationNode[];
   /** Source of the next node id. Part of the value so ids stay deterministic. */
   nextId: number;
+  /** The game's own comments — the text before its first move (CTA-69). */
+  comments?: string[];
+};
+
+/*
+  Annotations (CTA-69). A tree carries what a PGN annotates it with — the
+  comments after a move, the comment opening a variation, a move's NAGs and
+  the game's opening comment — so a tree read from a file and written back
+  out loses none of it: merging a many-game upload, Update and Save as copy
+  all write the tree. Every field is optional and absent when empty, so a tree
+  built without annotations is exactly the value it always was. They ride on
+  the node, so every edit below keeps them on the moves that survive, and
+  `setComments` edits them like any other change to the tree.
+*/
+
+/**
+ * Whether a move carries a comment — after it or before it. What the
+ * variations explorer marks with its comment icon.
+ */
+export const hasComments = (node: VariationNode): boolean =>
+  (node.comments?.length ?? 0) > 0 || (node.preComments?.length ?? 0) > 0;
+
+/**
+ * What makes two comments **the same comment**: their words, whitespace
+ * aside. PGN hard-wraps comments near column 80, so one sentence reaches a
+ * file wrapped at different places in different chapters — the Alapin
+ * course carries ~145 such pairs — and reads identically once reflowed.
+ */
+export const commentKey = (text: string): string => text.split(/\s+/).join(" ").trim();
+
+/** Whether `list` already holds `text`, whitespace aside. */
+export const holdsComment = (list: readonly string[], text: string): boolean => {
+  const key = commentKey(text);
+  return list.some((existing) => commentKey(existing) === key);
+};
+
+/**
+ * `extra` appended to `into`, an item already there not added again — how a
+ * merge joins what several games say about the same move. `same` is what
+ * "already there" means: equality for NAGs, {@link holdsComment} for
+ * comments, where the first wording is the one kept. Returns `into`
+ * (created when absent) so a caller can assign it.
+ */
+const appendUnique = <T>(
+  into: T[] | undefined,
+  extra: readonly T[] | undefined,
+  same: (list: readonly T[], item: T) => boolean = (list, item) => list.includes(item),
+): T[] | undefined => {
+  if (extra === undefined || extra.length === 0) return into;
+  const list = into ?? [];
+  for (const item of extra) if (!same(list, item)) list.push(item);
+  return list;
 };
 
 /**
@@ -413,6 +481,61 @@ export const deleteFrom = (tree: GameTree, id: string): GameTree => {
   );
 };
 
+/** Which of a move's comment lists an edit is for — after it, or before it. */
+export type CommentKind = "comments" | "preComments";
+
+/**
+ * **Edit a move's comments** (CTA-69) — the list of `kind` at `id` replaced
+ * by `next`, each text trimmed and an empty one dropped; `id` `null` is the
+ * game's own comment (before the first move; `kind` is not read there). An
+ * empty list removes the field, so a move whose last comment goes is the
+ * value it was before it had one. Pure and id-preserving like the edits
+ * above — only the path to the move is copied — and the same reference back
+ * when nothing changes, or for an id the tree does not hold, so
+ * `core.tree !== repertoire` stays the whole of "changed".
+ */
+export const setComments = (
+  tree: GameTree,
+  id: string | null,
+  kind: CommentKind,
+  next: readonly string[],
+): GameTree => {
+  const texts = next.map((text) => text.trim()).filter((text) => text !== "");
+  const same = (current: readonly string[] | undefined) =>
+    (current ?? []).length === texts.length &&
+    texts.every((text, index) => current?.[index] === text);
+
+  if (id === null) {
+    if (same(tree.comments)) return tree;
+    const edited: GameTree = { ...tree };
+    if (texts.length === 0) delete edited.comments;
+    else edited.comments = texts;
+    return edited;
+  }
+
+  const path = pathTo(tree, id);
+  const target = path.at(-1);
+  if (target === undefined || same(target[kind])) return tree;
+  const edited: VariationNode = { ...target };
+  if (texts.length === 0) delete edited[kind];
+  else edited[kind] = texts;
+
+  const last = path.length - 1;
+  return rebuildAlong(tree, path, (siblings, node, depth) =>
+    depth === last
+      ? siblings.map((sibling) => (sibling.id === node.id ? edited : sibling))
+      : siblings,
+  );
+};
+
+/** The comments of `kind` at `id` — `null` the game's own; empty when none. */
+export const commentsAt = (
+  tree: GameTree,
+  id: string | null,
+  kind: CommentKind,
+): readonly string[] =>
+  (id === null ? tree.comments : findNode(tree, id)?.[kind]) ?? [];
+
 /**
  * What {@link deleteFrom} would take away: the moves from `id` on (itself
  * included) and the lines among them — the leaves, each the end of one line.
@@ -470,6 +593,14 @@ export const linePgn = (tree: GameTree, id: string | null): string => {
  * Every tree must start from `startFen`; a tree that does not is skipped, not
  * forced (its moves mean nothing from another position). The caller decides
  * whether merging is offered at all.
+ *
+ * **Annotations come along** (CTA-69). Where several games annotate the same
+ * move, a text they share is kept once — whitespace aside, so the same
+ * sentence wrapped differently is one comment ({@link commentKey}) — and
+ * different ones are joined in file order; NAGs are unioned. The first game's opening comment is the merged
+ * tree's; a later game's opens **its own line** — the comment before the
+ * first move that game added, where its side line begins — or, when it adds
+ * no move of its own, joins the tree's. Nothing a file says is lost.
  */
 export const mergeTrees = (
   trees: readonly GameTree[],
@@ -478,6 +609,9 @@ export const mergeTrees = (
 ): GameTree => {
   const moves: VariationNode[] = [];
   let nextId = 1;
+  let comments: string[] | undefined;
+  /** The first node the tree being merged added — where its line begins. */
+  const added: { first?: VariationNode } = {};
 
   const into = (target: VariationNode[], source: readonly VariationNode[], ply: number) => {
     for (const node of source) {
@@ -495,16 +629,45 @@ export const mergeTrees = (
         };
         nextId += 1;
         target.push(existing);
+        added.first ??= existing;
       }
+      const joinedComments = appendUnique(existing.comments, node.comments, holdsComment);
+      if (joinedComments !== undefined) existing.comments = joinedComments;
+      const joinedPre = appendUnique(existing.preComments, node.preComments, holdsComment);
+      if (joinedPre !== undefined) existing.preComments = joinedPre;
+      const joinedNags = appendUnique(existing.nags, node.nags);
+      if (joinedNags !== undefined) existing.nags = joinedNags;
       into(existing.children, node.children, ply + 1);
     }
   };
 
+  let first = true;
   for (const tree of trees) {
-    if (tree.startFen === startFen) into(moves, tree.moves, 1);
+    if (tree.startFen !== startFen) continue;
+    added.first = undefined;
+    into(moves, tree.moves, 1);
+    const firstAdded = added.first as VariationNode | undefined;
+    if (first || firstAdded === undefined) {
+      comments = appendUnique(comments, tree.comments, holdsComment);
+    } else {
+      // The game's own comment came first in its text, so it goes first.
+      const opening = appendUnique(
+        appendUnique(undefined, tree.comments, holdsComment),
+        firstAdded.preComments,
+        holdsComment,
+      );
+      if (opening !== undefined) firstAdded.preComments = opening;
+    }
+    first = false;
   }
 
-  return { headers: { ...headers }, startFen, moves, nextId };
+  return {
+    headers: { ...headers },
+    startFen,
+    moves,
+    nextId,
+    ...(comments !== undefined ? { comments } : {}),
+  };
 };
 
 /** Lift a linear {@link Game} into a tree with that game as its only line. */
@@ -597,9 +760,27 @@ const writeMove = (
   forceNumber: boolean,
 ): string => {
   const { number, isWhiteMove } = plyLabel(startFen, node.ply);
-  if (isWhiteMove) return `${number}. ${node.san}`;
-  return forceNumber ? `${number}... ${node.san}` : node.san;
+  const before = writeComments(node.preComments);
+  // A comment before the move breaks the reader's place like a variation does.
+  const numbered = isWhiteMove
+    ? `${number}. ${node.san}`
+    : forceNumber || before !== ""
+      ? `${number}... ${node.san}`
+      : node.san;
+  const nags = node.nags?.map((nag) => `$${nag}`).join(" ") ?? "";
+  return [before, numbered, nags, writeComments(node.comments)]
+    .filter((part) => part !== "")
+    .join(" ");
 };
+
+/**
+ * Comments as PGN writes them, `{ text }` each. A `}` cannot sit inside one
+ * (it would close it), so one that arrived by a `;` comment is dropped.
+ */
+const writeComments = (comments: readonly string[] | undefined): string =>
+  comments === undefined
+    ? ""
+    : comments.map((text) => `{ ${text.replaceAll("}", "")} }`).join(" ");
 
 /**
  * Render a list of alternatives: the first as the line, the rest in parentheses
@@ -620,9 +801,13 @@ const writeNodes = (
     parts.push(`(${writeNodes(startFen, [alternative], true)})`);
   }
 
-  // A variation between two moves of the line breaks the reader's place, so the
-  // move after it restates its number.
-  const rest = writeNodes(startFen, main.children, alternatives.length > 0);
+  // A variation — or a comment — between two moves of the line breaks the
+  // reader's place, so the move after it restates its number.
+  const rest = writeNodes(
+    startFen,
+    main.children,
+    alternatives.length > 0 || (main.comments?.length ?? 0) > 0,
+  );
   if (rest !== "") parts.push(rest);
 
   return parts.join(" ");
@@ -635,7 +820,9 @@ const writeNodes = (
  * Written in the export format: the tag pairs, a blank line, then the movetext
  * ending in the result. A non-standard start position is stated as
  * `SetUp`/`FEN`, which is what makes a position set up from a FEN reload as
- * itself.
+ * itself. Annotations are written where `parsePgnTree` reads them back from
+ * (CTA-69): the game's comment first, then per move its opening comment, the
+ * move, its NAGs as `$N` (a `!?` suffix comes back as `$5`) and its comments.
  */
 export const treeToPgn = (tree: GameTree): string => {
   const headers = headersWithStart(tree);
@@ -644,7 +831,9 @@ export const treeToPgn = (tree: GameTree): string => {
     .join("\n");
 
   const result = gameTag(headers, "Result") ?? "*";
-  const movetext = writeNodes(tree.startFen, tree.moves, true);
+  const movetext = [writeComments(tree.comments), writeNodes(tree.startFen, tree.moves, true)]
+    .filter((part) => part !== "")
+    .join(" ");
 
   return `${tags}${tags === "" ? "" : "\n\n"}${
     movetext === "" ? result : `${movetext} ${result}`

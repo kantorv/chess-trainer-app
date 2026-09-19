@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import type { Turn } from "../../lib/engineAnalysis";
 import type { GameTree, VariationNode } from "../../lib/gameTree";
+import { marksFrom } from "../../lib/playChance";
 import {
   backtrackingPolicy,
   backtrackTarget,
@@ -11,7 +12,7 @@ import {
 } from "../../lib/repertoireGames";
 import {
   EMPTY_DRILL_SCORE,
-  pickTrainerMove,
+  playChancePolicy,
   withVerdict,
   type DrillScore,
   type DrillVerdict,
@@ -25,8 +26,15 @@ import {
  * themselves are pure (`lib/repertoireGames.ts`); this hook only keeps the
  * session's state beside them, and knows nothing about the board.
  *
- * With no game (the repertoire's own player) it is inert: the shipped policy,
- * nothing required, nothing counted.
+ * With no game (the repertoire's own player) it is inert: the play-chance
+ * policy, nothing required, nothing counted.
+ *
+ * **The policy** (CTA-69): the player and *Get to the end* pick by the
+ * lichess-tools play chances (`playChancePolicy`, `lib/playChance.ts`);
+ * Backtracking keeps picking by what is still uncovered. The chances are
+ * read off the **session's** tree, so a `prc` the reader has just set counts
+ * at once. The policy is rebuilt when that tree changes — only on a real
+ * edit: following a move the repertoire has hands back the same tree.
  */
 
 const NOTHING_COVERED: ReadonlySet<string> = new Set();
@@ -36,6 +44,7 @@ export type RepertoireGameState = ReturnType<typeof useRepertoireGame>;
 export const useRepertoireGame = ({
   game,
   repertoire,
+  session = repertoire,
   nodeId,
   turn,
   trainerColor,
@@ -43,6 +52,8 @@ export const useRepertoireGame = ({
   game: RepertoireGameId | undefined;
   /** The repertoire as it arrived. */
   repertoire: GameTree;
+  /** The session's tree — where the play chances are read (CTA-69). */
+  session?: GameTree;
   /** The node on screen, and whose turn it is there. */
   nodeId: string | null;
   turn: Turn;
@@ -55,8 +66,9 @@ export const useRepertoireGame = ({
   const coverage = useMemo(() => coverageOf(repertoire, covered), [repertoire, covered]);
 
   const policy: TrainerPolicy = useMemo(
-    () => (game === "backtrack" ? backtrackingPolicy(coverage) : pickTrainerMove),
-    [game, coverage],
+    () =>
+      game === "backtrack" ? backtrackingPolicy(coverage) : playChancePolicy(marksFrom(session)),
+    [game, coverage, session],
   );
 
   const required: readonly VariationNode[] | undefined = useMemo(

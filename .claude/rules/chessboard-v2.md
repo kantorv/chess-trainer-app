@@ -286,7 +286,8 @@ const trainer = useTrainerModule({
   core,                             // nodeId · fen · tree · onPieceDrop · resolvePromotion · playVariation
   repertoire: GameTree,             // the tree AS IT ARRIVED — what the trainer answers from
   trainerColor: "w" | "b",
-  policy?: TrainerPolicy,           // pickTrainerMove: uniform over the file's moves at the node
+  policy?: TrainerPolicy,           // default pickTrainerMove (uniform); the repertoire screens pass
+                                    // playChancePolicy (lichess-tools prc:N, CTA-69) or backtrackingPolicy
   random?: () => number,            // injectable, so a test is deterministic
   delayMs?: number,
   drill?: boolean,                  // game mode: judge the reader's moves, take a wrong one back
@@ -335,7 +336,10 @@ A scripted opponent that answers **only from a repertoire**. What it owns:
 **Adding a policy, a scoring rule or a mode.** A new trainer (weighted,
 mainline-first, spaced repetition) is a new function of type `TrainerPolicy`
 in `lib/repertoireTrainer.ts`, passed as `policy` — never a branch in
-`pickTrainerMove` or in the module. What a verdict is *worth* — the session
+`pickTrainerMove` or in the module. `playChancePolicy` (CTA-69) is the worked
+example: lichess-tools' `prc:N` play chances, their rules pure in
+`lib/playChance.ts`, handed in by `useRepertoireGame` with a mark reader over
+the session's tree — nothing in the module changed for it. What a verdict is *worth* — the session
 tally today (`DrillScore` / `withVerdict`), a persisted per-position record
 for spaced repetition later — is the screen's `onJudged`, never the
 module's. A further mode is one more option here, beside `drill`. None of it
