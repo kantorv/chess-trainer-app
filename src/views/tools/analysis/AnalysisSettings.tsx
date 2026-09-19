@@ -15,17 +15,16 @@ import {
 } from "./useAnalysisBoard";
 
 /**
- * The Engine tab: whether to analyse at all, how hard, how many lines, whether
- * to show the bar, and a way back to an empty board.
+ * The Engine tab: how hard, how many lines, whether to show the bar, and a way
+ * back to an empty board.
  *
  * Shorter than the Play with Engine tab on purpose. There is no opponent here,
  * so there is no colour to pick and no strength to set — an analysis board wants
  * the engine's best answer, and weakening it would only produce worse analysis.
- * What is left is the two `go` arguments, `MultiPV`, and the two switches.
- *
- * The two switches are **independent**, which is the point of having both: the
- * bar can stay up over a position nothing is analysing, and the engine can run
- * with the bar hidden.
+ * What is left is the two `go` arguments, `MultiPV`, and the bar switch — the
+ * engine's own on/off switch is **not here** since CTA-51: it lives in the row
+ * above the tab strip (`AnalysisPanel.tsx`), because it is wanted from any tab,
+ * and this tab is gated on it all the same.
  *
  * `MultiPV` is rendered through the shared `<OptionSlider>`, so it reports
  * itself as absent or pinned when the running build says so rather than
@@ -37,8 +36,8 @@ type AnalysisSettingsProps = {
   onChange: (patch: Partial<AnalysisSettingsValues>) => void;
   /** What the running worker declared. Empty until the handshake lands. */
   engineOptions: ReadonlyMap<string, EngineOption>;
+  /** Whether the engine above the tab strip is switched on — what gates these. */
   engineOn: boolean;
-  onEngineOnChange: (next: boolean) => void;
   showEvalBar: boolean;
   onShowEvalBarChange: (next: boolean) => void;
   onClear: () => void;
@@ -49,7 +48,6 @@ function AnalysisSettings({
   onChange,
   engineOptions,
   engineOn,
-  onEngineOnChange,
   showEvalBar,
   onShowEvalBarChange,
   onClear,
@@ -64,17 +62,6 @@ function AnalysisSettings({
 
   return (
     <Box data-testid="analysis-settings" sx={{ display: "grid", gap: 2 }}>
-      <FormControlLabel
-        control={
-          <Switch
-            checked={engineOn}
-            data-testid="analysis-setting-engine"
-            onChange={(event) => onEngineOnChange(event.target.checked)}
-          />
-        }
-        label={t("analysis.settings.engineOn")}
-      />
-
       {/* Depth and move time are `go` arguments, not options — always available,
           but pointless to offer while nothing is being searched. */}
       <Box

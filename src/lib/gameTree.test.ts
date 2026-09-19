@@ -4,6 +4,7 @@ import { parsePgnGames, parsePgnTree } from "./pgn";
 import { moveRowsOf } from "./gameNavigation";
 import {
   addMove,
+  countVariations,
   emptyTree,
   fenAtNode,
   findNode,
@@ -11,6 +12,7 @@ import {
   lineOf,
   mainline,
   mainlineGame,
+  mergeTrees,
   nodeAtSanPath,
   pathTo,
   plyLabel,
@@ -76,6 +78,29 @@ describe("addMove", () => {
     expect(fenAtNode(tree, first.id)).toBe(first.fen);
     // Ply 0 is the tree's own start position.
     expect(fenAtNode(tree, null)).toBe(DEFAULT_POSITION);
+  });
+
+  it("records the piece type a capture took, through the move param", () => {
+    // 1. e4 d5 2. exd5 — the capture rides with the move.
+    const chess = new Chess();
+    for (const san of ["e4", "d5", "exd5"]) chess.move(san);
+
+    let parentId: string | null = null;
+    let current = emptyTree();
+    for (const move of chess.history({ verbose: true })) {
+      const added = addMove(current, parentId, {
+        san: move.san,
+        from: move.from,
+        to: move.to,
+        fen: move.after,
+        captured: move.captured,
+      });
+      current = added.tree;
+      parentId = added.nodeId;
+    }
+
+    expect(findNode(current, parentId!)!.captured).toBe("p");
+    expect(mainline(current)[0].captured).toBeUndefined();
   });
 
   it("branches when a different move is played from an earlier ply", () => {
@@ -193,6 +218,14 @@ describe("the linear reading", () => {
       headers: game.headers,
       moves: game.moves,
     });
+  });
+
+  it("carries a capture through the round trip, the same field both ways", () => {
+    const game = parsePgnGames("1. e4 d5 2. exd5 1-0")[0];
+    expect(game.moves[2].captured).toBe("p");
+
+    expect(mainlineGame(treeFromGame(game)).moves[2].captured).toBe("p");
+    expect(lineGame(treeFromGame(game), "n3").moves[2].captured).toBe("p");
   });
 
   it("reads one variation as its own line", () => {
@@ -324,3 +357,90 @@ describe("sanPathTo / nodeAtSanPath — a portable place in a tree", () => {
     expect(sanPathTo(tree, found)).toEqual(["e4", "c5"]);
   });
 });
+
+describe("countVariations", () => {
+  it("is zero for a tree with only one line", () => {
+    expect(countVariations(opening().tree)).toBe(0);
+  });
+
+  it("counts a side line once, however many moves it runs to", () => {
+    const short = play(opening().tree, null, "e4");
+    const branchedShort = play(short.tree, short.nodeId, "c5").tree;
+    expect(countVariations(branchedShort)).toBe(1);
+
+    const long = play(opening().tree, null, "e4");
+    const branchedLong = play(
+      long.tree,
+      long.nodeId,
+      "c5",
+      "Nc3",
+      "a6",
+      "Bc4",
+      "e6",
+      "Qf3",
+    ).tree;
+    expect(countVariations(branchedLong)).toBe(1);
+  });
+
+  it("counts a branch at the very first half-move, not only deeper ones", () => {
+    const tree = play(emptyTree(), null, "e4").tree;
+    const branched = play(emptyTree(), null, "d4").tree;
+    // Two alternatives at ply 1, "d4" appended beside the existing "e4" tree.
+    const merged: GameTree = { ...tree, moves: [...tree.moves, ...branched.moves] };
+
+    expect(countVariations(merged)).toBe(1);
+  });
+
+  it("counts every branch point, not just one", () => {
+    // Mainline e4 e5 Nf3 Nc6, plus a side line off e4 and another off e5.
+    const { tree: t1, nodeId: e4 } = play(emptyTree(), null, "e4");
+    const { tree: t2, nodeId: e5 } = play(t1, e4, "e5");
+    const t3 = play(t2, e5, "Nf3").tree;
+    const t4 = play(t3, e4, "c5").tree;
+    const t5 = play(t4, e5, "Nc3").tree;
+
+    expect(countVariations(t5)).toBe(2);
+  });
+});
+
+describe("mergeTrees", () => {
+  it("follows moves already there, and hangs new ones as side lines", () => {
+    const merged = mergeTrees(
+      [
+        parsePgnTree("1. e4 e5 2. Nf3 *"),
+        parsePgnTree("1. e4 c5 2. Nf3 *"),
+        parsePgnTree("1. e4 e5 2. Bc4 (2. Nc3) *"),
+      ],
+      DEFAULT_POSITION,
+      { Event: "Merged" },
+    );
+
+    expect(merged.headers).toEqual({ Event: "Merged" });
+    expect(mainline(merged).map((node) => node.san)).toEqual(["e4", "e5", "Nf3"]);
+    expect(merged.moves).toHaveLength(1);
+    expect(merged.moves[0].children.map((node) => node.san)).toEqual(["e5", "c5"]);
+    expect(merged.moves[0].children[0].children.map((node) => node.san)).toEqual([
+      "Nf3",
+      "Bc4",
+      "Nc3",
+    ]);
+    // Fresh ids, one per node in the order met — the last is 2. Nc3 — and
+    // plies that count from the start.
+    expect(merged.nextId).toBe(8);
+    expect(pathTo(merged, "n7").map((node) => [node.san, node.ply])).toEqual([
+      ["e4", 1],
+      ["e5", 2],
+      ["Nc3", 3],
+    ]);
+  });
+
+  it("skips a tree that starts from another position", () => {
+    const merged = mergeTrees(
+      [parsePgnTree("1. e4 *"), parsePgnTree('[SetUp "1"]\n[FEN "8/8/8/4k3/8/8/4P3/4K3 w - - 0 1"]\n\n1. Kd2 *')],
+      DEFAULT_POSITION,
+    );
+    expect(mainline(merged).map((node) => node.san)).toEqual(["e4"]);
+    expect(merged.nextId).toBe(2);
+  });
+});
+

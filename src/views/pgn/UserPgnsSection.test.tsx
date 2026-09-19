@@ -51,6 +51,15 @@ vi.mock("react-chessboard", () => ({
       data-orientation={options.boardOrientation}
     />
   ),
+  // The captured-pieces strip reaches for this to draw its icons.
+  defaultPieces: Object.fromEntries(
+    ["w", "b"].flatMap((color) =>
+      ["K", "Q", "R", "B", "N", "P"].map((letter) => {
+        const type = `${color}${letter}`;
+        return [type, () => <svg data-testid={`piece-${type}`} />];
+      }),
+    ),
+  ),
 }));
 
 /** Where a hand-off lands: the route it opened, and what it carried. */
@@ -142,7 +151,10 @@ describe("the User PGNs section", () => {
     const footer = screen.getByTestId(`library-item-footer-${played.id}`);
 
     expect(footer).toHaveTextContent("Jose Raul Capablanca - Savielly Tartakower");
-    expect(footer).toHaveTextContent(`1-0 · ${played.game.moves.length} moves`);
+    // Full moves — half-moves rounded up — as the move list numbers them.
+    expect(footer).toHaveTextContent(
+      `1-0 · ${Math.ceil(played.game.moves.length / 2)} moves`,
+    );
     expect(footer).toHaveTextContent("New York, 1924");
     expect(footer).toHaveTextContent("Horwitz Defense · A40");
   });
@@ -953,14 +965,14 @@ const REPERTOIRE_PGN = [1, 2, 3, 4]
   .join("\n");
 
 describe("an uploaded repertoire", () => {
-  const ROOT = "uploads/alapin";
+  const ROOT = "uploads/c3-sicilian";
   const CHAPTER = `${ROOT}/2-move-1`;
   const LINE = `${CHAPTER}/line-1-1`;
 
   beforeEach(async () => {
     await i18n.changeLanguage("en");
     clearUploads();
-    addUpload("alapin.pgn", REPERTOIRE_PGN);
+    addUpload("c3-sicilian.pgn", REPERTOIRE_PGN);
   });
 
   it("is recognised by shape and shows the root as chapter folder-cards", () => {
@@ -1012,5 +1024,35 @@ describe("the /pgn -> /library redirect (CTA-38 back-compat)", () => {
       "data-search",
       "?move=4",
     );
+  });
+});
+
+describe("the User PGNs section — the captured-pieces strips", () => {
+  it("shows the strips on the game detail, walked from the game's own start", async () => {
+    renderAt(`/library/${PLAYED}/${played.id}`);
+
+    // Ply 0: the game's start, where nothing is captured yet.
+    expect(screen.getByTestId("library-item-captured-white")).toBeInTheDocument();
+    expect(screen.getByTestId("library-item-captured-black")).toBeInTheDocument();
+    expect(screen.getByTestId("library-item-captured-white")).not.toHaveAttribute("data-diff");
+    expect(screen.getByTestId("library-item-captured-black")).not.toHaveAttribute("data-diff");
+
+    // The Capablanca game is not quiet — at its final position one of the
+    // strips is ahead of the line's own start.
+    await userEvent.click(
+      screen.getByRole("button", { name: i18n.t("gamePanel.controls.last") }),
+    );
+
+    const ahead =
+      screen
+        .getAllByTestId(/^library-item-captured-(white|black)$/)
+        .filter((strip) => strip.hasAttribute("data-diff"));
+    expect(ahead.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("is not on the list screen — previews are excluded", () => {
+    renderAt(`/library/${PLAYED}`);
+
+    expect(screen.queryByTestId(/^library-item-captured-/)).toBeNull();
   });
 });

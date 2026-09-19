@@ -1,72 +1,98 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
-import Card from "@mui/material/Card";
-import CardActionArea from "@mui/material/CardActionArea";
-import Checkbox from "@mui/material/Checkbox";
-import Chip from "@mui/material/Chip";
-import IconButton from "@mui/material/IconButton";
 import List from "@mui/material/List";
-import ListItem from "@mui/material/ListItem";
-import ToggleButton from "@mui/material/ToggleButton";
-import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
-import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
-import AccountTreeRounded from "@mui/icons-material/AccountTreeRounded";
-import ArticleRounded from "@mui/icons-material/ArticleRounded";
-import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
-import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
-import ViewComfyRounded from "@mui/icons-material/ViewComfyRounded";
-import ViewListRounded from "@mui/icons-material/ViewListRounded";
-import ViewModuleRounded from "@mui/icons-material/ViewModuleRounded";
-import { Link as RouterLink } from "react-router";
+import CreateNewFolderRoundedIcon from "@mui/icons-material/CreateNewFolderRounded";
 import { useTranslation } from "react-i18next";
-import { Chessboard, type ChessboardOptions } from "react-chessboard";
 
-import {
-  ENGINE_REFERENCE_KEY,
-  gameReferenceOf,
-} from "../../../lib/gameReference";
-import { finalFenOf, type Game } from "../../../lib/gameModel";
 import type { LibraryGame } from "../../../lib/libraryCatalog";
 import {
-  getPositionBook,
-  loadOpeningBook,
   openingOfLine,
-  type OpeningBook,
   type OpeningEntry,
-  type PositionBook,
 } from "../../../lib/openings";
 import { downloadPgn } from "../../../lib/pgnExport";
-import { savedGameSummary, type SavedGame } from "../../../lib/savedGames";
+import { slugify } from "../../../lib/pgnLibrary";
 import {
-  removeSavedGame,
-  savedGamesCatalog,
-} from "../../../lib/savedGameStore";
+  gameFolderSubtree,
+  gameFolderChildren,
+  gamesUnderFolder,
+  gamesInFolder,
+  type GameFolder,
+} from "../../../lib/savedGameFolders";
+import { removeGameFolder } from "../../../lib/savedGameFolderStore";
+import { savedGamesCatalog } from "../../../lib/savedGameStore";
+import type { SavedGame } from "../../../lib/savedGames";
 import { RightPanel } from "../../main/rightPanel";
-import { cardSizeTrack, type CardSize } from "../../library/cardSize";
+import SavedListExportBar from "../../shared/SavedListExportBar";
+import SavedListViewToggle from "../../shared/SavedListViewToggle";
+import {
+  SAVED_LIST_DEFAULT_VIEW,
+  savedListGridSx,
+  type SavedListView,
+} from "../../shared/savedList";
+import { useOpeningBook } from "../../shared/useOpeningBook";
+import { SavedGameCard, SavedGameRow } from "./SavedGameViews";
+import { SavedFolderCard, SavedFolderRow } from "./SavedFolderViews";
+import { SavedFolderBreadcrumb } from "./SavedFolderBreadcrumb";
+import SavedGamesDialogs, {
+  type NameDialogState,
+} from "./SavedGamesDialogs";
+import { useFolderBrowser } from "./useFolderBrowser";
+import { useGameFolders } from "./useGameFolders";
 import { useSavedGames } from "./useSavedGames";
 
 /**
  * **Saved games** — every game the reader has played against the engine, newest
- * first, each with somewhere to take it.
+ * first, filed into a tree of folders (CTA-46) and each with somewhere to take
+ * it.
  *
  * It sits in the Engine folder beside Play with Engine, because these are that
  * screen's games: nothing was uploaded, imported or shipped, and there is no
  * catalog to browse. Play with Engine writes a row on every move
- * (`usePlayWithEngine`), so this screen has nothing to save and no form — it is
- * a list of games and three destinations.
+ * (`usePlayWithEngine`), so this screen has nothing to save and no form — it
+ * is a list of games and three destinations.
+ *
+ * ### A tree of folders, the openings' one again
+ *
+ * Since CTA-46 the flat list is filed into folders — the Saved openings
+ * screen's folder system (CTA-40, refactored in CTA-43) over the games' own
+ * store. Folders are **display organisation only**: the catalog
+ * (`savedGameCatalogOf`), the `?game=` hand-off and the `?saved=` resume are
+ * untouched, and a game filed anywhere still opens everywhere it did. What is
+ * this screen's own is the *filing*: an opening is filed when it is saved (the
+ * save prompt carries the folder choice), but a game is written by an effect on
+ * Play with Engine — nothing to click — so filing happens here, one game at a
+ * time, through the move control on each row and card
+ * (`fileSavedGame`, the store's in-place write).
+ *
+ * The one trap the openings do not have is the **autosave**: the record the
+ * effect writes carries no folder knowledge, so the store carries the stored
+ * `folderId` forward (`saveGame`) and the idempotent compare does not read it —
+ * the first move after filing a game keeps its folder, and mounting a resumed
+ * filed game re-orders nothing.
+ *
+ * The screen is split into debuggable pieces, the openings' split again: the
+ * folder browsing is the [`useFolderBrowser`](./useFolderBrowser.ts) hook, the
+ * game rows and cards are [`SavedGameViews.tsx`](./SavedGameViews.tsx) and the
+ * folder rows and cards are [`SavedFolderViews.tsx`](./SavedFolderViews.tsx),
+ * the breadcrumb and the dialog stack are their own files beside them, and this
+ * file is the state and the wiring — the folder CRUD as the manager (create
+ * under the folder the reader is standing in, rename, move anywhere but the
+ * folder's own subtree, and delete, which keeps the contents: an empty folder
+ * deletes at once, one with contents asks first, and its games become Unfiled
+ * while its sub-folders re-parent to its own parent).
  *
  * ### Two ways to look at the same list
  *
- * A row says what a game *is*; a board says what it *looks like*, and for a game
- * you are coming back to that is often the faster way to recognise it. So the
- * top bar carries a three-way toggle — the list, small boards, big boards — and
- * the two board settings are the library list screen's own two, through
+ * A row says what a game *is*; a board says what it *looks like*, and for a
+ * game you are coming back to that is often the faster way to recognise it. So
+ * the top bar carries a three-way toggle — the list, small boards, big boards —
+ * and the two board settings are the library list screen's own two, through
  * [`cardSize.ts`](../../library/cardSize.ts) rather than a second copy of the
- * grid track. The list stays the default: it is what the screen shipped with, so
- * a reader is left with exactly what they had and the boards are something
- * offered.
+ * grid track. The toggle, the export bar and the view-switch behaviour are the
+ * shared saved-list machinery (`views/shared/savedList.ts` and the
+ * `SavedList*.tsx` beside it), which all three saved screens consume.
  *
  * **A saved game's card previews the position it was left at**, not the one it
  * started from — which is where it deliberately parts company with
@@ -104,368 +130,64 @@ import { useSavedGames } from "./useSavedGames";
  * that exist **nowhere else**: a shipped study is already a file in the repo and
  * an uploaded one is already a file the reader has, but a game played against
  * the engine lives in this browser's `localStorage` and nothing but this button
- * gets it out.
+ * gets it out. Beside it, each folder row and card carries a download of the
+ * whole subtree — one `.pgn` of everything under that folder, the same set its
+ * count stands for.
  *
- * Two decisions worth knowing:
+ * Three decisions worth knowing:
  *
- * - **Only the list view.** A checkbox on a card would sit beside the two icon
- *   buttons and the delete, in a footer that is already full at 160px — and the
- *   board views exist for *recognising* a game, where the list exists for
- *   working through one. Switching view therefore drops the selection, because
- *   a selection nothing on screen shows is a trap.
- * - **The export is a join, not a re-write.** A saved game is stored as PGN
- *   already, so the file is those records with a blank line between them:
+ * - **Only the list view has the checkboxes.** A checkbox on a card would sit
+ *   beside the two icon buttons and the delete, in a footer that is already
+ *   full at 160px — and the board views exist for *recognising* a game, where
+ *   the list exists for working through one. Switching view therefore drops the
+ *   selection, because a selection nothing on screen shows is a trap.
+ * - **The exports are joins, not re-writes.** A saved game is stored as PGN
+ *   already, so a file is those records with a blank line between them:
  *   nothing is re-parsed, and a record this build cannot read still exports
  *   intact. Which is also why a row that will not parse is still selectable.
+ * - **The picks persist across folder navigation** — the Saved openings
+ *   screen's semantics again: select-all in a folder *adds* that folder's
+ *   games, the chip counts the whole picked set wherever the reader is
+ *   standing, and each folder's download is the whole subtree, the set its
+ *   count stands for.
  *
  * ### A row the store has and the catalog does not
  *
  * The list is built from the **store**, not from the catalog: a record whose PGN
  * will not parse is absent from the catalog, and building the list from that
  * would leave the reader with a row they can neither open nor delete because it
- * is not rendered at all. So such a row is listed, says so, and offers the one
- * action that still means something. It has no board either — there is no
- * position to draw — so in the board view it is a card with the message in it.
+ * is not rendered at all. So such a row is listed, says so, and offers the two
+ * actions that still mean something — filing (folders are organisation, not
+ * readability) and the delete. It has no board either — there is no position to
+ * draw — so in the board view it is a card with the message in it.
  */
-
-/** The list, or one of the two board sizes. */
-type SavedGamesView = "list" | CardSize;
-
-/** What the screen opens on — what it shipped with, so nothing is taken away. */
-const DEFAULT_VIEW: SavedGamesView = "list";
-
-/** How a game stands, as a locale key under `savedGames.result`. */
-const resultKey = (result: string | undefined): string => {
-  if (result === "1-0") return "white";
-  if (result === "0-1") return "black";
-  if (result === "1/2-1/2") return "draw";
-  return "inProgress";
-};
 
 /**
- * A card's preview board. Read-only, and showing the position the game was left
- * at — see the note above on why that is not `libraryItemFen`. Each board takes
- * the game's own id, since `options.id` has to be unique across the page and
- * this screen shows many at once.
+ * The folder export's file stem: the reader's own name for the folder,
+ * slugified. A name that slugs to nothing — an empty one, or one written in a
+ * non-Latin script (`slugify` keeps `[a-z0-9]` only) — falls back to the fixed
+ * stem rather than producing `-2026-09-12.pgn`.
  */
-const previewOptions = (id: string, game: Game): ChessboardOptions => ({
-  id: `saved-games-preview-${id}`,
-  position: finalFenOf(game),
-  allowDragging: false,
-  allowDrawingArrows: false,
-  showNotation: false,
-});
+const FOLDER_STEM_FALLBACK = "saved-games";
 
-/** The three links a readable game offers, or `undefined` when it is not one. */
-const destinationsOf = (saved: SavedGame, item: LibraryGame | undefined) => {
-  if (item === undefined) return undefined;
-  const reference = encodeURIComponent(gameReferenceOf(ENGINE_REFERENCE_KEY, item));
-  return {
-    resume: `/engine/play?saved=${encodeURIComponent(saved.id)}`,
-    analysis: `/tools/analysis?game=${reference}`,
-    loadPgn: `/games/load-pgn?game=${reference}`,
-  };
-};
-
-type EntryProps = {
-  saved: SavedGame;
-  /** The catalog's parse of it, or `undefined` for a record that will not read. */
-  item: LibraryGame | undefined;
-};
-
-type CardProps = EntryProps & {
-  /** What the game opened with, once the book has loaded and if it names one. */
-  opening: OpeningEntry | undefined;
-};
-
-/**
- * The two lines that identify a game in either view: which side the reader had,
- * and then how long it is, how it stands, at what strength and when.
- *
- * A hook rather than a pure helper because every part of it is translated, and
- * not exported because both callers are in this file — a non-component export
- * from a `.tsx` costs fast refresh, which is why `cardSize.ts` is its own module
- * and this is not.
- */
-const useCaption = ({ saved, item }: EntryProps) => {
-  const { t, i18n } = useTranslation();
-  const summary = savedGameSummary(saved, item?.game);
-
-  /*
-    The reader's own clock and their own language: `updatedAt` is stored as ISO
-    so the record stays plain JSON, and it is a date rather than notation, so it
-    is the one thing here formatted for the reader rather than written the way
-    PGN writes it.
-  */
-  const played = new Date(saved.updatedAt);
-  const when = Number.isNaN(played.valueOf())
-    ? ""
-    : played.toLocaleDateString(i18n.language, {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-      });
-
-  return {
-    primary: t(`savedGames.playingAs.${summary.playAs}`),
-    secondary:
-      item === undefined
-        ? t("savedGames.unreadable")
-        : [
-            t("savedGames.moves", { count: summary.moves }),
-            t(`savedGames.result.${resultKey(summary.result)}`),
-            t("savedGames.level", { level: summary.skillLevel }),
-            when,
-          ]
-            .filter((part) => part !== "")
-            .join(" · "),
-  };
-};
-
-/** The delete control, identical in both views. */
-function RemoveButton({ id }: { id: string }) {
-  const { t } = useTranslation();
-
-  return (
-    <IconButton
-      size="small"
-      aria-label={t("savedGames.remove")}
-      data-testid={`saved-games-remove-${id}`}
-      onClick={() => removeSavedGame(id)}
-    >
-      <DeleteOutlineRoundedIcon fontSize="small" />
-    </IconButton>
-  );
-}
-
-type RowProps = EntryProps & {
-  /** Whether this row is picked for export. */
-  checked: boolean;
-  onToggle: () => void;
-};
-
-function SavedGameRow({ saved, item, checked, onToggle }: RowProps) {
-  const { t } = useTranslation();
-  const { primary, secondary } = useCaption({ saved, item });
-  const to = destinationsOf(saved, item);
-
-  return (
-    <ListItem
-      disableGutters
-      data-testid={`saved-games-item-${saved.id}`}
-      sx={{
-        display: "flex",
-        flexWrap: "wrap",
-        alignItems: "center",
-        gap: 1.5,
-        py: 1.25,
-        borderBottom: "1px solid",
-        borderColor: "divider",
-      }}
-    >
-      <Box sx={{ minWidth: 0, flex: "1 1 12rem" }}>
-        <Typography variant="subtitle2" sx={{ fontWeight: 600, lineHeight: 1.3 }}>
-          {primary}
-        </Typography>
-        <Typography
-          variant="caption"
-          sx={{
-            display: "block",
-            color: "text.secondary",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-          }}
-        >
-          {secondary}
-        </Typography>
-      </Box>
-
-      <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexShrink: 0 }}>
-        {to !== undefined && (
-          <>
-            <Button
-              component={RouterLink}
-              to={to.resume}
-              size="small"
-              variant="contained"
-              data-testid={`saved-games-continue-${saved.id}`}
-            >
-              {t("savedGames.continue")}
-            </Button>
-            <Button
-              component={RouterLink}
-              to={to.analysis}
-              size="small"
-              variant="outlined"
-              data-testid={`saved-games-analysis-${saved.id}`}
-            >
-              {t("savedGames.analyse")}
-            </Button>
-            <Button
-              component={RouterLink}
-              to={to.loadPgn}
-              size="small"
-              variant="outlined"
-              data-testid={`saved-games-loadpgn-${saved.id}`}
-            >
-              {t("savedGames.openInLoadPgn")}
-            </Button>
-          </>
-        )}
-        <RemoveButton id={saved.id} />
-        {/* Last in the row, as it is on the sites a reader will have exported
-            a game from — and selectable even for a record that will not parse,
-            since the export copies the stored PGN rather than re-writing it. */}
-        <Checkbox
-          size="small"
-          checked={checked}
-          onChange={onToggle}
-          slotProps={{ input: { "aria-label": t("savedGames.select") } }}
-          data-testid={`saved-games-select-${saved.id}`}
-        />
-      </Box>
-    </ListItem>
-  );
-}
-
-function SavedGameCard({ saved, item, opening }: CardProps) {
-  const { t } = useTranslation();
-  const { primary, secondary } = useCaption({ saved, item });
-  const to = destinationsOf(saved, item);
-
-  return (
-    <Card variant="outlined" data-testid={`saved-games-item-${saved.id}`}>
-      {/* The board *is* the continue button — the primary action, and the one
-          thing on the card big enough to be worth clicking. A record with no
-          readable game has no position to draw, so it gets the message in the
-          same square instead. */}
-      {to === undefined || item === undefined ? (
-        <Box
-          sx={{
-            m: 1,
-            aspectRatio: "1 / 1",
-            display: "grid",
-            placeItems: "center",
-            p: 1,
-            borderRadius: 1,
-            bgcolor: "action.hover",
-          }}
-        >
-          <Typography
-            variant="caption"
-            sx={{ color: "text.secondary", textAlign: "center" }}
-          >
-            {t("savedGames.unreadable")}
-          </Typography>
-        </Box>
-      ) : (
-        <CardActionArea
-          component={RouterLink}
-          to={to.resume}
-          data-testid={`saved-games-continue-${saved.id}`}
-          aria-label={t("savedGames.continue")}
-        >
-          <Box sx={{ p: 1 }}>
-            <Box sx={{ width: "100%", aspectRatio: "1 / 1" }}>
-              <Chessboard options={previewOptions(saved.id, item.game)} />
-            </Box>
-          </Box>
-        </CardActionArea>
-      )}
-
-      {/* Outside the action area on purpose: a button inside a button is
-          neither valid HTML nor reliably clickable. */}
-      <Box sx={{ px: 1, pb: 1 }}>
-        <Typography
-          variant="caption"
-          sx={{
-            display: "block",
-            fontWeight: 600,
-            lineHeight: 1.3,
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-          }}
-        >
-          {primary}
-        </Typography>
-        <Typography
-          variant="caption"
-          sx={{
-            display: "block",
-            color: "text.secondary",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-          }}
-        >
-          {secondary}
-        </Typography>
-        {/* The opening gets its own line, as it does on a User PGNs card: the
-            line above is already four facts wide, and this is the one a reader
-            recognises a game by. Absent until the book has loaded, and for a
-            line it does not name — an unrecognised position is a fact about
-            chess, not an empty row to render. */}
-        {opening !== undefined && (
-          <Typography
-            variant="caption"
-            dir="ltr"
-            data-testid={`saved-games-opening-${saved.id}`}
-            sx={{
-              display: "block",
-              color: "text.secondary",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {`${opening.name} · ${opening.eco}`}
-          </Typography>
-        )}
-
-        <Box sx={{ display: "flex", alignItems: "center", mt: 0.5, ml: -0.5 }}>
-          {to !== undefined && (
-            <>
-              <Tooltip title={t("savedGames.analyse")}>
-                <IconButton
-                  component={RouterLink}
-                  to={to.analysis}
-                  size="small"
-                  aria-label={t("savedGames.analyse")}
-                  data-testid={`saved-games-analysis-${saved.id}`}
-                >
-                  <AccountTreeRounded fontSize="small" />
-                </IconButton>
-              </Tooltip>
-              <Tooltip title={t("savedGames.openInLoadPgn")}>
-                <IconButton
-                  component={RouterLink}
-                  to={to.loadPgn}
-                  size="small"
-                  aria-label={t("savedGames.openInLoadPgn")}
-                  data-testid={`saved-games-loadpgn-${saved.id}`}
-                >
-                  <ArticleRounded fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            </>
-          )}
-          <Box sx={{ marginInlineStart: "auto" }}>
-            <RemoveButton id={saved.id} />
-          </Box>
-        </Box>
-      </Box>
-    </Card>
-  );
-}
+const folderStem = (folder: GameFolder): string =>
+  slugify(folder.name) || FOLDER_STEM_FALLBACK;
 
 function SavedGames() {
   const { t } = useTranslation();
 
-  const [view, setView] = useState<SavedGamesView>(DEFAULT_VIEW);
+  const [view, setView] = useState<SavedListView>(SAVED_LIST_DEFAULT_VIEW);
 
   const games = useSavedGames();
+  const folders = useGameFolders();
+  const {
+    browseId,
+    foldersHere,
+    gamesHere,
+    crumbs,
+    open: openFolder,
+  } = useFolderBrowser(games, folders);
+
   /*
     Read after the subscription above, and memoised on the same snapshot the
     hook returned — so the parsed games are rebuilt when a game is saved or
@@ -479,15 +201,37 @@ function SavedGames() {
       .map((item) => [item.id, item]),
   );
 
-  const entries = games.map((saved) => ({
-    saved,
-    item: itemById.get(saved.id),
-  }));
+  const book = useOpeningBook();
+
+  /*
+    One walk per game, memoised on the snapshot and the book — both stable
+    between changes, so fifty games are looked up once rather than on every
+    render, every toggle of the view and every keystroke anywhere in the shell.
+  */
+  const openings = useMemo(() => {
+    const found = new Map<string, OpeningEntry>();
+    if (book === null) return found;
+
+    for (const saved of games) {
+      const item = itemById.get(saved.id);
+      if (item === undefined) continue;
+      const opening = openingOfLine(
+        book.book,
+        book.positions,
+        item.game.moves.map((move) => move.fen),
+      );
+      if (opening !== undefined) found.set(saved.id, opening);
+    }
+    return found;
+    // `games` is the store's stable snapshot, and `itemById` derives from the
+    // same snapshot's catalog.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [games, catalog, book]);
 
   /*
     Which games are picked for export. Held as a set of ids rather than a flag
-    per row, so a game deleted — here or in another tab — simply falls out of the
-    list without leaving a phantom in the count: everything below reads the
+    per row, so a game deleted — here or in another tab — simply falls out of
+    the list without leaving a phantom in the count: everything below reads the
     selection *through* `games`, never on its own.
   */
   const [picked, setPicked] = useState<ReadonlySet<string>>(new Set());
@@ -500,13 +244,25 @@ function SavedGames() {
       return next;
     });
 
-  // The header box: all when some or none are picked, none when all are.
-  const toggleAll = () =>
-    setPicked(
-      selected.length === games.length
-        ? new Set()
-        : new Set(games.map((saved) => saved.id)),
-    );
+  /*
+    Select-all over the rows on screen. The picks persist across folder
+    navigation — the Saved openings screen's semantics, and the one place this
+    screen changed when the folders arrived — so this is an **add** of this
+    folder's games rather than a replace: checking adds what is on screen,
+    unchecking removes just these, and picks made elsewhere stay.
+  */
+  const selectedHere = gamesHere.filter((saved) => picked.has(saved.id));
+  const toggleAllHere = () =>
+    setPicked((current) => {
+      const next = new Set(current);
+      const allPicked =
+        gamesHere.length > 0 && selectedHere.length === gamesHere.length;
+      for (const saved of gamesHere) {
+        if (allPicked) next.delete(saved.id);
+        else next.add(saved.id);
+      }
+      return next;
+    });
 
   const downloadSelected = () =>
     downloadPgn(
@@ -514,51 +270,53 @@ function SavedGames() {
       selected.map((saved) => saved.pgn),
     );
 
-  /*
-    The opening book, for the line under each card. Loaded lazily and shared:
-    `loadOpeningBook` caches its promise, so a reader who has already opened a
-    game screen pays nothing here, and one who never opens this screen never
-    downloads it. Until it resolves the cards simply carry no opening line —
-    where `CurrentOpening` says "loading", because there it is the whole point
-    of the line and here it is a fourth fact on a card.
-  */
-  const [book, setBook] = useState<{
-    book: OpeningBook;
-    positions: PositionBook;
-  } | null>(null);
+  const [nameDialog, setNameDialog] = useState<NameDialogState>(null);
+  const [moving, setMoving] = useState<GameFolder | null>(null);
+  const [filing, setFiling] = useState<SavedGame | null>(null);
+  const [deleting, setDeleting] = useState<GameFolder | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    void loadOpeningBook().then((loaded) => {
-      if (!cancelled) setBook({ book: loaded, positions: getPositionBook(loaded) });
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  /** One `.pgn` of everything under the folder — the set its count stands for. */
+  const downloadFolder = (folder: GameFolder) =>
+    downloadPgn(
+      folderStem(folder),
+      gamesInFolder(games, folders, folder.id).map((row) => row.pgn),
+    );
 
   /*
-    One walk per game, memoised on the snapshot and the book — both stable
-    between changes, so fifty games are looked up once rather than on every
-    render, every toggle of the view and every keystroke anywhere in the shell.
+    The folder CRUD as the manager: the dialogs speak the stores directly, and
+    this only decides the delete's wording — and where the reader lands. An
+    **empty** folder (no games across its subtree, no direct sub-folders)
+    deletes at once, the same way deleting nothing asks for nothing; anything
+    else opens the confirmation, which states the rule before it runs.
   */
-  const openings = useMemo(() => {
-    const found = new Map<string, OpeningEntry>();
-    if (book === null) return found;
-
-    for (const { saved, item } of entries) {
-      if (item === undefined) continue;
-      const opening = openingOfLine(
-        book.book,
-        book.positions,
-        item.game.moves.map((move) => move.fen),
-      );
-      if (opening !== undefined) found.set(saved.id, opening);
+  const confirmDelete = (folder: GameFolder) => {
+    /*
+      Stand where the contents went: its sub-folders re-parent to this folder's
+      own parent, so landing there keeps the reader beside what they kept — and
+      it is also the only move that keeps the browser off a folder that no
+      longer exists.
+    */
+    if (
+      browseId !== null &&
+      gameFolderSubtree(folders, folder.id).has(browseId)
+    ) {
+      openFolder(folder.parentId);
     }
-    return found;
-    // `entries` is derived from `games`, which is the store's stable snapshot.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [games, catalog, book]);
+    removeGameFolder(folder.id);
+  };
+
+  const startDelete = (folder: GameFolder) => {
+    const isEmpty =
+      gamesUnderFolder(games, folders, folder.id) === 0 &&
+      gameFolderChildren(folders, folder.id).length === 0;
+    if (isEmpty) confirmDelete(folder);
+    else setDeleting(folder);
+  };
+
+  const entriesHere = gamesHere.map((saved) => ({
+    saved,
+    item: itemById.get(saved.id),
+  }));
 
   return (
     <>
@@ -598,6 +356,16 @@ function SavedGames() {
             </Typography>
           </Box>
 
+          <Button
+            size="small"
+            variant="outlined"
+            startIcon={<CreateNewFolderRoundedIcon fontSize="small" />}
+            data-testid="saved-games-new-folder"
+            onClick={() => setNameDialog({ mode: "create", parentId: browseId })}
+          >
+            {t("savedGames.folder.newFolder")}
+          </Button>
+
           {/*
             The export controls, and only beside the view that has the
             checkboxes they drive — see the header comment. `visibility` is not
@@ -605,116 +373,67 @@ function SavedGames() {
             and the selection is dropped with them.
           */}
           {view === "list" && games.length > 0 && (
-            <Box
-              data-testid="saved-games-export"
-              sx={{ display: "flex", alignItems: "center", gap: 0.5, flexShrink: 0 }}
-            >
-              <Tooltip title={t("savedGames.selectAll")}>
-                <Checkbox
-                  size="small"
-                  checked={selected.length === games.length}
-                  indeterminate={
-                    selected.length > 0 && selected.length < games.length
-                  }
-                  onChange={toggleAll}
-                  slotProps={{ input: { "aria-label": t("savedGames.selectAll") } }}
-                  data-testid="saved-games-select-all"
-                />
-              </Tooltip>
-              {selected.length > 0 && (
-                <Chip
-                  size="small"
-                  label={t("savedGames.selected", { count: selected.length })}
-                  onDelete={() => setPicked(new Set())}
-                  data-testid="saved-games-selected-count"
-                />
-              )}
-              <Tooltip title={t("savedGames.download")}>
-                {/* A disabled button takes no pointer events, so the tooltip
-                    needs a wrapper that still does — the same wrapper the board
-                    controls use. */}
-                <Box component="span" sx={{ display: "inline-flex" }}>
-                  <IconButton
-                    size="small"
-                    disabled={selected.length === 0}
-                    onClick={downloadSelected}
-                    aria-label={t("savedGames.download")}
-                    data-testid="saved-games-download"
-                  >
-                    <DownloadRoundedIcon fontSize="small" />
-                  </IconButton>
-                </Box>
-              </Tooltip>
-            </Box>
+            <SavedListExportBar
+              testIdPrefix="saved-games"
+              labelKey="savedGames"
+              checked={
+                gamesHere.length > 0 && selectedHere.length === gamesHere.length
+              }
+              indeterminate={
+                selectedHere.length > 0 && selectedHere.length < gamesHere.length
+              }
+              onToggleAll={toggleAllHere}
+              selectedCount={selected.length}
+              onClearSelected={() => setPicked(new Set())}
+              onDownload={downloadSelected}
+            />
           )}
 
-          <ToggleButtonGroup
-            exclusive
-            size="small"
+          {/*
+            A real change drops the selection, because the checkboxes only
+            exist in the list view — a count for rows nobody can see is a trap.
+            The toggle itself is the shared one (`SavedListViewToggle`), which
+            never calls back with the view already showing.
+          */}
+          <SavedListViewToggle
             value={view}
-            /*
-              `null` when the pressed button is the one already selected: the
-              screen has to be showing *something*, so that is a no-op.
-
-              A real change drops the selection, because the checkboxes only
-              exist in the list view — a count for rows nobody can see is a
-              trap.
-            */
-            onChange={(_event, next: SavedGamesView | null) => {
-              if (next === null) return;
+            onChange={(next) => {
               setView(next);
               setPicked(new Set());
             }}
-            aria-label={t("savedGames.view.label")}
-            sx={{ flexShrink: 0 }}
-          >
-            <ToggleButton
-              value="list"
-              data-testid="saved-games-view-list"
-              aria-label={t("savedGames.view.list")}
-            >
-              <Tooltip title={t("savedGames.view.list")}>
-                <ViewListRounded fontSize="small" />
-              </Tooltip>
-            </ToggleButton>
-            <ToggleButton
-              value="compact"
-              data-testid="saved-games-view-compact"
-              aria-label={t("savedGames.view.compact")}
-            >
-              <Tooltip title={t("savedGames.view.compact")}>
-                <ViewComfyRounded fontSize="small" />
-              </Tooltip>
-            </ToggleButton>
-            <ToggleButton
-              value="comfortable"
-              data-testid="saved-games-view-comfortable"
-              aria-label={t("savedGames.view.comfortable")}
-            >
-              <Tooltip title={t("savedGames.view.comfortable")}>
-                <ViewModuleRounded fontSize="small" />
-              </Tooltip>
-            </ToggleButton>
-          </ToggleButtonGroup>
+            labelKey="savedGames"
+            testIdPrefix="saved-games"
+          />
         </Box>
+
+        {crumbs.length > 0 && (
+          <SavedFolderBreadcrumb crumbs={crumbs} onOpen={openFolder} />
+        )}
 
         {/*
           The one region that scrolls. The shell hands this screen a fixed-height
           box and scrolls nothing inside it, so whichever view is showing has to
           do it itself — the same flex column every screen filling the board
-          square uses.
+          square uses. Folders come first in both views, then this folder's
+          games: the reader drills into a folder, they do not scroll past it.
         */}
-        {games.length === 0 ? (
+        {foldersHere.length === 0 && gamesHere.length === 0 ? (
           <Box
             data-testid="saved-games-body"
             sx={{ flex: 1, minHeight: 0, overflowY: "auto" }}
           >
             <Typography
-              data-testid="saved-games-empty"
+              data-testid={
+                browseId === null
+                  ? "saved-games-empty"
+                  : "saved-games-folder-empty"
+              }
               variant="body2"
               sx={{ color: "text.secondary", textAlign: "center", py: 4 }}
             >
-              {t("savedGames.empty")}
+              {browseId === null
+                ? t("savedGames.empty")
+                : t("savedGames.folder.empty")}
             </Typography>
           </Box>
         ) : view === "list" ? (
@@ -723,44 +442,53 @@ function SavedGames() {
             sx={{ flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden" }}
           >
             <List disablePadding>
-              {entries.map((entry) => (
+              {foldersHere.map((folder) => (
+                <SavedFolderRow
+                  key={folder.id}
+                  folder={folder}
+                  count={gamesUnderFolder(games, folders, folder.id)}
+                  onOpen={openFolder}
+                  onDownload={downloadFolder}
+                  onRename={(renamed) =>
+                    setNameDialog({ mode: "rename", folder: renamed })
+                  }
+                  onMove={setMoving}
+                  onDelete={startDelete}
+                />
+              ))}
+              {entriesHere.map((entry) => (
                 <SavedGameRow
                   key={entry.saved.id}
                   {...entry}
                   checked={picked.has(entry.saved.id)}
                   onToggle={() => togglePicked(entry.saved.id)}
+                  onMove={setFiling}
                 />
               ))}
             </List>
           </Box>
         ) : (
-          <Box
-            data-testid="saved-games-grid"
-            sx={{
-              flex: 1,
-              minHeight: 0,
-              overflowY: "auto",
-              overflowX: "hidden",
-              display: "grid",
-              gridTemplateColumns: cardSizeTrack(view),
-              /*
-                **This is the line that makes it scroll** — the same trap
-                `LibraryList` documents: an `auto` row inside a grid whose own
-                height is definite is stretched to share that height out, so the
-                cards would be squashed and clipped and there would be no
-                overflow to scroll. Sized by their content, the rows overflow.
-              */
-              gridAutoRows: "max-content",
-              gap: 2,
-              alignContent: "start",
-              pt: 1.5,
-            }}
-          >
-            {entries.map((entry) => (
+          <Box data-testid="saved-games-grid" sx={savedListGridSx(view)}>
+            {foldersHere.map((folder) => (
+              <SavedFolderCard
+                key={folder.id}
+                folder={folder}
+                count={gamesUnderFolder(games, folders, folder.id)}
+                onOpen={openFolder}
+                onDownload={downloadFolder}
+                onRename={(renamed) =>
+                  setNameDialog({ mode: "rename", folder: renamed })
+                }
+                onMove={setMoving}
+                onDelete={startDelete}
+              />
+            ))}
+            {entriesHere.map((entry) => (
               <SavedGameCard
                 key={entry.saved.id}
                 {...entry}
                 opening={openings.get(entry.saved.id)}
+                onMove={setFiling}
               />
             ))}
           </Box>
@@ -777,6 +505,20 @@ function SavedGames() {
           </Typography>
         </Box>
       </RightPanel>
+
+      <SavedGamesDialogs
+        games={games}
+        folders={folders}
+        nameDialog={nameDialog}
+        setNameDialog={setNameDialog}
+        moving={moving}
+        setMoving={setMoving}
+        filing={filing}
+        setFiling={setFiling}
+        deleting={deleting}
+        setDeleting={setDeleting}
+        onDeleteFolder={confirmDelete}
+      />
     </>
   );
 }

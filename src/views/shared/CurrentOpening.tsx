@@ -21,7 +21,7 @@ import {
  * with the board.
  *
  * The ECO chip is itself the link into the Openings explorer
- * (`/tools/openings?fen=<the position on screen>`) — the same `?fen=` carrier
+ * (`/openings?fen=<the position on screen>`) — the same `?fen=` carrier
  * every other position hand-off uses, so this component replaced the "Open in
  * Openings" buttons those screens used to pin to their panel foot.
  *
@@ -117,7 +117,7 @@ function CurrentOpening({ fen, testId }: Props) {
           </Typography>
           <RouterLink
             to={{
-              pathname: "/tools/openings",
+              pathname: "/openings",
               search: createSearchParams({ fen }).toString(),
             }}
             data-testid={`${testId}-eco`}

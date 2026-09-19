@@ -10,6 +10,7 @@ import { createSearchParams, useNavigate, useSearchParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import {
   Chessboard,
+  type Arrow,
   type ChessboardOptions,
   type PieceDropHandlerArgs,
 } from "react-chessboard";
@@ -17,7 +18,13 @@ import { FenParseError, parseFen } from "../../../lib/fen";
 import { resolveGameReference } from "../../../lib/gameReference";
 import { findSavedAnalysis } from "../../../lib/savedAnalysisStore";
 import { initialPlyOf, parseMoveParam } from "../../../lib/gameNavigation";
-import type { GameTree } from "../../../lib/gameTree";
+import {
+  findNode,
+  pathTo,
+  type GameTree,
+  type VariationNode,
+} from "../../../lib/gameTree";
+import { capturedSummaryOf, diffForSide } from "../../../lib/capturedPieces";
 import {
   EmptyPgnError,
   PgnParseError,
@@ -30,7 +37,15 @@ import EvalBar, {
   EVAL_BAR_TOTAL_PX,
 } from "../../shared/EvalBar";
 import PromotionPicker from "../../shared/PromotionPicker";
-import AnalysisPanel from "./AnalysisPanel";
+import CapturedPieces, {
+  CAPTURED_STRIPS_TOTAL_PX,
+  CAPTURED_STRIP_GAP_PX,
+} from "../../shared/CapturedPieces";
+import AnalysisPanel, { type AnalysisTabId } from "./AnalysisPanel";
+import {
+  HOVERED_NEXT_MOVE_ARROW_COLOR,
+  NEXT_MOVE_ARROW_COLOR,
+} from "./nextMoveArrows";
 import PositionSetup from "./PositionSetup";
 import { useAnalysisBoard } from "./useAnalysisBoard";
 
@@ -42,7 +57,8 @@ import { useAnalysisBoard } from "./useAnalysisBoard";
  *
  * - the **board square** holds the evaluation bar and the board, side by side;
  * - the **right-hand panel** (`<RightPanel>`) holds `AnalysisPanel` — the
- *   Moves / Engine / Variations / Position tabs over the board controls.
+ *   engine's lines pinned above the Moves / Engine / Position tabs, over the
+ *   board controls.
  *
  * ### Arriving with a position, or with a game
  *
@@ -79,7 +95,11 @@ import { useAnalysisBoard } from "./useAnalysisBoard";
  * the board options, and the ingestion state that the Position tab and the drop
  * targets share. `<RightPanel>` portals the panel out of this tree, so it still
  * shares this screen's state by closure and nothing is threaded through the
- * shell.
+ * shell. The same closure is what the pinned next-moves bar (CTA-54) rests on:
+ * its tokens are drawn in the panel and its arrows in the board options here,
+ * so the open tab, the continuations of the position on screen and the bar
+ * move the pointer is over are this screen's state, handed down to the panel
+ * and read back here — two halves of one feature, one owner.
  *
  * ### How the eval bar and the board split the square
  *
@@ -184,6 +204,58 @@ function AnalysisBoard() {
   const [isDragOver, setIsDragOver] = useState(false);
 
   const topLine = state.analysis.lines.find((line) => line !== undefined);
+
+  /*
+    The captured pieces for the position on screen, walked from the tree's own
+    start position — the study-friendly baseline, not the standard one. The
+    diff is the position on screen against that same start, so a promotion
+    counts as a gain for the side that made it.
+  */
+  const captured = useMemo(
+    () =>
+      capturedSummaryOf(
+        pathTo(state.tree, state.nodeId),
+        state.tree.startFen,
+        state.fen,
+      ),
+    [state.tree, state.nodeId, state.fen],
+  );
+
+  /*
+    The panel's open tab, lifted to the screen (CTA-54): the pinned next-moves
+    bar is a Moves-tab piece, and its board-side half — the arrows — is drawn
+    from the options this component builds, so the board needs the same gate
+    the bar renders under. The panel renders the strip; the state is the
+    screen's.
+  */
+  const [tab, setTab] = useState<AnalysisTabId>("moves");
+
+  /*
+    The continuations of the position on screen (CTA-54) — what the pinned bar
+    offers and the board arrows draw. The children of the node the reader
+    stands on, or the tree's own first moves at the start position; the tree's
+    invariant orders them — `children[0]` is the mainline at every level — and
+    two or more of them is the fork the bar appears at. Re-reading them on
+    every step is what makes the bar re-offer the choices of wherever a click
+    lands. Built here rather than in the panel because both halves read it:
+    the board for arrows, the panel for the bar.
+  */
+  const continuations = useMemo(
+    () =>
+      state.nodeId === null
+        ? state.tree.moves
+        : (findNode(state.tree, state.nodeId)?.children ?? []),
+    [state.tree, state.nodeId],
+  );
+
+  /*
+    The bar move the pointer is over, lifted for the same reason the tab and
+    the continuations are: the board recolours that move's arrow, and the bar
+    — portalled into the panel — is where the pointer events happen. `null`
+    is "the pointer is over no bar move".
+  */
+  const [hoveredNextMove, setHoveredNextMove] =
+    useState<VariationNode | null>(null);
 
   /** Turn a parse failure into a translated line; never let one escape. */
   const messageFor = (cause: unknown) => {
@@ -294,16 +366,40 @@ function AnalysisBoard() {
   */
   const dropTargetProps = { onDragOver, onDragLeave, onDrop };
 
+  /*
+    The bar's board-side half (CTA-54): one arrow per continuation of the
+    fork — the mainline first — green while on offer, red while its token in
+    the bar is hovered (`nextMoveArrows.ts` has the colours' story).
+    External arrows are controlled: the board never clears or adds to them
+    itself (`.claude/rules/chessboard.md` §3.4), so this is the whole set,
+    recomputed on every step, click and hover — and drawn only while the bar
+    is, the same Moves-tab-at-a-fork gate `NextMovesBar` renders under.
+  */
+  const nextMoveArrows: Arrow[] =
+    tab === "moves" && continuations.length >= 2
+      ? continuations.map((node) => ({
+          startSquare: node.from,
+          endSquare: node.to,
+          color:
+            hoveredNextMove?.id === node.id
+              ? HOVERED_NEXT_MOVE_ARROW_COLOR
+              : NEXT_MOVE_ARROW_COLOR,
+        }))
+      : [];
+
   const chessboardOptions: ChessboardOptions = {
     id: "analysis-board",
     position: state.fen,
     boardOrientation: state.orientation,
     /*
-      The move that produced the position on screen. External arrows are never
-      cleared by the board itself (`.claude/rules/chessboard.md` §3.4), so this
-      is the whole set for the current position, recomputed on every change.
+      The move that produced the position on screen. External square styles are
+      never cleared by the board itself (`.claude/rules/chessboard.md` §3.3), so
+      this is the whole set for the current position, recomputed on every change.
     */
-    arrows: state.arrows,
+    squareStyles: state.squareStyles,
+    // The pinned next-moves bar's arrows (CTA-54) — built above; they ride
+    // beside the last-move highlight, not over it.
+    arrows: nextMoveArrows,
     onPieceDrop: ({ sourceSquare, targetSquare }: PieceDropHandlerArgs) =>
       state.onPieceDrop({ sourceSquare, targetSquare }),
     /*
@@ -320,6 +416,13 @@ function AnalysisBoard() {
   const boardSide = state.showEvalBar
     ? `calc(100% - ${EVAL_BAR_TOTAL_PX}px)`
     : "100%";
+  // The strips sit on the board's top and bottom edges, so the board gives up
+  // their height — and, to stay square, the same amount of its width.
+  const boardInnerSide = `calc(100% - ${CAPTURED_STRIPS_TOTAL_PX}px)`;
+
+  // Each strip belongs to the side it is beside, whichever way the board faces.
+  const topColor = state.orientation === "white" ? "black" : "white";
+  const bottomColor = state.orientation === "white" ? "white" : "black";
 
   return (
     <>
@@ -357,33 +460,67 @@ function AnalysisBoard() {
         )}
 
         {/*
-          `position: relative` so the promotion picker, which is absolutely
-          positioned in percentages of the board, has this box to measure
-          against — it overlays the board exactly.
+          The board square is a column now: the captured-pieces strip above, the
+          board, the strip below. Both boxes keep their side a calc of the same
+          percentage base — the column's against the shell's square, the
+          board's against the column — so the board stays square.
         */}
         <Box
           data-testid="analysis-board-square"
           sx={{
-            position: "relative",
             width: boardSide,
             height: boardSide,
             // The width is already exact; never let flex shave a pixel off it,
             // which would make the board a rectangle.
             flexShrink: 0,
+            display: "flex",
+            flexDirection: "column",
           }}
         >
-          <Chessboard options={chessboardOptions} />
+          <CapturedPieces
+            testId="analysis-captured"
+            color={topColor}
+            captured={captured.captured[topColor]}
+            diff={diffForSide(captured.materialDiff, topColor)}
+          />
 
-          {state.promotion && (
-            <PromotionPicker
-              targetSquare={state.promotion.to}
-              orientation={state.orientation}
-              // The side promoting is the side to move in the position the pawn
-              // is being pushed from — both colours move here.
-              color={state.turn}
-              onSelect={state.resolvePromotion}
-            />
-          )}
+          {/*
+            `position: relative` so the promotion picker, which is absolutely
+            positioned in percentages of the board, has this box to measure
+            against — it overlays the board exactly.
+          */}
+          <Box
+            sx={{
+              position: "relative",
+              width: boardInnerSide,
+              height: boardInnerSide,
+              // The side is already exact; never let flex shave a pixel off
+              // it, which would make the board a rectangle.
+              flexShrink: 0,
+              alignSelf: "center",
+              marginBlock: `${CAPTURED_STRIP_GAP_PX}px`,
+            }}
+          >
+            <Chessboard options={chessboardOptions} />
+
+            {state.promotion && (
+              <PromotionPicker
+                targetSquare={state.promotion.to}
+                orientation={state.orientation}
+                // The side promoting is the side to move in the position the pawn
+                // is being pushed from — both colours move here.
+                color={state.turn}
+                onSelect={state.resolvePromotion}
+              />
+            )}
+          </Box>
+
+          <CapturedPieces
+            testId="analysis-captured"
+            color={bottomColor}
+            captured={captured.captured[bottomColor]}
+            diff={diffForSide(captured.materialDiff, bottomColor)}
+          />
         </Box>
       </Box>
 
@@ -401,6 +538,10 @@ function AnalysisBoard() {
         >
           <AnalysisPanel
             state={state}
+            tab={tab}
+            onTabChange={setTab}
+            continuations={continuations}
+            onHoverNextMove={setHoveredNextMove}
             onPlayFromHere={onPlayFromHere}
             position={
               <PositionSetup

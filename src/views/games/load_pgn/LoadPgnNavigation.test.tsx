@@ -5,7 +5,7 @@ import { MemoryRouter } from "react-router";
 import i18n from "../../../i18n";
 import AppThemeWithLang from "../../../theme/AppThemeWithLang";
 import { parsePgnGames } from "../../../lib/pgn";
-import { MOVE_ARROW_COLOR, fenAtPly } from "../../../lib/gameNavigation";
+import { LAST_MOVE_HIGHLIGHT, fenAtPly } from "../../../lib/gameNavigation";
 import { RightPanelOutlet, RightPanelProvider } from "../../main/rightPanel";
 import LoadPgn from "./LoadPgn";
 
@@ -15,8 +15,8 @@ import LoadPgn from "./LoadPgn";
 
   The board itself is stubbed — jsdom has no layout engine and `<Chessboard>`
   throws "Square width not found" on mount (`.claude/rules/chessboard.md` §8).
-  This stub records the arrows as well as the position, which is what the
-  "recomputed, never accumulated" assertions read.
+  This stub records the square styles as well as the position, which is what
+  the "recomputed, never accumulated" assertions read.
 */
 
 /* The opening book stays stubbed — the panel's new opening line must not pull
@@ -38,12 +38,14 @@ vi.mock("react-chessboard", () => ({
     options: {
       position?: string;
       arrows?: { startSquare: string; endSquare: string; color: string }[];
+      squareStyles?: Record<string, { background?: string }>;
     };
   }) => (
     <div
       data-testid="pgn-board"
       data-position={options.position}
       data-arrows={JSON.stringify(options.arrows ?? [])}
+      data-square-styles={JSON.stringify(options.squareStyles ?? {})}
     />
   ),
 }));
@@ -89,6 +91,8 @@ const renderScreen = (entry = "/games/load-pgn") =>
 
 const board = () => screen.getByTestId("pgn-board");
 const arrowsOn = () => JSON.parse(board().getAttribute("data-arrows") ?? "[]");
+const stylesOn = () =>
+  JSON.parse(board().getAttribute("data-square-styles") ?? "{}");
 const currentPly = () =>
   Number(
     screen
@@ -217,29 +221,33 @@ describe("stepping through a loaded game", () => {
     expect(board()).toHaveAttribute("data-position", fenAtPly(game, 0));
   });
 
-  it("recomputes the board arrow on every ply instead of accumulating", async () => {
+  it("recomputes the last-move highlight on every ply instead of accumulating", async () => {
     renderScreen();
     await pasteAndLoad(pgn);
 
     // Ply 5 — Bb5, and nothing left over from the four moves before it.
-    expect(arrowsOn()).toEqual([
-      { startSquare: "f1", endSquare: "b5", color: MOVE_ARROW_COLOR },
-    ]);
+    expect(stylesOn()).toEqual({
+      f1: { background: LAST_MOVE_HIGHLIGHT },
+      b5: { background: LAST_MOVE_HIGHLIGHT },
+    });
+    // And no arrow any more — the highlight replaced it.
+    expect(arrowsOn()).toEqual([]);
 
     press("ArrowLeft");
-    expect(arrowsOn()).toEqual([
-      { startSquare: "b8", endSquare: "c6", color: MOVE_ARROW_COLOR },
-    ]);
+    expect(stylesOn()).toEqual({
+      b8: { background: LAST_MOVE_HIGHLIGHT },
+      c6: { background: LAST_MOVE_HIGHLIGHT },
+    });
 
     // Walking the whole game never grows the set.
     for (let i = 0; i < 4; i += 1) {
       press("ArrowLeft");
-      expect(arrowsOn()).toHaveLength(currentPly() === 0 ? 0 : 1);
+      expect(Object.keys(stylesOn())).toHaveLength(currentPly() === 0 ? 0 : 2);
     }
 
-    // At the starting position there is no move to draw.
+    // At the starting position there is no move to mark.
     expect(currentPly()).toBe(0);
-    expect(arrowsOn()).toEqual([]);
+    expect(stylesOn()).toEqual({});
   });
 
   it("leaves arrow keys to a focused text input", async () => {

@@ -1,13 +1,14 @@
 import type { SvgIconComponent } from "@mui/icons-material";
 import HistoryRoundedIcon from "@mui/icons-material/HistoryRounded";
+import LibraryAddRoundedIcon from "@mui/icons-material/LibraryAddRounded";
+import MenuBookRoundedIcon from "@mui/icons-material/MenuBookRounded";
 import SportsEsportsRoundedIcon from "@mui/icons-material/SportsEsportsRounded";
 import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
-import AccountTreeRoundedIcon from "@mui/icons-material/AccountTreeRounded";
 import DashboardCustomizeRoundedIcon from "@mui/icons-material/DashboardCustomizeRounded";
-import TravelExploreRoundedIcon from "@mui/icons-material/TravelExploreRounded";
 import VisibilityOffRoundedIcon from "@mui/icons-material/VisibilityOffRounded";
 
 import type { LocalizedText } from "../../lib/libraryCatalog";
+import { devNavItems } from "../dev/devNav";
 import type { NavFolderId } from "./navFolders";
 import { userPgnsNavItems } from "./navFromLibrary";
 
@@ -65,29 +66,55 @@ export const navItems = (): readonly NavItem[] => [
   },
   ...userPgnsNavItems(),
   {
-    to: "/tools/analysis",
-    labelKey: "nav.analysisBoard",
-    icon: AccountTreeRoundedIcon,
-    folder: "tools",
-  },
-  {
-    to: "/tools/analysis/saved",
-    labelKey: "nav.savedAnalyses",
-    icon: HistoryRoundedIcon,
-    folder: "tools",
-  },
-  {
     to: "/tools/editor",
     labelKey: "nav.boardEditor",
     icon: DashboardCustomizeRoundedIcon,
     folder: "tools",
   },
+  /*
+    The Analysis Board has no nav entry (CTA-58, mirroring CTA-42's Openings
+    folder): the top-level Analysis folder is a single entry (`navFolders.ts`)
+    that renders as the screen below, and the board is reached from the saved
+    list's New button. The `/tools/analysis` route stays — every `?fen=`,
+    `?game=` and `?analysis=` hand-off still lands there.
+  */
   {
-    to: "/tools/openings",
-    labelKey: "nav.openings",
-    icon: TravelExploreRoundedIcon,
-    folder: "tools",
+    to: "/tools/analysis/saved",
+    labelKey: "nav.savedAnalyses",
+    icon: HistoryRoundedIcon,
+    folder: "analysis",
   },
+  /*
+    The Openings board has no nav entry (CTA-42): the top-level Openings folder
+    is a single entry (`navFolders.ts`) that renders as the screen below, and
+    the board is reached from the saved list's New button. The `/openings`
+    route stays — it is where a Continue hand-off and the ECO chip land.
+  */
+  {
+    to: "/openings/saved",
+    labelKey: "nav.savedOpenings",
+    icon: HistoryRoundedIcon,
+    folder: "openings",
+  },
+  {
+    to: "/repertoires",
+    labelKey: "nav.repertoires",
+    icon: MenuBookRoundedIcon,
+    folder: "repertoires",
+  },
+  {
+    to: "/repertoires/new",
+    labelKey: "nav.addRepertoire",
+    icon: LibraryAddRoundedIcon,
+    folder: "repertoires",
+  },
+  /*
+    The Development section's five boards (CTA-60) — the same `import.meta.env.DEV`
+    gate the folder and the routes carry, and for the same reason: in a
+    production build the spread is dead code and rollup drops the module behind
+    it. See `views/dev/devNav.ts`.
+  */
+  ...(import.meta.env.DEV ? devNavItems() : []),
 ];
 
 /** The screens filed under one folder, in registration order. */

@@ -5,11 +5,22 @@ import { Chess } from "chess.js";
 import { MemoryRouter, useLocation } from "react-router";
 import i18n from "../../../i18n";
 import AppThemeWithLang from "../../../theme/AppThemeWithLang";
-import { MOVE_ARROW_COLOR } from "../../../lib/gameNavigation";
+import { LAST_MOVE_HIGHLIGHT } from "../../../lib/gameNavigation";
+import { treeFromGame } from "../../../lib/gameTree";
+import { gameFromChess } from "../../../lib/gameModel";
 import {
   HOVERED_MOVE_ARROW_COLOR,
   KNOWN_MOVE_ARROW_COLOR,
 } from "../../../lib/openings";
+import {
+  newSavedOpeningId,
+  savedOpeningOf,
+} from "../../../lib/savedOpenings";
+import { saveOpening, savedOpeningsSnapshot } from "../../../lib/savedOpeningStore";
+import {
+  createOpeningFolder,
+  openingFoldersSnapshot,
+} from "../../../lib/savedOpeningFolderStore";
 import { RightPanelOutlet, RightPanelProvider } from "../../main/rightPanel";
 import OpeningsBoard from "./OpeningsBoard";
 
@@ -31,6 +42,7 @@ vi.mock("react-chessboard", () => ({
       position?: string;
       boardOrientation?: string;
       arrows?: BoardArrow[];
+      squareStyles?: Record<string, { background?: string }>;
     };
   }) => (
     <div
@@ -39,6 +51,7 @@ vi.mock("react-chessboard", () => ({
       data-position={options.position}
       data-orientation={options.boardOrientation}
       data-arrows={JSON.stringify(options.arrows ?? [])}
+      data-square-styles={JSON.stringify(options.squareStyles ?? {})}
     />
   ),
 }));
@@ -55,8 +68,21 @@ const offBookFen = () => {
   return chess.fen();
 };
 
+/** After 1. e4 e5 2. f4 Nf6 — the book names it "King's Gambit Declined: Petrov's Defense". */
+const deepFen = () => {
+  const chess = new Chess();
+  for (const san of ["e4", "e5", "f4", "Nf6"]) chess.move(san);
+  return chess.fen();
+};
+
 const boardArrows = (): BoardArrow[] =>
   JSON.parse(screen.getByTestId("board").getAttribute("data-arrows") ?? "[]");
+
+type BoardSquareStyles = Record<string, { background?: string }>;
+const boardSquareStyles = (): BoardSquareStyles =>
+  JSON.parse(
+    screen.getByTestId("board").getAttribute("data-square-styles") ?? "{}",
+  );
 
 /*
   Where "Play from here" lands. The screen navigates to `/engine/play?fen=…`;
@@ -79,7 +105,7 @@ const handOffFen = () =>
     screen.getByTestId("location").getAttribute("data-search") ?? "",
   ).get("fen");
 
-const renderScreen = (entry = "/tools/openings") =>
+const renderScreen = (entry = "/openings") =>
   render(
     <MemoryRouter initialEntries={[entry]}>
       <AppThemeWithLang>
@@ -196,21 +222,20 @@ describe("the Openings screen", () => {
     );
   });
 
-  it("adds an amber last-move arrow once a move has been played", async () => {
+  it("highlights the last move's squares once a move has been played", async () => {
     const user = userEvent.setup();
     renderScreen();
     await bookSettled();
 
     await user.click(screen.getByTestId("openings-next-move-e4"));
 
-    const arrows = boardArrows();
-    expect(arrows).toHaveLength(21);
-    expect(
-      arrows.filter((arrow) => arrow.color === MOVE_ARROW_COLOR),
-    ).toEqual([{ startSquare: "e2", endSquare: "e4", color: MOVE_ARROW_COLOR }]);
-    expect(
-      arrows.filter((arrow) => arrow.color === KNOWN_MOVE_ARROW_COLOR),
-    ).toHaveLength(20);
+    // No arrow for the last move — the book continuations alone.
+    expect(boardArrows()).toHaveLength(20);
+    // The origin and destination squares carry the translucent highlight.
+    expect(boardSquareStyles()).toEqual({
+      e2: { background: LAST_MOVE_HIGHLIGHT },
+      e4: { background: LAST_MOVE_HIGHLIGHT },
+    });
   });
 
   it("branches the variation tree when a different book move is tried from an earlier ply", async () => {
@@ -307,7 +332,7 @@ describe("the Openings screen — hovering a next move", () => {
     ]);
   });
 
-  it("highlights on hover at a deeper ply, without disturbing the last-move arrow", async () => {
+  it("highlights on hover at a deeper ply, without disturbing the last-move highlight", async () => {
     const user = userEvent.setup();
     renderScreen();
     await bookSettled();
@@ -315,12 +340,13 @@ describe("the Openings screen — hovering a next move", () => {
     await user.click(screen.getByTestId("openings-next-move-e4"));
     await user.hover(screen.getByTestId("openings-next-move-e5"));
 
-    const arrows = boardArrows();
-    // amber last-move arrow untouched
-    expect(
-      arrows.filter((arrow) => arrow.color === MOVE_ARROW_COLOR),
-    ).toEqual([{ startSquare: "e2", endSquare: "e4", color: MOVE_ARROW_COLOR }]);
+    // last-move highlight untouched
+    expect(boardSquareStyles()).toEqual({
+      e2: { background: LAST_MOVE_HIGHLIGHT },
+      e4: { background: LAST_MOVE_HIGHLIGHT },
+    });
     // exactly the hovered continuation is red
+    const arrows = boardArrows();
     expect(
       arrows.filter((arrow) => arrow.color === HOVERED_MOVE_ARROW_COLOR),
     ).toEqual([
@@ -361,7 +387,7 @@ describe("the Openings screen — Play from here", () => {
 
 describe("the Openings screen — arriving with a position", () => {
   it("opens on a readable ?fen= and faces the side to move", async () => {
-    renderScreen(`/tools/openings?fen=${encodeURIComponent(AFTER_E4)}`);
+    renderScreen(`/openings?fen=${encodeURIComponent(AFTER_E4)}`);
     await bookSettled();
 
     expect(screen.getByTestId("board")).toHaveAttribute(
@@ -379,7 +405,7 @@ describe("the Openings screen — arriving with a position", () => {
 
   it("reports an off-book ?fen= as unknown with no next moves or arrows", async () => {
     const fen = offBookFen();
-    renderScreen(`/tools/openings?fen=${encodeURIComponent(fen)}`);
+    renderScreen(`/openings?fen=${encodeURIComponent(fen)}`);
     await bookSettled();
 
     expect(screen.getByTestId("openings-current")).toHaveTextContent(
@@ -391,7 +417,7 @@ describe("the Openings screen — arriving with a position", () => {
 
   it("New game returns to the handed-over position, not the standard start", async () => {
     const user = userEvent.setup();
-    renderScreen(`/tools/openings?fen=${encodeURIComponent(AFTER_E4)}`);
+    renderScreen(`/openings?fen=${encodeURIComponent(AFTER_E4)}`);
     await bookSettled();
 
     await user.click(screen.getByTestId("openings-next-move-e5"));
@@ -404,11 +430,227 @@ describe("the Openings screen — arriving with a position", () => {
   });
 
   it("ignores a ?fen= nobody can read", () => {
-    renderScreen("/tools/openings?fen=not-a-fen");
+    renderScreen("/openings?fen=not-a-fen");
 
     expect(screen.getByTestId("board")).toHaveAttribute(
       "data-position",
       START_FEN,
     );
+  });
+});
+
+/*
+  A saved opening is reopened by the `?openings=` hand-off: the tree, the
+  orientation and the note arrive as initial state — and the board opens at the
+  end of the mainline, the position the reader goes on playing from.
+*/
+describe("the Openings screen — arriving with a saved opening", () => {
+  it("opens at the end of the mainline, not at ply 0", () => {
+    const chess = new Chess();
+    for (const san of ["e4", "e5", "f4"]) chess.move(san);
+    const record = savedOpeningOf(
+      newSavedOpeningId(),
+      treeFromGame(gameFromChess(chess)),
+      "white",
+      "My line",
+      null,
+    );
+    saveOpening(record);
+
+    renderScreen(`/openings?openings=${encodeURIComponent(record.id)}`);
+
+    expect(screen.getByTestId("board")).toHaveAttribute(
+      "data-position",
+      chess.fen(),
+    );
+  });
+
+  it("reopens an id that is not there as a fresh board", () => {
+    renderScreen("/openings?openings=no-such-id");
+
+    expect(screen.getByTestId("board")).toHaveAttribute(
+      "data-position",
+      START_FEN,
+    );
+  });
+});
+
+/*
+  The store is *not* stubbed: it writes to the `localStorage` jsdom provides and
+  `src/test/setup.ts` clears between tests, which is the behaviour under test —
+  the same stand-in policy the Saved openings suite states.
+*/
+describe("the Openings screen — saving", () => {
+  it("opens the save prompt with Unfiled, a picker and the default hint", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    await bookSettled();
+
+    await user.click(screen.getByTestId("openings-save"));
+
+    expect(screen.getByTestId("opening-folder-picker-unfiled")).toBeInTheDocument();
+    expect(screen.getByTestId("opening-new-folder")).toBeInTheDocument();
+    expect(screen.getByTestId("opening-folder-default-hint")).toHaveTextContent(
+      i18n.t("savedOpenings.folder.defaultHint"),
+    );
+  });
+
+  it("saves into the folder the reader chose", async () => {
+    const user = userEvent.setup();
+    const folder = createOpeningFolder("My lines", null);
+    renderScreen();
+    await bookSettled();
+
+    await user.click(screen.getByTestId("openings-save"));
+    await user.click(screen.getByTestId(`opening-folder-picker-${folder?.id}`));
+    await user.type(screen.getByTestId("opening-note-input"), "My line");
+    await user.click(screen.getByTestId("opening-note-save"));
+
+    expect(savedOpeningsSnapshot()).toHaveLength(1);
+    expect(savedOpeningsSnapshot()[0].note).toBe("My line");
+    expect(savedOpeningsSnapshot()[0].folderId).toBe(folder?.id);
+  });
+
+  it("saves Unfiled when the reader picks it, over the default rule", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    await bookSettled();
+
+    // After 1. e4 the default rule would file by the opening's name; picking
+    // Unfiled explicitly is the choice that wins.
+    await user.click(screen.getByTestId("openings-next-move-e4"));
+    await user.click(screen.getByTestId("openings-save"));
+    await user.click(screen.getByTestId("opening-folder-picker-unfiled"));
+    await user.click(screen.getByTestId("opening-note-save"));
+
+    expect(savedOpeningsSnapshot()[0].folderId).toBeNull();
+    expect(openingFoldersSnapshot()).toEqual([]);
+  });
+
+  it("creates a folder inline and saves into it", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    await bookSettled();
+
+    await user.click(screen.getByTestId("openings-save"));
+    await user.click(screen.getByTestId("opening-new-folder"));
+    await user.type(
+      screen.getByTestId("opening-new-folder-input"),
+      "New lines{Enter}",
+    );
+
+    // The folder is a real record already, and it is the picker's selection.
+    const created = openingFoldersSnapshot().find((f) => f.name === "New lines");
+    expect(created).toBeDefined();
+
+    await user.click(screen.getByTestId("opening-note-save"));
+
+    expect(savedOpeningsSnapshot()[0].folderId).toBe(created?.id);
+  });
+
+  it("keeps a folder the reader created inline, even if the save is cancelled", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    await bookSettled();
+
+    await user.click(screen.getByTestId("openings-save"));
+    await user.click(screen.getByTestId("opening-new-folder"));
+    await user.type(screen.getByTestId("opening-new-folder-input"), "Kept{Enter}");
+    await user.click(screen.getByTestId("opening-note-cancel"));
+
+    expect(openingFoldersSnapshot().map((f) => f.name)).toEqual(["Kept"]);
+    expect(savedOpeningsSnapshot()).toEqual([]);
+  });
+
+  it("files by the opening's own name when no folder was chosen", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    await bookSettled();
+
+    await user.click(screen.getByTestId("openings-next-move-e4"));
+    await user.click(screen.getByTestId("openings-save"));
+    await user.click(screen.getByTestId("opening-note-save"));
+
+    // A folder named after the opening, at the top level, and the opening in it.
+    const created = openingFoldersSnapshot().find(
+      (f) => f.name === "King's Pawn Game",
+    );
+    expect(created?.parentId).toBeNull();
+    expect(savedOpeningsSnapshot()[0].folderId).toBe(created?.id);
+    // And the note defaults to the top-level name — no variation to take.
+    expect(savedOpeningsSnapshot()[0].note).toBe("King's Pawn Game");
+  });
+
+  it("files by the opening's top-level name when the book name is deep", async () => {
+    const user = userEvent.setup();
+    // After 1. e4 e5 2. f4 Nf6 — the book names it "King's Gambit Declined:
+    // Petrov's Defense"; the folder is the part before the first ":".
+    renderScreen(`/openings?fen=${encodeURIComponent(deepFen())}`);
+    await bookSettled();
+
+    await user.click(screen.getByTestId("openings-save"));
+    await user.click(screen.getByTestId("opening-note-save"));
+
+    // The family name, not the whole "Opening: Variation" convention.
+    const created = openingFoldersSnapshot().find(
+      (f) => f.name === "King's Gambit Declined",
+    );
+    expect(created).toBeDefined();
+    expect(created?.parentId).toBeNull();
+    expect(savedOpeningsSnapshot()[0].folderId).toBe(created?.id);
+    expect(
+      openingFoldersSnapshot().find(
+        (f) => f.name === "King's Gambit Declined: Petrov's Defense",
+      ),
+    ).toBeUndefined();
+  });
+
+  it("names a note-less save by the variation, falling back to the top level", async () => {
+    const user = userEvent.setup();
+    // "King's Gambit Declined: Petrov's Defense" — the variation is the name.
+    renderScreen(`/openings?fen=${encodeURIComponent(deepFen())}`);
+    await bookSettled();
+
+    await user.click(screen.getByTestId("openings-save"));
+    await user.click(screen.getByTestId("opening-note-save"));
+
+    expect(savedOpeningsSnapshot()[0].note).toBe("Petrov's Defense");
+  });
+
+  it("keeps a typed note over the default name", async () => {
+    const user = userEvent.setup();
+    renderScreen(`/openings?fen=${encodeURIComponent(deepFen())}`);
+    await bookSettled();
+
+    await user.click(screen.getByTestId("openings-save"));
+    await user.type(screen.getByTestId("opening-note-input"), "My line");
+    await user.click(screen.getByTestId("opening-note-save"));
+
+    expect(savedOpeningsSnapshot()[0].note).toBe("My line");
+  });
+
+  it("files an off-book position to Unfiled when no folder was chosen", async () => {
+    const user = userEvent.setup();
+    renderScreen(`/openings?fen=${encodeURIComponent(offBookFen())}`);
+    await bookSettled();
+
+    await user.click(screen.getByTestId("openings-save"));
+    await user.click(screen.getByTestId("opening-note-save"));
+
+    expect(savedOpeningsSnapshot()[0].folderId).toBeNull();
+    expect(openingFoldersSnapshot()).toEqual([]);
+  });
+});
+
+describe("Openings — the captured-pieces strips", () => {
+  it("renders two empty strips at the standard start, one beside each side", () => {
+    renderScreen();
+
+    // Nothing has been captured off the standard start, so both are empty —
+    // and both render, holding the board's size steady.
+    expect(screen.getByTestId("openings-captured-white")).toBeInTheDocument();
+    expect(screen.getByTestId("openings-captured-black")).toBeInTheDocument();
+    expect(screen.getByTestId("openings-captured-white")).not.toHaveAttribute("data-diff");
+    expect(screen.getByTestId("openings-captured-black")).not.toHaveAttribute("data-diff");
   });
 });

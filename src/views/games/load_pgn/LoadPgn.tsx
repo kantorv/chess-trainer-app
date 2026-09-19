@@ -10,13 +10,18 @@ import Box from "@mui/material/Box";
 import { useSearchParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import { Chessboard, type ChessboardOptions } from "react-chessboard";
+import { capturedSummaryOf, diffForSide } from "../../../lib/capturedPieces";
 import { resolveGameReference } from "../../../lib/gameReference";
 import { initialPlyOf, parseMoveParam } from "../../../lib/gameNavigation";
+import { initialFenOf, type Game } from "../../../lib/gameModel";
 import { EmptyPgnError, PgnParseError, parsePgnGames } from "../../../lib/pgn";
-import type { Game } from "../../../lib/gameModel";
 import { RightPanel } from "../../main/rightPanel";
 import GamePanel from "./GamePanel";
 import PgnIngest from "./PgnIngest";
+import CapturedPieces, {
+  CAPTURED_STRIPS_TOTAL_PX,
+  CAPTURED_STRIP_GAP_PX,
+} from "../../shared/CapturedPieces";
 import { useGameNavigation } from "../../shared/useGameNavigation";
 
 /**
@@ -104,10 +109,34 @@ function LoadPgn() {
     instance here on purpose — every ply already carries the FEN of the position
     after it (`lib/pgn.ts`), so nothing needs re-simulating.
   */
-  const { ply, lastPly, fen, arrows, goToPly } = useGameNavigation(
+  const { ply, lastPly, fen, squareStyles, goToPly } = useGameNavigation(
     current,
     initialPly,
   );
+
+  /*
+    The captured pieces for the ply on screen, walked from the game's own start
+    position — the study-friendly baseline, not the standard one. The diff is
+    the position on screen against that same start.
+  */
+  const captured = useMemo(
+    () =>
+      current === undefined
+        ? // No game yet: an empty line over the starting position. The strips
+          // still render — empty strips hold the board's size steady across a
+          // paste, the way they do on every other board.
+          capturedSummaryOf([], fen, fen)
+        : capturedSummaryOf(
+            current.moves.slice(0, ply),
+            initialFenOf(current),
+            fen,
+          ),
+    [current, ply, fen],
+  );
+
+  // Each strip belongs to the side it is beside, whichever way the board faces.
+  const topColor = orientation === "white" ? "black" : "white";
+  const bottomColor = orientation === "white" ? "white" : "black";
 
   /*
     A freshly loaded game opens on its final position — the most informative
@@ -209,12 +238,12 @@ function LoadPgn() {
     position: fen,
     boardOrientation: orientation,
     /*
-      The move that produced this position. External arrows are never cleared
-      by the board itself (.claude/rules/chessboard.md §3.4), so this is the
-      whole set for the current ply, recomputed on every change — at ply 0 it
-      is empty.
+      The move that produced this position. External square styles are never
+      cleared by the board itself (.claude/rules/chessboard.md §3.3), so this
+      is the whole set for the current ply, recomputed on every change — at
+      ply 0 it is empty.
     */
-    arrows,
+    squareStyles,
     // Read-only: this screen shows a loaded game. Dragging a piece here would
     // desync the board from the PGN it is displaying.
     allowDragging: false,
@@ -230,10 +259,10 @@ function LoadPgn() {
   return (
     <>
       {/*
-        The shell's square, filled edge to edge by the board. The drag highlight
-        is an `outline`, not a `border`: an outline is painted outside the box
-        model, so switching it on does not shrink the board by its own width.
-        It takes its colour from `currentColor`.
+        The shell's square, filled edge to edge by the board square. The drag
+        highlight is an `outline`, not a `border`: an outline is painted
+        outside the box model, so switching it on does not shrink the board by
+        its own width. It takes its colour from `currentColor`.
       */}
       <Box
         data-testid="load-pgn-screen"
@@ -245,9 +274,41 @@ function LoadPgn() {
           outline: isDragOver ? "2px dashed" : "none",
           outlineOffset: "-2px",
           color: isDragOver ? "primary.main" : "inherit",
+          display: "flex",
+          flexDirection: "column",
         }}
       >
-        <Chessboard options={chessboardOptions} />
+        <CapturedPieces
+          testId="load-pgn-captured"
+          color={topColor}
+          captured={captured.captured[topColor]}
+          diff={diffForSide(captured.materialDiff, topColor)}
+        />
+
+        {/*
+          The strips sit on the board's top and bottom edges, so the board
+          gives up their height — and, to stay square, the same amount of its
+          width. Both sides of this box are a calc of the same percentage base,
+          so it stays square.
+        */}
+        <Box
+          sx={{
+            width: `calc(100% - ${CAPTURED_STRIPS_TOTAL_PX}px)`,
+            height: `calc(100% - ${CAPTURED_STRIPS_TOTAL_PX}px)`,
+            flexShrink: 0,
+            alignSelf: "center",
+            marginBlock: `${CAPTURED_STRIP_GAP_PX}px`,
+          }}
+        >
+          <Chessboard options={chessboardOptions} />
+        </Box>
+
+        <CapturedPieces
+          testId="load-pgn-captured"
+          color={bottomColor}
+          captured={captured.captured[bottomColor]}
+          diff={diffForSide(captured.materialDiff, bottomColor)}
+        />
       </Box>
 
       <RightPanel>

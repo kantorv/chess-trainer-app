@@ -25,6 +25,10 @@ import {
 } from "../../../lib/savedAnalysisStore";
 import { RightPanelOutlet, RightPanelProvider } from "../../main/rightPanel";
 import AnalysisBoard from "./AnalysisBoard";
+import {
+  HOVERED_NEXT_MOVE_ARROW_COLOR,
+  NEXT_MOVE_ARROW_COLOR,
+} from "./nextMoveArrows";
 
 /*
   The same two stand-ins the Play with Engine suite needs, and for the same
@@ -158,10 +162,12 @@ vi.mock("react-chessboard", () => ({
       ? column.charCodeAt(0) - "a".charCodeAt(0)
       : 7 - (column.charCodeAt(0) - "a".charCodeAt(0)),
   defaultPieces: Object.fromEntries(
-    ["wQ", "wR", "wN", "wB", "bQ", "bR", "bN", "bB"].map((key) => [
-      key,
-      () => <svg data-testid={`piece-${key}`} />,
-    ]),
+    ["w", "b"].flatMap((color) =>
+      ["K", "Q", "R", "B", "N", "P"].map((letter) => {
+        const key = `${color}${letter}`;
+        return [key, () => <svg data-testid={`piece-${key}`} />];
+      }),
+    ),
   ),
 }));
 
@@ -176,6 +182,7 @@ const boardOptions = () => {
   const options = harness.board.options as {
     position?: string;
     allowDragging?: boolean;
+    arrows?: { startSquare: string; endSquare: string; color: string }[];
     onPieceDrop?: (args: {
       sourceSquare: string;
       targetSquare: string | null;
@@ -260,11 +267,15 @@ const handOffFen = () =>
 
 const position = () => screen.getByTestId("board").getAttribute("data-position");
 
-/** The SAN of every move in the tree view, in render order. */
+/** The SAN of every side-line move of the merged list, in render order. */
 const moveTokens = () =>
   screen.getAllByTestId(/^tree-move-n/).map((element) => element.dataset.san);
 
-const openTab = (tab: "moves" | "engine" | "lines" | "position") =>
+/** The SAN of every next-moves bar token, in render order. */
+const barTokens = () =>
+  screen.getAllByTestId(/^next-move-n/).map((element) => element.dataset.san);
+
+const openTab = (tab: "moves" | "engine" | "position") =>
   userEvent.click(screen.getByTestId(`analysis-panel-tab-${tab}`));
 
 /*
@@ -306,10 +317,11 @@ describe("Analysis Board — moving pieces", () => {
         uciMessage: "bestmove e7e5",
       });
     });
-    expect(moveTokens()).toEqual(["e4"]);
+    expect(screen.getByTestId("move-ply-1")).toHaveTextContent("e4");
+    expect(screen.queryByTestId("move-ply-2")).toBeNull();
 
     expect(drag("e7", "e5")).toBe(true);
-    expect(moveTokens()).toEqual(["e4", "e5"]);
+    expect(screen.getByTestId("move-ply-2")).toHaveTextContent("e5");
   });
 
   it("rejects an illegal drag and leaves the position alone", () => {
@@ -347,7 +359,10 @@ describe("Analysis Board — variations", () => {
     drag("c7", "c5");
 
     // Both replies are in the list, and the mainline is untouched.
-    expect(moveTokens()).toEqual(["e4", "e5", "c5", "Nf3"]);
+    expect(screen.getByTestId("move-ply-1")).toHaveTextContent("e4");
+    expect(screen.getByTestId("move-ply-2")).toHaveTextContent("e5");
+    expect(screen.getByTestId("move-ply-3")).toHaveTextContent("Nf3");
+    expect(moveTokens()).toEqual(["c5"]);
     expect(position()).toContain("2p5");
   });
 
@@ -360,11 +375,14 @@ describe("Analysis Board — variations", () => {
     drag("c7", "c5");
 
     const sicilian = position();
-    const [, mainReply, variation] = screen.getAllByTestId(/^tree-move-n/);
+    const [variation] = screen.getAllByTestId(/^tree-move-n/);
+    expect(variation).toHaveAttribute("data-san", "c5");
 
-    await userEvent.click(mainReply);
+    // The numbered rows click out as mainline plies…
+    await userEvent.click(screen.getByTestId("move-ply-2"));
     expect(position()).toContain("4p3");
 
+    // …and the side-line run as the node it names.
     await userEvent.click(variation);
     expect(position()).toBe(sicilian);
   });
@@ -378,7 +396,9 @@ describe("Analysis Board — variations", () => {
 
     // Replaying the move that is already there is not a new variation.
     drag("e7", "e5");
-    expect(moveTokens()).toEqual(["e4", "e5"]);
+    expect(screen.getByTestId("move-ply-1")).toHaveTextContent("e4");
+    expect(screen.getByTestId("move-ply-2")).toHaveTextContent("e5");
+    expect(screen.queryAllByTestId(/^tree-move-n/)).toHaveLength(0);
   });
 
   it("steps along the variation it is standing in, not the mainline", async () => {
@@ -397,7 +417,365 @@ describe("Analysis Board — variations", () => {
     expect(position()).toContain("2p5");
     // …and "end" returns to the end of it rather than to the mainline's.
     await userEvent.click(screen.getByTestId("board-control-last"));
-    expect(moveTokens()).toEqual(["e4", "e5", "c5", "Nc3", "Nf3"]);
+    expect(screen.getByTestId("move-ply-1")).toHaveTextContent("e4");
+    expect(screen.getByTestId("move-ply-2")).toHaveTextContent("e5");
+    expect(screen.getByTestId("move-ply-3")).toHaveTextContent("Nf3");
+    expect(moveTokens()).toEqual(["c5", "Nc3"]);
+  });
+});
+
+describe("Analysis Board — the pinned next-moves bar", () => {
+  it("pins the continuations of the position on screen above the controls, mainline first", async () => {
+    renderScreen();
+
+    // A fork after 1. e4: e5 the mainline reply, c5 the variation.
+    drag("e2", "e4");
+    drag("e7", "e5");
+    await userEvent.click(screen.getByTestId("board-control-previous"));
+    drag("c7", "c5");
+    // Playing the variation navigated to it; step back to the fork it hangs off.
+    await userEvent.click(screen.getByTestId("board-control-previous"));
+
+    const bar = screen.getByTestId("analysis-next-moves");
+    expect(barTokens()).toEqual(["e5", "c5"]);
+    /*
+      Pinned, not scrolled: a sibling of the tab's scrolling region (a child of
+      it would scroll with the list), sitting above the step controls.
+    */
+    expect(
+      bar.closest('[data-testid="analysis-panel-content-moves"]'),
+    ).toBeNull();
+    expect(
+      bar.compareDocumentPosition(screen.getByTestId("board-controls")),
+    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
+
+  it("is nothing at all with one continuation, and at the end of a line", async () => {
+    renderScreen();
+
+    drag("e2", "e4");
+    drag("e7", "e5");
+    drag("g1", "f3");
+
+    // The start position (one first move)…
+    await userEvent.click(screen.getByTestId("board-control-first"));
+    expect(screen.queryByTestId("analysis-next-moves")).not.toBeInTheDocument();
+    expect(boardOptions().arrows).toEqual([]);
+    // …a mid-line position with exactly one continuation…
+    await userEvent.click(screen.getByTestId("board-control-next"));
+    expect(screen.queryByTestId("analysis-next-moves")).not.toBeInTheDocument();
+    expect(boardOptions().arrows).toEqual([]);
+    // …and the end of the line. One continuation or none is not a fork — and
+    // the board's half of the feature vanishes with the bar's, never one
+    // without the other.
+    await userEvent.click(screen.getByTestId("board-control-last"));
+    expect(screen.queryByTestId("analysis-next-moves")).not.toBeInTheDocument();
+    expect(boardOptions().arrows).toEqual([]);
+  });
+
+  it("counts the start position as its own fork when the tree has two first moves", async () => {
+    renderScreen();
+
+    drag("e2", "e4");
+    await userEvent.click(screen.getByTestId("board-control-first"));
+    drag("d2", "d4");
+    await userEvent.click(screen.getByTestId("board-control-first"));
+
+    expect(barTokens()).toEqual(["e4", "d4"]);
+    // The fork the bar counts at the start is the one the board draws arrows
+    // for: one per first move, each a move on offer.
+    expect(boardOptions().arrows).toEqual([
+      { startSquare: "e2", endSquare: "e4", color: NEXT_MOVE_ARROW_COLOR },
+      { startSquare: "d2", endSquare: "d4", color: NEXT_MOVE_ARROW_COLOR },
+    ]);
+  });
+
+  it("reads a fork inside a side line, that line's own continuation first", async () => {
+    renderScreen();
+
+    // The side line's own second move is a fork: 2. Nc3 the continuation the
+    // reader stands on (`children[0]` there), 2. Nf3 the alternative off it.
+    drag("e2", "e4");
+    drag("e7", "e5");
+    await userEvent.click(screen.getByTestId("board-control-previous"));
+    drag("c7", "c5");
+    drag("b1", "c3");
+    await userEvent.click(screen.getByTestId("board-control-previous"));
+    drag("g1", "f3");
+    await userEvent.click(screen.getByTestId("board-control-previous"));
+
+    expect(barTokens()).toEqual(["Nc3", "Nf3"]);
+  });
+
+  it("advances on a click, and re-reads the continuations of where it lands", async () => {
+    renderScreen();
+
+    drag("e2", "e4");
+    drag("e7", "e5");
+    await userEvent.click(screen.getByTestId("board-control-previous"));
+    drag("c7", "c5");
+    await userEvent.click(screen.getByTestId("board-control-previous"));
+
+    const [toSicilian] = screen
+      .getAllByTestId(/^next-move-n/)
+      .filter((element) => element.dataset.san === "c5");
+    await userEvent.click(toSicilian);
+
+    /*
+      The same selection a side-line token in the list makes: the board shows
+      the position after the move, the list highlights it there, and the bar —
+      at the end of that line, with nothing to follow — is gone.
+    */
+    expect(position()).toContain("2p5");
+    const standing = screen
+      .getAllByTestId(/^tree-move-n/)
+      .find((element) => element.getAttribute("aria-current") === "true");
+    expect(standing).toHaveAttribute("data-san", "c5");
+    expect(screen.queryByTestId("analysis-next-moves")).not.toBeInTheDocument();
+
+    // Back at the fork, the choices are on offer again.
+    await userEvent.click(screen.getByTestId("board-control-previous"));
+    expect(barTokens()).toEqual(["e5", "c5"]);
+  });
+
+  it("puts an arrow on the board for every continuation, recoloured by hover", async () => {
+    renderScreen();
+
+    drag("e2", "e4");
+    drag("e7", "e5");
+    await userEvent.click(screen.getByTestId("board-control-previous"));
+    drag("c7", "c5");
+    await userEvent.click(screen.getByTestId("board-control-previous"));
+
+    /*
+      The bar's board-side half: one arrow per continuation of the fork — e5
+      the mainline, c5 the variation — in the green of a move on offer, the
+      same language the Openings screen's explorer arrows speak.
+    */
+    expect(boardOptions().arrows).toEqual([
+      { startSquare: "e7", endSquare: "e5", color: NEXT_MOVE_ARROW_COLOR },
+      { startSquare: "c7", endSquare: "c5", color: NEXT_MOVE_ARROW_COLOR },
+    ]);
+
+    // The token the pointer is over is the move a click will play: its arrow
+    // alone turns red, and no other…
+    const [toSicilian] = screen
+      .getAllByTestId(/^next-move-n/)
+      .filter((element) => element.dataset.san === "c5");
+    await userEvent.hover(toSicilian);
+    expect(boardOptions().arrows).toEqual([
+      { startSquare: "e7", endSquare: "e5", color: NEXT_MOVE_ARROW_COLOR },
+      {
+        startSquare: "c7",
+        endSquare: "c5",
+        color: HOVERED_NEXT_MOVE_ARROW_COLOR,
+      },
+    ]);
+
+    // …and the offer is back to green once the pointer leaves.
+    await userEvent.unhover(toSicilian);
+    expect(boardOptions().arrows).toEqual([
+      { startSquare: "e7", endSquare: "e5", color: NEXT_MOVE_ARROW_COLOR },
+      { startSquare: "c7", endSquare: "c5", color: NEXT_MOVE_ARROW_COLOR },
+    ]);
+  });
+
+  it("belongs to the Moves tab alone", async () => {
+    renderScreen();
+
+    drag("e2", "e4");
+    drag("e7", "e5");
+    await userEvent.click(screen.getByTestId("board-control-previous"));
+    drag("c7", "c5");
+    await userEvent.click(screen.getByTestId("board-control-previous"));
+    expect(screen.getByTestId("analysis-next-moves")).toBeInTheDocument();
+    expect(boardOptions().arrows).toHaveLength(2);
+
+    // The bar is part of the moves UI: the other tabs carry neither half of
+    // it — the strip, or the arrows on the board.
+    await openTab("engine");
+    expect(screen.queryByTestId("analysis-next-moves")).not.toBeInTheDocument();
+    expect(boardOptions().arrows).toEqual([]);
+    await openTab("position");
+    expect(screen.queryByTestId("analysis-next-moves")).not.toBeInTheDocument();
+    expect(boardOptions().arrows).toEqual([]);
+
+    // …and both halves are back with the moves when the tab returns.
+    await openTab("moves");
+    expect(barTokens()).toEqual(["e5", "c5"]);
+    expect(boardOptions().arrows).toHaveLength(2);
+  });
+});
+
+describe("Analysis Board — the move list", () => {
+  it("shows the mainline as the shared numbered-pairs list, and no second print of it", () => {
+    renderScreen();
+
+    drag("e2", "e4");
+    drag("e7", "e5");
+
+    // The same list the linear screens use: numbered pairs over the mainline,
+    // each move a jump target.
+    expect(screen.getByTestId("move-list")).toBeInTheDocument();
+    expect(screen.getByTestId("move-ply-1")).toHaveTextContent("e4");
+    expect(screen.getByTestId("move-ply-2")).toHaveTextContent("e5");
+    /*
+      …and nothing else (CTA-53): the flowing tree that reprinted the mainline
+      below the list is gone from the tab, so with no side lines there is no
+      variation section at all.
+    */
+    expect(screen.queryByTestId("variation-tree")).not.toBeInTheDocument();
+    expect(screen.queryAllByTestId(/^tree-move-n/)).toHaveLength(0);
+    expect(screen.queryAllByTestId(/^tree-variation-/)).toHaveLength(0);
+  });
+
+  it("prints an eval beside each scored move, and nothing beside the rest", () => {
+    renderScreen();
+
+    // The start position is searched on arrival; a finished search records its
+    // score against the FEN it describes.
+    engineReports({ depth: 14, multipv: 1, cp: 40, pv: "e2e4 e7e5" });
+    act(() => {
+      engine().say({
+        fen: engine().lastSearch,
+        bestMove: "e2e4",
+        uciMessage: "bestmove e2e4",
+      });
+    });
+    expect(screen.getByTestId("move-eval-0")).toHaveTextContent("+0.40");
+
+    // Black to move after 1. e4: the engine's number is from Black's side, so
+    // −0.30 is White +0.30.
+    drag("e2", "e4");
+    engineReports({ depth: 12, multipv: 1, cp: -30, pv: "e7e5" });
+    act(() => {
+      engine().say({
+        fen: engine().lastSearch,
+        bestMove: "e7e5",
+        uciMessage: "bestmove e7e5",
+      });
+    });
+    expect(screen.getByTestId("move-eval-1")).toHaveTextContent("+0.30");
+
+    // 1… e5 has not been searched — it prints nothing, not the no-data dash.
+    expect(screen.queryByTestId("move-eval-2")).not.toBeInTheDocument();
+  });
+
+  it("reads the eval back by FEN, so returning to a position finds it again", async () => {
+    renderScreen();
+
+    engineReports({ depth: 14, multipv: 1, cp: 40, pv: "e2e4 e7e5" });
+    act(() => {
+      engine().say({
+        fen: engine().lastSearch,
+        bestMove: "e2e4",
+        uciMessage: "bestmove e2e4",
+      });
+    });
+
+    drag("e2", "e4");
+    // Back to the start through the list itself.
+    await userEvent.click(screen.getByTestId("move-ply-0"));
+
+    // The map is keyed by FEN and not cleared by navigating, so the start
+    // position reads the same score twice.
+    expect(screen.getByTestId("move-eval-0")).toHaveTextContent("+0.40");
+    expect(screen.getByTestId("move-ply-0")).toHaveAttribute(
+      "aria-current",
+      "true",
+    );
+  });
+
+  it("highlights the mainline move the selection names, and nothing while inside a side line", async () => {
+    renderScreen();
+
+    drag("e2", "e4");
+    drag("e7", "e5");
+    drag("g1", "f3");
+
+    // Step back to after 1. e4 and answer it differently, then walk deeper
+    // into the Sicilian: the selection is no ply of the mainline there.
+    await userEvent.click(screen.getByTestId("board-control-first"));
+    await userEvent.click(screen.getByTestId("board-control-next"));
+    drag("c7", "c5");
+    drag("b1", "c3");
+
+    const highlighted = screen
+      .queryAllByTestId(/^move-ply-/)
+      .filter((element) => element.getAttribute("aria-current") === "true");
+    expect(highlighted).toHaveLength(0);
+    // …but the run the reader is standing in knows where they are: its token
+    // is the highlighted one, inside the same list.
+    const currentInSideLine = screen
+      .getAllByTestId(/^tree-move-n/)
+      .find((element) => element.getAttribute("aria-current") === "true");
+    expect(currentInSideLine).toHaveAttribute("data-san", "Nc3");
+
+    // A click on mainline move 2 walks out of the side line to that node.
+    await userEvent.click(screen.getByTestId("move-ply-2"));
+    expect(position()).toContain("4p3");
+    expect(screen.getByTestId("move-ply-2")).toHaveAttribute(
+      "aria-current",
+      "true",
+    );
+    const currentInVariation = screen
+      .queryAllByTestId(/^tree-move-n/)
+      .find((element) => element.getAttribute("aria-current") === "true");
+    expect(currentInVariation).toBeUndefined();
+  });
+
+  it("hangs a side line directly under the pair it answers, inside the list", async () => {
+    renderScreen();
+
+    drag("e2", "e4");
+    drag("e7", "e5");
+    drag("g1", "f3");
+    await userEvent.click(screen.getByTestId("board-control-first"));
+    await userEvent.click(screen.getByTestId("board-control-next"));
+    drag("c7", "c5");
+
+    /*
+      DOM order is the layout here: the run sits between the row holding the
+      move it answers (1. e4 e5) and the row after it (2. Nf3).
+    */
+    const layout = screen
+      .getAllByTestId(/^move-ply-\d|^tree-variation-/)
+      .map((element) => element.getAttribute("data-testid"));
+    expect(layout).toEqual([
+      "move-ply-0",
+      "move-ply-1",
+      "move-ply-2",
+      expect.stringMatching(/^tree-variation-/),
+      "move-ply-3",
+    ]);
+  });
+
+  it("prints an eval beside a side-line move whose position the engine has scored", async () => {
+    renderScreen();
+
+    drag("e2", "e4");
+    drag("e7", "e5");
+    await userEvent.click(screen.getByTestId("board-control-previous"));
+    drag("c7", "c5");
+
+    // Standing in the side line, the engine searches the Sicilian position.
+    const sicilian = position();
+    expect(engine().lastSearch).toBe(sicilian);
+    // Nothing is printed before a finished search records the score.
+    expect(screen.queryAllByTestId(/^tree-eval-/)).toHaveLength(0);
+
+    engineReports({ depth: 12, multipv: 1, cp: 20, pv: "b1c3" });
+    act(() => {
+      engine().say({
+        fen: engine().lastSearch,
+        bestMove: "b1c3",
+        uciMessage: "bestmove b1c3",
+      });
+    });
+
+    const [c5] = screen.getAllByTestId(/^tree-move-n/);
+    const id = c5.getAttribute("data-testid")!.slice("tree-move-".length);
+    expect(screen.getByTestId(`tree-eval-${id}`)).toHaveTextContent("+0.20");
   });
 });
 
@@ -415,7 +793,8 @@ describe("Analysis Board — the Position tab", () => {
     // The move numbering follows the FEN rather than restarting at move 1.
     drag("g8", "f6");
     await openTab("moves");
-    expect(screen.getByTestId("variation-tree")).toHaveTextContent("12… Nf6");
+    expect(screen.getByTestId("move-number-12")).toHaveTextContent("12.");
+    expect(screen.getByTestId("move-ply-1")).toHaveTextContent("Nf6");
   });
 
   it("turns the board to the side to move in a pasted FEN", async () => {
@@ -472,8 +851,12 @@ describe("Analysis Board — the Position tab", () => {
     await userEvent.click(screen.getByRole("button", { name: "Load PGN" }));
 
     await openTab("moves");
+    expect(screen.getByTestId("move-ply-1")).toHaveTextContent("e4");
+    expect(screen.getByTestId("move-ply-2")).toHaveTextContent("e5");
+    expect(screen.getByTestId("move-ply-3")).toHaveTextContent("Nf3");
+    expect(screen.getByTestId("move-ply-4")).toHaveTextContent("Nc6");
     // The side line survived the load — `parsePgnGames` would have dropped it.
-    expect(moveTokens()).toEqual(["e4", "e5", "c5", "Nf3", "Nf3", "Nc6"]);
+    expect(moveTokens()).toEqual(["c5", "Nf3"]);
     // A load opens on the start position.
     expect(position()).toMatch(/^rnbqkbnr\/pppppppp/);
   });
@@ -505,7 +888,8 @@ describe("Analysis Board — the Position tab", () => {
 
     await userEvent.click(within(picker).getByText("Carol vs Dan"));
     await openTab("moves");
-    expect(moveTokens()).toEqual(["d4", "d5"]);
+    expect(screen.getByTestId("move-ply-1")).toHaveTextContent("d4");
+    expect(screen.getByTestId("move-ply-2")).toHaveTextContent("d5");
   });
 
   it("reports which game in a file failed", async () => {
@@ -608,29 +992,34 @@ describe("Analysis Board — the two switches", () => {
     renderScreen();
     engineReports({ depth: 14, multipv: 1, cp: 40, pv: "e2e4 e7e5" });
 
-    await openTab("lines");
-    expect(screen.getByTestId("best-variations")).toHaveTextContent("+0.40");
+    // The lines sit above the tab strip (CTA-55), so the engine's number is
+    // on screen without opening any tab — the Moves tab is simply the default.
+    expect(screen.getByTestId("analysis-variations")).toHaveTextContent(
+      "+0.40",
+    );
 
-    await openTab("engine");
+    // The switch sits beside them — it is clicked from wherever the reader is.
     await userEvent.click(screen.getByTestId("analysis-setting-engine"));
 
-    // The running search is stopped rather than left to finish in the tab.
+    // The running search is stopped rather than left to finish on its own.
     expect(engine().stops).toBeGreaterThan(0);
 
     const searchesWhenOff = engine().searches.length;
     drag("e2", "e4");
     expect(engine().searches).toHaveLength(searchesWhenOff);
 
-    // And the tab says the engine is off rather than showing the stale line.
-    await openTab("lines");
-    expect(screen.getByTestId("analysis-engine-off")).toBeInTheDocument();
-    expect(screen.queryByTestId("best-variations")).not.toBeInTheDocument();
+    // The pinned block is gone rather than showing the stale line, and the
+    // status row says the engine is off — honestly, not "waiting".
+    expect(screen.queryByTestId("analysis-variations")).not.toBeInTheDocument();
+    expect(screen.getByTestId("analysis-status")).toHaveTextContent(
+      "The engine is off",
+    );
   });
 
   it("searches the position on screen again when it is switched back on", async () => {
     renderScreen();
-    await openTab("engine");
 
+    // The switch is above the tab strip — the Moves tab is simply showing.
     await userEvent.click(screen.getByTestId("analysis-setting-engine"));
     drag("e2", "e4");
     await userEvent.click(screen.getByTestId("analysis-setting-engine"));
@@ -656,6 +1045,14 @@ describe("Analysis Board — the two switches", () => {
     expect(screen.getByTestId("eval-bar")).toBeInTheDocument();
 
     await openTab("engine");
+
+    // The engine switch is no longer in this tab — it lives above the strip.
+    expect(
+      screen
+        .getByTestId("analysis-setting-engine")
+        .closest('[data-testid="analysis-settings"]'),
+    ).toBeNull();
+
     await userEvent.click(screen.getByTestId("analysis-setting-evalbar"));
     expect(screen.queryByTestId("eval-bar")).not.toBeInTheDocument();
 
@@ -699,6 +1096,109 @@ describe("Analysis Board — the two switches", () => {
       "data-score",
       "−1.00",
     );
+  });
+});
+
+describe("Analysis Board — the pinned lines", () => {
+  /*
+    CTA-55: lichess analysis behaviour. The engine's best lines sit above the
+    tab strip on every tab, and each of their moves is a click that plays the
+    line's prefix up to it — landing the reader on the move the click named.
+  */
+
+  it("has no Lines tab — the lines are the block above the strip", () => {
+    renderScreen();
+
+    expect(
+      screen.queryByTestId("analysis-panel-tab-lines"),
+    ).not.toBeInTheDocument();
+    // The strip that is left.
+    for (const id of ["moves", "engine", "position"] as const) {
+      expect(
+        screen.getByTestId(`analysis-panel-tab-${id}`),
+      ).toBeInTheDocument();
+    }
+  });
+
+  it("pins the lines above the tab strip, whichever tab is open", async () => {
+    renderScreen();
+    engineReports({ depth: 14, multipv: 1, cp: 40, pv: "e2e4 e7e5" });
+
+    const block = screen.getByTestId("analysis-variations");
+    expect(block).toHaveTextContent("1. e4 e5");
+
+    // Above every tab is a DOM fact, not only a layout one: the strip follows
+    // the block in document order.
+    const strip = screen.getByTestId("analysis-panel-tab-moves");
+    expect(
+      block.compareDocumentPosition(strip) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+
+    // …and the block stays on screen through the other tabs and back.
+    await openTab("engine");
+    expect(screen.getByTestId("analysis-variations")).toBeInTheDocument();
+    await openTab("position");
+    expect(screen.getByTestId("analysis-variations")).toBeInTheDocument();
+    await openTab("moves");
+    expect(screen.getByTestId("analysis-variations")).toBeInTheDocument();
+  });
+
+  it("plays a line's prefix up to the move clicked", async () => {
+    renderScreen();
+    engineReports({ depth: 14, multipv: 1, cp: 20, pv: "e2e4 e7e5 g1f3" });
+
+    // Clicking the third move plays all three, and the board ends on the move
+    // the click named — no second or third click needed.
+    await userEvent.click(screen.getByTestId("variation-1-move-3"));
+
+    const played = new Chess();
+    played.move("e4");
+    played.move("e5");
+    played.move("Nf3");
+    expect(position()).toBe(played.fen());
+    expect(screen.getByTestId("move-ply-3")).toHaveTextContent("Nf3");
+  });
+
+  it("follows a line the tree already holds when the same prefix is clicked again", async () => {
+    renderScreen();
+    engineReports({ depth: 14, multipv: 1, cp: 30, pv: "e2e4 e7e5" });
+
+    await userEvent.click(screen.getByTestId("variation-1-move-2"));
+    expect(screen.getByTestId("move-ply-2")).toHaveTextContent("e5");
+
+    // Back at the start, the engine offers the same line again. Clicking it
+    // must walk the moves that already exist…
+    await userEvent.click(screen.getByTestId("board-control-first"));
+    engineReports({ depth: 14, multipv: 1, cp: 30, pv: "e2e4 e7e5" });
+    await userEvent.click(screen.getByTestId("variation-1-move-2"));
+
+    // …rather than forking the mainline into a duplicate of itself: no side
+    // line hangs under the list, and the game is still two moves long.
+    expect(screen.queryAllByTestId(/^tree-move-n/)).toHaveLength(0);
+    expect(screen.queryByTestId("move-ply-3")).toBeNull();
+  });
+
+  it("plays a line as a side line when the reader is standing on an earlier node", async () => {
+    renderScreen();
+    engineReports({ depth: 14, multipv: 1, cp: 30, pv: "e2e4 e7e5" });
+    await userEvent.click(screen.getByTestId("variation-1-move-2"));
+
+    // Back at the start, the engine offers a different line…
+    await userEvent.click(screen.getByTestId("board-control-first"));
+    engineReports({ depth: 14, multipv: 1, cp: 20, pv: "d2d4 d7d5" });
+
+    // …and playing it forks the game rather than rewriting the mainline: the
+    // new run hangs under the first move as a side line, and the board ends on
+    // the move the click named.
+    await userEvent.click(screen.getByTestId("variation-1-move-2"));
+    expect(moveTokens()).toEqual(["d4", "d5"]);
+    expect(screen.getByTestId("move-ply-1")).toHaveTextContent("e4");
+    expect(screen.getByTestId("move-ply-2")).toHaveTextContent("e5");
+
+    const forked = new Chess();
+    forked.move("d4");
+    forked.move("d5");
+    expect(position()).toBe(forked.fen());
   });
 });
 
@@ -759,7 +1259,7 @@ describe("Analysis Board — arriving from the Board Editor", () => {
     // about it, and a move played from it is the first of the line.
     expect(engine().lastSearch).toBe(edited);
     drag("e2", "e7");
-    expect(moveTokens()).toEqual(["Qe7+"]);
+    expect(screen.getByTestId("move-ply-1")).toHaveTextContent("Qe7+");
   });
 
   it("faces the side to move in the position it was handed", () => {
@@ -808,7 +1308,9 @@ describe("Analysis Board — arriving with a whole game", () => {
       "data-orientation",
       "white",
     );
-    expect(moveTokens()).toContain(withVariations.game.moves[0].san);
+    expect(screen.getByTestId("move-ply-1")).toHaveTextContent(
+      withVariations.game.moves[0].san,
+    );
   });
 
   it("keeps the game's side lines, which the catalog's mainline does not have", async () => {
@@ -821,11 +1323,13 @@ describe("Analysis Board — arriving with a whole game", () => {
     /*
       `chess.js` `loadPgn` discards `( … )`, so the `Game` the catalog holds is
       the mainline alone. This screen parses the PGN text again with
-      `parsePgnTree`, so the tree it shows is strictly larger.
+      `parsePgnTree`, so the list it shows is strictly larger: the same numbered
+      rows, plus the side lines hanging under them.
     */
-    expect(moveTokens().length).toBeGreaterThan(
-      withVariations.game.moves.length,
-    );
+    expect(
+      screen.getByTestId(`move-ply-${withVariations.game.moves.length}`),
+    ).toBeInTheDocument();
+    expect(moveTokens().length).toBeGreaterThan(0);
   });
 
   it("ignores a reference that names nothing, rather than throwing on the link", () => {
@@ -915,6 +1419,7 @@ describe("Analysis Board — the shell around it", () => {
     expect(position()).toMatch(/^rnbqkbnr\/pppppppp/);
     await openTab("moves");
     expect(screen.queryAllByTestId(/^tree-move-n/)).toHaveLength(0);
+    expect(screen.queryByTestId("move-ply-1")).toBeNull();
   });
 
   it("flips the board without touching the game", async () => {
@@ -927,7 +1432,7 @@ describe("Analysis Board — the shell around it", () => {
       "data-orientation",
       "black",
     );
-    expect(moveTokens()).toEqual(["e4"]);
+    expect(screen.getByTestId("move-ply-1")).toHaveTextContent("e4");
   });
 
   it("terminates the worker when the screen goes away", () => {
@@ -1104,9 +1609,16 @@ describe("Analysis Board — reopening a saved analysis", () => {
     expect(position()).toBe(fenAtNode(tree, nodeAtSanPath(tree, ["e4", "c5"])));
 
     await openTab("moves");
-    expect(moveTokens()).toEqual(
-      expect.arrayContaining(["e4", "e5", "Nf3", "c5"]),
-    );
+    expect(screen.getByTestId("move-ply-1")).toHaveTextContent("e4");
+    expect(screen.getByTestId("move-ply-2")).toHaveTextContent("e5");
+    expect(screen.getByTestId("move-ply-3")).toHaveTextContent("Nf3");
+    // The side line is back, hanging under the move it answers.
+    expect(moveTokens()).toEqual(["c5"]);
+    // …and the reader reopens standing inside it, not on the mainline.
+    const standing = screen
+      .getAllByTestId(/^tree-move-n/)
+      .find((element) => element.getAttribute("aria-current") === "true");
+    expect(standing).toHaveAttribute("data-san", "c5");
   });
 
   it("comes back facing the way it was left, and at its own settings", () => {
@@ -1151,5 +1663,29 @@ describe("Analysis Board — reopening a saved analysis", () => {
     renderScreen("/tools/analysis?analysis=nope");
 
     expect(position()).toMatch(/^rnbqkbnr\/pppppppp/);
+  });
+});
+
+describe("Analysis Board — the captured-pieces strips", () => {
+  it("shows nothing on a position handed over, until something is taken", () => {
+    // A queen-vs-rook-and-pawn study position: nothing on it is "captured"
+    // relative to its own start, so the strips are empty.
+    const study = "6rk/7p/8/8/8/8/8/K6Q w - - 0 1";
+    renderScreen(`/tools/analysis?fen=${encodeURIComponent(study)}`);
+
+    const white = screen.getByTestId("analysis-captured-white");
+    const black = screen.getByTestId("analysis-captured-black");
+    expect(white).toBeInTheDocument();
+    expect(black).toBeInTheDocument();
+    expect(white).not.toHaveAttribute("data-diff");
+    expect(black).not.toHaveAttribute("data-diff");
+
+    // White takes the study's pawn: one point up of the line's own start.
+    drag("h1", "h7");
+
+    expect(white).toHaveAttribute("data-diff", "1");
+    expect(white).toHaveTextContent("+1");
+    expect(screen.getByTestId("piece-bP")).toBeInTheDocument();
+    expect(black).not.toHaveAttribute("data-diff");
   });
 });

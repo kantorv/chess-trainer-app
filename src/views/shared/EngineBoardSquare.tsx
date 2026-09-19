@@ -1,14 +1,20 @@
 import Box from "@mui/material/Box";
 import { useTranslation } from "react-i18next";
+import type { CSSProperties } from "react";
 import {
   Chessboard,
-  type Arrow,
   type ChessboardOptions,
   type PieceDropHandlerArgs,
+  type PieceRenderObject,
 } from "react-chessboard";
+import { diffForSide, type CapturedSummary } from "../../lib/capturedPieces";
 import type { Score } from "../../lib/engineAnalysis";
 import EvalBar, { EVAL_BAR_GAP_PX, EVAL_BAR_TOTAL_PX } from "./EvalBar";
 import PromotionPicker, { type PromotionChoice } from "./PromotionPicker";
+import CapturedPieces, {
+  CAPTURED_STRIPS_TOTAL_PX,
+  CAPTURED_STRIP_GAP_PX,
+} from "./CapturedPieces";
 
 /**
  * The board square of a screen that plays a game against the engine: the
@@ -48,8 +54,8 @@ type EngineBoardSquareProps = {
   /** The position on screen — not necessarily the live one. */
   position: string;
   orientation: "white" | "black";
-  /** The whole arrow set for this ply; the board never clears external ones. */
-  arrows: Arrow[];
+  /** The last-move highlight for this ply; the board never clears external ones. */
+  squareStyles: Record<string, CSSProperties>;
   allowDragging: boolean;
   onPieceDrop: (args: {
     sourceSquare: string;
@@ -67,6 +73,14 @@ type EngineBoardSquareProps = {
   /** Already normalised to White's perspective (`lib/engineAnalysis.ts`). */
   score: Score | null;
 
+  /** The captured-pieces summary for the game on screen (`lib/capturedPieces.ts`). */
+  captured: CapturedSummary;
+  /**
+   * Renderers for the strips' icons, keyed by the twelve piece types — the
+   * mask's costumes on the masked screen, `defaultPieces` everywhere else.
+   */
+  capturedPieces?: PieceRenderObject;
+
   /** The pending promotion, or `null` when no picker is open. */
   promotion: { from: string; to: string } | null;
   /** Whose promotion it is — the picker offers that colour's pieces. */
@@ -78,12 +92,14 @@ function EngineBoardSquare({
   id,
   position,
   orientation,
-  arrows,
+  squareStyles,
   allowDragging,
   onPieceDrop,
   boardOptions,
   showEvalBar,
   score,
+  captured,
+  capturedPieces,
   promotion,
   humanColor,
   onResolvePromotion,
@@ -95,7 +111,7 @@ function EngineBoardSquare({
     id,
     position,
     boardOrientation: orientation,
-    arrows,
+    squareStyles,
     onPieceDrop: ({ sourceSquare, targetSquare }: PieceDropHandlerArgs) =>
       onPieceDrop({ sourceSquare, targetSquare }),
     allowDragging,
@@ -104,6 +120,13 @@ function EngineBoardSquare({
   // The bar is inside the square, so the board gives up its width. Without it
   // the board takes the whole square back.
   const boardSide = showEvalBar ? `calc(100% - ${EVAL_BAR_TOTAL_PX}px)` : "100%";
+  // The strips sit on the board's top and bottom edges, so the board gives up
+  // their height — and, to stay square, the same amount of its width.
+  const boardInnerSide = `calc(100% - ${CAPTURED_STRIPS_TOTAL_PX}px)`;
+
+  // Each strip belongs to the side it is beside, whichever way the board faces.
+  const topColor = orientation === "white" ? "black" : "white";
+  const bottomColor = orientation === "white" ? "white" : "black";
 
   return (
     <Box
@@ -133,31 +156,67 @@ function EngineBoardSquare({
       )}
 
       {/*
-        `position: relative` so the promotion picker, which is absolutely
-        positioned in percentages of the board, has this box to measure
-        against — it overlays the board exactly.
+        The board square is a column now: the captured-pieces strip above, the
+        board, the strip below. Both boxes keep their side a calc of the same
+        percentage base — the column's against the shell's square, the board's
+        against the column — so the board stays square.
       */}
       <Box
         data-testid={`${id}-board`}
         sx={{
-          position: "relative",
           width: boardSide,
           height: boardSide,
           // The width is already exact; never let flex shave a pixel off it,
           // which would make the board a rectangle.
           flexShrink: 0,
+          display: "flex",
+          flexDirection: "column",
         }}
       >
-        <Chessboard options={chessboardOptions} />
+        <CapturedPieces
+          testId={`${id}-captured`}
+          color={topColor}
+          captured={captured.captured[topColor]}
+          diff={diffForSide(captured.materialDiff, topColor)}
+          pieces={capturedPieces}
+        />
 
-        {promotion && (
-          <PromotionPicker
-            targetSquare={promotion.to}
-            orientation={orientation}
-            color={humanColor}
-            onSelect={onResolvePromotion}
-          />
-        )}
+        {/*
+          `position: relative` so the promotion picker, which is absolutely
+          positioned in percentages of the board, has this box to measure
+          against — it overlays the board exactly.
+        */}
+        <Box
+          sx={{
+            position: "relative",
+            width: boardInnerSide,
+            height: boardInnerSide,
+            // The side is already exact; never let flex shave a pixel off it,
+            // which would make the board a rectangle.
+            flexShrink: 0,
+            alignSelf: "center",
+            marginBlock: `${CAPTURED_STRIP_GAP_PX}px`,
+          }}
+        >
+          <Chessboard options={chessboardOptions} />
+
+          {promotion && (
+            <PromotionPicker
+              targetSquare={promotion.to}
+              orientation={orientation}
+              color={humanColor}
+              onSelect={onResolvePromotion}
+            />
+          )}
+        </Box>
+
+        <CapturedPieces
+          testId={`${id}-captured`}
+          color={bottomColor}
+          captured={captured.captured[bottomColor]}
+          diff={diffForSide(captured.materialDiff, bottomColor)}
+          pieces={capturedPieces}
+        />
       </Box>
     </Box>
   );

@@ -1,5 +1,7 @@
 import { useMemo } from "react";
 import { useSearchParams } from "react-router";
+import { capturedSummaryOf } from "../../../lib/capturedPieces";
+import { initialFenOf } from "../../../lib/gameModel";
 import { parseFen } from "../../../lib/fen";
 import { findSavedGame } from "../../../lib/savedGameStore";
 import { RightPanel } from "../../main/rightPanel";
@@ -80,6 +82,22 @@ function PlayWithEngine() {
 
   const topLine = state.analysis.lines.find((line) => line !== undefined);
 
+  /*
+    The captured pieces for the ply on screen, walked from the game's own start
+    position — the study-friendly baseline, not the standard one. The diff is
+    the position on screen against that same start, so a promotion counts as a
+    gain for the side that made it.
+  */
+  const captured = useMemo(
+    () =>
+      capturedSummaryOf(
+        state.game.moves.slice(0, state.ply),
+        initialFenOf(state.game),
+        state.fen,
+      ),
+    [state.game, state.ply, state.fen],
+  );
+
   return (
     <>
       <EngineBoardSquare
@@ -87,12 +105,12 @@ function PlayWithEngine() {
         position={state.fen}
         orientation={state.orientation}
         /*
-          The move that produced the position on screen. External arrows are
-          never cleared by the board itself (`.claude/rules/chessboard.md` §3.4),
-          so this is the whole set for the current ply, recomputed on every
-          change.
+          The move that produced the position on screen. External square styles
+          are never cleared by the board itself (`.claude/rules/chessboard.md`
+          §3.3), so this is the whole set for the current ply, recomputed on
+          every change.
         */
-        arrows={state.arrows}
+        squareStyles={state.squareStyles}
         /*
           Draggable only on the live position, on the human's turn, with no
           promotion picker open. Off the live position the board is a review of
@@ -105,6 +123,7 @@ function PlayWithEngine() {
         onPieceDrop={state.onPieceDrop}
         showEvalBar={state.showEvalBar}
         score={topLine?.score ?? null}
+        captured={captured}
         promotion={state.promotion}
         humanColor={state.humanColor}
         onResolvePromotion={state.resolvePromotion}

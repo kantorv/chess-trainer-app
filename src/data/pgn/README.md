@@ -132,22 +132,27 @@ section requires a name to be unique across files.
 
 An opening **repertoire** — a Chessable-style export, or a lichess study built
 as one — is a third folder-of-folders shape, and it splits on a different tag.
-No repertoire ships in this repo; drop one in (or upload one) and it looks like:
+Three ship (CTA-60, replaced in CTA-66): `sicilian-2c3-sampler.pgn` (the
+chaptered shape below, recognised by shape alone), `live-chess-2026-09-18.pgn`
+(one game, one 7,859-node tree — the section's stress case, declared with a
+manifest `kind`) and `d2d4Variations.pgn` (flat, `chapters: false`). The
+sampler looks like:
 
 ```
-my-repertoire.pgn                    ← one file, dozens of lines, no StudyName
-  └── /library/my-repertoire                         the file's folder
-        ├── …/introduction                           a chapter (White: "Introduction")
-        ├── …/2-qa5                                   a chapter (White: "1) 2...Qa5")
-        │     └── …/2-qa5-3-g3-b5-1                   a line (Black: "2... Qa5 3. g3 b5 #1")
-        └── …/2-nc6                                   the next chapter, …
+sicilian-2c3-sampler.pgn             ← one file, 14 lines, no StudyName
+  └── /library/sicilian-2c3-sampler                  the file's folder
+        ├── …/overview                               a chapter (White: "Overview")
+        ├── …/the-central-strike                     a chapter (White: "1) The central strike")
+        │     └── …/3-qxd5-4-d4-nc6                   a line (Black: "3...Qxd5 4.d4 Nc6")
+        └── …/the-french-style-setup                 the next chapter, …
 ```
 
 - **The chapter name is on the `White` tag**, usually with an `"N) "` order
-  prefix (`"12) 2...d5 …"`). The prefix is parsed off for ordering and stripped
-  for the label; chapters with no prefix (`"Introduction"`, `"Quickstarter"`)
-  sort ahead of the numbered ones, in the order the file names them.
-- **The line name is on the `Black` tag** (`"2... Qa5 3. g3 b5 #1"`).
+  prefix (`"3) Knight to f6"`). The prefix is parsed off for ordering and
+  stripped for the label; chapters with no prefix (`"Overview"`) sort ahead of
+  the numbered ones, in the order the file names them. The sampler names its
+  numbered chapters out of order (3, 1, 5, 2, 4) so that sort is exercised.
+- **The line name is on the `Black` tag** (`"3...Qxd5 4.d4 Nc6"`).
 - **A line opens with its variation tree.** The `( )` side lines are the point
   of a repertoire, so a line is re-read with `parsePgnTree` and rendered beside
   the board with the shared `VariationTree` (`LibraryVariationDetail`), not the
@@ -155,9 +160,8 @@ my-repertoire.pgn                    ← one file, dozens of lines, no StudyName
   the sibling nav, `?game=` / `?move=` — is unchanged.
 - **Recognised from the manifest first, the shape second.** `kind: "repertoire"`
   in `pgn.json` is the reliable declaration a shipped file would use; an
-  undeclared file (or an upload — the only way one reaches this section today)
-  is classified by `looksLikeRepertoire` — many games, no `StudyName`, several
-  `White` tags sharing a `"N) "` prefix over most of the games. A manifest
+  undeclared file (the shipped sampler, or an upload) is classified by
+  `looksLikeRepertoire` — many games, no `StudyName`, several `White` tags sharing a `"N) "` prefix over most of the games. A manifest
   `kind` always wins over the heuristic.
 
 ## Notes for a folder — a sibling `.mdx`
@@ -231,7 +235,7 @@ hide a file.
     },
     "lucena.pgn":   { "under": "lessons", "order": 10 },
     "philidor.pgn": { "under": "lessons", "order": 20 },
-    "alapin.pgn":   { "kind": "repertoire", "order": 30 } // force the kind
+    "my_lines.pgn": { "kind": "repertoire", "order": 30 } // force the kind
   }
 }
 ```

@@ -54,6 +54,14 @@ describe("gameFromChess", () => {
     expect(finalFenOf(game)).toBe(game.moves[2].fen);
   });
 
+  it("records the piece type each capture took, and nothing for a quiet move", () => {
+    const game = gameFromChess(played("e4", "d5", "exd5"));
+
+    expect(game.moves[2].captured).toBe("p");
+    expect(game.moves[0].captured).toBeUndefined();
+    expect(game.moves[1].captured).toBeUndefined();
+  });
+
   it("is a copy: mutating the instance afterwards leaves the snapshot alone", () => {
     const chess = played("e4");
     const game = gameFromChess(chess);

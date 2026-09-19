@@ -112,6 +112,27 @@ export const findOpening = (
 };
 
 /**
+ * The opening's top-level name: the part of eco.json's
+ * `"Opening: Variation, SubVariation"` convention before its first `":"` — the
+ * family, which is what the save dialog's default rule files a position under.
+ * A name with no `":"` is its own top level, and one that trims to nothing
+ * stays empty for the caller's normaliser to refuse.
+ */
+export const topLevelOpeningName = (name: string): string =>
+  name.split(":")[0].trim();
+
+/**
+ * The opening's variation name: the part of eco.json's
+ * `"Opening: Variation, SubVariation"` convention after its first `":"`, or
+ * `""` for a name without one — the piece a saved opening's default note
+ * names, with the top level as the fallback when there is no variation.
+ */
+export const openingVariationName = (name: string): string => {
+  const index = name.indexOf(":");
+  return index === -1 ? "" : name.slice(index + 1).trim();
+};
+
+/**
  * The opening a whole **line of play** ended up in: the deepest position along
  * it that the book names, or `undefined` for a line it never recognised.
  *
@@ -198,9 +219,10 @@ export const knownMoveOpenings = (
   );
 
 /**
- * The colour of a known-next-move arrow — green, where the last-move arrow is
- * `MOVE_ARROW_COLOR`'s amber, so the two read as *what can follow* versus *what
- * was played* when both are on the board.
+ * The colour of a known-next-move arrow — solid green. The last move is not an
+ * arrow at all: it is the translucent square fill `LAST_MOVE_HIGHLIGHT` lays
+ * over its two squares, so the two read as *what can follow* (an arrow) versus
+ * *what was played* (a fill) when both are on the board.
  */
 export const KNOWN_MOVE_ARROW_COLOR = "#4caf50";
 

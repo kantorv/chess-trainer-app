@@ -96,7 +96,11 @@ describe("the shipped User PGNs catalog", () => {
     // 18 rosette chapters + 28 puzzle chapters + 9 annotated master games,
     // plus the Capablanca parts: 44 + 26 + 14 chapters once the ten king-less
     // diagrams are dropped — and the 169 chapters of the multi-study export.
-    expect(pgnCatalog.items).toHaveLength(55 + 84 + 169);
+    // Then the three repertoires (CTA-60, replaced in CTA-66): the 2.c3
+    // sampler's 14 lines across an unnumbered chapter and five `"N) "` ones,
+    // the one-tree example's single game, and the 13 flat lines of the 1.d4
+    // repertoire.
+    expect(pgnCatalog.items).toHaveLength(55 + 84 + 169 + (14 + 1 + 13));
     expect(pgnCatalog.items.every((item) => item.kind === "game")).toBe(true);
     // A game is not a position, so the projection the other two sections read is
     // empty for this one.

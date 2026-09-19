@@ -9,11 +9,14 @@ import Tabs from "@mui/material/Tabs";
 import Typography from "@mui/material/Typography";
 import RestartAltRoundedIcon from "@mui/icons-material/RestartAltRounded";
 import SportsEsportsRoundedIcon from "@mui/icons-material/SportsEsportsRounded";
+import BookmarkAddRoundedIcon from "@mui/icons-material/BookmarkAddRounded";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import BoardControls from "../../shared/BoardControls";
 import CurrentOpening from "../../shared/CurrentOpening";
 import VariationTree from "../analysis/VariationTree";
+import { useOpeningFolders } from "./saved/useOpeningFolders";
+import SaveOpeningDialog from "./SaveOpeningDialog";
 import type { OpeningsState } from "./useOpenings";
 
 /**
@@ -55,6 +58,14 @@ function OpeningsPanel({
 }) {
   const { t } = useTranslation();
   const [tab, setTab] = useState<TabId>("nextMoves");
+  const [saveOpen, setSaveOpen] = useState(false);
+
+  /*
+    The folders, for the save dialog's picker — the same `useSyncExternalStore`
+    binding the Saved openings screen reads, so a folder created there (or in
+    the dialog just below) is in this list the moment it exists.
+  */
+  const folders = useOpeningFolders();
 
   return (
     <Box
@@ -98,6 +109,15 @@ function OpeningsPanel({
           <Button
             size="small"
             variant="outlined"
+            startIcon={<BookmarkAddRoundedIcon fontSize="small" />}
+            data-testid="openings-save"
+            onClick={() => setSaveOpen(true)}
+          >
+            {t("openings.controls.save")}
+          </Button>
+          <Button
+            size="small"
+            variant="outlined"
             startIcon={<SportsEsportsRoundedIcon fontSize="small" />}
             data-testid="openings-play-from-here"
             onClick={onPlayFromHere}
@@ -115,6 +135,21 @@ function OpeningsPanel({
           </Button>
         </Box>
       </Box>
+
+      {/*
+        A reopened opening brings its note along. Shown read-only here — editing
+        a note happens on the Saved openings screen — and absent for anything
+        that was not reopened, so a fresh board carries no phantom caption.
+      */}
+      {state.note !== undefined && state.note !== "" && (
+        <Typography
+          variant="caption"
+          data-testid="openings-note"
+          sx={{ flexShrink: 0, color: "text.secondary" }}
+        >
+          {state.note}
+        </Typography>
+      )}
 
       <Tabs
         value={tab}
@@ -187,6 +222,13 @@ function OpeningsPanel({
         lastPly={state.lastPly}
         onSelectPly={state.goToPly}
         onFlip={state.flipBoard}
+      />
+
+      <SaveOpeningDialog
+        open={saveOpen}
+        folders={folders}
+        onSave={state.saveOpening}
+        onClose={() => setSaveOpen(false)}
       />
     </Box>
   );

@@ -1,7 +1,14 @@
 import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router";
+import { capturedSummaryOf } from "../../../lib/capturedPieces";
+import { initialFenOf } from "../../../lib/gameModel";
 import { parseFen } from "../../../lib/fen";
-import { MASK_PRESETS, maskedPieces, type PieceMask } from "../../../lib/pieceMask";
+import {
+  MASK_PRESETS,
+  isAnyMasked,
+  maskedPieces,
+  type PieceMask,
+} from "../../../lib/pieceMask";
 import { RightPanel } from "../../main/rightPanel";
 import EngineBoardSquare from "../../shared/EngineBoardSquare";
 import { usePlayWithEngine } from "../../engine/play/usePlayWithEngine";
@@ -79,13 +86,39 @@ function MaskedPlay() {
 
   const topLine = state.analysis.lines.find((line) => line !== undefined);
 
+  /*
+    The captured pieces for the ply on screen, exactly as `/engine/play` derives
+    them — the true position underneath is unchanged by the mask.
+  */
+  const captured = useMemo(
+    () =>
+      capturedSummaryOf(
+        state.game.moves.slice(0, state.ply),
+        initialFenOf(state.game),
+        state.fen,
+      ),
+    [state.game, state.ply, state.fen],
+  );
+
+  /*
+    The strips' icons wear the same costume the board does (`maskedPieces`),
+    and the material diff is hidden while anything is masked: it is derived
+    from the true types, and a live "+9" beside a board of pawns is exactly the
+    leak §13 of the masking technique forbids. The captured lists keep
+    rendering — as the drawn-as types, which say nothing the board does not.
+  */
+  const stripCaptured = useMemo(
+    () => (isAnyMasked(mask) ? { ...captured, materialDiff: 0 } : captured),
+    [captured, mask],
+  );
+
   return (
     <>
       <EngineBoardSquare
         id="masked-play"
         position={state.fen}
         orientation={state.orientation}
-        arrows={state.arrows}
+        squareStyles={state.squareStyles}
         allowDragging={
           state.isLive && !state.isEngineThinking && state.promotion === null
         }
@@ -93,6 +126,8 @@ function MaskedPlay() {
         boardOptions={{ pieces }}
         showEvalBar={state.showEvalBar}
         score={topLine?.score ?? null}
+        captured={stripCaptured}
+        capturedPieces={pieces}
         promotion={state.promotion}
         humanColor={state.humanColor}
         onResolvePromotion={state.resolvePromotion}

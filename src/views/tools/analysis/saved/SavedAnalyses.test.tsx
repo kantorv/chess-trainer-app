@@ -165,9 +165,24 @@ describe("Saved analyses — the list", () => {
     renderScreen();
 
     const row = screen.getByTestId("saved-analyses-item-a1");
-    expect(row).toHaveTextContent("3 moves");
-    expect(row).toHaveTextContent("2 variations");
+    expect(row).toHaveTextContent("2 moves");
+    expect(row).toHaveTextContent("1 variation");
     expect(row).toHaveTextContent("at ply 2");
+  });
+
+  it("counts a side line once no matter how many moves it runs to", () => {
+    saveAnalysis(
+      save("a1", [
+        [[], ["e4", "e5", "Nf3"]],
+        [["e4"], ["c5", "Nc3", "a6", "Bc4", "e6", "Qf3"]],
+      ]),
+    );
+
+    renderScreen();
+
+    expect(screen.getByTestId("saved-analyses-item-a1")).toHaveTextContent(
+      "1 variation",
+    );
   });
 
   it("says nothing about variations for a board with only one line", () => {
@@ -176,7 +191,7 @@ describe("Saved analyses — the list", () => {
     renderScreen();
 
     const row = screen.getByTestId("saved-analyses-item-a1");
-    expect(row).toHaveTextContent("2 moves");
+    expect(row).toHaveTextContent("1 move");
     expect(row).not.toHaveTextContent("variation");
     // Ply 0 is not a place the reader stopped at, it is where a board opens.
     expect(row).not.toHaveTextContent("at ply");
@@ -266,6 +281,16 @@ describe("Saved analyses — where a row goes", () => {
 
     expect(screen.queryByTestId("saved-analyses-item-a1")).not.toBeInTheDocument();
     expect(screen.getByTestId("saved-analyses-empty")).toBeInTheDocument();
+  });
+
+  it("offers a New button to the plain board view, with no query params", () => {
+    renderScreen();
+
+    // The board left the sidebar (CTA-58) — this button is how it is reached.
+    expect(screen.getByTestId("saved-analyses-new")).toHaveAttribute(
+      "href",
+      "/tools/analysis",
+    );
   });
 });
 

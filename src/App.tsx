@@ -1,5 +1,6 @@
 //import * as Sentry from "@sentry/react";
-import { createBrowserRouter, Navigate, RouterProvider, useLocation } from "react-router";
+import { lazy, Suspense, type ReactNode } from "react";
+import { createBrowserRouter, Navigate, RouterProvider, useLocation, type RouteObject } from "react-router";
 
 import { DefaultLayout } from './views/main/Layout';
 import { default as HomeScreen  } from './views/home/Main'
@@ -11,7 +12,13 @@ import { default as AnalysisBoardScreen  } from './views/tools/analysis/Main'
 import { default as SavedAnalysesScreen  } from './views/tools/analysis/saved/Main'
 import { default as BoardEditorScreen  } from './views/tools/editor/Main'
 import { default as OpeningsScreen  } from './views/tools/openings/Main'
+import { default as SavedOpeningsScreen  } from './views/tools/openings/saved/Main'
 import { default as UserPgnsScreen  } from './views/pgn/Main'
+import { default as RepertoiresScreen  } from './views/repertoires/RepertoiresMain'
+import { default as RepertoireUploadScreen  } from './views/repertoires/RepertoireUploadMain'
+import { default as RepertoireBoardScreen  } from './views/repertoires/RepertoireBoardMain'
+import { default as RepertoireSettingsScreen  } from './views/repertoires/RepertoireSettingsScreenMain'
+import { default as RepertoireGameScreen  } from './views/repertoires/RepertoireGameMain'
 
 
 /**
@@ -25,6 +32,54 @@ export function LegacyPgnRedirect() {
   const rest = location.pathname.replace(/^\/pgn(?=\/|$)/, "");
   return <Navigate to={`/library${rest}${location.search}${location.hash}`} replace />;
 }
+
+/**
+ * Back-compat for the pre-CTA-39 `/tools/openings` URL. The Openings screen now
+ * lives at `/openings` (a top-level folder of its own), so a bookmarked or
+ * shared `/tools/openings` link (with its query string, e.g. `?fen=`) redirects
+ * there. `replace` so it does not leave the dead URL in history.
+ */
+export function ToolsOpeningsRedirect() {
+  const location = useLocation();
+  return <Navigate to={`/openings${location.search}${location.hash}`} replace />;
+}
+
+/**
+ * The **Development** section's routes (CTA-60) — the five boards composed from
+ * the unified board core (`.claude/rules/chessboard-v2.md`).
+ *
+ * Dev-only, and this array is the whole of the gate. Two things make it
+ * provable rather than hopeful:
+ *
+ * - `import.meta.env.DEV` is replaced by the literal `false` in a production
+ *   build, so the conditional below is dead code;
+ * - every screen is reached through `lazy(() => import(…))` rather than a
+ *   static import at the top of this file, so with the branch dead there is no
+ *   reference to `views/dev/` left for rollup to keep — no dev chunk is
+ *   emitted at all, where a static import would have been bundled whether the
+ *   route existed or not.
+ *
+ * `Suspense` is required by `lazy`, and a board screen resolves from the same
+ * dev server in a frame, so the fallback is deliberately nothing.
+ */
+const devScreen = (load: Parameters<typeof lazy>[0]): ReactNode => {
+  const Screen = lazy(load);
+  return (
+    <Suspense fallback={null}>
+      <Screen />
+    </Suspense>
+  );
+};
+
+const devRoutes: RouteObject[] = import.meta.env.DEV
+  ? [
+      { path: "/dev/analysis", element: devScreen(() => import("./views/dev/analysis/Main")) },
+      { path: "/dev/play", element: devScreen(() => import("./views/dev/play/Main")) },
+      { path: "/dev/masked", element: devScreen(() => import("./views/dev/masked/Main")) },
+      { path: "/dev/openings", element: devScreen(() => import("./views/dev/openings/Main")) },
+      { path: "/dev/repertoire", element: devScreen(() => import("./views/dev/repertoire/Main")) },
+    ]
+  : [];
 
 const routes = createBrowserRouter(
 
@@ -77,8 +132,49 @@ const routes = createBrowserRouter(
           element: <BoardEditorScreen />
         },
         {
-          path: "/tools/openings",
+          path: "/openings",
           element: <OpeningsScreen />
+        },
+        // The reader's own saved openings, kept in `localStorage`
+        // (`lib/savedOpeningStore.ts`). The Saved analyses screen's counterpart,
+        // and a screen rather than a library section for the same reason: these
+        // are this app's own output, so there is no catalog to nest.
+        {
+          path: "/openings/saved",
+          element: <SavedOpeningsScreen />
+        },
+        // The reader's own repertoires (CTA-61), kept in `localStorage`
+        // (`lib/savedRepertoireStore.ts`): the list, the screen one is brought
+        // in on, and the v2 board one is read on. `new` is a static segment, so
+        // it ranks above `:id` whatever the order here.
+        {
+          path: "/repertoires",
+          element: <RepertoiresScreen />
+        },
+        {
+          path: "/repertoires/new",
+          element: <RepertoireUploadScreen />
+        },
+        {
+          path: "/repertoires/:id",
+          element: <RepertoireBoardScreen />
+        },
+        // A repertoire's title, description and main color (and what comes next).
+        {
+          path: "/repertoires/:id/settings",
+          element: <RepertoireSettingsScreen />
+        },
+        // Its games (CTA-63): `end` (Get to the end) and `backtrack`. The
+        // same player the repertoire's own view is, with a game's rules; an
+        // unknown game is the view's own miss.
+        {
+          path: "/repertoires/:id/games/:game",
+          element: <RepertoireGameScreen />
+        },
+        // Pre-CTA-39 the Openings screen lived under `/tools`. Old links redirect.
+        {
+          path: "/tools/openings",
+          element: <ToolsOpeningsRedirect />
         },
         // The Library section. One splat route, over content that is not a JSON
         // file at all: the folders are the `.pgn` files under `src/data/pgn/`
@@ -94,7 +190,9 @@ const routes = createBrowserRouter(
         {
           path: "/pgn/*",
           element: <LegacyPgnRedirect />
-        }
+        },
+        // The Development section — dev-only; see `devRoutes` above.
+        ...devRoutes
 
       ]
     }

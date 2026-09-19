@@ -4,9 +4,9 @@ import {
   EVAL_BAR_MARGIN,
   evalBarFraction,
   formatScore,
-  numberedVariation,
   pvToSan,
   scoreFromUci,
+  variationNumbering,
   type Score,
 } from "./engineAnalysis";
 
@@ -150,25 +150,27 @@ describe("pvToSan", () => {
   });
 });
 
-describe("numberedVariation", () => {
+describe("variationNumbering", () => {
   it("numbers a line that starts on White's move", () => {
-    expect(numberedVariation(DEFAULT_POSITION, ["e4", "e5", "Nf3"])).toBe(
-      "1. e4 e5 2. Nf3",
-    );
+    expect(variationNumbering(DEFAULT_POSITION, 3)).toStrictEqual([
+      "1. ",
+      "",
+      "2. ",
+    ]);
   });
 
   it("opens with an ellipsis when the line starts on Black's move", () => {
     const blackToMove =
       "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1";
-    expect(numberedVariation(blackToMove, ["e5", "Nf3"])).toBe("1... e5 2. Nf3");
+    expect(variationNumbering(blackToMove, 2)).toStrictEqual(["1... ", "2. "]);
   });
 
   it("starts from the position's own move number, not from 1", () => {
     const late = "8/5k2/8/8/8/6K1/6P1/8 w - - 0 24";
-    expect(numberedVariation(late, ["Kf3", "Ke6"])).toBe("24. Kf3 Ke6");
+    expect(variationNumbering(late, 2)).toStrictEqual(["24. ", ""]);
   });
 
   it("is empty for an empty line", () => {
-    expect(numberedVariation(DEFAULT_POSITION, [])).toBe("");
+    expect(variationNumbering(DEFAULT_POSITION, 0)).toStrictEqual([]);
   });
 });

@@ -1,5 +1,6 @@
 import { sameAnalysisSettings } from "./analysisSettings";
 import type { LibraryCatalog } from "./libraryCatalog";
+import { recordStore } from "./recordStore";
 import {
   savedAnalysisCatalogOf,
   savedAnalysisFrom,
@@ -7,24 +8,21 @@ import {
 } from "./savedAnalyses";
 
 /**
- * Where the reader's analysis boards are kept: one `localStorage` key, holding a
- * JSON array of {@link SavedAnalysis}, newest first.
+ * Where the reader's analysis boards are kept: one `localStorage` key, holding
+ * a JSON array of {@link SavedAnalysis}, newest first.
  *
  * The store half of [`savedAnalyses.ts`](./savedAnalyses.ts), and
- * [`savedGameStore.ts`](./savedGameStore.ts) again — a versioned key, a revision
- * stamp so a snapshot is cheap, non-throwing reads and writes, an idempotent
- * write because the writer is an effect, and a cap so a store written on every
- * move cannot fill the origin's quota. That module carries the reasoning for all
- * of it and it is not repeated here; the two are separate stores rather than one
- * because a saved game and a saved analysis are different records, resumed on
- * different screens, and neither should push the other off the end of a list.
+ * [`savedGameStore.ts`](./savedGameStore.ts) again, built over the shared
+ * [`recordStore.ts`](./recordStore.ts) scaffolding — which owns the
+ * non-throwing read, the revision-stamped snapshot and the `storage`-event
+ * subscription, and carries the reasoning for all of it. The two are separate
+ * stores rather than one because a saved game and a saved analysis are
+ * different records, resumed on different screens, and neither should push the
+ * other off the end of a list.
  */
 
 /** The `localStorage` key. Versioned, so a future shape change is a new key. */
 export const SAVED_ANALYSES_STORAGE_KEY = "chessapp.savedAnalyses.v1";
-
-/** Where the revision is stamped — a few bytes, read on every snapshot. */
-export const SAVED_ANALYSES_REVISION_KEY = `${SAVED_ANALYSES_STORAGE_KEY}.rev`;
 
 /**
  * How many analyses are kept.
@@ -39,95 +37,19 @@ export const MAX_SAVED_ANALYSES = 30;
 /** What went wrong with a write. One case, but named rather than boolean. */
 export type SavedAnalysisProblem = "storage";
 
-const EMPTY: readonly SavedAnalysis[] = [];
-
-const listeners = new Set<() => void>();
-
-/** Cached parse, and the revision it was read at. `undefined` = never read. */
-let lastRevision: string | null | undefined;
-let cached: readonly SavedAnalysis[] = EMPTY;
-
-const read = (key: string): string | null => {
-  try {
-    return localStorage.getItem(key);
-  } catch {
-    return null;
-  }
-};
-
-const parse = (raw: string | null): readonly SavedAnalysis[] => {
-  if (raw === null || raw.trim() === "") return EMPTY;
-  try {
-    const value: unknown = JSON.parse(raw);
-    if (!Array.isArray(value)) return EMPTY;
-    const rows = value
-      .map(savedAnalysisFrom)
-      .filter((row): row is SavedAnalysis => row !== undefined);
-    return rows.length === 0 ? EMPTY : rows;
-  } catch {
-    return EMPTY;
-  }
-};
+const analyses = recordStore<SavedAnalysis>(
+  SAVED_ANALYSES_STORAGE_KEY,
+  savedAnalysisFrom,
+);
 
 /** The saved analyses, newest first. Stable between changes. */
-export const savedAnalysesSnapshot = (): readonly SavedAnalysis[] => {
-  const revision = read(SAVED_ANALYSES_REVISION_KEY);
-  if (revision !== lastRevision) {
-    lastRevision = revision;
-    cached = parse(read(SAVED_ANALYSES_STORAGE_KEY));
-  }
-  return cached;
-};
-
-const emit = () => {
-  for (const listener of listeners) listener();
-};
-
-const onStorageEvent = (event: StorageEvent) => {
-  // `key === null` is a `clear()` from another tab, which affects us too.
-  if (
-    event.key === null ||
-    event.key === SAVED_ANALYSES_STORAGE_KEY ||
-    event.key === SAVED_ANALYSES_REVISION_KEY
-  ) {
-    emit();
-  }
-};
+export const savedAnalysesSnapshot = analyses.snapshot;
 
 /** Subscribe to changes — this tab's writes, and other tabs' through `storage`. */
-export const subscribeSavedAnalyses = (onChange: () => void): (() => void) => {
-  listeners.add(onChange);
+export const subscribeSavedAnalyses = analyses.subscribe;
 
-  if (listeners.size === 1 && typeof window !== "undefined") {
-    window.addEventListener("storage", onStorageEvent);
-  }
-
-  return () => {
-    listeners.delete(onChange);
-    if (listeners.size === 0 && typeof window !== "undefined") {
-      window.removeEventListener("storage", onStorageEvent);
-    }
-  };
-};
-
-/** Bumped on every write, so a snapshot can tell "changed" from "unchanged". */
-let writes = 0;
-
-/** Write the list, or say why it could not be written. Never throws. */
-const write = (
-  analyses: readonly SavedAnalysis[],
-): SavedAnalysisProblem | undefined => {
-  try {
-    localStorage.setItem(SAVED_ANALYSES_STORAGE_KEY, JSON.stringify(analyses));
-    // After the data, so a revision never claims a write that did not land.
-    writes += 1;
-    localStorage.setItem(SAVED_ANALYSES_REVISION_KEY, `${Date.now()}-${writes}`);
-  } catch {
-    return "storage";
-  }
-  emit();
-  return undefined;
-};
+/** The store's write — every operation below funnels through it. */
+const write = analyses.write;
 
 /** Whether two records would restore the same screen. */
 const unchanged = (a: SavedAnalysis, b: SavedAnalysis): boolean =>
