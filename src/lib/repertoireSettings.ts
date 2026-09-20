@@ -1,8 +1,9 @@
 /**
  * **A saved repertoire's settings** — what the reader can say about a
  * repertoire beyond its text: a description, the side it is played from,
- * whether its board draws the next-move arrows, and whether it is protected
- * from being changed.
+ * whether its board draws the next-move arrows (and colours them by play
+ * chance where a branch is marked), and whether it is protected from being
+ * changed.
  *
  * One object on the record (`SavedRepertoire.settings`), read back through
  * {@link repertoireSettingsFrom}, which fills **each field on its own** from
@@ -50,6 +51,16 @@ export type RepertoireSettings = {
    */
   showArrows: boolean;
   /**
+   * Whether the repertoire's own view opens **colouring the next-move arrows
+   * by play chance** (CTA-71) — green for a move the trainer almost always
+   * plays, yellow for one it almost never does — at the branches that carry
+   * explicit `prc` marks (`lib/playChance.ts`); unmarked branches keep the
+   * green-and-blue pair whatever this says. Seeded into the player's Settings
+   * tab as a session switch beside the arrows one; the games see neither,
+   * since a drill must not show the answer's odds.
+   */
+  chanceArrows: boolean;
+  /**
    * Whether the repertoire is **protected** from its own board's "Update"
    * (CTA-63): changes made on it can still be saved as a copy, but writing
    * them into this record asks the reader to switch protection off in its
@@ -64,6 +75,7 @@ export const DEFAULT_REPERTOIRE_SETTINGS: RepertoireSettings = {
   description: "",
   color: "white",
   showArrows: true,
+  chanceArrows: false,
   protected: true,
 };
 
@@ -87,6 +99,10 @@ export const repertoireSettingsFrom = (value: unknown): RepertoireSettings => {
       typeof row.showArrows === "boolean"
         ? row.showArrows
         : DEFAULT_REPERTOIRE_SETTINGS.showArrows,
+    chanceArrows:
+      typeof row.chanceArrows === "boolean"
+        ? row.chanceArrows
+        : DEFAULT_REPERTOIRE_SETTINGS.chanceArrows,
     protected:
       typeof row.protected === "boolean"
         ? row.protected

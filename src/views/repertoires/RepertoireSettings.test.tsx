@@ -88,6 +88,17 @@ describe("a repertoire's settings screen", () => {
     await waitFor(() => expect(boardOptions().arrows).toEqual([]));
   });
 
+  it("keeps whether the board colours the arrows by play chance, off by default", async () => {
+    store("a");
+    renderSection("/repertoires/a/settings");
+    const toggle = screen.getByTestId("repertoire-settings-chance-arrows");
+    expect(toggle).not.toBeChecked();
+
+    await userEvent.click(toggle);
+    await userEvent.click(screen.getByTestId("repertoire-settings-save"));
+    expect(findSavedRepertoire("a")?.settings.chanceArrows).toBe(true);
+  });
+
   it("protects a repertoire by default, and saves the reader's no", async () => {
     store("a");
     renderSection("/repertoires/a/settings");

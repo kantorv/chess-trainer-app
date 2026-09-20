@@ -44,11 +44,51 @@ export const HOVERED_NEXT_MOVE_ARROW_COLOR = "#f44336";
 export const REQUIRED_MOVE_ARROW_COLOR = "#9c27b0";
 
 /**
+ * The **rare** end of the play-chance gradient (CTA-71): the colour of a move
+ * the trainer almost never plays. The common end is
+ * {@link NEXT_MOVE_ARROW_COLOR} itself, so the gradient runs yellow→green and
+ * the "the move to play" colour stays the one a reader already knows.
+ */
+export const RARE_NEXT_MOVE_ARROW_COLOR = "#ffeb3b";
+
+/** `#rrggbb` apart into its three channels — the gradient's one parser. */
+const channelsOf = (hex: string): [number, number, number] => [
+  parseInt(hex.slice(1, 3), 16),
+  parseInt(hex.slice(3, 5), 16),
+  parseInt(hex.slice(5, 7), 16),
+];
+
+/**
+ * A move's colour on the play-chance gradient (CTA-71): green at `1`, a move
+ * the trainer almost always plays; yellow ({@link RARE_NEXT_MOVE_ARROW_COLOR})
+ * at `0`. A straight interpolation per channel between the two ends — a
+ * chance is a share of a whole, so the halfway colour is the halfway chance,
+ * not some other curve's. `chance` outside 0–1 is clamped rather than trusted.
+ */
+export const chanceArrowColor = (chance: number): string => {
+  const at = Math.min(1, Math.max(0, chance));
+  const [r1, g1, b1] = channelsOf(RARE_NEXT_MOVE_ARROW_COLOR);
+  const [r2, g2, b2] = channelsOf(NEXT_MOVE_ARROW_COLOR);
+  const channel = (from: number, to: number) =>
+    Math.round(from + (to - from) * at)
+      .toString(16)
+      .padStart(2, "0");
+  return `#${channel(r1, r2)}${channel(g1, g2)}${channel(b1, b2)}`;
+};
+
+/**
  * The arrows for the continuations of the position on screen — the whole
  * external set, since the board never clears `options.arrows` itself
  * (`chessboard.md` §3.4). `nodes[0]` is the mainline and gets
  * {@link NEXT_MOVE_ARROW_COLOR}; the rest are side lines. A hovered
  * continuation takes {@link HOVERED_NEXT_MOVE_ARROW_COLOR} whichever it is.
+ *
+ * The third argument is the **opt-in play-chance gradient** (CTA-71): each
+ * continuation's chance, 0–1, in `nodes` order — pass it only where a branch
+ * carries an explicit `prc` mark, and every arrow takes
+ * {@link chanceArrowColor} of its move's chance. Without the argument, or
+ * where an entry is `undefined`, the green/blue pair stands — so every
+ * existing caller keeps today's colours until it asks for the gradient.
  *
  * The one place the v2 boards build their next-move arrows (CTA-63). The
  * shipped Analysis Board keeps its own copy — the shipped board screens are
@@ -57,6 +97,7 @@ export const REQUIRED_MOVE_ARROW_COLOR = "#9c27b0";
 export const nextMoveArrowsOf = (
   nodes: readonly VariationNode[],
   hoveredId: string | null = null,
+  chances?: readonly number[],
 ): Arrow[] =>
   nodes.map((node, index) => ({
     startSquare: node.from,
@@ -64,7 +105,9 @@ export const nextMoveArrowsOf = (
     color:
       node.id === hoveredId
         ? HOVERED_NEXT_MOVE_ARROW_COLOR
-        : index === 0
-          ? NEXT_MOVE_ARROW_COLOR
-          : SIDELINE_NEXT_MOVE_ARROW_COLOR,
+        : chances?.[index] !== undefined
+          ? chanceArrowColor(chances[index])
+          : index === 0
+            ? NEXT_MOVE_ARROW_COLOR
+            : SIDELINE_NEXT_MOVE_ARROW_COLOR,
   }));

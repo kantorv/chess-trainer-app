@@ -38,6 +38,7 @@ import {
 } from "../../lib/gameTree";
 import { annotationsAt } from "../../lib/moveAnnotations";
 import { downloadPgn } from "../../lib/pgnExport";
+import { playChances, playChanceOf } from "../../lib/playChance";
 import { atParamOf, nodeAtParam, REPERTOIRE_AT_PARAM } from "../../lib/repertoireLink";
 import { slugify } from "../../lib/pgnLibrary";
 import type { RepertoireGameId } from "../../lib/repertoireGames";
@@ -381,6 +382,11 @@ function RepertoirePlayer({
   const [showArrows, setShowArrows] = useState(
     game === undefined && saved.settings.showArrows,
   );
+  // The play-chance gradient the same way: a session switch seeded from the
+  // setting, and off in a game — a drill must not show the answer's odds.
+  const [chanceArrows, setChanceArrows] = useState(
+    game === undefined && saved.settings.chanceArrows,
+  );
   const [hovered, setHovered] = useState<VariationNode | null>(null);
   const continuations = useMemo(
     () =>
@@ -389,6 +395,18 @@ function RepertoirePlayer({
         : (findNode(core.tree, core.nodeId)?.children ?? []),
     [core.tree, core.nodeId],
   );
+  // The chances the gradient colours the arrows by, handed to
+  // `nextMoveArrowsOf` only where the branch on screen carries an explicit
+  // `prc` mark — with none anywhere the green/blue pair stands, which is
+  // what the unmarked positions keep. Read off the session's tree, so a
+  // chance changed in the dialog counts before it is saved — the trainer's
+  // own rule.
+  const chances = useMemo(() => {
+    if (!chanceArrows || !continuations.some((node) => playChanceOf(node) !== undefined)) {
+      return undefined;
+    }
+    return playChances(continuations);
+  }, [chanceArrows, continuations]);
 
   // A required move is an instruction, so it is drawn whatever the switch says.
   const arrows: Arrow[] =
@@ -399,7 +417,7 @@ function RepertoirePlayer({
           color: REQUIRED_MOVE_ARROW_COLOR,
         }))
       : showArrows
-        ? nextMoveArrowsOf(continuations, hovered?.id ?? null)
+        ? nextMoveArrowsOf(continuations, hovered?.id ?? null, chances)
         : hovered !== null
           ? nextMoveArrowsOf([hovered], hovered.id)
           : [];
@@ -884,6 +902,8 @@ function RepertoirePlayer({
                 onAutoplayChange={changeAutoplay}
                 showArrows={showArrows}
                 onShowArrowsChange={setShowArrows}
+                chanceArrows={game === undefined ? chanceArrows : undefined}
+                onChanceArrowsChange={setChanceArrows}
                 engineOn={engineOn}
                 onEngineOnChange={setEngineOn}
               />
@@ -998,8 +1018,9 @@ function SwitchSetting({
 
 /**
  * The Settings tab: the session's knobs — side, Autoplay (the player's only),
- * arrows, engine — one labelled row each. Presentational: the screen owns the
- * state, since changing side restarts the session.
+ * arrows, their play-chance colouring (the player's only too), engine — one
+ * labelled row each. Presentational: the screen owns the state, since
+ * changing side restarts the session.
  */
 function PlaySettings({
   id,
@@ -1009,6 +1030,8 @@ function PlaySettings({
   onAutoplayChange,
   showArrows,
   onShowArrowsChange,
+  chanceArrows,
+  onChanceArrowsChange,
   engineOn,
   onEngineOnChange,
 }: {
@@ -1020,6 +1043,9 @@ function PlaySettings({
   onAutoplayChange: (next: boolean) => void;
   showArrows: boolean;
   onShowArrowsChange: (next: boolean) => void;
+  /** `undefined` where there is no switch — a game must not show the odds. */
+  chanceArrows: boolean | undefined;
+  onChanceArrowsChange: (next: boolean) => void;
   engineOn: boolean;
   onEngineOnChange: (next: boolean) => void;
 }) {
@@ -1069,6 +1095,15 @@ function PlaySettings({
         label={t("repertoires.play.arrows")}
         help={t("repertoires.play.arrowsHelp")}
       />
+      {chanceArrows !== undefined && (
+        <SwitchSetting
+          testId={`${id}-chance-arrows`}
+          checked={chanceArrows}
+          onChange={onChanceArrowsChange}
+          label={t("repertoires.play.chanceArrows")}
+          help={t("repertoires.play.chanceArrowsHelp")}
+        />
+      )}
       <SwitchSetting
         testId={`${id}-setting-engine`}
         checked={engineOn}

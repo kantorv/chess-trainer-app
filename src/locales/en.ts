@@ -972,6 +972,9 @@ const en = {
       showArrows: "Show next-move arrows",
       showArrowsHelp:
         "The board opens with arrows for the moves that follow the position on it: the main line in green, side lines in blue. You can still switch them for a session. Games always start without them.",
+      chanceArrows: "Colour arrows by play chance",
+      chanceArrowsHelp:
+        "The board opens colouring those arrows by how often the trainer plays each move — green for almost always, yellow for rarely — at the branches that carry play-chance marks. Unmarked branches keep the green and blue. You can still switch this for a session. Games always start without it.",
       white: "White",
       black: "Black",
       save: "Save",
@@ -1055,6 +1058,10 @@ const en = {
       arrows: "Show next-move arrows",
       arrowsHelp:
         "Arrows for the moves that follow the position on the board: the main line in green, side lines in blue.",
+      /** The switch that colours them by play chance — off by default. */
+      chanceArrows: "Colour arrows by play chance",
+      chanceArrowsHelp:
+        "Where the position's branch carries play-chance marks, each arrow takes a colour by how often the trainer plays that move: green for almost always, yellow for rarely.",
       autoplay: "Autoplay",
       autoplayHelp:
         "The trainer answers your moves from the repertoire, picking among its lines at random. Off, you move both sides.",
