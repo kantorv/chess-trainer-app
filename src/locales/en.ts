@@ -972,9 +972,9 @@ const en = {
       showArrows: "Show next-move arrows",
       showArrowsHelp:
         "The board opens with arrows for the moves that follow the position on it: the main line in green, side lines in blue. You can still switch them for a session. Games always start without them.",
-      chanceArrows: "Colour arrows by play chance",
+      chanceArrows: "Show play chances",
       chanceArrowsHelp:
-        "The board opens colouring those arrows by how often the trainer plays each move — green for almost always, yellow for rarely — at the branches that carry play-chance marks. Unmarked branches keep the green and blue. You can still switch this for a session. Games always start without it.",
+        "At the branches that carry play-chance marks, each arrow is coloured by how often the trainer plays its move — green for the most likely, amber for a real alternative, gray for almost never — and the moves bar prints each move's percentage. Unmarked branches keep the green and blue. You can still switch this for a session. Games always start without it.",
       white: "White",
       black: "Black",
       save: "Save",
@@ -1058,10 +1058,10 @@ const en = {
       arrows: "Show next-move arrows",
       arrowsHelp:
         "Arrows for the moves that follow the position on the board: the main line in green, side lines in blue.",
-      /** The switch that colours them by play chance — off by default. */
-      chanceArrows: "Colour arrows by play chance",
+      /** The switch that shows the play chances — off by default. */
+      chanceArrows: "Show play chances",
       chanceArrowsHelp:
-        "Where the position's branch carries play-chance marks, each arrow takes a colour by how often the trainer plays that move: green for almost always, yellow for rarely.",
+        "Where the position's branch carries play-chance marks: the arrows take their colours by how often the trainer plays each move — green for the most likely, amber for a real alternative, gray for almost never — and the bar prints each move's percentage.",
       autoplay: "Autoplay",
       autoplayHelp:
         "The trainer answers your moves from the repertoire, picking among its lines at random. Off, you move both sides.",

@@ -44,36 +44,61 @@ export const HOVERED_NEXT_MOVE_ARROW_COLOR = "#f44336";
 export const REQUIRED_MOVE_ARROW_COLOR = "#9c27b0";
 
 /**
- * The **rare** end of the play-chance gradient (CTA-71): the colour of a move
- * the trainer almost never plays. The common end is
- * {@link NEXT_MOVE_ARROW_COLOR} itself, so the gradient runs yellow→green and
- * the "the move to play" colour stays the one a reader already knows.
+ * The colour of a move the trainer **almost never** plays (CTA-71) — the
+ * bottom of the three play-chance tiers. Gray, twice over: red is taken — it
+ * is the hovered colour above — and red would read as forbidden, which is
+ * false; the trainer does play this move, just rarely. Gray reads as inert.
  */
-export const RARE_NEXT_MOVE_ARROW_COLOR = "#ffeb3b";
-
-/** `#rrggbb` apart into its three channels — the gradient's one parser. */
-const channelsOf = (hex: string): [number, number, number] => [
-  parseInt(hex.slice(1, 3), 16),
-  parseInt(hex.slice(3, 5), 16),
-  parseInt(hex.slice(5, 7), 16),
-];
+export const RARE_NEXT_MOVE_ARROW_COLOR = "#757575";
 
 /**
- * A move's colour on the play-chance gradient (CTA-71): green at `1`, a move
- * the trainer almost always plays; yellow ({@link RARE_NEXT_MOVE_ARROW_COLOR})
- * at `0`. A straight interpolation per channel between the two ends — a
- * chance is a share of a whole, so the halfway colour is the halfway chance,
- * not some other curve's. `chance` outside 0–1 is clamped rather than trusted.
+ * The colour of a move the trainer plays **sometimes** — a real alternative,
+ * one the reader will meet in a session. Amber rather than the pure yellow
+ * this replaced: the light squares are cream (`#f0d9b5`), and a pure yellow
+ * washes out on them.
  */
-export const chanceArrowColor = (chance: number): string => {
-  const at = Math.min(1, Math.max(0, chance));
-  const [r1, g1, b1] = channelsOf(RARE_NEXT_MOVE_ARROW_COLOR);
-  const [r2, g2, b2] = channelsOf(NEXT_MOVE_ARROW_COLOR);
-  const channel = (from: number, to: number) =>
-    Math.round(from + (to - from) * at)
-      .toString(16)
-      .padStart(2, "0");
-  return `#${channel(r1, r2)}${channel(g1, g2)}${channel(b1, b2)}`;
+export const SOMETIMES_NEXT_MOVE_ARROW_COLOR = "#ffa000";
+
+/**
+ * The lowest chance that still counts as "a move the reader will really
+ * meet" (CTA-71): at it and above a move is amber, under it gray. A taste
+ * dial — one constant, and the tier line moves with it.
+ */
+export const SOMETIMES_MOVE_MIN_CHANCE = 0.15;
+
+/**
+ * The colour of each move's arrow by its play chance (CTA-71) — three named
+ * tiers, in `chances` order: **green** ({@link NEXT_MOVE_ARROW_COLOR}) for
+ * the move the trainer plays most, **amber**
+ * ({@link SOMETIMES_NEXT_MOVE_ARROW_COLOR}) for a real alternative, **gray**
+ * ({@link RARE_NEXT_MOVE_ARROW_COLOR}) for one it almost never plays. An
+ * `undefined` entry stays `undefined`, so a move with no chance to read
+ * keeps its structural colour.
+ *
+ * Deliberately tiers rather than a gradient, and deliberately rank-based.
+ * The question at a fork is categorical — *which* move gets played — and the
+ * eye cannot rank the near-identical yellows a green→yellow ramp puts at its
+ * low end (the reader's own verdict on the first cut of this feature). So
+ * the most likely move is green even at a 60% fork, where a value-scaled
+ * colour would be an undecided olive; and a tie gives both moves green,
+ * which is the true answer — either of these gets played. The three tiers
+ * differ in lightness as much as hue — amber light, green mid, gray dark —
+ * so they stay readable in grayscale and under the red-green colour
+ * blindness a reader in eight has.
+ */
+export const chanceArrowColors = (
+  chances: readonly (number | undefined)[],
+): (string | undefined)[] => {
+  const highest = Math.max(
+    ...chances.filter((chance): chance is number => chance !== undefined),
+  );
+  return chances.map((chance) => {
+    if (chance === undefined) return undefined;
+    if (chance >= highest) return NEXT_MOVE_ARROW_COLOR;
+    return chance >= SOMETIMES_MOVE_MIN_CHANCE
+      ? SOMETIMES_NEXT_MOVE_ARROW_COLOR
+      : RARE_NEXT_MOVE_ARROW_COLOR;
+  });
 };
 
 /**
@@ -83,12 +108,12 @@ export const chanceArrowColor = (chance: number): string => {
  * {@link NEXT_MOVE_ARROW_COLOR}; the rest are side lines. A hovered
  * continuation takes {@link HOVERED_NEXT_MOVE_ARROW_COLOR} whichever it is.
  *
- * The third argument is the **opt-in play-chance gradient** (CTA-71): each
+ * The third argument is the **opt-in play-chance tiers** (CTA-71): each
  * continuation's chance, 0–1, in `nodes` order — pass it only where a branch
- * carries an explicit `prc` mark, and every arrow takes
- * {@link chanceArrowColor} of its move's chance. Without the argument, or
- * where an entry is `undefined`, the green/blue pair stands — so every
- * existing caller keeps today's colours until it asks for the gradient.
+ * carries an explicit `prc` mark, and every arrow takes the tier of its
+ * move's chance ({@link chanceArrowColors}). Without the argument, or where
+ * an entry is `undefined`, the green/blue pair stands — so every existing
+ * caller keeps today's colours until it asks for the tiers.
  *
  * The one place the v2 boards build their next-move arrows (CTA-63). The
  * shipped Analysis Board keeps its own copy — the shipped board screens are
@@ -97,17 +122,19 @@ export const chanceArrowColor = (chance: number): string => {
 export const nextMoveArrowsOf = (
   nodes: readonly VariationNode[],
   hoveredId: string | null = null,
-  chances?: readonly number[],
-): Arrow[] =>
-  nodes.map((node, index) => ({
+  chances?: readonly (number | undefined)[],
+): Arrow[] => {
+  const colors =
+    chances === undefined ? undefined : chanceArrowColors(chances);
+  return nodes.map((node, index) => ({
     startSquare: node.from,
     endSquare: node.to,
     color:
       node.id === hoveredId
         ? HOVERED_NEXT_MOVE_ARROW_COLOR
-        : chances?.[index] !== undefined
-          ? chanceArrowColor(chances[index])
-          : index === 0
+        : colors?.[index] ??
+          (index === 0
             ? NEXT_MOVE_ARROW_COLOR
-            : SIDELINE_NEXT_MOVE_ARROW_COLOR,
+            : SIDELINE_NEXT_MOVE_ARROW_COLOR),
   }));
+};

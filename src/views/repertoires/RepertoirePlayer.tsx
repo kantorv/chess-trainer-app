@@ -382,7 +382,7 @@ function RepertoirePlayer({
   const [showArrows, setShowArrows] = useState(
     game === undefined && saved.settings.showArrows,
   );
-  // The play-chance gradient the same way: a session switch seeded from the
+  // The play-chance tiers the same way: a session switch seeded from the
   // setting, and off in a game — a drill must not show the answer's odds.
   const [chanceArrows, setChanceArrows] = useState(
     game === undefined && saved.settings.chanceArrows,
@@ -395,12 +395,12 @@ function RepertoirePlayer({
         : (findNode(core.tree, core.nodeId)?.children ?? []),
     [core.tree, core.nodeId],
   );
-  // The chances the gradient colours the arrows by, handed to
-  // `nextMoveArrowsOf` only where the branch on screen carries an explicit
-  // `prc` mark — with none anywhere the green/blue pair stands, which is
-  // what the unmarked positions keep. Read off the session's tree, so a
-  // chance changed in the dialog counts before it is saved — the trainer's
-  // own rule.
+  // The chances the arrows are tiered and the bar's percentages print by,
+  // handed to `nextMoveArrowsOf` and the next-moves bar only where the branch
+  // on screen carries an explicit `prc` mark — with none anywhere the
+  // green/blue pair stands, which is what the unmarked positions keep. Read
+  // off the session's tree, so a chance changed in the dialog counts before
+  // it is saved — the trainer's own rule.
   const chances = useMemo(() => {
     if (!chanceArrows || !continuations.some((node) => playChanceOf(node) !== undefined)) {
       return undefined;
@@ -972,6 +972,7 @@ function RepertoirePlayer({
                   nodes={continuations}
                   onSelect={core.goToNode}
                   onHover={setHovered}
+                  chances={chances}
                 />
               ) : null}
             </>
