@@ -21,6 +21,7 @@ import {
 } from "../../lib/libraryCollections";
 import { peekShippedGames, peekShippedRows, shippedCollections } from "../../lib/shippedCollections";
 import { findSavedAnalysis, savedAnalysesSnapshot } from "../../lib/savedAnalysisStore";
+import { downloadPgn } from "../../lib/pgnExport";
 import AppThemeWithLang from "../../theme/AppThemeWithLang";
 import { boardOptions, FakeEngine } from "../dev/devTestHarness";
 import { RightPanelOutlet, RightPanelProvider } from "../main/rightPanel";
@@ -33,6 +34,12 @@ vi.mock("react-chessboard", async () => {
   const { reactChessboardMock } = await import("../dev/devTestHarness");
   return reactChessboardMock();
 });
+
+// The download is a blob URL in a browser; here, what it was handed.
+vi.mock("../../lib/pgnExport", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../lib/pgnExport")>()),
+  downloadPgn: vi.fn(() => true),
+}));
 
 vi.mock("../../lib/openings", async (importOriginal) => {
   const { openingsMock } = await import("../dev/devTestHarness");
@@ -93,6 +100,26 @@ const keep = async (name: string, games: string[]) => {
   return added.collection;
 };
 const upload = () => keep("Club games", GAMES);
+
+/** Type into one of the panel's autocompletes. */
+const typeInto = (testId: string, value: string) =>
+  fireEvent.change(within(screen.getByTestId(testId)).getByRole("combobox"), { target: { value } });
+
+/** The real 7,818-game fixture as an upload — its tags' rows (the chess.js pass would take a minute). */
+const keepCarlsen = async () => {
+  const reading = readCollectionText(
+    readFileSync(join(process.cwd(), "src/test/fixtures/pgn/Carlsen.pgn"), "utf8"),
+  );
+  if (!reading.ok) throw new Error("the fixture did not read");
+  const rows = reading.games.map((pgn): IndexedRow => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { number, ...row } = collectionRowOf(pgn, 0);
+    return row;
+  });
+  const added = await addCollection("Carlsen", reading.games, rows);
+  if (!("collection" in added)) throw new Error("not added");
+  return { games: reading.games, rows, id: added.collection.id };
+};
 
 /** Unmount what is on screen and mount another entry. */
 const cleanupAndMount = (entry: string) => {
@@ -247,8 +274,6 @@ describe("the table's filters", () => {
     '[Event "Autumn Cup"]\n[Date "2023.10"]\n[White "Ding"]\n[Black "Carlsen"]\n[Result "1/2-1/2"]\n[ECO "D37"]\n[Opening "Queen\'s Gambit"]\n\n1. d4 d5 1/2-1/2',
   ];
   const panel = () => within(screen.getByTestId("library-filters"));
-  const typeInto = (testId: string, value: string) =>
-    fireEvent.change(within(screen.getByTestId(testId)).getByRole("combobox"), { target: { value } });
 
   it("shows only the filters the collection's games can use", async () => {
     // Club games: players and results, one event, no dates, no openings.
@@ -309,19 +334,8 @@ describe("the table's filters", () => {
   });
 
   it("lists every opening of a real 7,818-game collection, ECO code first — not a first page", async () => {
-    const reading = readCollectionText(
-      readFileSync(join(process.cwd(), "src/test/fixtures/pgn/Carlsen.pgn"), "utf8"),
-    );
-    if (!reading.ok) throw new Error("the fixture did not read");
-    // The tags' rows: the chess.js pass would take a minute and adds nothing here.
-    const rows = reading.games.map((pgn): IndexedRow => {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { number, ...row } = collectionRowOf(pgn, 0);
-      return row;
-    });
-    const added = await addCollection("Carlsen", reading.games, rows);
-    if (!("collection" in added)) throw new Error("not added");
-    await mountTable(`/library/${added.collection.id}`);
+    const { rows, id } = await keepCarlsen();
+    await mountTable(`/library/${id}`);
 
     const expected = collectionFacetsOf(numberedRows(rows)).openings;
     const box = within(screen.getByTestId("library-filter-opening")).getByRole("combobox");
@@ -346,6 +360,59 @@ describe("the table's filters", () => {
     typeInto("library-filter-opening", "king's gambit");
     expect(rowNumbers().length).toBeGreaterThan(0);
     expect(screen.getByTestId("library-table-count")).toHaveTextContent(/of 211 games/);
+  });
+});
+
+describe("picking games to download", () => {
+  const RICH = [
+    '[Event "Spring Open"]\n[White "Carlsen"]\n[Black "Nepo"]\n[Result "1-0"]\n\n1. e4 e5 1-0',
+    '[Event "Spring Open"]\n[White "Nepo"]\n[Black "Carlsen"]\n[Result "0-1"]\n\n1. e4 c5 0-1',
+    '[Event "Autumn Cup"]\n[White "Ding"]\n[Black "Carlsen"]\n[Result "1/2-1/2"]\n\n1. d4 d5 1/2-1/2',
+  ];
+
+  beforeEach(() => vi.mocked(downloadPgn).mockClear());
+
+  it("picks every game the filters leave, on every page, and downloads them as one PGN", async () => {
+    const { games, rows, id } = await keepCarlsen();
+    await mountTable(`/library/${id}?opening=B9`);
+    const expected = filteredRows(numberedRows(rows), { text: "", result: "", opening: "B9" });
+    expect(expected.length).toBeGreaterThan(50);
+    // One page shows 50 of them; select-all takes them all.
+    expect(rowNumbers()).toHaveLength(50);
+    expect(screen.getByTestId("library-picks-download")).toBeDisabled();
+
+    fireEvent.click(within(screen.getByTestId("library-picks-select-all")).getByRole("checkbox"));
+    expect(screen.getByTestId("library-picks-selected-count")).toHaveTextContent(`${expected.length} selected`);
+    fireEvent.click(screen.getByTestId("library-picks-download"));
+
+    await waitFor(() => expect(downloadPgn).toHaveBeenCalledTimes(1));
+    const [stem, pgns] = vi.mocked(downloadPgn).mock.calls[0];
+    expect(stem).toBe(`carlsen-${expected.length}-games`);
+    // Collection order, each game exactly as the collection holds it.
+    expect(pgns).toEqual(expected.map((row) => games[row.number - 1]));
+  }, 60_000);
+
+  it("picks one game from its row without opening it, and keeps picks across filters", async () => {
+    const rich = await keep("Rich", RICH);
+    await mountTable(`/library/${rich.id}`);
+    fireEvent.click(within(screen.getByTestId("library-picks-row-3")).getByRole("checkbox"));
+    expect(where()).toBe(`/library/${rich.id}`);
+    expect(screen.getByTestId("library-picks-selected-count")).toHaveTextContent("1 selected");
+
+    // Filter to the Spring Open: select-all adds its two games to the pick.
+    typeInto("library-filter-event", "Spring Open");
+    fireEvent.click(await screen.findByRole("option", { name: "Spring Open" }));
+    expect(rowNumbers()).toEqual(["1", "2"]);
+    const selectAll = () => within(screen.getByTestId("library-picks-select-all")).getByRole("checkbox");
+    fireEvent.click(selectAll());
+    expect(screen.getByTestId("library-picks-selected-count")).toHaveTextContent("3 selected");
+    // Unticking takes out only the games shown.
+    fireEvent.click(selectAll());
+    expect(screen.getByTestId("library-picks-selected-count")).toHaveTextContent("1 selected");
+
+    fireEvent.click(selectAll());
+    fireEvent.click(screen.getByTestId("library-picks-download"));
+    await waitFor(() => expect(downloadPgn).toHaveBeenCalledWith("rich-3-games", RICH));
   });
 });
 

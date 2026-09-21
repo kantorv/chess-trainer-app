@@ -641,6 +641,12 @@ const he: typeof en = {
       download: "הורדת PGN",
       delete: "מחיקת האוסף",
       loading: "קוראים את האוסף…",
+      picks: {
+        selectAll: "בחירת כל המשחקים שהמסננים מציגים",
+        selected: "{{count}} נבחרו",
+        download: "הורדת הנבחרים כקובץ PGN אחד",
+        pick: "בחירת {{title}}",
+      },
       unreadable: "לא ניתן לקרוא את המשחק הזה — יש שגיאה במסעים שלו.",
       columns: {
         number: "#",

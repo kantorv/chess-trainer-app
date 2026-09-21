@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import Checkbox from "@mui/material/Checkbox";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
@@ -49,6 +50,7 @@ import {
 import { downloadPgn } from "../../lib/pgnExport";
 import { slugify } from "../../lib/pgnText";
 import { RightPanel } from "../main/rightPanel";
+import SavedListExportBar from "../shared/SavedListExportBar";
 import CollectionFilters from "./CollectionFilters";
 import LibraryMiss from "./LibraryMiss";
 import { loadCollectionGames, useCollectionRows } from "./useLibraryCollections";
@@ -62,6 +64,15 @@ import { loadCollectionGames, useCollectionRows } from "./useLibraryCollections"
  * event, dates, result (`CollectionFilters.tsx`; each shown only where the
  * collection has its field). A row opens that game on the Library's
  * analysis board.
+ *
+ * **Every row carries a checkbox**, and the top bar the saved lists' export
+ * bar (`SavedListExportBar`): its select-all works on **the rows the filters
+ * leave, on every page** — so filter, select all, download, and the file is
+ * the filtered batch — and adds them to the picks (unticking removes just
+ * those), while its chip counts every pick, whatever the filter now shows.
+ * The download is one `.pgn` of the picked games, in collection order. Picks
+ * are the screen's, not the URL's: a link carries the filter, not a hand-made
+ * selection.
  *
  * **The rows are the collection's index** (`lib/collectionIndex.ts`), read
  * whole — no game is parsed, or even fetched, to draw the table: a shipped
@@ -94,6 +105,8 @@ function CollectionTable({
   const location = useLocation();
   const [params, setParams] = useSearchParams();
   const [deleting, setDeleting] = useState(false);
+  /** The picked games, by number. */
+  const [picked, setPicked] = useState<ReadonlySet<number>>(() => new Set());
 
   const requestedSort = params.get("sort");
   const sort: CollectionColumn = isColumn(requestedSort) ? requestedSort : "number";
@@ -127,6 +140,34 @@ function CollectionTable({
       ),
     [rows, text, result, player, color, opening, event, from, to, sort, direction],
   );
+  const pickedShown = useMemo(() => shown.filter((row) => picked.has(row.number)).length, [shown, picked]);
+  const allShownPicked = shown.length > 0 && pickedShown === shown.length;
+  /** Select-all over the filtered rows: add them all, or — all picked already — take just them out. */
+  const toggleAllShown = () =>
+    setPicked((before) => {
+      const next = new Set(before);
+      for (const row of shown) {
+        if (allShownPicked) next.delete(row.number);
+        else next.add(row.number);
+      }
+      return next;
+    });
+  const togglePicked = (number: number) =>
+    setPicked((before) => {
+      const next = new Set(before);
+      if (!next.delete(number)) next.add(number);
+      return next;
+    });
+  const downloadPicked = async () => {
+    const games = await loadCollectionGames(collection);
+    if (games === null) return;
+    const numbers = [...picked].sort((a, b) => a - b);
+    downloadPgn(
+      `${slugify(collection.name) || "collection"}-${numbers.length}-games`,
+      numbers.map((number) => games[number - 1]).filter((pgn) => pgn !== undefined),
+    );
+  };
+
   const lastPage = Math.max(0, Math.ceil(shown.length / rowsPerPage) - 1);
   const page = Math.min(Math.max(0, Number(params.get("page")) || 0), lastPage);
   const pageRows = shown.slice(page * rowsPerPage, (page + 1) * rowsPerPage);
@@ -209,6 +250,16 @@ function CollectionTable({
                 : t("library.table.shown", { shown: shown.length, count: rows.length })}
             </Typography>
           </Box>
+          <SavedListExportBar
+            testIdPrefix="library-picks"
+            labelKey="library.table.picks"
+            checked={allShownPicked}
+            indeterminate={pickedShown > 0 && !allShownPicked}
+            onToggleAll={toggleAllShown}
+            selectedCount={picked.size}
+            onClearSelected={() => setPicked(new Set())}
+            onDownload={() => void downloadPicked()}
+          />
           <Tooltip title={t("library.table.download")}>
             <IconButton
               size="small"
@@ -252,6 +303,8 @@ function CollectionTable({
           <Table size="small" stickyHeader data-testid="library-table">
             <TableHead>
               <TableRow>
+                {/* The checkboxes' column: select-all is the export bar's. */}
+                <TableCell padding="checkbox" />
                 {COLLECTION_COLUMNS.map((column) => (
                   <TableCell
                     key={column}
@@ -279,6 +332,15 @@ function CollectionTable({
                   data-testid={`library-table-row-${row.number}`}
                   sx={{ cursor: "pointer" }}
                 >
+                  <TableCell padding="checkbox" onClick={(event) => event.stopPropagation()}>
+                    <Checkbox
+                      size="small"
+                      checked={picked.has(row.number)}
+                      onChange={() => togglePicked(row.number)}
+                      slotProps={{ input: { "aria-label": t("library.table.picks.pick", { title: gameTitleOf(row) }) } }}
+                      data-testid={`library-picks-row-${row.number}`}
+                    />
+                  </TableCell>
                   <TableCell sx={{ whiteSpace: "nowrap" }}>
                     {row.number}
                     {row.unreadable && (

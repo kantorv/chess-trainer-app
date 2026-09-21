@@ -892,6 +892,16 @@ const en = {
       download: "Download PGN",
       delete: "Delete collection",
       loading: "Reading the collection…",
+      /**
+       * The picks — a checkbox per row and the export bar in the top bar,
+       * whose select-all takes every game the filters leave, on every page.
+       */
+      picks: {
+        selectAll: "Select all games shown by the filters",
+        selected: "{{count}} selected",
+        download: "Download selected as one PGN",
+        pick: "Select {{title}}",
+      },
       /** The `#` cell's mark on a game the index could not parse. */
       unreadable: "This game could not be read — its moves have an error.",
       /** The column headers — `lib/libraryCollections.ts`'s `COLLECTION_COLUMNS`. */
