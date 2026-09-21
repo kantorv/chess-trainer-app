@@ -25,15 +25,11 @@ import {
 } from "../../../lib/savedOpeningStore";
 import {
   clearDevStores,
-  devSavedAnalysesSnapshot,
   devSavedGamesSnapshot,
   devSavedOpeningsSnapshot,
-  findDevSavedAnalysis,
   findDevSavedGame,
-  saveDevAnalysis,
   saveDevGame,
   saveDevOpening,
-  DEV_SAVED_ANALYSES_STORAGE_KEY,
   DEV_SAVED_GAMES_STORAGE_KEY,
   DEV_SAVED_OPENINGS_STORAGE_KEY,
   DEV_STORAGE_KEYS,
@@ -89,28 +85,17 @@ describe("the dev record stores", () => {
     }
     // And the pairing is deliberate, not accidentally overlapping.
     expect(DEV_SAVED_GAMES_STORAGE_KEY).not.toBe(SAVED_GAMES_STORAGE_KEY);
-    expect(DEV_SAVED_ANALYSES_STORAGE_KEY).not.toBe(SAVED_ANALYSES_STORAGE_KEY);
     expect(DEV_SAVED_OPENINGS_STORAGE_KEY).not.toBe(SAVED_OPENINGS_STORAGE_KEY);
   });
 
   it("writes a dev record where no shipped screen can see it", () => {
     saveDevGame(savedGameOf("dev-game", playedGame(), DEFAULT_ENGINE_SETTINGS));
-    saveDevAnalysis(
-      savedAnalysisOf(
-        "dev-analysis",
-        aTree(),
-        ["e4"],
-        DEFAULT_ANALYSIS_SETTINGS,
-        "white",
-      ),
-    );
     saveDevOpening(
       savedOpeningOf("dev-opening", aTree(), "white", "King's Pawn", null),
     );
 
-    // The dev side has all three.
+    // The dev side has both.
     expect(devSavedGamesSnapshot()).toHaveLength(1);
-    expect(devSavedAnalysesSnapshot()).toHaveLength(1);
     expect(devSavedOpeningsSnapshot()).toHaveLength(1);
 
     // The shipped side has none of them — this is the whole point.
@@ -187,20 +172,5 @@ describe("the dev record stores", () => {
 
     expect(devSavedGamesSnapshot()).toHaveLength(1);
     expect(findDevSavedGame("dev-game")?.pgn).toContain("e5");
-  });
-
-  it("keeps a reopened dev analysis findable by id", () => {
-    saveDevAnalysis(
-      savedAnalysisOf(
-        "dev-analysis",
-        aTree(),
-        ["e4"],
-        DEFAULT_ANALYSIS_SETTINGS,
-        "black",
-      ),
-    );
-
-    expect(findDevSavedAnalysis("dev-analysis")?.orientation).toBe("black");
-    expect(findDevSavedAnalysis("nothing")).toBeUndefined();
   });
 });

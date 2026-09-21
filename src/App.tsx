@@ -73,7 +73,6 @@ const devScreen = (load: Parameters<typeof lazy>[0]): ReactNode => {
 
 const devRoutes: RouteObject[] = import.meta.env.DEV
   ? [
-      { path: "/dev/analysis", element: devScreen(() => import("./views/dev/analysis/Main")) },
       { path: "/dev/play", element: devScreen(() => import("./views/dev/play/Main")) },
       { path: "/dev/masked", element: devScreen(() => import("./views/dev/masked/Main")) },
       { path: "/dev/openings", element: devScreen(() => import("./views/dev/openings/Main")) },

@@ -173,6 +173,7 @@ export const boardOptions = () => {
   return boardSpy.options as {
     id?: string;
     position?: string;
+    boardOrientation?: "white" | "black";
     allowDragging?: boolean;
     pieces?: unknown;
     arrows?: { startSquare: string; endSquare: string; color: string }[];

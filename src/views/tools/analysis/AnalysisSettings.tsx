@@ -12,7 +12,7 @@ import OptionSlider from "../../shared/OptionSlider";
 import {
   ANALYSIS_UCI_OPTION,
   type AnalysisSettings as AnalysisSettingsValues,
-} from "./useAnalysisBoard";
+} from "../../../lib/analysisSettings";
 
 /**
  * The Engine tab: how hard, how many lines, whether to show the bar, and a way
