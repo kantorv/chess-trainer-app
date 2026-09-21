@@ -1,9 +1,11 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router";
 
 import i18n from "../../i18n";
-import { indexedRowOf } from "../../lib/collectionIndex";
+import { indexedRowOf, numberedRows, type IndexedRow } from "../../lib/collectionIndex";
 import {
   addCollection,
   loadUploadedCollections,
@@ -11,6 +13,12 @@ import {
   resetLibraryCollectionStore,
   uploadedCollectionsSnapshot,
 } from "../../lib/libraryCollectionStore";
+import {
+  collectionFacetsOf,
+  collectionRowOf,
+  filteredRows,
+  readCollectionText,
+} from "../../lib/libraryCollections";
 import { peekShippedGames, peekShippedRows, shippedCollections } from "../../lib/shippedCollections";
 import { findSavedAnalysis, savedAnalysesSnapshot } from "../../lib/savedAnalysisStore";
 import AppThemeWithLang from "../../theme/AppThemeWithLang";
@@ -299,6 +307,39 @@ describe("the table's filters", () => {
     expect(where()).toBe(`/library/${rich.id}?q=open`);
     expect(panel().getByTestId("library-filter-clear")).toBeDisabled();
   });
+
+  it("lists every opening of a real 7,818-game collection, ECO code first — not a first page", async () => {
+    const reading = readCollectionText(
+      readFileSync(join(process.cwd(), "src/test/fixtures/pgn/Carlsen.pgn"), "utf8"),
+    );
+    if (!reading.ok) throw new Error("the fixture did not read");
+    // The tags' rows: the chess.js pass would take a minute and adds nothing here.
+    const rows = reading.games.map((pgn): IndexedRow => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { number, ...row } = collectionRowOf(pgn, 0);
+      return row;
+    });
+    const added = await addCollection("Carlsen", reading.games, rows);
+    if (!("collection" in added)) throw new Error("not added");
+    await mountTable(`/library/${added.collection.id}`);
+
+    const expected = collectionFacetsOf(numberedRows(rows)).openings;
+    const box = within(screen.getByTestId("library-filter-opening")).getByRole("combobox");
+    fireEvent.keyDown(box, { key: "ArrowDown" });
+    const options = await screen.findAllByRole("option");
+    expect(options).toHaveLength(expected.length);
+    expect(options[0]).toHaveTextContent(/^A0\d/);
+    expect(options[options.length - 1]).toHaveTextContent(/^E9\d/);
+
+    // Picking one narrows the table to its games.
+    const pick = options.find((option) => /^B90\b/.test(option.textContent ?? ""))!;
+    const label = pick.textContent!;
+    fireEvent.click(pick);
+    const matching = filteredRows(numberedRows(rows), { text: "", result: "", opening: label }).length;
+    expect(matching).toBeGreaterThan(0);
+    expect(screen.getByTestId("library-table-count")).toHaveTextContent(`${matching} of 7818 games`);
+    expect(where()).toContain(`opening=${encodeURIComponent(label).replace(/%20/g, "+")}`);
+  }, 60_000);
 
   it("offers a shipped collection's openings, filled from the book where the file has none", async () => {
     await mountTable("/library/morphy");

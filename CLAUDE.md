@@ -312,12 +312,17 @@ node scripts/wirepgn.js x.pgn ──▶ src/data/library/ ─ manifest.json ─�
   last either way); a words box over the table and the right-hand panel's
   **filters** narrow it (`CollectionFilters.tsx`, `filteredRows` /
   `collectionFacetsOf`): a **player** (part of a name, suggested from the
-  games) and the **side** they had, an **opening** (part of its name, or the
-  start of its ECO code — the index filled both from eco.json where the tags
-  lacked them), the **event**, a **date range** (the browser's date inputs; a
-  partial PGN date such as `1848` is in range when any day it could be is,
-  `dateBounds`) and the **result**. A filter is shown only where some game
-  carries its field — a PGN has what its source wrote. The rows are **paged**
+  games) and the **side** they had, an **opening** (listed and matched as
+  its ECO code then its name, `B90 Sicilian Defense: Najdorf Variation` —
+  `openingLabelOf`, in ECO order; typing `B9` or `najdorf` works too — the
+  index filled both from eco.json where the tags lacked them), the
+  **event**, a **date range** (the browser's date inputs; a partial PGN date
+  such as `1848` is in range when any day it could be is, `dateBounds`) and
+  the **result**. A filter is shown only where some game carries its field —
+  a PGN has what its source wrote. **The lists are complete**, never a first
+  page: a real 7,818-game collection (`src/test/fixtures/pgn/Carlsen.pgn`, the
+  tests' fixture) offers its 3,040 openings, 1,338 players and 622 events, and
+  opens them in ~100–170 ms in Chrome without virtualization. The rows are **paged**
   (50 / 100 / 250). The sort, the filters and the page live in the URL (history
   replace), so coming back from a game finds the table as it was left.
 - **A game opens on a full analysis board** (`LibraryGameBoard.tsx`), composed

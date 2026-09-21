@@ -268,7 +268,11 @@ export type RowFilter = {
   player?: string;
   /** The side `player` had; `""` / absent for either. Nothing without a `player`. */
   color?: PlayerColor | "";
-  /** Part of the opening's name, or the start of its ECO code (`B9` is B90–B99). */
+  /**
+   * Part of the opening's label — its ECO code, then its name
+   * ({@link openingLabelOf}): `B9` finds B90–B99, `najdorf` the Najdorf, and
+   * a label picked from the list its own line and the lines under it.
+   */
   opening?: string;
   /** The event, exactly. */
   event?: string;
@@ -319,6 +323,16 @@ const searchTextOf = (row: CollectionRow): string =>
     .toLowerCase();
 
 /**
+ * What the opening filter shows and matches: the ECO code, then the name —
+ * `B90 Sicilian Defense: Najdorf Variation`. Either alone when the game has
+ * only one; `undefined` with neither.
+ */
+export const openingLabelOf = (row: Pick<CollectionRow, "eco" | "opening">): string | undefined => {
+  const label = [row.eco, row.opening].filter((part) => part !== undefined && part !== "").join(" ");
+  return label === "" ? undefined : label;
+};
+
+/**
  * The days a PGN date could be, as `YYYY-MM-DD` bounds: `2023.07.30` is that
  * day; `1848` (its unknown parts already dropped) is the whole year; a month
  * or day written `??` is any. `undefined` without a readable year.
@@ -350,11 +364,7 @@ export const filteredRows = (
       const asBlack = filter.color !== "white" && (row.black?.toLowerCase().includes(player) ?? false);
       if (!asWhite && !asBlack) return false;
     }
-    if (
-      opening !== "" &&
-      !(row.opening?.toLowerCase().includes(opening) ?? false) &&
-      !(row.eco?.toLowerCase().startsWith(opening) ?? false)
-    ) {
+    if (opening !== "" && !(openingLabelOf(row)?.toLowerCase().includes(opening) ?? false)) {
       return false;
     }
     if (event !== "" && row.event !== event) return false;
@@ -375,8 +385,10 @@ export const filteredRows = (
  * What a collection's rows offer the side panel's filters — **a filter is
  * shown only where some game carries its field**, since a collection is
  * whatever its PGN says (Morphy's file has no rounds, an upload may have no
- * dates). The lists are distinct and sorted (numeric-aware); `dates` is the
- * earliest and latest day any game could be.
+ * dates). The lists are distinct and complete — a 7,818-game collection
+ * offers its 3,040 openings, every one; `openings` are {@link openingLabelOf}
+ * labels in ECO order (A00 to E99, then any without a code), the rest sorted
+ * numeric-aware. `dates` is the earliest and latest day any game could be.
  */
 export type CollectionFacets = {
   players: string[];
@@ -396,7 +408,8 @@ export const collectionFacetsOf = (rows: readonly CollectionRow[]): CollectionFa
   for (const row of rows) {
     if (row.white !== undefined) players.add(row.white);
     if (row.black !== undefined) players.add(row.black);
-    if (row.opening !== undefined) openings.add(row.opening);
+    const opening = openingLabelOf(row);
+    if (opening !== undefined) openings.add(opening);
     if (row.event !== undefined) events.add(row.event);
     results.add(row.result);
     const bounds = dateBounds(row.date);
@@ -406,9 +419,12 @@ export const collectionFacetsOf = (rows: readonly CollectionRow[]): CollectionFa
     }
   }
   const sorted = (values: Set<string>) => [...values].sort(collator.compare);
+  const hasEco = (label: string) => /^[A-E]\d\d\b/.test(label);
   return {
     players: sorted(players),
-    openings: sorted(openings),
+    openings: [...openings].sort(
+      (a, b) => Number(hasEco(b)) - Number(hasEco(a)) || collator.compare(a, b),
+    ),
     events: sorted(events),
     results: RESULTS.filter((result) => results.has(result)),
     dates: min === undefined || max === undefined ? undefined : { min, max },

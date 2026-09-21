@@ -1,4 +1,4 @@
-import Autocomplete, { createFilterOptions } from "@mui/material/Autocomplete";
+import Autocomplete from "@mui/material/Autocomplete";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import MenuItem from "@mui/material/MenuItem";
@@ -23,17 +23,15 @@ import {
  *
  * **A filter is shown only where the collection has its field**
  * (`collectionFacetsOf`): a PGN carries what its source wrote, so an upload
- * with no dates gets no date range, one event gets no event picker. The name
- * lists suggest what the games hold — the first 50 matches, so a 10,000-game
- * collection's players stay quick — and the player and opening boxes take any
- * text (part of a name; an ECO code's start for an opening).
+ * with no dates gets no date range, one event gets no event picker. The lists
+ * offer **everything** the games hold — every player, every event, every
+ * opening (labelled with its ECO code first, in ECO order) — and the player
+ * and opening boxes also take any text: part of a name, or an ECO code's start.
  *
  * The dates are the browser's own date inputs (`type="date"`). A PGN date is
  * often partial — `1848`, `1858.10` — so a game counts as in range when any
  * day it could have been played is (`dateBounds`).
  */
-
-const suggest = createFilterOptions<string>({ limit: 50 });
 
 export type CollectionFiltersProps = {
   facets: CollectionFacets;
@@ -63,7 +61,6 @@ function CollectionFilters({ facets, values, onChange, onClear }: CollectionFilt
             freeSolo
             size="small"
             options={facets.players}
-            filterOptions={suggest}
             value={values.player}
             inputValue={values.player}
             onChange={(_event, value) => onChange({ player: value ?? "" })}
@@ -99,7 +96,6 @@ function CollectionFilters({ facets, values, onChange, onClear }: CollectionFilt
           freeSolo
           size="small"
           options={facets.openings}
-          filterOptions={suggest}
           value={values.opening}
           inputValue={values.opening}
           onChange={(_event, value) => onChange({ opening: value ?? "" })}
@@ -121,7 +117,6 @@ function CollectionFilters({ facets, values, onChange, onClear }: CollectionFilt
         <Autocomplete
           size="small"
           options={facets.events}
-          filterOptions={suggest}
           value={values.event === "" ? null : values.event}
           onChange={(_event, value) => onChange({ event: value ?? "" })}
           data-testid="library-filter-event"

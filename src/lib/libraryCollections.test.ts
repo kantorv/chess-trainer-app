@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -7,6 +9,7 @@ import {
   collectionFacetsOf,
   collectionRowsOf,
   dateBounds,
+  openingLabelOf,
   filteredRows,
   mainlinePlies,
   MAX_COLLECTION_CHARS,
@@ -112,11 +115,21 @@ describe("the side panel's filters", () => {
     expect(numbers({ color: "black" })).toEqual([1, 2, 3]);
   });
 
-  it("finds an opening by its name or the start of its ECO code", () => {
+  it("finds an opening by its ECO code, its name, or the label picked from the list", () => {
     expect(numbers({ opening: "petrov" })).toEqual([1]);
     expect(numbers({ opening: "C4" })).toEqual([1]);
     expect(numbers({ opening: "classical" })).toEqual([1]);
+    expect(numbers({ opening: "C42 Petrov, Classical" })).toEqual([1]);
     expect(numbers({ opening: "sicilian" })).toEqual([]);
+  });
+
+  it("labels an opening with its ECO code first", () => {
+    expect(openingLabelOf({ eco: "B90", opening: "Sicilian Defense: Najdorf Variation" })).toBe(
+      "B90 Sicilian Defense: Najdorf Variation",
+    );
+    expect(openingLabelOf({ eco: "D12" })).toBe("D12");
+    expect(openingLabelOf({ opening: "Petrov" })).toBe("Petrov");
+    expect(openingLabelOf({})).toBeUndefined();
   });
 
   it("matches an event exactly", () => {
@@ -140,10 +153,33 @@ describe("the side panel's filters", () => {
     expect(dateBounds("????")).toBeUndefined();
   });
 
+  it("lists every opening of a real 7,818-game collection, ECO first, in ECO order", () => {
+    const reading = readCollectionText(
+      readFileSync(join(process.cwd(), "src/test/fixtures/pgn/Carlsen.pgn"), "utf8"),
+    );
+    if (!reading.ok) throw new Error("the fixture did not read");
+    expect(reading.games).toHaveLength(7818);
+    const carlsen = collectionRowsOf({ games: reading.games });
+    const { openings, players, events } = collectionFacetsOf(carlsen);
+
+    // Complete: every game's label is offered, once — not a first page.
+    const labels = new Set(carlsen.map((row) => openingLabelOf(row)).filter((label) => label !== undefined));
+    expect(openings).toHaveLength(labels.size);
+    expect(new Set(openings)).toEqual(labels);
+    expect(openings.length).toBeGreaterThan(400);
+    // In ECO order, A to E.
+    const ecos = openings.map((label) => label.slice(0, 3));
+    expect(ecos[0]).toMatch(/^A0/);
+    expect(ecos[ecos.length - 1]).toMatch(/^E9/);
+    expect(ecos).toEqual([...ecos].sort());
+    expect(players).toContain("Carlsen,Magnus");
+    expect(events.length).toBeGreaterThan(600);
+  });
+
   it("offers only what the games carry", () => {
     expect(collectionFacetsOf(rows)).toEqual({
       players: ["Anderssen", "Carlsen,M", "Morphy, Paul", "Nepo,I", "Zed"],
-      openings: ["Petrov, Classical"],
+      openings: ["C42 Petrov, Classical"],
       events: ["Test Open"],
       results: ["1-0", "0-1", "1/2-1/2"],
       dates: { min: "1848-01-01", max: "2023-07-30" },
