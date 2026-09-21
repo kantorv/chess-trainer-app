@@ -8,7 +8,7 @@ import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { useTranslation } from "react-i18next";
 
-import FolderPicker from "../../engine/saved/FolderPicker";
+import FolderPicker from "../../shared/folders/FolderPicker";
 import { useAnalysisFolders } from "./saved/useAnalysisFolders";
 
 /**

@@ -20,7 +20,10 @@ export const THINKING_DOTS_MS = 400;
 function EngineThinking({
   thinking,
   depth,
+  testId = "analysis-play",
 }: {
+  /** The root of its test ids — `${testId}-status`, `${testId}-depth`. */
+  testId?: string;
   /** Whether the engine is searching for its move. */
   thinking: boolean;
   /** The depth reached so far in this search; 0 before the first result. */
@@ -39,7 +42,7 @@ function EngineThinking({
     <Box
       role="status"
       aria-live="polite"
-      data-testid="analysis-play-status"
+      data-testid={`${testId}-status`}
       data-status={thinking ? "thinking" : "your-move"}
       sx={{
         display: "flex",
@@ -63,7 +66,7 @@ function EngineThinking({
       {thinking && depth > 0 && (
         <Typography
           variant="caption"
-          data-testid="analysis-play-depth"
+          data-testid={`${testId}-depth`}
           sx={{ color: "text.secondary", marginInlineStart: "auto" }}
         >
           {t("analysis.play.depth", { depth })}

@@ -22,7 +22,7 @@ import FolderPicker from "./FolderPicker";
  */
 function FolderMoveDialog({
   open,
-  labelKey = "savedGames",
+  labelKey,
   idPrefix = "game-folder",
   folders,
   folder,
@@ -39,8 +39,8 @@ function FolderMoveDialog({
   currentParentName: string;
   onMove: (newParentId: string | null) => void;
   onClose: () => void;
-  /** The locale block — `savedGames` by default; its `folder.*` keys are read. */
-  labelKey?: string;
+  /** The locale block — its `folder.*` keys are read. */
+  labelKey: string;
   /** The test-id prefix — `game-folder` by default. */
   idPrefix?: string;
 }) {

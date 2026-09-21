@@ -63,6 +63,7 @@ vi.mock("../../lib/openings", async (importOriginal) => {
 });
 
 import AnalysisBoard from "../tools/analysis/AnalysisBoard";
+import PlayWithEngine from "../engine/play/PlayWithEngine";
 import MaskedV2 from "./masked/MaskedV2";
 import OpeningsV2 from "./openings/OpeningsV2";
 import PlayV2 from "./play/PlayV2";
@@ -74,6 +75,8 @@ const BOARDS: readonly { name: string; panelId: string; Screen: () => ReactNode 
     // Analysis v2, shipped as the Analysis Board (CTA-73) and kept under the
     // assertion it was built to pass.
     { name: "Analysis Board", panelId: "analysis-panel", Screen: AnalysisBoard },
+    // Play with Engine, a v2 screen since CTA-74.
+    { name: "Play with Engine", panelId: "play-with-engine-panel", Screen: PlayWithEngine },
     { name: "Play with Engine v2", panelId: "dev-play-panel", Screen: PlayV2 },
     { name: "Masked Pieces v2", panelId: "dev-masked-panel", Screen: MaskedV2 },
     { name: "Openings v2", panelId: "dev-openings-panel", Screen: OpeningsV2 },

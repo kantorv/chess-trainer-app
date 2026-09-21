@@ -13,7 +13,7 @@ const en = {
     toggleColorMode: "Toggle light and dark mode",
     switchLanguage: "Switch language",
     playWithEngine: "Play with Engine",
-    /** The games played on that screen, kept in this browser. */
+    /** The games played on that screen, kept in this browser — the flat list at `/engine/games` (CTA-74). */
     savedGames: "Saved games",
     /**
      * The same screen as `playWithEngine`, with the pieces in disguise. The
@@ -321,12 +321,33 @@ const en = {
       game: "Game",
       engine: "Engine",
       lines: "Variations",
+      /** Play with Engine v2's (CTA-74) — the variations explorer's two tabs. */
+      moves: "Moves",
+      map: "Map",
     },
     status: {
       yourTurn: "Your move",
       engineTurn: "The engine is thinking…",
       /** Shown while an earlier ply is on screen, where no move can be made. */
       reviewing: "Reviewing an earlier move",
+    },
+    /** Play with Engine v2's header controls (CTA-74). */
+    game: {
+      replay: "Replay — start over",
+      resign: "Resign",
+      cancel: "Cancel",
+      replayConfirm: {
+        title: "Start over?",
+        body: "This game's saved progress is discarded and a new game begins from the start.",
+        confirm: "Start over",
+      },
+      resignConfirm: {
+        title: "Resign this game?",
+        body: "You lose the game. You can still step through it and analyse it.",
+        confirm: "Resign",
+      },
+      /** The footer's line once resigned. */
+      resigned: "You resigned · {{result}}",
     },
     settings: {
       /** The engine's on/off switch above the tab strip — the tab's own name. */
@@ -349,118 +370,42 @@ const en = {
     },
   },
   /**
-   * The **Saved games** screen — the games the reader has played against the
-   * engine (`views/engine/saved/`). Chrome, all of it: a saved game's own
-   * notation is its PGN, and the tag pairs in it are written in PGN's own
-   * vocabulary rather than in a language.
+   * The **Saved games** list of Play with Engine v2 (CTA-74,
+   * `views/engine/games/`) — flat, newest first; each game a tree, resumed
+   * where the reader left it.
    */
-  savedGames: {
+  playedGames: {
     title: "Saved games",
     count: "Games: {{count}}",
     empty: "No saved games yet. Play a game against the engine and it appears here on its own.",
-    hint: "Every game you play against the engine is written down as you play it. Pick one up where you left it, file it into a folder, or open it for study.",
-    /** Said plainly: this is a browser, not a backup — as the Uploads screen does. */
+    hint: "Every game you play against the engine is written down as you play it — side lines too. Pick one up where you left it, or open it on the Analysis Board.",
     storage: "Saved games are kept in this browser only. Clearing site data removes them, and they do not follow you to another device.",
-    /** The line that identifies a game: which side the reader had. */
-    playingAs: {
-      white: "You played White",
-      black: "You played Black",
-    },
-    /**
-     * How it stands. `inProgress` is the `"*"` result — a game still being
-     * played, which is most of this list.
-     */
-    result: {
-      white: "White won",
-      black: "Black won",
-      draw: "Draw",
-      inProgress: "In progress",
-    },
-    /**
-     * The three-way view toggle in the top bar: the list the screen shipped
-     * with, and the library list screen's own two board sizes.
-     */
-    view: {
-      label: "View",
-      list: "List",
-      compact: "Small boards",
-      comfortable: "Big boards",
-    },
-    /** The engine's `Skill Level` the game was played at. */
-    level: "Level {{level}}",
-    /** Plural forms, because a one-move game is a real row here. */
+    /** A row's title: the pairing, White first. */
+    players: "{{white}} - {{black}}",
+    human: "Human",
+    engine: "Stockfish level {{level}}",
     moves_one: "{{count}} move",
     moves_other: "{{count}} moves",
-    /** A stored record whose PGN no longer parses: it can only be deleted. */
+    variations_one: "{{count}} side line",
+    variations_other: "{{count}} side lines",
     unreadable: "This game could not be read.",
-    /** The three destinations — see `SavedGames.tsx` for why these three. */
     continue: "Continue",
     analyse: "Analysis",
-    openInLoadPgn: "PGN viewer",
     remove: "Delete this game",
-    /**
-     * Picking games and taking them out as one `.pgn` — the list view only, see
-     * `SavedGames.tsx`. These are the only games in the app that exist nowhere
-     * else, so this is the one way out of the browser.
-     */
-    select: "Select this game",
-    selectAll: "Select all games",
-    selected: "{{count}} selected",
-    download: "Download selected as PGN",
-    /**
-     * The folder system (CTA-46), the savedOpenings block's `folder` below over
-     * the games' own store. Chrome only — a folder's name is the reader's own
-     * words, never a key. The folder rows, cards, breadcrumb and dialogs read
-     * it through a `labelKey`, so the savedAnalyses block's `folder` carries
-     * the same keys.
-     */
-    folder: {
-      /**
-       * A folder with no readable name — a half-broken store can produce one
-       * (`gameFolderFrom` normalises a broken name to empty rather than
-       * dropping the folder). Only a hand-edited store reaches this.
-       */
-      untitled: "Untitled folder",
-      /** The breadcrumb's first crumb — standing at the top of the tree. */
-      root: "All games",
-      /** The top bar's create button. */
-      newFolder: "New folder",
-      renameFolder: "Rename folder",
-      moveFolder: "Move folder",
-      /** The per-game filing control — the one the openings do not have. */
-      moveGame: "Move game",
-      deleteFolder: "Delete folder",
-      /** The folder's own download — one .pgn of everything under it. */
-      download: "Download this folder as PGN",
-      /** The game move dialog's "none" choice — a game with no folder. */
-      unfiled: "Unfiled",
-      /** The folder move dialog's "none" row — the move's other destination. */
-      topLevel: "Top level",
-      /** Both the create and the rename dialog's field. */
-      name: "Folder name",
-      save: "Save",
+    confirmDelete: {
+      title: "Delete this game?",
+      body: "It is removed from this browser, side lines and all.",
       cancel: "Cancel",
-      /**
-       * The delete confirmation for a non-empty folder: the contents stay —
-       * games become Unfiled, sub-folders re-parent up a level.
-       */
-      deleteConfirm:
-        "Deleting this folder keeps its contents: games filed in it become Unfiled, and its sub-folders move up one level.",
-      deleteCounts:
-        "This folder holds {{games}} games and {{subFolders}} sub-folders.",
-      /** A folder card's caption, counting everything under it. */
-      count_one: "{{count}} game",
-      count_other: "{{count}} games",
-      /** An empty folder's body, once the reader has drilled in. */
-      empty: "This folder is empty.",
+      confirm: "Delete",
+    },
+    problem: {
+      storage: "The game could not be saved — this browser's storage refused it.",
     },
   },
   /**
    * The **Saved analyses** screen — the boards the reader has worked on at the
-   * Analysis Board (`views/tools/analysis/saved/`). The same block shape as
-   * `savedGames` above, minus the two things an analysis does not have (a result
-   * and a side the reader was on) and plus the two it does: how many side lines
-   * were tried, and how far in the reader had got.
+   * Analysis Board (`views/tools/analysis/saved/`): how many side lines were
+   * tried, and how far in the reader had got.
    */
   savedAnalyses: {
     title: "Saved analyses",
@@ -517,8 +462,8 @@ const en = {
       confirm: "Delete",
     },
     /**
-     * The nested folders (CTA-73) — the savedGames block's `folder` keys, read
-     * by the same components through `labelKey`.
+     * The nested folders (CTA-73) — the `folder` keys the shared folder
+     * components (`views/shared/folders/`) read through `labelKey`.
      */
     folder: {
       untitled: "Untitled folder",
@@ -595,7 +540,7 @@ const en = {
     play: "Play from here",
     remove: "Delete this opening",
     /**
-     * The export controls (CTA-41), mirroring the savedGames block's naming —
+     * The export controls (CTA-41), mirroring the Saved analyses block's naming —
      * see `SavedOpenings.tsx` for why they are list-view only and how the
      * picks persist across folder navigation.
      */

@@ -19,7 +19,7 @@ import { useTranslation } from "react-i18next";
  */
 function FolderNameDialog({
   open,
-  labelKey = "savedGames",
+  labelKey,
   idPrefix = "game-folder",
   title,
   initial,
@@ -33,8 +33,8 @@ function FolderNameDialog({
   initial: string;
   onSave: (name: string) => void;
   onClose: () => void;
-  /** The locale block — `savedGames` by default; its `folder.*` keys are read. */
-  labelKey?: string;
+  /** The locale block — its `folder.*` keys are read. */
+  labelKey: string;
   /** The test-id prefix — `game-folder` by default. */
   idPrefix?: string;
 }) {

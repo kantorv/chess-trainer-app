@@ -46,8 +46,9 @@ export const navItems = (): readonly NavItem[] => [
     icon: SportsEsportsRoundedIcon,
     folder: "engine",
   },
+  // Play with Engine v2's games (CTA-74) — the list the nav calls Saved games.
   {
-    to: "/engine/saved",
+    to: "/engine/games",
     labelKey: "nav.savedGames",
     icon: HistoryRoundedIcon,
     folder: "engine",

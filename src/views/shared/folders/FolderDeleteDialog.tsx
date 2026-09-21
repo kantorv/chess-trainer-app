@@ -20,7 +20,7 @@ import type { GameFolder } from "../../../lib/savedGameFolders";
  */
 function FolderDeleteDialog({
   open,
-  labelKey = "savedGames",
+  labelKey,
   idPrefix = "game-folder",
   folder,
   games,
@@ -37,8 +37,8 @@ function FolderDeleteDialog({
   subFolders: number;
   onConfirm: () => void;
   onClose: () => void;
-  /** The locale block — `savedGames` by default; its `folder.*` keys are read. */
-  labelKey?: string;
+  /** The locale block — its `folder.*` keys are read. */
+  labelKey: string;
   /** The test-id prefix — `game-folder` by default. */
   idPrefix?: string;
 }) {

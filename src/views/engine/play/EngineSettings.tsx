@@ -42,7 +42,10 @@ type EngineSettingsProps = {
   engineOptions: ReadonlyMap<string, EngineOption>;
   showEvalBar: boolean;
   onShowEvalBarChange: (next: boolean) => void;
-  onNewGame: () => void;
+  /** The New game button — absent, none (Play with Engine has Replay in its header). */
+  onNewGame?: () => void;
+  /** Whether the *Play as* toggle is here — off where the screen's header carries it. */
+  showPlayAs?: boolean;
 };
 
 function EngineSettings({
@@ -52,6 +55,7 @@ function EngineSettings({
   showEvalBar,
   onShowEvalBarChange,
   onNewGame,
+  showPlayAs = true,
 }: EngineSettingsProps) {
   const { t } = useTranslation();
 
@@ -183,29 +187,31 @@ function EngineSettings({
         onChange={(hashMb) => onChange({ hashMb })}
       />
 
-      <Box>
-        <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
-          {t("playEngine.settings.playAs")}
-        </Typography>
-        <ToggleButtonGroup
-          exclusive
-          size="small"
-          fullWidth
-          value={settings.playAs}
-          data-testid="engine-setting-playas"
-          onChange={(_event, next: "white" | "black" | null) => {
-            // A group can deselect its active button; keep a colour selected.
-            if (next) onChange({ playAs: next });
-          }}
-        >
-          <ToggleButton value="white" data-testid="engine-setting-playas-white">
-            {t("playEngine.settings.white")}
-          </ToggleButton>
-          <ToggleButton value="black" data-testid="engine-setting-playas-black">
-            {t("playEngine.settings.black")}
-          </ToggleButton>
-        </ToggleButtonGroup>
-      </Box>
+      {showPlayAs && (
+        <Box>
+          <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
+            {t("playEngine.settings.playAs")}
+          </Typography>
+          <ToggleButtonGroup
+            exclusive
+            size="small"
+            fullWidth
+            value={settings.playAs}
+            data-testid="engine-setting-playas"
+            onChange={(_event, next: "white" | "black" | null) => {
+              // A group can deselect its active button; keep a colour selected.
+              if (next) onChange({ playAs: next });
+            }}
+          >
+            <ToggleButton value="white" data-testid="engine-setting-playas-white">
+              {t("playEngine.settings.white")}
+            </ToggleButton>
+            <ToggleButton value="black" data-testid="engine-setting-playas-black">
+              {t("playEngine.settings.black")}
+            </ToggleButton>
+          </ToggleButtonGroup>
+        </Box>
+      )}
 
       <FormControlLabel
         control={
@@ -218,14 +224,16 @@ function EngineSettings({
         label={t("playEngine.settings.evalBar")}
       />
 
-      <Button
-        variant="outlined"
-        startIcon={<RestartAltRoundedIcon />}
-        data-testid="engine-new-game"
-        onClick={onNewGame}
-      >
-        {t("playEngine.settings.newGame")}
-      </Button>
+      {onNewGame !== undefined && (
+        <Button
+          variant="outlined"
+          startIcon={<RestartAltRoundedIcon />}
+          data-testid="engine-new-game"
+          onClick={onNewGame}
+        >
+          {t("playEngine.settings.newGame")}
+        </Button>
+      )}
     </Box>
   );
 }

@@ -10,12 +10,6 @@ import {
   type GameHeaders,
 } from "./gameModel";
 import { gameToPgn } from "./gameTree";
-import {
-  libraryCatalogOf,
-  type LibraryCatalog,
-  type LibraryCategory,
-  type LibraryGame,
-} from "./libraryCatalog";
 import { parsePgnGame } from "./pgn";
 
 /**
@@ -27,7 +21,7 @@ import { parsePgnGame } from "./pgn";
  * the rest of `src/lib/` is written in: it takes its games as a parameter, never
  * touches `localStorage`, and nothing here throws. The storage half is
  * [`savedGameStore.ts`](./savedGameStore.ts) and the React binding is
- * `views/engine/saved/useSavedGames.ts` — the same three-way split
+ * its reader was the Saved games list (deleted, CTA-74) — the same three-way split
  * `pgnUploads.ts` / `pgnUploadStore.ts` / `views/pgn/useUploads.ts` already
  * uses, and for the same reason.
  *
@@ -48,17 +42,6 @@ import { parsePgnGame } from "./pgn";
  * tags — a tag pair is what the game *was*, and these are how the next move gets
  * made — so they are a field of their own, read back through
  * `engineSettingsFrom` rather than trusted.
- *
- * ## It is also a tiny library, so `?game=` works
- *
- * Handing a saved game to the Analysis Board or to Load PGN is the hand-off
- * those two screens already have: `?game=<reference>` (`lib/gameReference.ts`),
- * which resolves a *reference into a catalog*. So {@link savedGameCatalogOf}
- * presents the saved games as one — a single category holding a `LibraryGame`
- * each — and the hand-off costs one registry entry rather than a second
- * transport. Nothing browses that catalog: the Saved games screen is its own,
- * under the Engine folder, because these are the reader's games rather than a
- * shipped library.
  */
 
 /** One game the reader played against the engine. Plain JSON, deliberately. */
@@ -101,12 +84,6 @@ export type SavedGameEval = {
   /** Centipawns, or moves to mate, signed so that positive favours White. */
   value: number;
 };
-
-/** The category path the saved games sit under, and their reference segment. */
-export const SAVED_GAMES_PATH = "saved";
-
-/** The Saved games folder's name is chrome the app ships, so it is a locale key. */
-export const SAVED_GAMES_LABEL_KEY = "savedGames.title";
 
 /** The `Event` tag every saved game carries — what these games all are. */
 export const SAVED_GAME_EVENT = "Play with Engine";
@@ -424,50 +401,4 @@ export const savedGameSummary = (
     playAs: saved.settings.playAs,
     skillLevel: saved.settings.skillLevel,
   };
-};
-
-/**
- * The saved games as a **library catalog** — one category, one `LibraryGame` per
- * record that parses, in the order they were given.
- *
- * It exists for one reason: `?game=` resolves a reference against a catalog
- * (`lib/gameReference.ts`), so presenting the saved games as one is what lets
- * "open this in the Analysis Board" be the hand-off those screens already have
- * rather than a second transport. A record that will not parse is simply absent
- * from it — the Saved games screen reads the *store*, not this, so such a row is
- * still listed and still removable.
- */
-export const savedGameCatalogOf = (
-  games: readonly SavedGame[],
-): LibraryCatalog => {
-  const category: LibraryCategory = {
-    id: SAVED_GAMES_PATH,
-    path: SAVED_GAMES_PATH,
-    labelKey: SAVED_GAMES_LABEL_KEY,
-    children: [],
-  };
-
-  const items: LibraryGame[] = [];
-  for (const saved of games) {
-    const game = savedGameToGame(saved);
-    if (game === undefined) continue;
-
-    items.push({
-      kind: "game",
-      id: saved.id,
-      category: SAVED_GAMES_PATH,
-      // English, and never rendered by this app: the Saved games screen writes
-      // its own translated rows. It is here because a `LibraryItem` carries a
-      // name, and a PGN's players are the honest answer to what this game is.
-      name: {
-        en: `${gameTag(game.headers, "White") ?? "White"} – ${
-          gameTag(game.headers, "Black") ?? "Black"
-        }`,
-      },
-      pgn: saved.pgn,
-      game,
-    });
-  }
-
-  return libraryCatalogOf([category], items, []);
 };

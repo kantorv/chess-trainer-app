@@ -22,8 +22,8 @@ import type { RepertoireFolder } from "../../lib/savedRepertoireFolders";
  * controls: rename, delete, and a download of everything in it as one `.pgn`
  * (the list's export, over the folder's repertoires).
  *
- * Presentational, like the saved games' folder views it follows
- * (`views/engine/saved/SavedFolderViews.tsx`): the list screen owns the
+ * Presentational, like the shared folder views it follows
+ * (`views/shared/folders/SavedFolderViews.tsx`): the list screen owns the
  * dialogs and the store calls, and hands in the callbacks.
  */
 type FolderViewProps = {

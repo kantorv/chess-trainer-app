@@ -30,7 +30,7 @@ import {
  */
 function FolderPicker({
   folders,
-  labelKey = "savedGames",
+  labelKey,
   idPrefix = "game-folder",
   value,
   onChange,
@@ -48,8 +48,8 @@ function FolderPicker({
   noneTestId: string;
   /** Folder ids not offered — the moved folder's own subtree, when moving one. */
   exclude?: readonly string[];
-  /** The locale block — `savedGames` by default; its `folder.*` keys are read. */
-  labelKey?: string;
+  /** The locale block — its `folder.*` keys are read. */
+  labelKey: string;
   /** The test-id prefix — `game-folder` by default. */
   idPrefix?: string;
 }) {

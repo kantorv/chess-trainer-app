@@ -4,8 +4,9 @@ How a board screen **attaches a view of its game tree** — the move list, the
 map, the comments, the next-move arrows — instead of wiring them inline. This
 is the spec the shared explorer in [`src/views/explorer/`](../../src/views/explorer/)
 implements (CTA-72). The repertoire player (`/repertoires/<id>` and its games)
-and, since CTA-73, the Analysis Board (`/tools/analysis`) are built on it. The
-other screens will move onto it in later issues.
+and, since CTA-73, the Analysis Board (`/tools/analysis`) and, since CTA-74,
+Play with Engine (`/engine/play`) are built on it. The other screens will move
+onto it in later issues.
 
 Read [`chessboard-v2.md`](./chessboard-v2.md) first. It owns the board core a
 tree view reads from (`useBoardCore`), the shell and panel a view's parts are
@@ -195,14 +196,27 @@ extension tint is the same set. It places `moves` and `map` in its Moves
 and Map tabs (both kept mounted) and `annotations`, its changes strip and
 `nextMoves` (on the Moves tab) in its footer.
 
+### Play with Engine — the third (CTA-74)
+
+`views/engine/play/PlayWithEngine.tsx` passes the Analysis Board's options
+without `addedIds` / `extensionIds` (nothing is "added" against a record — the
+whole game is the reader's): `onEditTree: core.replaceTree`,
+`playChances: false`, `annotations: true`, `arrows: { show }` (a switch in its
+Engine tab, on) and `map: { linked: true }`. A game against the engine is a
+tree there — a move by hand from an earlier position is a side line — so it
+takes the explorer rather than the flat mode below. It places `moves` and
+`map` in its Moves and Map tabs (both kept mounted) and `annotations`, Play's
+status line and `nextMoves` (on the Moves tab) in its footer.
+
 ---
 
-## 3. Flat — specified, not built (Play with Engine)
+## 3. Flat — specified, not built
 
 A **two-column mainline list with no variations**, but with comments and
-arrows. It is meant for a board where the game is one line: Play with Engine,
-where the reader and the engine take turns and a branch cannot form
-(`canMoveAt: isLive`).
+arrows. It is meant for a board where the game is one line — where the
+reader and the engine take turns and a branch cannot form
+(`canMoveAt: isLive`), as on the pre-v2 Play with Engine and Masked Pieces.
+(Play with Engine v2, CTA-74, branches, and so took the explorer.)
 
 ```ts
 const parts = useFlatView({

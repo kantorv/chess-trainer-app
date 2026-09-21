@@ -1,989 +1,363 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { act, render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router";
-import { Chess } from "chess.js";
+import { act, fireEvent, render, screen } from "@testing-library/react";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router";
+
 import i18n from "../../../i18n";
+import { DEFAULT_ENGINE_SETTINGS } from "../../../lib/engineSettings";
+import { parsePgnTree } from "../../../lib/pgn";
+import { findPlayedGame, playedGamesSnapshot, savePlayedGame } from "../../../lib/playedGameStore";
+import { playedGameOf } from "../../../lib/playedGames";
 import AppThemeWithLang from "../../../theme/AppThemeWithLang";
-import type { Score } from "../../../lib/engineAnalysis";
-import {
-  DEFAULT_ENGINE_SETTINGS,
-  type EngineSettings,
-} from "../../../lib/engineSettings";
-import { gameFromChess } from "../../../lib/gameModel";
-import { savedGameOf } from "../../../lib/savedGames";
-import { saveGame, savedGamesSnapshot } from "../../../lib/savedGameStore";
+import { boardOptions, FakeEngine } from "../../dev/devTestHarness";
 import { RightPanelOutlet, RightPanelProvider } from "../../main/rightPanel";
+
+vi.mock("../../../lib/engine", async () => ({
+  default: (await import("../../dev/devTestHarness")).FakeEngine,
+}));
+
+vi.mock("react-chessboard", async () => {
+  const { reactChessboardMock } = await import("../../dev/devTestHarness");
+  return reactChessboardMock();
+});
+
+vi.mock("../../../lib/openings", async (importOriginal) => {
+  const { openingsMock } = await import("../../dev/devTestHarness");
+  return openingsMock(
+    importOriginal as () => Promise<typeof import("../../../lib/openings")>,
+  );
+});
+
 import PlayWithEngine from "./PlayWithEngine";
 
 /*
-  Two things have to be stood in for to test this screen under jsdom.
-
-  `<Chessboard>` measures its own square on mount and throws "Square width not
-  found" where there is no layout engine (`.claude/rules/chessboard.md` §8), so
-  it is stubbed — and the stub keeps hold of the options it was handed, which is
-  how a test drags a piece.
-
-  `Engine` builds a real `Worker`, which jsdom has none of, and would then be an
-  async search to wait on. The fake below records what was searched and lets a
-  test push UCI results back, so the screen's engine behaviour is driven exactly
-  and synchronously.
+  Play with Engine, v2 (CTA-74): a new board with Play on, the engine playing
+  the side not at the bottom, pausing on a step back or a change of side, side
+  lines from an earlier position, the autosave to the played-games store, and
+  the `?fen=` / `?saved=` arrivals (the old store's ids too). The shared panel
+  and square are asserted with the other v2 boards (`devBoards.test.tsx`,
+  `devPanelPropagation.test.tsx`).
 */
 
-const harness = vi.hoisted(() => {
-  type Listener = (message: Record<string, unknown>) => void;
+const START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+const AFTER_E4 = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1";
+const AFTER_E4_E5 = "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2";
+const AFTER_D4 = "rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR b KQkq - 0 1";
 
-  class FakeEngine {
-    static instances: FakeEngine[] = [];
+function Where() {
+  const location = useLocation();
+  return <div data-testid="where">{`${location.pathname}${location.search}`}</div>;
+}
 
-    readonly searches: string[] = [];
-    readonly setOptions: [string, string | number][] = [];
-    /** What the worker in `public/stockfish/` really answers `uci` with. */
-    readonly options = new Map<string, { name: string; type: string; min?: number; max?: number }>([
-      ["Threads", { name: "Threads", type: "spin", min: 1, max: 1 }],
-      ["Hash", { name: "Hash", type: "spin", min: 16, max: 16 }],
-      ["MultiPV", { name: "MultiPV", type: "spin", min: 1, max: 500 }],
-      ["Skill Level", { name: "Skill Level", type: "spin", min: 0, max: 20 }],
-    ]);
-    terminated = false;
-    private listeners = new Set<Listener>();
-
-    constructor() {
-      FakeEngine.instances.push(this);
-    }
-
-    onMessage(listener: Listener) {
-      this.listeners.add(listener);
-      return () => this.listeners.delete(listener);
-    }
-
-    whenOptionsReady(callback: () => void) {
-      callback();
-      return () => {};
-    }
-
-    supportsOption(name: string) {
-      return this.options.has(name);
-    }
-
-    setOption(name: string, value: string | number) {
-      this.setOptions.push([name, value]);
-      return this.options.has(name);
-    }
-
-    search(fen: string) {
-      this.searches.push(fen);
-    }
-
-    evaluatePosition(fen: string) {
-      this.search(fen);
-    }
-
-    stop() {}
-
-    terminate() {
-      this.terminated = true;
-      this.listeners.clear();
-    }
-
-    /** Push one parsed message back, as the real wrapper would. */
-    say(message: Record<string, unknown>) {
-      [...this.listeners].forEach((listener) => listener(message));
-    }
-
-    get lastSearch() {
-      return this.searches.at(-1);
-    }
-  }
-
-  const board: { options: Record<string, never> | null } = { options: null };
-
-  return { FakeEngine, board };
-});
-
-vi.mock("../../../lib/engine", () => ({ default: harness.FakeEngine }));
-
-
-/* The opening book stays stubbed — the panel's new opening line must not pull
-   the real ~3MB eco.json into a screen test. */
-vi.mock("../../../lib/openings", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../../lib/openings")>();
-  return {
-    ...actual,
-    loadOpeningBook: () => Promise.resolve({}),
-    getPositionBook: () => ({}),
-    findOpening: () => undefined,
-  };
-});
-
-vi.mock("react-chessboard", () => ({
-  Chessboard: ({ options }: { options: Record<string, never> }) => {
-    harness.board.options = options;
-    return (
-      <div
-        data-testid="board"
-        data-position={(options as { position?: string }).position}
-        data-orientation={(options as { boardOrientation?: string }).boardOrientation}
-        data-dragging={String((options as { allowDragging?: boolean }).allowDragging)}
-      />
-    );
-  },
-  // Only what `PromotionPicker` reaches for.
-  chessColumnToColumnIndex: (column: string, _columns: number, orientation: string) =>
-    orientation === "white"
-      ? column.charCodeAt(0) - "a".charCodeAt(0)
-      : 7 - (column.charCodeAt(0) - "a".charCodeAt(0)),
-  defaultPieces: Object.fromEntries(
-    ["w", "b"].flatMap((color) =>
-      ["K", "Q", "R", "B", "N", "P"].map((letter) => {
-        const key = `${color}${letter}`;
-        return [key, () => <svg data-testid={`piece-${key}`} />];
-      }),
-    ),
-  ),
-}));
-
-/** The engine instance the mounted screen is talking to. */
-const engine = () => {
-  const instance = harness.FakeEngine.instances.at(-1);
-  if (!instance) throw new Error("no engine was constructed");
-  return instance;
-};
-
-const boardOptions = () => {
-  const options = harness.board.options as {
-    position?: string;
-    allowDragging?: boolean;
-    onPieceDrop?: (args: {
-      sourceSquare: string;
-      targetSquare: string | null;
-    }) => boolean;
-  } | null;
-  if (!options) throw new Error("the board has not rendered");
-  return options;
-};
-
-/** Drag a piece, the way the board would report it. */
-const drag = (from: string, to: string) => {
-  let accepted = false;
-  act(() => {
-    accepted = boardOptions().onPieceDrop!({
-      sourceSquare: from,
-      targetSquare: to,
-    });
-  });
-  return accepted;
-};
-
-/** Let the engine answer the search it is currently running with this move. */
-const engineReplies = (uci: string) => {
-  const fen = engine().lastSearch;
-  act(() => {
-    engine().say({ fen, bestMove: uci, uciMessage: `bestmove ${uci}` });
-  });
-};
-
-/** Push one `info` line for the position currently being searched. */
-const engineReports = (
-  info: { depth: number; multipv?: number; cp?: number; mate?: number; pv: string },
-) => {
-  const fen = engine().lastSearch;
-  act(() => {
-    engine().say({
-      fen,
-      uciMessage: "info",
-      depth: info.depth,
-      multipv: info.multipv,
-      positionEvaluation: info.cp === undefined ? undefined : String(info.cp),
-      possibleMate: info.mate === undefined ? undefined : String(info.mate),
-      pv: info.pv,
-    });
-  });
-};
-
-/*
-  A router, because the screen reads its starting position off the URL — that is
-  how the Board Editor hands one over. `entry` is what a test arrives at.
-*/
-const renderScreen = (entry = "/engine/play") =>
+const mount = (entry = "/engine/play") =>
   render(
     <AppThemeWithLang>
       <MemoryRouter initialEntries={[entry]}>
         <RightPanelProvider>
-          <PlayWithEngine />
+          <Routes>
+            <Route path="/engine/play" element={<PlayWithEngine />} />
+            <Route path="*" element={<div data-testid="elsewhere" />} />
+          </Routes>
+          <Where />
           <RightPanelOutlet />
         </RightPanelProvider>
       </MemoryRouter>
     </AppThemeWithLang>,
   );
 
-const position = () => screen.getByTestId("board").getAttribute("data-position");
+const where = () => screen.getByTestId("where").textContent ?? "";
 
-/** A position the Board Editor could hand over: Black to move, mate in one. */
-const handedOverFen = "6k1/5ppp/8/8/8/8/8/R5K1 b - - 0 1";
+const drag = (from: string, to: string) => {
+  let accepted = false;
+  act(() => {
+    accepted = boardOptions().onPieceDrop!({ sourceSquare: from, targetSquare: to });
+  });
+  return accepted;
+};
+
+/** End the search for the position on screen with a line and a bestmove. */
+const engineSearches = (pv: string) => {
+  const engine = FakeEngine.latest();
+  const fen = engine.lastSearch;
+  act(() => {
+    engine.say({ fen, uciMessage: "info", depth: 12, multipv: 1, positionEvaluation: "20", pv });
+  });
+  act(() => {
+    engine.say({ fen, uciMessage: "bestmove", bestMove: pv.split(" ")[0] });
+  });
+};
+
+const playButton = () => screen.getByTestId("play-with-engine-play");
+const isPlaying = () => playButton().getAttribute("aria-pressed") === "true";
+const click = (testId: string) => fireEvent.click(screen.getByTestId(testId));
 
 beforeEach(async () => {
-  harness.FakeEngine.instances = [];
-  harness.board.options = null;
+  localStorage.clear();
+  FakeEngine.reset();
   await i18n.changeLanguage("en");
 });
 
-describe("Play with Engine — the game against the engine", () => {
-  it("opens on the starting position and asks the engine about it", () => {
-    renderScreen();
-
-    expect(position()).toMatch(/^rnbqkbnr\/pppppppp/);
-    expect(engine().lastSearch).toBe(position());
+describe("Play with Engine — a new game", () => {
+  it("opens on the standard start, the reader on White, the engine on and Play on", () => {
+    mount();
+    expect(boardOptions().id).toBe("play-with-engine");
+    expect(boardOptions().position).toBe(START);
+    expect(boardOptions().boardOrientation).toBe("white");
+    expect(
+      screen.getByTestId("play-with-engine-setting-engine").querySelector("input"),
+    ).toBeChecked();
+    expect(isPlaying()).toBe(true);
+    expect(screen.getByTestId("play-with-engine-play-status")).toHaveAttribute(
+      "data-status",
+      "your-move",
+    );
   });
 
-  it("plays a full exchange: the human drags, the engine replies", () => {
-    renderScreen();
+  it("opens a ?fen= with Black to move with the reader on Black, the board turned", () => {
+    mount(`/engine/play?fen=${encodeURIComponent(AFTER_E4)}`);
+    expect(boardOptions().position).toBe(AFTER_E4);
+    expect(boardOptions().boardOrientation).toBe("black");
+    expect(isPlaying()).toBe(true);
+    expect(screen.getByTestId("play-with-engine-play-status")).toHaveAttribute(
+      "data-status",
+      "your-move",
+    );
+  });
+
+  it("ignores an unreadable ?fen=", () => {
+    mount("/engine/play?fen=nonsense");
+    expect(boardOptions().position).toBe(START);
+  });
+});
+
+describe("Play with Engine — the engine plays the other side", () => {
+  it("answers the reader's move, and never plays the reader's side", () => {
+    mount();
+    // A search of the start finished: it is the reader's turn, so nothing moves.
+    engineSearches("e2e4 e7e5");
+    expect(boardOptions().position).toBe(START);
 
     expect(drag("e2", "e4")).toBe(true);
-    expect(position()).toContain("4P3");
-    // The move went in, so the engine is now asked about the new position.
-    expect(engine().lastSearch).toBe(position());
-
-    engineReplies("e7e5");
-
-    expect(position()).toContain("4p3");
-    expect(screen.getByTestId("move-ply-1")).toHaveTextContent("e4");
-    expect(screen.getByTestId("move-ply-2")).toHaveTextContent("e5");
+    expect(screen.getByTestId("play-with-engine-play-status")).toHaveAttribute(
+      "data-status",
+      "thinking",
+    );
+    expect(screen.getByTestId("play-with-engine-play-spinner")).toBeInTheDocument();
+    engineSearches("e7e5 g1f3");
+    expect(boardOptions().position).toBe(AFTER_E4_E5);
   });
 
-  it("rejects an illegal drag and leaves the position alone", () => {
-    renderScreen();
-    const before = position();
+  it("pauses when the reader switches side, and Play then has the engine take White at once", () => {
+    mount();
+    // The engine searched the start and finished while it was the reader's turn.
+    engineSearches("d2d4 d7d5");
+    click("board-control-flip");
+    expect(boardOptions().boardOrientation).toBe("black");
+    expect(isPlaying()).toBe(false);
+    expect(boardOptions().position).toBe(START);
 
-    expect(drag("e2", "e5")).toBe(false);
-
-    expect(position()).toBe(before);
+    fireEvent.click(playButton());
+    expect(isPlaying()).toBe(true);
+    // White's turn, a finished search in hand: its move is played at once.
+    expect(boardOptions().position).toBe(AFTER_D4);
   });
 
-  it("refuses a drag off the board", () => {
-    renderScreen();
-
-    act(() => {
-      expect(
-        boardOptions().onPieceDrop!({ sourceSquare: "e2", targetSquare: null }),
-      ).toBe(false);
-    });
+  it("takes the header's side toggle for the side — the board turns and Play pauses", () => {
+    mount();
+    click("play-with-engine-side-black");
+    expect(boardOptions().boardOrientation).toBe("black");
+    expect(isPlaying()).toBe(false);
+    // …and it is no longer in the Engine tab, nor is New game.
+    click("play-with-engine-panel-tab-engine");
+    expect(screen.queryByTestId("engine-setting-playas")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("engine-new-game")).not.toBeInTheDocument();
   });
 
-  it("will not let the human move on the engine's turn", () => {
-    renderScreen();
+  it("pauses on a step back, and a move by hand there is a side line Play goes on from", () => {
+    mount();
     drag("e2", "e4");
+    engineSearches("e7e5");
+    expect(boardOptions().position).toBe(AFTER_E4_E5);
 
-    // Black is the engine's, and it has not answered yet.
-    expect(boardOptions().allowDragging).toBe(false);
-    expect(drag("e7", "e5")).toBe(false);
+    click("board-control-first");
+    expect(isPlaying()).toBe(false);
+    expect(boardOptions().position).toBe(START);
+
+    // By hand, from the start: a side line beside 1. e4.
+    expect(drag("d2", "d4")).toBe(true);
+    expect(boardOptions().position).toBe(AFTER_D4);
+    const moves = screen.getByTestId("play-with-engine-panel-content-moves");
+    expect(moves).toHaveTextContent(/e4/);
+    expect(moves).toHaveTextContent(/d4/);
+
+    // Play again: the engine answers there, in the side line.
+    fireEvent.click(playButton());
+    expect(isPlaying()).toBe(true);
+    engineSearches("d7d5");
+    expect(boardOptions().position).toBe(
+      "rnbqkbnr/ppp1pppp/8/3p4/3P4/8/PPP1PPPP/RNBQKBNR w KQkq - 0 2",
+    );
   });
 
-  it("ignores a bestmove for a position the game is no longer at", () => {
-    renderScreen();
-    drag("e2", "e4");
-
-    // A result stamped with a position that is not the live one — the wrapper's
-    // FEN stamp is what makes this detectable at all.
-    act(() => {
-      engine().say({
-        fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
-        bestMove: "e7e5",
-        uciMessage: "bestmove e7e5",
-      });
-    });
-
-    expect(screen.queryByTestId("move-ply-2")).not.toBeInTheDocument();
+  it("stops when the engine is switched off", () => {
+    mount();
+    click("play-with-engine-setting-engine");
+    expect(isPlaying()).toBe(false);
+    expect(playButton()).toBeDisabled();
   });
 });
 
-describe("Play with Engine — stepping back through the game", () => {
-  const playOpening = () => {
-    renderScreen();
+describe("Play with Engine — the game saves itself", () => {
+  it("writes nothing for an untouched board", () => {
+    mount();
+    expect(playedGamesSnapshot()).toHaveLength(0);
+    expect(where()).toBe("/engine/play");
+  });
+
+  it("writes the game on every move, and the URL names it", () => {
+    mount();
     drag("e2", "e4");
-    engineReplies("e7e5");
-    drag("g1", "f3");
-    engineReplies("b8c6");
-  };
+    expect(playedGamesSnapshot()).toHaveLength(1);
+    const [game] = playedGamesSnapshot();
+    expect(game.path).toEqual(["e4"]);
+    expect(game.settings.playAs).toBe("white");
+    expect(where()).toBe(`/engine/play?saved=${game.id}`);
 
-  it("shows the ply that was clicked, and locks the board there", async () => {
-    playOpening();
-    const live = position();
-
-    await userEvent.click(screen.getByTestId("move-ply-1"));
-
-    expect(position()).not.toBe(live);
-    expect(position()).toContain("4P3");
-    // Off the live position a drag would apply to a position nobody is looking
-    // at, so the board is a review and nothing else.
-    expect(boardOptions().allowDragging).toBe(false);
-    expect(drag("b1", "c3")).toBe(false);
+    engineSearches("e7e5");
+    expect(playedGamesSnapshot()).toHaveLength(1);
+    expect(playedGamesSnapshot()[0].path).toEqual(["e4", "e5"]);
+    expect(playedGamesSnapshot()[0].pgn).toContain("1. e4 e5");
+    // The finished scores ride along, keyed by position.
+    expect(playedGamesSnapshot()[0].evals?.some((entry) => entry.fen === AFTER_E4)).toBe(true);
   });
 
-  it("does not let the engine move for a position the player has left", async () => {
-    playOpening();
-    await userEvent.click(screen.getByTestId("move-ply-1"));
-
-    const plies = screen.getAllByTestId(/^move-ply-[1-9]/).length;
-
-    /*
-      The engine is now searching the *displayed* ply, where it is Black to move
-      — exactly the shape that would make a naive handler play a move behind the
-      player's back. The result is analysis, and only analysis.
-    */
-    engineReplies("d7d5");
-
-    expect(screen.getAllByTestId(/^move-ply-[1-9]/)).toHaveLength(plies);
-    expect(position()).toContain("4P3");
-  });
-
-  it("searches the ply on screen, not the live position", async () => {
-    playOpening();
-    const live = engine().lastSearch;
-
-    await userEvent.click(screen.getByTestId("move-ply-2"));
-
-    expect(engine().lastSearch).not.toBe(live);
-    expect(engine().lastSearch).toBe(position());
-  });
-
-  it("returns to the live position through the board controls, and plays on", async () => {
-    playOpening();
-    await userEvent.click(screen.getByTestId("move-ply-1"));
-
-    await userEvent.click(screen.getByTestId("board-control-last"));
-
-    expect(boardOptions().allowDragging).toBe(true);
-    expect(drag("f1", "c4")).toBe(true);
-  });
-});
-
-describe("Play with Engine — promotion", () => {
-  /*
-    A real picker rather than a hardcoded queen is an acceptance criterion, so
-    this plays an actual promotion line: White's h-pawn takes its way to the
-    eighth rank while the engine answers for Black.
-  */
-  const playToPromotion = () => {
-    renderScreen();
-    drag("h2", "h4");
-    engineReplies("g7g5");
-    drag("h4", "g5");
-    engineReplies("g8f6");
-    drag("g5", "f6");
-    engineReplies("h8g8");
-    drag("f6", "e7");
-    engineReplies("g8g6");
-  };
-
-  it("asks which piece instead of assuming a queen", () => {
-    playToPromotion();
-    const before = position();
-
-    // The drop is accepted so the pawn is not snapped back and then jumped
-    // forward again when the choice lands.
-    expect(drag("e7", "d8")).toBe(true);
-
-    expect(screen.getByTestId("promotion-picker")).toBeInTheDocument();
-    // Nothing has been played yet — the choice decides the move.
-    expect(position()).toBe(before);
-    for (const piece of ["q", "r", "n", "b"]) {
-      expect(screen.getByTestId(`promotion-choice-${piece}`)).toBeInTheDocument();
-    }
-  });
-
-  it("underpromotes when that is what was chosen", async () => {
-    playToPromotion();
-    drag("e7", "d8");
-
-    await userEvent.click(screen.getByTestId("promotion-choice-n"));
-
-    expect(screen.queryByTestId("promotion-picker")).not.toBeInTheDocument();
-    // A knight on d8, not a queen — the whole point of asking.
-    expect(position()).toMatch(/^rnbN/);
-  });
-
-  it("cancels without moving when the scrim is clicked", async () => {
-    playToPromotion();
-    const before = position();
-    drag("e7", "d8");
-
-    await userEvent.click(screen.getByTestId("promotion-scrim"));
-
-    expect(screen.queryByTestId("promotion-picker")).not.toBeInTheDocument();
-    expect(position()).toBe(before);
-  });
-
-  it("locks the board while the picker is open", () => {
-    playToPromotion();
-    drag("e7", "d8");
-
-    expect(boardOptions().allowDragging).toBe(false);
-  });
-});
-
-describe("Play with Engine — the panel", () => {
-  it("shows the evaluation bar, normalised so up is always White", () => {
-    renderScreen();
-    // White to move, +120 for the side to move: White is ahead.
-    engineReports({ depth: 18, multipv: 1, cp: 120, pv: "e2e4 e7e5" });
-
-    const bar = screen.getByTestId("eval-bar");
-    expect(bar).toHaveAttribute("data-score", "+1.20");
-    expect(Number(bar.getAttribute("data-white-share"))).toBeGreaterThan(0.5);
-  });
-
-  it("flips the same raw score when it is Black to move", () => {
-    renderScreen();
+  it("keeps side lines in the record", () => {
+    mount();
     drag("e2", "e4");
-    // Black to move now; +120 for the side to move means Black is ahead.
-    engineReports({ depth: 18, multipv: 1, cp: 120, pv: "e7e5 g1f3" });
-
-    const bar = screen.getByTestId("eval-bar");
-    expect(bar).toHaveAttribute("data-score", "−1.20");
-    expect(Number(bar.getAttribute("data-white-share"))).toBeLessThan(0.5);
-  });
-
-  it("shows a mate as mate-in-N on the bar", () => {
-    renderScreen();
-    engineReports({ depth: 12, multipv: 1, mate: 4, pv: "e2e4" });
-
-    expect(screen.getByTestId("eval-bar")).toHaveAttribute("data-score", "M4");
-  });
-
-  it("turns the evaluation bar off and on again", async () => {
-    renderScreen();
-    expect(screen.getByTestId("eval-bar")).toBeInTheDocument();
-
-    await userEvent.click(screen.getByTestId("engine-panel-tab-engine"));
-    await userEvent.click(
-      screen.getByTestId("engine-setting-evalbar").querySelector("input")!,
-    );
-
-    expect(screen.queryByTestId("eval-bar")).not.toBeInTheDocument();
-
-    await userEvent.click(
-      screen.getByTestId("engine-setting-evalbar").querySelector("input")!,
-    );
-    expect(screen.getByTestId("eval-bar")).toBeInTheDocument();
-  });
-
-  it("lists the engine's variations with their depth", async () => {
-    renderScreen();
-    engineReports({ depth: 20, multipv: 1, cp: 35, pv: "e2e4 e7e5" });
-    engineReports({ depth: 20, multipv: 2, cp: 20, pv: "d2d4 d7d5" });
-
-    await userEvent.click(screen.getByTestId("engine-panel-tab-lines"));
-
-    expect(screen.getByTestId("variation-1-line")).toHaveTextContent("1. e4 e5");
-    expect(screen.getByTestId("variation-2-line")).toHaveTextContent("1. d4 d5");
-    expect(screen.getByTestId("analysis-depth")).toHaveTextContent("Depth 20");
-  });
-
-  it("drops the previous position's lines rather than showing them under a new board", async () => {
-    renderScreen();
-    engineReports({ depth: 20, multipv: 1, cp: 35, pv: "e2e4 e7e5" });
-    await userEvent.click(screen.getByTestId("engine-panel-tab-lines"));
-    expect(screen.getByTestId("variation-1")).toBeInTheDocument();
-
-    drag("e2", "e4");
-
-    // A new position with no result yet: waiting, not the old line.
-    expect(screen.queryByTestId("variation-1")).not.toBeInTheDocument();
-    expect(screen.getByTestId("best-variations")).toHaveTextContent(
-      "Waiting for the engine…",
-    );
-  });
-
-  it("pushes a changed setting to the engine and re-searches", async () => {
-    renderScreen();
-    const searchesBefore = engine().searches.length;
-
-    await userEvent.click(screen.getByTestId("engine-panel-tab-engine"));
-    await userEvent.click(screen.getByTestId("engine-setting-playas-black"));
-
-    // Changing a setting takes effect on the next search, with no reload.
-    expect(engine().searches.length).toBeGreaterThan(searchesBefore);
-  });
-
-  it("only sends the engine options this build actually declares", () => {
-    renderScreen();
-
-    const sent = engine().setOptions.map(([name]) => name);
-    expect(sent).toContain("Skill Level");
-    expect(sent).toContain("MultiPV");
-    // A name this build has no option for never reaches the wire.
-    expect(engine().setOption("UCI_Elo", 1800)).toBe(false);
-  });
-
-  it("shows a pinned option as fixed rather than as a slider that does nothing", async () => {
-    renderScreen();
-
-    await userEvent.click(screen.getByTestId("engine-panel-tab-engine"));
-
-    // This build pins both: Threads to 1, Hash to 16.
-    expect(screen.getByTestId("engine-setting-threads-fixed")).toHaveTextContent(
-      "This engine build fixes Threads at 1.",
-    );
-    expect(
-      screen.getByTestId("engine-setting-hash").querySelector("input"),
-    ).toBeDisabled();
-    // MultiPV has a real range, so it stays live.
-    expect(
-      screen.getByTestId("engine-setting-multipv").querySelector("input"),
-    ).toBeEnabled();
-  });
-
-  it("lets the engine take White when the human switches colours", async () => {
-    renderScreen();
-
-    await userEvent.click(screen.getByTestId("engine-panel-tab-engine"));
-    await userEvent.click(screen.getByTestId("engine-setting-playas-black"));
-
-    engineReplies("d2d4");
-
-    // Back to the Game tab — the move list is only rendered while it is open.
-    await userEvent.click(screen.getByTestId("engine-panel-tab-game"));
-    expect(screen.getByTestId("move-ply-1")).toHaveTextContent("d4");
-  });
-
-  it("starts a new game from the settings tab", async () => {
-    renderScreen();
-    drag("e2", "e4");
-    engineReplies("e7e5");
-    expect(screen.getByTestId("move-ply-2")).toBeInTheDocument();
-
-    await userEvent.click(screen.getByTestId("engine-panel-tab-engine"));
-    await userEvent.click(screen.getByTestId("engine-new-game"));
-
-    expect(screen.queryByTestId("move-ply-1")).not.toBeInTheDocument();
-    expect(position()).toMatch(/^rnbqkbnr\/pppppppp/);
-  });
-
-  it("flips the board without touching the game", async () => {
-    renderScreen();
-    drag("e2", "e4");
-    const before = position();
-
-    await userEvent.click(screen.getByTestId("board-control-flip"));
-
-    expect(screen.getByTestId("board")).toHaveAttribute(
-      "data-orientation",
-      "black",
-    );
-    expect(position()).toBe(before);
-  });
-
-  it("tears the worker down on unmount", () => {
-    const { unmount } = renderScreen();
-    const instance = engine();
-
-    unmount();
-
-    expect(instance.terminated).toBe(true);
-  });
-});
-
-describe("Play with Engine — the captured-pieces strips", () => {
-  it("renders two empty strips for an untouched board", () => {
-    renderScreen();
-
-    // Empty strips hold the board's size steady — and show nothing.
-    const white = screen.getByTestId("play-with-engine-captured-white");
-    const black = screen.getByTestId("play-with-engine-captured-black");
-    expect(white).toBeInTheDocument();
-    expect(black).toBeInTheDocument();
-    expect(white).not.toHaveAttribute("data-diff");
-    expect(black).not.toHaveAttribute("data-diff");
-  });
-
-  it("attributes a capture to the side that made it, with the diff beside it", () => {
-    renderScreen();
-
-    drag("e2", "e4");
-    engineReplies("d7d5");
-    drag("e4", "d5");
-
-    // White took a black pawn: one point up, beside White's strip.
-    const white = screen.getByTestId("play-with-engine-captured-white");
-    expect(white).toHaveAttribute("data-diff", "1");
-    expect(white).toHaveTextContent("+1");
-    expect(screen.getByTestId("piece-bP")).toBeInTheDocument();
-    expect(screen.getByTestId("play-with-engine-captured-black")).not.toHaveAttribute(
-      "data-diff",
-    );
-  });
-
-  it("shows the top strip belonging to the side at the top of the board, and swaps on a flip", async () => {
-    renderScreen();
-    drag("e2", "e4");
-    engineReplies("d7d5");
-    drag("e4", "d5");
-
-    // Facing White: Black sits at the top, so Black's strip is the first.
-    const strips = () =>
-      screen
-        .getByTestId("play-with-engine-board")
-        .querySelectorAll("[data-testid^='play-with-engine-captured-'][role='img']");
-    expect(strips()[0]).toHaveAttribute(
-      "data-testid",
-      "play-with-engine-captured-black",
-    );
-    expect(strips()[1]).toHaveAttribute(
-      "data-testid",
-      "play-with-engine-captured-white",
-    );
-
-    await userEvent.click(screen.getByTestId("board-control-flip"));
-
-    // Facing Black now: the same two strips, sides swapped.
-    expect(strips()[0]).toHaveAttribute(
-      "data-testid",
-      "play-with-engine-captured-white",
-    );
-    expect(strips()[1]).toHaveAttribute(
-      "data-testid",
-      "play-with-engine-captured-black",
-    );
-    // The captures themselves are the game's, not the board's.
-    expect(screen.getByTestId("play-with-engine-captured-white")).toHaveAttribute(
-      "data-diff",
-      "1",
-    );
-  });
-});
-
-describe("Play with Engine — arriving from the Board Editor", () => {
-  const handedOver = handedOverFen;
-
-  it("starts the game from the position handed over in the URL", () => {
-    renderScreen(`/engine/play?fen=${encodeURIComponent(handedOver)}`);
-
-    expect(position()).toBe(handedOver);
-    // It is a game, not a diagram: the engine is asked about that position, and
-    // a move played from it is the first of the list.
-    expect(engine().lastSearch).toBe(handedOver);
-    expect(drag("g8", "h8")).toBe(true);
-    expect(screen.getByTestId("move-ply-1")).toHaveTextContent("Kh8");
-  });
-
-  it("gives the reader the side to move, and turns the board to face it", () => {
-    renderScreen(`/engine/play?fen=${encodeURIComponent(handedOver)}`);
-
-    /*
-      A position set up with Black to move is one the reader means to play as
-      Black — otherwise the engine would move the moment the screen opened, from
-      a position they had just finished arranging.
-    */
-    expect(screen.getByTestId("board")).toHaveAttribute(
-      "data-orientation",
-      "black",
-    );
-    engineReplies("a1a8");
-    expect(screen.queryByTestId("move-ply-1")).not.toBeInTheDocument();
-  });
-
-  it("goes back to that position on a new game, not to the standard start", async () => {
-    renderScreen(`/engine/play?fen=${encodeURIComponent(handedOver)}`);
-    drag("g8", "h8");
-
-    await userEvent.click(screen.getByTestId("engine-panel-tab-engine"));
-    await userEvent.click(screen.getByTestId("engine-new-game"));
-
-    expect(screen.queryByTestId("move-ply-1")).not.toBeInTheDocument();
-    expect(position()).toBe(handedOver);
-  });
-
-  it("ignores a position it cannot read, rather than throwing on the link", () => {
-    renderScreen("/engine/play?fen=not-a-position");
-
-    expect(position()).toMatch(/^rnbqkbnr\/pppppppp/);
-  });
-});
-
-describe("Play with Engine — saving the game", () => {
-  /** What the store holds, read the way the Saved games screen reads it. */
-  const saved = () => savedGamesSnapshot();
-
-  it("writes nothing for a board nobody has played on", () => {
-    renderScreen();
-
-    // Visiting the screen is not playing a game, and an empty row in the list
-    // would be worse than nothing.
-    expect(saved()).toEqual([]);
-  });
-
-  it("saves the game on every move, with nothing to click", () => {
-    renderScreen();
-
-    drag("e2", "e4");
-    expect(saved()).toHaveLength(1);
-    expect(saved()[0].pgn).toContain("1. e4");
-
-    engineReplies("e7e5");
-    // The engine's reply is saved too — one row, grown, not a second one.
-    expect(saved()).toHaveLength(1);
-    expect(saved()[0].pgn).toContain("e5");
-  });
-
-  it("records the settings the game was played under", async () => {
-    renderScreen();
-
-    await userEvent.click(screen.getByTestId("engine-panel-tab-engine"));
-    await userEvent.click(screen.getByTestId("engine-setting-playas-black"));
-    engineReplies("d2d4");
-
-    expect(saved()[0].settings.playAs).toBe("black");
-  });
-
-  it("leaves the abandoned game in the list when a new one is started", async () => {
-    renderScreen();
-    drag("e2", "e4");
-    const first = saved()[0].id;
-
-    await userEvent.click(screen.getByTestId("engine-panel-tab-engine"));
-    await userEvent.click(screen.getByTestId("engine-new-game"));
-    await userEvent.click(screen.getByTestId("engine-panel-tab-game"));
+    click("board-control-first");
     drag("d2", "d4");
-
-    const ids = saved().map((row) => row.id);
-    expect(ids).toHaveLength(2);
-    // Newest first, and the game that was abandoned is still there.
-    expect(ids[1]).toBe(first);
-    expect(saved()[0].pgn).toContain("1. d4");
+    expect(playedGamesSnapshot()[0].pgn).toMatch(/1\. e4 \(1\. d4\)/);
   });
 
-  it("keeps the position a handed-over game started from", () => {
-    renderScreen(`/engine/play?fen=${encodeURIComponent(handedOverFen)}`);
-    drag("g8", "h8");
+  it("discards the game's saved progress on Replay, once asked, and starts over", () => {
+    mount();
+    drag("e2", "e4");
+    const first = playedGamesSnapshot()[0];
 
-    expect(saved()[0].pgn).toContain(`[FEN "${handedOverFen}"]`);
+    click("play-with-engine-replay");
+    // Asked first: cancelling keeps everything.
+    fireEvent.click(screen.getByText("Cancel"));
+    expect(playedGamesSnapshot()).toHaveLength(1);
+
+    click("play-with-engine-replay");
+    click("play-with-engine-confirm-ok");
+    expect(boardOptions().position).toBe(START);
+    expect(isPlaying()).toBe(true);
+    expect(where()).toBe("/engine/play");
+    expect(findPlayedGame(first.id)).toBeUndefined();
+    expect(playedGamesSnapshot()).toHaveLength(0);
+
+    drag("d2", "d4");
+    expect(playedGamesSnapshot()).toHaveLength(1);
+    expect(playedGamesSnapshot()[0].id).not.toBe(first.id);
   });
 });
 
-describe("Play with Engine — the engine switch", () => {
-  /** The switch lives above the tab strip, in the panel's first row. */
-  const switchInput = () =>
-    screen.getByTestId("engine-setting-engine").querySelector("input")!;
-
-  it("renders the switch above the tab strip, on by default", () => {
-    renderScreen();
-
-    expect(switchInput()).toBeChecked();
-    expect(screen.getByTestId("engine-current-opening")).toBeInTheDocument();
-    expect(
-      screen
-        .getByTestId("engine-setting-engine")
-        .compareDocumentPosition(screen.getByTestId("engine-panel-tab-game")) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
-  });
-
-  it("stops searching and lets the reader play both sides while off", async () => {
-    renderScreen();
-    const searchesBefore = engine().searches.length;
-
-    await userEvent.click(switchInput());
-
-    drag("e2", "e4");
-    expect(engine().searches).toHaveLength(searchesBefore);
-    // Black is the engine's side, but the engine is off: the reader plays it.
-    expect(drag("e7", "e5")).toBe(true);
-    expect(position()).toContain("4p3");
-  });
-
-  it("shows the score chip at its no-data state and no stale lines while off", async () => {
-    renderScreen();
-    engineReports({ depth: 18, multipv: 1, cp: 120, pv: "e2e4 e7e5" });
-    expect(screen.getByTestId("engine-status-score")).toHaveTextContent("+1.20");
-
-    await userEvent.click(switchInput());
-
-    expect(screen.getByTestId("engine-status-score")).toHaveTextContent("—");
-    // No stale lines: the variations fall to their empty state.
-    await userEvent.click(screen.getByTestId("engine-panel-tab-lines"));
-    expect(screen.queryByTestId("variation-1")).not.toBeInTheDocument();
-    expect(screen.getByTestId("best-variations")).toHaveTextContent(
-      "Waiting for the engine…",
+describe("Play with Engine — resuming", () => {
+  const stored = (pgn: string, path: string[], playAs: "white" | "black") => {
+    const record = playedGameOf(
+      "p1",
+      parsePgnTree(pgn),
+      path,
+      { ...DEFAULT_ENGINE_SETTINGS, playAs, skillLevel: 7 },
+      undefined,
+      new Date("2026-01-01T00:00:00Z"),
     );
-  });
-
-  it("resumes searching and the engine replies when switched back on", async () => {
-    renderScreen();
-
-    await userEvent.click(switchInput());
-    drag("e2", "e4");
-    expect(engine().lastSearch).not.toBe(position());
-
-    await userEvent.click(switchInput());
-    expect(engine().lastSearch).toBe(position());
-    engineReplies("e7e5");
-    expect(screen.getByTestId("move-ply-2")).toHaveTextContent("e5");
-  });
-
-  it("keeps already-collected move-list evals while off", async () => {
-    renderScreen();
-    drag("e2", "e4");
-    engineReports({ depth: 18, multipv: 1, cp: 120, pv: "e7e5" });
-    engineReplies("e7e5");
-    expect(screen.getByTestId("move-eval-1")).toBeInTheDocument();
-
-    await userEvent.click(switchInput());
-
-    expect(screen.getByTestId("move-eval-1")).toBeInTheDocument();
-  });
-});
-
-describe("Play with Engine — move-list evals", () => {
-  it("records a position's score when its search completes, not on a streamed line", () => {
-    renderScreen();
-    drag("e2", "e4");
-    // The engine is searching the position after e4, where Black is to move:
-    // +120 for the side to move is Black's, so White's perspective is −1.20.
-    engineReports({ depth: 18, multipv: 1, cp: 120, pv: "e7e5" });
-    // A streamed line is not a score yet.
-    expect(screen.queryByTestId("move-eval-1")).not.toBeInTheDocument();
-
-    engineReplies("e7e5");
-    expect(screen.getByTestId("move-eval-1")).toHaveTextContent("−1.20");
-  });
-
-  it("shows the start-position eval at ply 0", () => {
-    renderScreen();
-    engineReports({ depth: 14, multipv: 1, cp: 30, pv: "e2e4" });
-    // The start search completes; the position is the human's to move, so the
-    // reply is not played — but the score is recorded.
-    engineReplies("e2e4");
-
-    expect(screen.queryByTestId("move-ply-1")).not.toBeInTheDocument();
-    expect(screen.getByTestId("move-eval-0")).toHaveTextContent("+0.30");
-  });
-
-  it("keeps only the top line's score", () => {
-    renderScreen();
-    drag("e2", "e4");
-    engineReports({ depth: 18, multipv: 2, cp: 50, pv: "e7e5" });
-    engineReplies("e7e5");
-
-    expect(screen.queryByTestId("move-eval-1")).not.toBeInTheDocument();
-  });
-
-  it("shows nothing, not a dash, for a position that has not been searched", () => {
-    renderScreen();
-    drag("e2", "e4");
-    engineReports({ depth: 18, multipv: 1, cp: 120, pv: "e7e5" });
-    engineReplies("e7e5");
-    // Only ply 1's position has been searched through to a bestmove.
-    expect(screen.getByTestId("move-eval-1")).toBeInTheDocument();
-    expect(screen.queryByTestId("move-eval-2")).not.toBeInTheDocument();
-  });
-});
-
-describe("Play with Engine — resuming a saved game", () => {
-  /** A game already in the store, as the Saved games screen would link to it. */
-  const storeGame = (
-    id: string,
-    moves: readonly string[],
-    settings: Partial<EngineSettings> = {},
-  ) => {
-    const chess = new Chess();
-    for (const san of moves) chess.move(san);
-    saveGame(
-      savedGameOf(id, gameFromChess(chess), {
-        ...DEFAULT_ENGINE_SETTINGS,
-        ...settings,
-      }),
-    );
+    savePlayedGame(record);
+    return record;
   };
 
-  it("opens on the position the game was left at, with its moves behind it", () => {
-    storeGame("g1", ["e4", "e5", "Nf3"]);
-
-    renderScreen("/engine/play?saved=g1");
-
-    expect(screen.getByTestId("move-ply-1")).toHaveTextContent("e4");
-    expect(screen.getByTestId("move-ply-3")).toHaveTextContent("Nf3");
-    expect(position()).toContain("5N2");
-    // And it is a live game, not a diagram: the engine is asked about it.
-    expect(engine().lastSearch).toBe(position());
+  it("goes on at the node and on the side it was left, at its strength", () => {
+    stored("1. e4 e5 2. Nf3 *", ["e4"], "black");
+    mount("/engine/play?saved=p1");
+    expect(boardOptions().position).toBe(AFTER_E4);
+    expect(boardOptions().boardOrientation).toBe("black");
+    click("play-with-engine-panel-tab-engine");
+    expect(screen.getByText(/Level 7/)).toBeInTheDocument();
   });
 
-  it("restores the side the reader was playing, and faces the board that way", () => {
-    storeGame("g1", ["e4"], { playAs: "black" });
-
-    renderScreen("/engine/play?saved=g1");
-
-    expect(screen.getByTestId("board")).toHaveAttribute(
-      "data-orientation",
-      "black",
-    );
-    // Black to move and Black is the reader's, so the board is theirs to drag.
-    expect(boardOptions().allowDragging).toBe(true);
-    expect(drag("e7", "e5")).toBe(true);
+  it("re-orders nothing by being opened", () => {
+    const record = stored("1. e4 e5 *", ["e4", "e5"], "white");
+    mount("/engine/play?saved=p1");
+    const after = findPlayedGame("p1");
+    expect(after?.pgn).toBe(record.pgn);
+    expect(after?.updatedAt).toBe(record.updatedAt);
+    expect(where()).toBe("/engine/play?saved=p1");
   });
 
-  it("restores the engine settings, so it plays on at the same strength", async () => {
-    storeGame("g1", ["e4", "e5"], { skillLevel: 3 });
-
-    renderScreen("/engine/play?saved=g1");
-
-    expect(engine().setOptions).toContainEqual(["Skill Level", 3]);
-    await userEvent.click(screen.getByTestId("engine-panel-tab-engine"));
-    expect(
-      screen.getByTestId("engine-setting-skill-level-value"),
-    ).toHaveTextContent("Level 3");
-  });
-
-  it("plays on into the same row rather than starting a second one", () => {
-    storeGame("g1", ["e4", "e5"]);
-    renderScreen("/engine/play?saved=g1");
-
+  it("plays on into the same row", () => {
+    stored("1. e4 e5 *", ["e4", "e5"], "white");
+    mount("/engine/play?saved=p1");
     drag("g1", "f3");
-
-    expect(savedGamesSnapshot()).toHaveLength(1);
-    expect(savedGamesSnapshot()[0].id).toBe("g1");
-    expect(savedGamesSnapshot()[0].pgn).toContain("Nf3");
+    expect(playedGamesSnapshot()).toHaveLength(1);
+    expect(findPlayedGame("p1")?.path).toEqual(["e4", "e5", "Nf3"]);
   });
 
-  it("does not re-order the list merely by being opened", () => {
-    storeGame("g1", ["e4"]);
-    storeGame("g2", ["d4"]);
-    expect(savedGamesSnapshot().map((row) => row.id)).toEqual(["g2", "g1"]);
-
-    renderScreen("/engine/play?saved=g1");
-
-    // The save effect ran and found the record unchanged, so nothing moved.
-    expect(savedGamesSnapshot().map((row) => row.id)).toEqual(["g2", "g1"]);
-  });
-
-  it("opens an ordinary new game for an id that names nothing", () => {
-    renderScreen("/engine/play?saved=nope");
-
-    expect(position()).toMatch(/^rnbqkbnr\/pppppppp/);
-    expect(screen.queryByTestId("move-ply-1")).not.toBeInTheDocument();
-  });
-
-  it("shows the evals the game learned while it was played", () => {
-    const chess = new Chess();
-    chess.move("e4");
-    chess.move("e5");
-    const game = gameFromChess(chess);
-    saveGame(
-      savedGameOf(
-        "g-evals",
-        game,
+  it("opens a resigned game still resigned", () => {
+    savePlayedGame(
+      playedGameOf(
+        "r1",
+        parsePgnTree("1. e4 e5 *"),
+        ["e4", "e5"],
         DEFAULT_ENGINE_SETTINGS,
         undefined,
+        new Date(),
         undefined,
-        undefined,
-        new Map<string, Score>([[game.moves[0].fen, { kind: "cp", value: 30 }]]),
+        "white",
       ),
     );
+    mount("/engine/play?saved=r1");
+    expect(screen.getByTestId("play-with-engine-resigned")).toHaveTextContent("0-1");
+    expect(isPlaying()).toBe(false);
+    expect(boardOptions().allowDragging).toBe(false);
+  });
+});
 
-    renderScreen("/engine/play?saved=g-evals");
+describe("Play with Engine — resigning", () => {
+  it("is off until a move is played", () => {
+    mount();
+    expect(screen.getByTestId("play-with-engine-resign")).toBeDisabled();
+  });
 
-    expect(screen.getByTestId("move-eval-1")).toHaveTextContent("+0.30");
-    // Only the ply the record learned is filled in.
-    expect(screen.queryByTestId("move-eval-2")).not.toBeInTheDocument();
+  it("ends the game once asked: the reader's side loses, Play stops, the board takes no moves", () => {
+    mount();
+    drag("e2", "e4");
+    engineSearches("e7e5");
+
+    click("play-with-engine-resign");
+    click("play-with-engine-confirm-ok");
+
+    expect(screen.getByTestId("play-with-engine-resigned")).toHaveTextContent(
+      "You resigned · 0-1",
+    );
+    expect(isPlaying()).toBe(false);
+    expect(playButton()).toBeDisabled();
+    expect(boardOptions().allowDragging).toBe(false);
+    expect(screen.getByTestId("play-with-engine-resign")).toBeDisabled();
+
+    const [game] = playedGamesSnapshot();
+    expect(game.resigned).toBe("white");
+    expect(game.pgn).toContain('[Result "0-1"]');
+  });
+
+  it("is undone by Replay, which starts a new game", () => {
+    mount();
+    drag("e2", "e4");
+    click("play-with-engine-resign");
+    click("play-with-engine-confirm-ok");
+    click("play-with-engine-replay");
+    click("play-with-engine-confirm-ok");
+    expect(screen.queryByTestId("play-with-engine-resigned")).not.toBeInTheDocument();
+    expect(isPlaying()).toBe(true);
+    expect(boardOptions().allowDragging).toBe(true);
   });
 });

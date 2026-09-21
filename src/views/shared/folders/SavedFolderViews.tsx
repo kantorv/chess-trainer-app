@@ -36,8 +36,8 @@ import type { GameFolder } from "../../../lib/savedGameFolders";
  */
 function FolderActions({
   folder,
-  labelKey = "savedGames",
-  testIdPrefix = "saved-games",
+  labelKey,
+  testIdPrefix,
   downloadDisabled,
   onDownload,
   onRename,
@@ -45,10 +45,10 @@ function FolderActions({
   onDelete,
 }: {
   folder: GameFolder;
-  /** The locale block — `savedGames` by default; its `folder.*` keys are read. */
-  labelKey?: string;
-  /** The test-id prefix — `saved-games` by default. */
-  testIdPrefix?: string;
+  /** The locale block — its `folder.*` keys are read. */
+  labelKey: string;
+  /** The test-id prefix. */
+  testIdPrefix: string;
   downloadDisabled: boolean;
   onDownload: (folder: GameFolder) => void;
   onRename: (folder: GameFolder) => void;
@@ -123,8 +123,8 @@ function FolderActions({
  */
 export function SavedFolderRow({
   folder,
-  labelKey = "savedGames",
-  testIdPrefix = "saved-games",
+  labelKey,
+  testIdPrefix,
   count,
   onOpen,
   onDownload,
@@ -133,10 +133,10 @@ export function SavedFolderRow({
   onDelete,
 }: {
   folder: GameFolder;
-  /** The locale block — `savedGames` by default; its `folder.*` keys are read. */
-  labelKey?: string;
-  /** The test-id prefix — `saved-games` by default. */
-  testIdPrefix?: string;
+  /** The locale block — its `folder.*` keys are read. */
+  labelKey: string;
+  /** The test-id prefix. */
+  testIdPrefix: string;
   /** Games under this folder, across its whole subtree. */
   count: number;
   onOpen: (id: string) => void;
@@ -196,8 +196,8 @@ export function SavedFolderRow({
 /** The same folder as a card, for the two board views. */
 export function SavedFolderCard({
   folder,
-  labelKey = "savedGames",
-  testIdPrefix = "saved-games",
+  labelKey,
+  testIdPrefix,
   count,
   onOpen,
   onDownload,
@@ -206,10 +206,10 @@ export function SavedFolderCard({
   onDelete,
 }: {
   folder: GameFolder;
-  /** The locale block — `savedGames` by default; its `folder.*` keys are read. */
-  labelKey?: string;
-  /** The test-id prefix — `saved-games` by default. */
-  testIdPrefix?: string;
+  /** The locale block — its `folder.*` keys are read. */
+  labelKey: string;
+  /** The test-id prefix. */
+  testIdPrefix: string;
   /** Games under this folder, across its whole subtree. */
   count: number;
   onOpen: (id: string) => void;

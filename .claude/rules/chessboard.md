@@ -356,8 +356,8 @@ Consequences for a caller:
 | Route | File | Based on upstream story | Demonstrates |
 | --- | --- | --- | --- |
 | `/` | [`views/home/Home.tsx`](../../src/views/home/Home.tsx) | — | Landing page, no board — a card per screen, built from `navTree()` |
-| `/engine/play` | [`views/engine/play/PlayWithEngine.tsx`](../../src/views/engine/play/PlayWithEngine.tsx) | (composed) | The full screen: eval bar, move list, MultiPV variations, live UCI settings, a real promotion picker. Takes a `?fen=` starting position |
-| `/engine/saved` | [`views/engine/saved/SavedGames.tsx`](../../src/views/engine/saved/SavedGames.tsx) | (composed) | The games played on the screen above, kept in `localStorage` and listed newest first, filed into a tree of folders (CTA-46) — as rows, or as read-only preview boards at either of the library's two card sizes, each showing the position that game was **left at**. `?saved=<id>` resumes one there; `?game=engine/saved/<id>` hands it to the Analysis Board or Load PGN; folders are display organisation only and the hand-offs are untouched |
+| `/engine/play` | [`views/engine/play/PlayWithEngine.tsx`](../../src/views/engine/play/PlayWithEngine.tsx) | (composed) | **A v2 screen since CTA-74** — the Analysis Board's composition (`usePlayGame`: the core, the engine module, the shared Play toggle `usePlayToggle`, the variations explorer) with **Play on from the start**: the engine plays the side not at the bottom, paused by a step back or a change of side (the flip, or the header's White / Black toggle). The header also carries **Replay** (start over, the saved progress discarded) and **Resign** (the reader's side loses; the board then takes no more moves), both asked first. A game is a **tree** — a move by hand from an earlier position is a side line. Tabs Moves · Map · Engine (the shipped `EngineSettings`, without *Play as* and New game). **Autosaved** on every move to `lib/playedGameStore.ts` (the URL becomes `?saved=<id>`); takes `?fen=` and `?saved=`. `options.id` is `play-with-engine` |
+| `/engine/games` | [`views/engine/games/PlayedGames.tsx`](../../src/views/engine/games/PlayedGames.tsx) | (composed) | Saved games (CTA-74): the games above, flat and newest first, each titled by its pairing ("Human - Stockfish level 10") with its PGN result — Continue (`?saved=<id>`), Analysis (`?game=play/games/<id>`), delete (asked first). No board. (The pre-CTA-74 `/engine/saved` list and its folders were deleted.) |
 | `/masked/play` | [`views/masked/play/MaskedPlay.tsx`](../../src/views/masked/play/MaskedPlay.tsx) | `Pieces` | The same screen with the pieces in disguise: `options.pieces` built from a `PieceMask` (`lib/pieceMask.ts`), and the notation masked to match. `usePlayWithEngine` reused verbatim |
 | `/games/load-pgn` | [`views/games/load_pgn/LoadPgn.tsx`](../../src/views/games/load_pgn/LoadPgn.tsx) | (composed) | A PGN pasted in, parsed to a `Game`, walked with the shared `MoveList` / `useGameNavigation` / `BoardControls` |
 | `/tools/analysis` | [`views/tools/analysis/AnalysisBoard.tsx`](../../src/views/tools/analysis/AnalysisBoard.tsx) | (composed) | **A v2 screen since CTA-73** — the core, the engine module (its best move played for the opponent's side only while the header's **Play** toggle is on — disabled while the engine is off, paused by a step back) and the shared **variations explorer** ([`tree-views.md`](./tree-views.md); editing on, *Play chances…* off): a **variation tree** (`lib/gameTree.ts`), both colours movable from any node, the engine and the eval bar switched independently. Tabs Moves · Map · Load · Export · Engine: Load takes a PGN (one game; several merged onto the board or split into a folder of saved analyses) or a FEN, Export copies the FEN and copies or downloads the PGN with or without comments, NAGs and side lines. **Saved explicitly** — the header's Save opens the changes strip (Update / Save as copy / Discard) over a record, or a name-and-folder dialog for a new board. Takes `?fen=`, `?game=`+`?move=`, `?analysis=` and writes `?at=` back. `options.id` is `analysis` |
@@ -381,7 +381,11 @@ landing page. The vendored Storybook examples under
 `docs/vendor/react-chessboard/stories/` still carry those minimal patterns when
 you need the smallest version of one.
 
-**Four rules the Play with Engine screen is built on, worth reusing:**
+**Four rules the pre-v2 Play with Engine screen was built on** (Masked Pieces
+still runs its hook, `usePlayWithEngine`; the v2 screen of CTA-74 keeps the
+first — it searches the position on screen — and replaces the second: it saves
+a tree to its own store, `lib/playedGameStore.ts`, and a move from an earlier
+position is a side line rather than refused)**, worth reusing:**
 
 - **Search the position on screen, not the live one.** The player can step back
   at any time. Everything shown — evaluation, variations, depth — describes the
@@ -425,9 +429,8 @@ you need the smallest version of one.
 - **A read-only board is a board, and it still takes an `options.id` that is
   unique on the page.** A list screen renders one per card, so the id is the
   item's id (`LibraryList`'s `previewOptions`), never a constant. The Saved
-  games and Saved analyses screens' board views are the same rule outside the
-  library section — `saved-games-preview-<id>`,
-  `saved-analyses-preview-<id>`.
+  analyses screen's board views are the same rule outside the library
+  section — `saved-analyses-preview-<id>`.
 - **A screen that scrolls inside the board square divides that square up
   itself, and a grid of `auto` rows will not scroll.** The shell hands the
   screen a fixed-height box and scrolls nothing in it, so `LibraryList` is a
