@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import Box from "@mui/material/Box";
+import CircularProgress from "@mui/material/CircularProgress";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import IconButton from "@mui/material/IconButton";
 import Switch from "@mui/material/Switch";
@@ -34,6 +35,7 @@ import { useVariationsExplorer } from "../../explorer/useVariationsExplorer";
 import RepertoireChangesBar from "../../repertoires/RepertoireChangesBar";
 import CurrentOpening from "../../shared/CurrentOpening";
 import AnalysisExport from "./AnalysisExport";
+import EngineThinking from "./EngineThinking";
 import AnalysisLoad from "./AnalysisLoad";
 import AnalysisSettingsPanel from "./AnalysisSettings";
 import SaveAnalysisDialog from "./SaveAnalysisDialog";
@@ -301,8 +303,17 @@ function AnalysisBoard() {
                     aria-label={t(state.playing ? "analysis.play.pause" : "analysis.play.start")}
                     aria-pressed={state.playing}
                     data-testid="analysis-play"
-                    sx={{ flexShrink: 0 }}
+                    sx={{ flexShrink: 0, position: "relative" }}
                   >
+                    {/* A ring round the button while the engine thinks. */}
+                    {state.thinking && (
+                      <CircularProgress
+                        size={30}
+                        thickness={3}
+                        data-testid="analysis-play-spinner"
+                        sx={{ position: "absolute", pointerEvents: "none" }}
+                      />
+                    )}
                     {state.playing ? (
                       <PauseRoundedIcon fontSize="small" />
                     ) : (
@@ -463,6 +474,13 @@ function AnalysisBoard() {
                 >
                   {t(`analysis.changes.problem.${state.problem}`)}
                 </Typography>
+              )}
+              {/* Play's status — the engine thinking, or the reader's move. */}
+              {state.playing && (
+                <EngineThinking
+                  thinking={state.thinking}
+                  depth={engine.analysis.fen === core.fen ? engine.analysis.depth : 0}
+                />
               )}
               {tab === "moves" && explorer.nextMoves}
             </>

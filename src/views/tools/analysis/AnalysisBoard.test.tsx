@@ -494,3 +494,48 @@ describe("Play — the engine plays the opponent's best move until paused", () =
     expect(pressed()).toBe("false");
   });
 });
+
+describe("Play — the engine's thinking, shown", () => {
+  it("says the engine is thinking, with the depth, until its move lands; then it is the reader's", () => {
+    mount();
+    expect(screen.queryByTestId("analysis-play-status")).toBeNull();
+    act(() => {
+      screen.getByTestId("board-control-flip").click();
+    });
+    fireEvent.click(screen.getByTestId("analysis-play"));
+
+    // White to move and the engine is White: it is thinking.
+    expect(screen.getByTestId("analysis-play-status")).toHaveAttribute("data-status", "thinking");
+    expect(screen.getByTestId("analysis-play-status")).toHaveTextContent("Engine is thinking");
+    expect(screen.getByTestId("analysis-play-spinner")).toBeInTheDocument();
+
+    // A streamed line: the depth reached shows as it climbs.
+    const engine = FakeEngine.latest();
+    act(() => {
+      engine.say({
+        fen: engine.lastSearch,
+        uciMessage: "info",
+        depth: 14,
+        multipv: 1,
+        positionEvaluation: "20",
+        pv: "e2e4 e7e5",
+      });
+    });
+    expect(screen.getByTestId("analysis-play-depth")).toHaveTextContent("depth 14");
+
+    act(() => {
+      engine.say({ fen: engine.lastSearch, uciMessage: "bestmove", bestMove: "e2e4" });
+    });
+    expect(boardOptions().position).toBe(AFTER_E4);
+    expect(screen.getByTestId("analysis-play-status")).toHaveAttribute("data-status", "your-move");
+    expect(screen.queryByTestId("analysis-play-spinner")).toBeNull();
+  });
+
+  it("shows nothing once paused", () => {
+    mount();
+    fireEvent.click(screen.getByTestId("analysis-play"));
+    expect(screen.getByTestId("analysis-play-status")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("analysis-play"));
+    expect(screen.queryByTestId("analysis-play-status")).toBeNull();
+  });
+});

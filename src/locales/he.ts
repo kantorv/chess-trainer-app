@@ -452,6 +452,9 @@ const he: typeof en = {
       start: "תנו למנוע לשחק את הצד השני",
       pause: "עצירת המנוע",
       engineOff: "הפעילו את המנוע כדי לתת לו לשחק",
+      thinking: "המנוע חושב",
+      depth: "עומק {{depth}}",
+      yourMove: "תורכם",
     },
     engineSwitch: "מנוע",
     save: {

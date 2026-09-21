@@ -682,6 +682,12 @@ const en = {
       start: "Let the engine play the other side",
       pause: "Pause the engine",
       engineOff: "Switch the engine on to let it play",
+      /** The status line while Play is on: the engine searching, dots moving… */
+      thinking: "Engine is thinking",
+      /** …the depth its search has reached so far… */
+      depth: "depth {{depth}}",
+      /** …or the reader's turn. */
+      yourMove: "Your move",
     },
     /** The header's engine switch — short, it sits beside three buttons. */
     engineSwitch: "Engine",

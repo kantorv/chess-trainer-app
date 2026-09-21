@@ -469,7 +469,10 @@ you need the smallest version of one.
   that is not one move forward (back, Home, an earlier move, another line, a
   load) pauses it, and the reader goes on by hand until pressing Play again.
   Play is disabled while the engine is off, and pauses itself when the
-  position is over. The play screen's reply is different in kind — it
+  position is over. While Play is on, a status line in the footer
+  (`EngineThinking.tsx`) says the engine is thinking — a spinner, moving dots
+  and the depth reached — or that it is the reader's move, and a ring spins
+  round the Play button while it thinks. The play screen's reply is different in kind — it
   answers the live position, for one side, always — and whether both colours
   are draggable (`canMoveAt`) is the rest of the difference; no mode flag.
 - **A screen that can branch navigates by node, not by ply.** See the root

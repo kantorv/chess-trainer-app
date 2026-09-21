@@ -191,6 +191,13 @@ export const useAnalysisBoard = ({
   if (playing && (!engineOn || isTerminal(core.fen))) setPlaying(false);
   /** The engine's side: the one not at the bottom of the board. */
   const engineTurn = core.orientation === "white" ? "b" : "w";
+  /**
+   * Whether Play is waiting on the engine — its turn, a search under way. What
+   * the board's "thinking" feedback shows (a long search otherwise looks like
+   * nothing happened).
+   */
+  const thinking =
+    playing && engineOn && turnOf(core.fen) === engineTurn && !isTerminal(core.fen);
   /*
     A step that is not one move forward — to anything but a child of the node
     that was on screen — pauses Play (the header note). Adjusted during render
@@ -400,6 +407,7 @@ export const useAnalysisBoard = ({
     engineOn,
     setEngineOn,
     playing,
+    thinking,
     togglePlaying,
     showEvalBar,
     setShowEvalBar,
