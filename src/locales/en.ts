@@ -674,11 +674,12 @@ const en = {
       engine: "Engine",
     },
     /**
-     * The header's Play toggle (CTA-73): the engine plays its best move,
-     * search after search, until paused. Disabled while the engine is off.
+     * The header's Play toggle (CTA-73): the engine plays the side not at
+     * the bottom of the board, its best move each turn, until paused (or the
+     * reader steps back). Disabled while the engine is off.
      */
     play: {
-      start: "Let the engine play its best moves",
+      start: "Let the engine play the other side",
       pause: "Pause the engine",
       engineOff: "Switch the engine on to let it play",
     },

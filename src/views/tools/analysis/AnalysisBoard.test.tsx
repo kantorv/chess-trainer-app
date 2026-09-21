@@ -399,12 +399,18 @@ describe("a saved analysis' settings on the board", () => {
   });
 });
 
-describe("Play — the engine plays its best move until paused", () => {
+const AFTER_E4_E5_NF3 =
+  "rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2";
+
+describe("Play — the engine plays the opponent's best move until paused", () => {
+  const play = () => fireEvent.click(screen.getByTestId("analysis-play"));
+  const pressed = () => screen.getByTestId("analysis-play").getAttribute("aria-pressed");
+
   it("never moves a piece while Play is off", () => {
     mount();
     engineSearches("e2e4 e7e5");
     expect(boardOptions().position).toBe(START);
-    expect(screen.getByTestId("analysis-play")).toHaveAttribute("aria-pressed", "false");
+    expect(pressed()).toBe("false");
   });
 
   it("is disabled while the engine is off", () => {
@@ -413,35 +419,78 @@ describe("Play — the engine plays its best move until paused", () => {
     expect(screen.getByTestId("analysis-play")).toBeDisabled();
   });
 
-  it("plays each finished search's best move, search after search, until paused", () => {
+  it("plays only the side not at the bottom of the board, turn after turn", () => {
     mount();
-    fireEvent.click(screen.getByTestId("analysis-play"));
-    expect(screen.getByTestId("analysis-play")).toHaveAttribute("aria-pressed", "true");
+    play();
+    expect(pressed()).toBe("true");
 
+    // White is the reader's: the engine's best move for White is not played.
     engineSearches("e2e4 e7e5");
-    expect(boardOptions().position).toBe(AFTER_E4);
+    expect(boardOptions().position).toBe(START);
+
+    drag("e2", "e4");
     engineSearches("e7e5 g1f3");
     expect(boardOptions().position).toBe(AFTER_E4_E5);
 
-    fireEvent.click(screen.getByTestId("analysis-play"));
-    expect(screen.getByTestId("analysis-play")).toHaveAttribute("aria-pressed", "false");
+    // The reader's turn again: nothing moves until the reader does.
     engineSearches("g1f3 b8c6");
     expect(boardOptions().position).toBe(AFTER_E4_E5);
+    drag("g1", "f3");
+    expect(boardOptions().position).toBe(AFTER_E4_E5_NF3);
+    expect(pressed()).toBe("true");
   });
 
-  it("plays at once from a search already finished for the position on screen", () => {
+  it("plays White when the board faces Black", () => {
     mount();
+    act(() => {
+      screen.getByTestId("board-control-flip").click();
+    });
+    play();
     engineSearches("e2e4 e7e5");
-    expect(boardOptions().position).toBe(START);
-    fireEvent.click(screen.getByTestId("analysis-play"));
     expect(boardOptions().position).toBe(AFTER_E4);
+  });
+
+  it("pauses when the reader steps back, and they go on by hand until Play again", () => {
+    mount();
+    play();
+    drag("e2", "e4");
+    engineSearches("e7e5 g1f3");
+    expect(boardOptions().position).toBe(AFTER_E4_E5);
+
+    act(() => {
+      screen.getByTestId("board-control-previous").click();
+    });
+    expect(pressed()).toBe("false");
+    // A different reply by hand; the engine does not answer it.
+    drag("c7", "c5");
+    engineSearches("g1f3 b8c6");
+    expect(boardOptions().position).toBe(
+      "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2",
+    );
+
+    // Play again: the reader's turn (White), so it waits for their move.
+    play();
+    drag("g1", "f3");
+    engineSearches("b8c6 f1b5");
+    expect(boardOptions().position).toBe(
+      "r1bqkbnr/pp1ppppp/2n5/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3",
+    );
+  });
+
+  it("plays at once at the engine's turn from a search already finished", () => {
+    mount();
+    drag("e2", "e4");
+    engineSearches("e7e5 g1f3");
+    expect(boardOptions().position).toBe(AFTER_E4);
+    play();
+    expect(boardOptions().position).toBe(AFTER_E4_E5);
   });
 
   it("stops when the engine is switched off", () => {
     mount();
-    fireEvent.click(screen.getByTestId("analysis-play"));
+    play();
     fireEvent.click(screen.getByTestId("analysis-setting-engine"));
     fireEvent.click(screen.getByTestId("analysis-setting-engine"));
-    expect(screen.getByTestId("analysis-play")).toHaveAttribute("aria-pressed", "false");
+    expect(pressed()).toBe("false");
   });
 });

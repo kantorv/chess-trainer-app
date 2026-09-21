@@ -44,14 +44,21 @@ import { useEngineModule } from "../../dev/core/useEngineModule";
  * (this hook)       — the record, the baseline, Save / Update / Save as copy / Discard
  * ```
  *
- * **The engine moves a piece only when the reader presses Play** (CTA-73).
- * While `playing` is on — and the engine is — every finished search of the
- * position on screen (`onBestMove`) is played there, under the node on screen,
- * so the engine goes on playing both sides from wherever the reader stands
- * until paused, until the position is over, or until the engine is switched
- * off. Pressing Play on a position whose search has already finished plays
- * that search's first move at once. Off, `onBestMove` does nothing: nothing
- * moves unasked.
+ * **The engine moves a piece only when the reader presses Play** (CTA-73), and
+ * then only **the opponent's**: the reader plays the side at the bottom of the
+ * board (`orientation`), the engine the other. While `playing` is on — and the
+ * engine is — a finished search of the position on screen (`onBestMove`) is
+ * played there, under the node on screen, when it is the engine's side to
+ * move; on the reader's turn nothing moves. Pressing Play at the engine's turn
+ * with that search already finished plays its first move at once.
+ *
+ * **Any step that is not one move forward pauses it** — back, Home, a click on
+ * an earlier move, ↑ / ↓ to another line, a load: the reader has gone to look
+ * or to try something, and goes on moving by hand until pressing Play again.
+ * A move played (the reader's or the engine's) is a step to a child of the
+ * node that was on screen, and keeps it on. It also pauses once the position
+ * is over, and whenever the engine is switched off. Off, `onBestMove` does
+ * nothing: nothing moves unasked.
  *
  * ## Explicit save, against a baseline
  *
@@ -182,6 +189,20 @@ export const useAnalysisBoard = ({
   */
   const [playing, setPlaying] = useState(false);
   if (playing && (!engineOn || isTerminal(core.fen))) setPlaying(false);
+  /** The engine's side: the one not at the bottom of the board. */
+  const engineTurn = core.orientation === "white" ? "b" : "w";
+  /*
+    A step that is not one move forward — to anything but a child of the node
+    that was on screen — pauses Play (the header note). Adjusted during render
+    against the node last seen.
+  */
+  const [seenNodeId, setSeenNodeId] = useState(core.nodeId);
+  if (seenNodeId !== core.nodeId) {
+    setSeenNodeId(core.nodeId);
+    const parentId =
+      core.nodeId === null ? undefined : (pathTo(core.tree, core.nodeId).at(-2)?.id ?? null);
+    if (playing && parentId !== seenNodeId) setPlaying(false);
+  }
   const { playVariation } = core;
   const playUci = useCallback(
     (uci: string, fen: string) => {
@@ -201,12 +222,13 @@ export const useAnalysisBoard = ({
   );
   const onBestMove = useCallback(
     (bestMove: string, searchedFen: string) => {
-      // Only a search of the position on screen, and only while playing.
+      // Only a search of the position on screen, only while playing, and
+      // only for the engine's side.
       if (!playing || !engineOn || searchedFen !== core.fen) return;
-      if (isTerminal(searchedFen)) return;
+      if (turnOf(searchedFen) !== engineTurn || isTerminal(searchedFen)) return;
       playUci(bestMove, searchedFen);
     },
-    [playing, engineOn, core.fen, playUci],
+    [playing, engineOn, core.fen, engineTurn, playUci],
   );
 
   const engine = useEngineModule({
@@ -224,9 +246,9 @@ export const useAnalysisBoard = ({
   const { clearAnalysis } = engine;
 
   /**
-   * Play on or off. On, with a finished search of the position on screen
-   * already in hand, its best move is played at once rather than waiting for
-   * a search that has already ended.
+   * Play on or off. On at the engine's turn, with a finished search of the
+   * position on screen already in hand, its best move is played at once
+   * rather than waiting for a search that has already ended.
    */
   const togglePlaying = () => {
     if (playing) {
@@ -235,6 +257,7 @@ export const useAnalysisBoard = ({
     }
     if (!engineOn || isTerminal(core.fen)) return;
     setPlaying(true);
+    if (turnOf(core.fen) !== engineTurn) return;
     const best = engine.analysis.lines[0]?.san[0];
     if (engine.analysis.fen === core.fen && engine.evalsByFen.has(core.fen) && best) {
       playVariation([best]);

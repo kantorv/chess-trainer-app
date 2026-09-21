@@ -44,7 +44,8 @@ import { useAnalysisBoard, type AnalysisBoardStart } from "./useAnalysisBoard";
  * position is taken apart on: both colours move from any node, side lines
  * branch off wherever the reader plays something else, and the engine reads
  * the position on screen — moving a piece only while the header's **Play** is
- * on, when it plays its best move, search after search, until paused.
+ * on, and then only for the side not at the bottom of the board, until
+ * paused or until the reader steps back (`useAnalysisBoard`).
  *
  * Composed from the v2 core
  * ([`.claude/rules/chessboard-v2.md`](../../../../.claude/rules/chessboard-v2.md))
@@ -55,7 +56,7 @@ import { useAnalysisBoard, type AnalysisBoardStart } from "./useAnalysisBoard";
  * | Capability | Taken | Because |
  * | --- | --- | --- |
  * | Base | `useBoardCore`, through `useAnalysisBoard` | the tree, the node, the oracle, promotion, orientation |
- * | Engine | switch, **on by default**; its best move played **only while Play is on** (`onBestMove`, `useAnalysisBoard`) | the pinned lines, the eval bar and the Engine tab; Play is disabled while the engine is off |
+ * | Engine | switch, **on by default**; its best move played **only while Play is on, for the opponent's side** (`onBestMove`, `useAnalysisBoard`) | the pinned lines, the eval bar and the Engine tab; Play is disabled while the engine is off, and a step back pauses it |
  * | Tree view | `useVariationsExplorer` | Moves (side lines, comment marks, evals, the move menu), Map, the comment block, the next-moves bar and arrows — editing on, *Play chances…* off (nothing here plays by chance) |
  * | Saving | `useAnalysisBoard` — explicit | no autosave: the header's Save lights while the board differs from its record, and opens the changes strip (Update / Save as copy / Discard); a board with no record yet saves through a name-and-folder dialog |
  *
@@ -280,8 +281,8 @@ function AnalysisBoard() {
                   </IconButton>
                 </span>
               </Tooltip>
-              {/* Play: the engine plays its best move, search after search,
-                  until paused — off (and disabled) while the engine is. */}
+              {/* Play: the engine plays the other side's best move each turn,
+                  until paused or a step back — disabled while the engine is off. */}
               <Tooltip
                 title={t(
                   !state.engineOn
