@@ -1,4 +1,4 @@
-import type { VariationNode } from "../../../lib/gameTree";
+import type { VariationNode } from "../../lib/gameTree";
 import {
   CHANCE_ARROW_FILL_COLOR,
   chanceArrowPath,

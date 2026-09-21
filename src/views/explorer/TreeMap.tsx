@@ -23,8 +23,7 @@ import type { SxProps, Theme } from "@mui/material/styles";
 import { useTranslation } from "react-i18next";
 
 import { pathTo, type GameTree } from "../../lib/gameTree";
-import type { Coverage } from "../../lib/repertoireGames";
-import MoveContextMenu, { type MoveMenuTarget } from "../dev/core/MoveContextMenu";
+import MoveContextMenu, { type MoveMenuTarget } from "./MoveContextMenu";
 import { menuAnchorOf, type ContextMenuNodeHandler } from "../shared/moveContextMenu";
 import {
   MAP_DX,
@@ -44,15 +43,19 @@ import {
   mapPixel,
   visibleRect,
   zoomViewAt,
+  type MapCoverage,
   type MapLayout,
   type MapView,
-} from "../../lib/repertoireMap";
+} from "../../lib/treeMap";
 
 /**
- * **The Map tab** (CTA-63) — the repertoire drawn as a tree, so the reader
- * sees where they are in it and how much is left: the player's, and
- * Backtracking's with its coverage. The layout is `lib/repertoireMap.ts`; this
- * draws it.
+ * **The tree map** (CTA-63; was `views/repertoires/RepertoireMap.tsx` until
+ * CTA-72, when it became a part of the shared variations explorer) — a game
+ * tree drawn as a tree, so the reader sees where they are in it and how much
+ * is left: the repertoire player's Map tab, and Backtracking's with its
+ * coverage. The layout is `lib/treeMap.ts`; this draws it. Everything a
+ * screen knows — which tree, whose coverage, whether a dot is a link — comes
+ * in as a prop; `useVariationsExplorer` is what usually passes them.
  *
  * ## One viewport, in the tab and full screen
  *
@@ -80,7 +83,7 @@ import {
  *   opens the variations explorer's move menu (`MoveContextMenu`) at the
  *   pointer — promote, make main line, delete from here, copy the line's PGN.
  *   One menu serves both viewports and renders above the full-screen dialog,
- *   which an edit leaves open: the edited tree is what `repertoire` becomes,
+ *   which an edit leaves open: the edited tree is what `tree` becomes,
  *   so the map redraws from it at once, and the view keeps its zoom and pan
  *   (it follows the marker only when the marker leaves it — the rule play
  *   already keeps). Only a move is bound; elsewhere the right-click is the
@@ -152,7 +155,7 @@ const drawingSx: SxProps<Theme> = {
 };
 
 /** No game: every line open, so every line is drawn in one neutral colour. */
-const NO_COVERAGE: Coverage = { total: 0, under: () => 1 };
+const NO_COVERAGE: MapCoverage = { total: 0, under: () => 1 };
 
 /** How far a pointer may travel and still be a click rather than a drag. */
 const CLICK_SLOP_PX = 4;
@@ -236,7 +239,7 @@ function MapLayers({
         data-testid={`${testId}-here`}
         data-node-id={nodeId ?? "start"}
       >
-        <title>{t("repertoires.play.map.here")}</title>
+        <title>{t("treeMap.here")}</title>
       </circle>
     </>
   );
@@ -297,9 +300,9 @@ const useBoxSize = (fallback: () => Size) => {
   return { ref, size };
 };
 
-function RepertoireMap({
+function TreeMap({
   testId,
-  repertoire,
+  tree,
   coverage,
   nodeId,
   onSelectNode,
@@ -308,16 +311,16 @@ function RepertoireMap({
 }: {
   testId: string;
   /** The tree to draw — the session's in the player, the repertoire in a game. */
-  repertoire: GameTree;
+  tree: GameTree;
   /** A game's coverage — Backtracking's; none draws every line alike. */
-  coverage?: Coverage;
-  /** Where the reader is, on `repertoire`; `null` is the start position. */
+  coverage?: MapCoverage;
+  /** Where the reader is, on `tree`; `null` is the start position. */
   nodeId: string | null;
   /** Go to a position — the player's; present, a written move is a link. */
   onSelectNode?: (id: string) => void;
   /** Opt-in: the move menu on a written move, and where its edits go — the player's. */
   onEditTree?: (next: GameTree) => void;
-  /** The moves in `repertoire` the reader added this session — the player's. */
+  /** The moves in `tree` the reader added this session — the player's. */
   addedIds?: ReadonlySet<string>;
 }) {
   const { t } = useTranslation();
@@ -335,20 +338,20 @@ function RepertoireMap({
           setMenuOpen(true);
         };
 
-  const layout = useMemo(() => mapLayoutOf(repertoire), [repertoire]);
+  const layout = useMemo(() => mapLayoutOf(tree), [tree]);
   const edges = useMemo(
     () => mapEdgePaths(layout, coverage ?? NO_COVERAGE, addedIds),
     [layout, coverage, addedIds],
   );
   const dots = useMemo(() => mapDots(layout, addedIds), [layout, addedIds]);
   const trail = useMemo(() => {
-    const path = pathTo(repertoire, nodeId);
+    const path = pathTo(tree, nodeId);
     return {
       edges: mapPathTo(layout, path),
       dots: mapPathDots(layout, path),
       ids: new Set(path.map((node) => node.id)),
     };
-  }, [layout, repertoire, nodeId]);
+  }, [layout, tree, nodeId]);
 
   const drawing: Drawing = {
     layout,
@@ -367,21 +370,21 @@ function RepertoireMap({
   /** The tree's size — what the header says without a game — and what was added. */
   const added = addedIds?.size ?? 0;
   const size = [
-    t("repertoires.play.map.size", {
-      lines: t("repertoires.play.map.lines", {
+    t("treeMap.size", {
+      lines: t("treeMap.lines", {
         count: layout.order.length === 0 ? 0 : layout.rows,
       }),
-      moves: t("repertoires.play.map.moves", { count: layout.order.length }),
+      moves: t("treeMap.moves", { count: layout.order.length }),
     }),
-    ...(added > 0 ? [t("repertoires.play.map.added", { count: added })] : []),
+    ...(added > 0 ? [t("treeMap.added", { count: added })] : []),
   ].join(" · ");
 
   const summary =
     coverage === undefined
       ? size
       : left === 0
-        ? t("repertoires.play.map.done")
-        : t("repertoires.play.map.left", { count: left });
+        ? t("treeMap.done")
+        : t("treeMap.left", { count: left });
 
   return (
     <Box
@@ -392,7 +395,7 @@ function RepertoireMap({
         {coverage !== undefined && (
           <>
             <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-              {t("repertoires.play.score.covered", { covered, total: coverage.total })}
+              {t("treeMap.covered", { covered, total: coverage.total })}
             </Typography>
             <LinearProgress
               variant="determinate"
@@ -424,7 +427,7 @@ function RepertoireMap({
         fallbackSize={() => ({ width: 320, height: 360 })}
         extraButtons={
           <MapButton
-            label={t("repertoires.play.map.fullScreen")}
+            label={t("treeMap.fullScreen")}
             testId={`${testId}-fullscreen`}
             onClick={() => setFullScreen(true)}
           >
@@ -461,12 +464,12 @@ function RepertoireMap({
                 id={`${testId}-dialog-title`}
                 sx={{ fontWeight: 700, marginInlineEnd: 1 }}
               >
-                {t("repertoires.play.tabs.map")}
+                {t("treeMap.title")}
               </Typography>
               <Box sx={{ flexGrow: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
                 {coverage !== undefined && (
                   <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                    {t("repertoires.play.score.covered", { covered, total: coverage.total })}
+                    {t("treeMap.covered", { covered, total: coverage.total })}
                   </Typography>
                 )}
                 <Typography variant="caption" sx={{ color: "text.secondary" }}>
@@ -474,7 +477,7 @@ function RepertoireMap({
                 </Typography>
               </Box>
               <MapButton
-                label={t("repertoires.play.map.close")}
+                label={t("treeMap.close")}
                 testId={`${testId}-dialog-close`}
                 onClick={() => setFullScreen(false)}
               >
@@ -508,7 +511,7 @@ function RepertoireMap({
 
       {onEditTree !== undefined && (
         <MoveContextMenu
-          tree={repertoire}
+          tree={tree}
           target={menu}
           open={menuOpen}
           onClose={() => setMenuOpen(false)}
@@ -657,11 +660,11 @@ function MapViewport({
           data-testid={`${testId}-hint`}
         >
           {showMoves && !readable
-            ? t("repertoires.play.map.zoomToRead")
-            : t("repertoires.play.map.mouseHint")}
+            ? t("treeMap.zoomToRead")
+            : t("treeMap.mouseHint")}
         </Typography>
         <MapButton
-          label={t("repertoires.play.map.showMoves")}
+          label={t("treeMap.showMoves")}
           testId={`${testId}-show-moves`}
           pressed={showMoves}
           onClick={() => onShowMovesChange(!showMoves)}
@@ -669,7 +672,7 @@ function MapViewport({
           <AbcRoundedIcon fontSize="small" />
         </MapButton>
         <MapButton
-          label={t("repertoires.play.map.zoomOut")}
+          label={t("treeMap.zoomOut")}
           testId={`${testId}-zoom-out`}
           onClick={() => zoomBy(1 / BUTTON_ZOOM)}
         >
@@ -684,14 +687,14 @@ function MapViewport({
           {`${Math.round(view.k * 100)}%`}
         </Typography>
         <MapButton
-          label={t("repertoires.play.map.zoomIn")}
+          label={t("treeMap.zoomIn")}
           testId={`${testId}-zoom-in`}
           onClick={() => zoomBy(BUTTON_ZOOM)}
         >
           <ZoomInRoundedIcon fontSize="small" />
         </MapButton>
         <MapButton
-          label={t("repertoires.play.map.fit")}
+          label={t("treeMap.fit")}
           testId={`${testId}-fit`}
           onClick={() => {
             setTouched(true);
@@ -701,7 +704,7 @@ function MapViewport({
           <FitScreenRoundedIcon fontSize="small" />
         </MapButton>
         <MapButton
-          label={t("repertoires.play.map.here")}
+          label={t("treeMap.here")}
           testId={`${testId}-locate`}
           onClick={() => setView((current) => centred(current.k))}
         >
@@ -754,7 +757,7 @@ function MapViewport({
         <Box
           component="svg"
           role="img"
-          aria-label={t("repertoires.play.map.label")}
+          aria-label={t("treeMap.label")}
           width="100%"
           height="100%"
           data-testid={`${testId}-svg`}
@@ -804,7 +807,7 @@ function MapViewport({
                       aria-label={
                         onSelectNode === undefined
                           ? undefined
-                          : t("repertoires.play.map.goTo", { move: label.san })
+                          : t("treeMap.goTo", { move: label.san })
                       }
                       data-testid={`${testId}-go-${label.id}`}
                       onClick={() => {
@@ -839,4 +842,4 @@ function MapViewport({
   );
 }
 
-export default RepertoireMap;
+export default TreeMap;

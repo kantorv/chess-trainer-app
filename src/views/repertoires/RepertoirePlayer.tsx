@@ -18,27 +18,15 @@ import SaveRoundedIcon from "@mui/icons-material/SaveRounded";
 import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
 import { Link as RouterLink, useLocation, useNavigate, useSearchParams } from "react-router";
 import { useTranslation } from "react-i18next";
-import type { Arrow, ChessboardOptions } from "react-chessboard";
+import type { ChessboardOptions } from "react-chessboard";
 
 import {
   ANALYSIS_UCI_OPTION,
   DEFAULT_ANALYSIS_SETTINGS,
   type AnalysisSettings,
 } from "../../lib/analysisSettings";
-import {
-  emptyTree,
-  commentsAt,
-  findNode,
-  pathTo,
-  plyLabel,
-  setComments,
-  type CommentKind,
-  type GameTree,
-  type VariationNode,
-} from "../../lib/gameTree";
-import { annotationsAt } from "../../lib/moveAnnotations";
+import { emptyTree, pathTo, type GameTree } from "../../lib/gameTree";
 import { downloadPgn } from "../../lib/pgnExport";
-import { playChances, playChanceOf } from "../../lib/playChance";
 import { atParamOf, nodeAtParam, REPERTOIRE_AT_PARAM } from "../../lib/repertoireLink";
 import { slugify } from "../../lib/pgnLibrary";
 import type { RepertoireGameId } from "../../lib/repertoireGames";
@@ -61,23 +49,14 @@ import {
   type SavedRepertoireProblem,
 } from "../../lib/savedRepertoireStore";
 import BoardShell from "../dev/core/BoardShell";
-import CommentDialog, { type CommentDraft } from "../dev/core/CommentDialog";
-import TreeMoveList from "../dev/core/TreeMoveList";
 import { useBoardCore } from "../dev/core/useBoardCore";
 import { useEngineModule } from "../dev/core/useEngineModule";
 import { useTrainerModule, type TrainerStatus } from "../dev/core/useTrainerModule";
 import CurrentOpening from "../shared/CurrentOpening";
 import AnalysisSettingsPanel from "../tools/analysis/AnalysisSettings";
-import ChanceArrows from "../tools/analysis/ChanceArrows";
-import NextMovesBar from "../tools/analysis/NextMovesBar";
-import {
-  nextMoveArrowsOf,
-  REQUIRED_MOVE_ARROW_COLOR,
-} from "../tools/analysis/nextMoveArrows";
-import RepertoireAnnotationsBar, { type CommentEditing } from "./RepertoireAnnotationsBar";
+import { useVariationsExplorer } from "../explorer/useVariationsExplorer";
 import RepertoireChangesBar from "./RepertoireChangesBar";
 import RepertoireGamesMenu from "./RepertoireGamesMenu";
-import RepertoireMap from "./RepertoireMap";
 import { useRepertoireGame } from "./useRepertoireGame";
 
 /**
@@ -97,6 +76,7 @@ import { useRepertoireGame } from "./useRepertoireGame";
  * | Game | `useRepertoireGame` | a game's score, finished lines and coverage; inert in the player |
  * | Engine | switch, **off by default**, **no reply** | the pinned best-variations block and the eval bar when asked for; it never moves a piece |
  * | Autosave | ❌ | the session is the reader's, the record is the file's |
+ * | Tree view | `useVariationsExplorer` (`views/explorer/`, CTA-72) | the Moves and Map tabs, the comment block, the next-moves bar and the arrows — the shared explorer, given what is the player's as options ([`.claude/rules/tree-views.md`](../../../.claude/rules/tree-views.md)) |
  *
  * ## The rules of a session — the player and every game
  *
@@ -133,7 +113,7 @@ import { useRepertoireGame } from "./useRepertoireGame";
  *   side, Autoplay (player only — and the header's **Play** button, a second
  *   control over the same state), the next-move arrows and the engine's
  *   switch; the Engine tab is disabled while the engine is off; Score is a
- *   game's; the Map (`RepertoireMap.tsx`) is the player's — its full-screen
+ *   game's; the Map (the explorer's `TreeMap.tsx`) is the player's — its
  *   dots links to their positions — and Backtracking's, with the coverage.
  *   Get to the end has none.
  * - **The player's URL is a permanent link** to the position on screen:
@@ -161,7 +141,7 @@ import { useRepertoireGame } from "./useRepertoireGame";
  *   finished line's move is refused (not a failure). When a line ends, play
  *   goes **back** to the deepest position with an uncovered line under it, and
  *   goes on from there until every line is covered. A **Map** tab draws the
- *   repertoire as a tree (`RepertoireMap.tsx`): covered lines, the rest, and
+ *   repertoire as a tree (`views/explorer/TreeMap.tsx`): covered lines, the rest, and
  *   where the reader is.
  *
  * The tree is parsed after a paint, behind a `setTimeout(0)`: a many-thousand-
@@ -388,62 +368,6 @@ function RepertoirePlayer({
   const [chanceArrows, setChanceArrows] = useState(
     game === undefined && saved.settings.chanceArrows,
   );
-  const [hovered, setHovered] = useState<VariationNode | null>(null);
-  const continuations = useMemo(
-    () =>
-      core.nodeId === null
-        ? core.tree.moves
-        : (findNode(core.tree, core.nodeId)?.children ?? []),
-    [core.tree, core.nodeId],
-  );
-  // The chances the overlay's arrows are sized by and the bar's percentages
-  // print by, handed to the chance-arrows overlay and the next-moves bar
-  // only where the branch on screen carries an explicit `prc` mark — with
-  // none anywhere the green/blue pair stands, which is what the unmarked
-  // positions keep. Read off the session's tree, so a chance changed in the
-  // dialog counts before it is saved — the trainer's own rule.
-  const chances = useMemo(() => {
-    if (!chanceArrows || !continuations.some((node) => playChanceOf(node) !== undefined)) {
-      return undefined;
-    }
-    return playChances(continuations);
-  }, [chanceArrows, continuations]);
-
-  // A required move is an instruction, so it is drawn whatever the switch
-  // says. Where the chances are on, the library arrows stand down entirely —
-  // colour is the only thing `options.arrows` can vary per arrow — and the
-  // overlay below draws them instead, sized by their chances.
-  const arrows: Arrow[] =
-    rules.required !== undefined
-      ? rules.required.map((node) => ({
-          startSquare: node.from,
-          endSquare: node.to,
-          color: REQUIRED_MOVE_ARROW_COLOR,
-        }))
-      : chances !== undefined
-        ? []
-        : showArrows
-          ? nextMoveArrowsOf(continuations, hovered?.id ?? null)
-          : hovered !== null
-            ? nextMoveArrowsOf([hovered], hovered.id)
-            : [];
-  const boardOptions: ChessboardOptions = { arrows };
-
-  // The play-chance arrows themselves, drawn over the board: white with a
-  // magenta border, the wider the likelier the move (CTA-71) — lichess's
-  // encoding, ours because the library's arrows cannot vary in size. The
-  // overlay says nothing where there are no chances to read.
-  const chanceOverlay =
-    chances === undefined ? null : (
-      <ChanceArrows
-        testId={`${id}-chance-arrows-overlay`}
-        nodes={continuations}
-        chances={chances}
-        hoveredId={hovered?.id ?? null}
-        orientation={core.orientation}
-      />
-    );
-
   const originalIds = useMemo(() => nodeIdsOf(repertoire), [repertoire]);
   const extensionIds = useMemo(
     () => extensionIdsOf(core.tree, originalIds),
@@ -487,72 +411,49 @@ function RepertoirePlayer({
   };
 
   /*
+    The variations explorer (CTA-72, `views/explorer/`): the Moves and Map
+    tabs, the comment block, the next-moves bar and the arrows, built from
+    the core and placed below. What is the player's is what it passes: the
+    move menu and comment editing are the player's only (a game never
+    writes), and so is the comment block — a game is a test, and "better is
+    14...b4" would answer it. The map draws the session in the player and
+    the repertoire, with its coverage, in Backtracking; the player opens with
+    the arrows its settings say, a game without them; a required move is
+    drawn whatever the switch says.
+  */
+  const explorer = useVariationsExplorer({
+    testId: id,
+    source: core,
+    evalsByFen: engine.evalsByFen,
+    extensionIds,
+    onEditTree: game === undefined ? core.replaceTree : undefined,
+    annotations: game === undefined && shown === "ready",
+    arrows: {
+      show: showArrows,
+      chances: chanceArrows,
+      required: rules.required,
+    },
+    map: hasMap
+      ? {
+          tree: game === undefined ? core.tree : repertoire,
+          nodeId: mapNodeId,
+          coverage: game === "backtrack" ? rules.coverage : undefined,
+          addedIds: game === undefined ? extensionIds : undefined,
+          // The player's dots are links to their positions; a game's are not
+          // — no skipping ahead.
+          linked: game === undefined,
+        }
+      : undefined,
+  });
+  const boardOptions: ChessboardOptions = { arrows: explorer.arrows };
+
+  /*
     The session's changes, and what to do with them (the player's; a game
     never writes). "Changed" is the tree not being the one last opened or
     saved: every edit to a tree makes a new one, and replaying a move that is
     there does not (`addMove`), so this holds for the moves added today and
     for any edit that comes later, with nothing to keep in step.
   */
-  /*
-    What the PGN says at the position on screen (CTA-69): the comment block
-    above the footer. The player's only — a game is a test, and "better is
-    14...b4" would answer it.
-  */
-  const annotations = useMemo(
-    () => (game === undefined && shown === "ready" ? annotationsAt(core.tree, core.nodeId) : null),
-    [game, shown, core.tree, core.nodeId],
-  );
-  const annotatedLabel = useMemo(() => {
-    const node = findNode(core.tree, core.nodeId);
-    if (node === null) return t("moveList.startPosition");
-    const { number, isWhiteMove } = plyLabel(core.tree.startFen, node.ply);
-    return `${number}${isWhiteMove ? "." : "…"} ${node.san}`;
-  }, [core.tree, core.nodeId, t]);
-
-  /*
-    Editing a comment (CTA-69) — the block's add, edit and delete. Each is a
-    `setComments` edit through the core's `replaceTree`, the path every other
-    edit to the tree takes: the Save button lights up, the strip offers to
-    keep it, Discard takes it back, and the reader stays where they are.
-    The dialog's target names the node, so its save edits the tree as it is
-    when it lands (the draft is built here, on each render).
-  */
-  const [commentEdit, setCommentEdit] = useState<{
-    nodeId: string | null;
-    kind: CommentKind;
-    /** `null` adds one after the move's others. */
-    index: number | null;
-  } | null>(null);
-  const editComments = useCallback(
-    (nodeId: string | null, kind: CommentKind, next: (list: string[]) => string[]) => {
-      const edited = setComments(core.tree, nodeId, kind, next([...commentsAt(core.tree, nodeId, kind)]));
-      if (edited !== core.tree) core.replaceTree(edited);
-    },
-    [core],
-  );
-  const commentDraft: CommentDraft | null =
-    commentEdit === null
-      ? null
-      : {
-          label: annotatedLabel,
-          initial:
-            commentEdit.index === null
-              ? ""
-              : (commentsAt(core.tree, commentEdit.nodeId, commentEdit.kind)[commentEdit.index] ?? ""),
-          onSave: (text) =>
-            editComments(commentEdit.nodeId, commentEdit.kind, (list) =>
-              commentEdit.index === null
-                ? [...list, text]
-                : list.map((old, index) => (index === commentEdit.index ? text : old)),
-            ),
-        };
-  const commentEditing: CommentEditing = {
-    onAdd: () => setCommentEdit({ nodeId: core.nodeId, kind: "comments", index: null }),
-    onEdit: (kind, index) => setCommentEdit({ nodeId: core.nodeId, kind, index }),
-    onDelete: (kind, index) =>
-      editComments(core.nodeId, kind, (list) => list.filter((_, at) => at !== index)),
-  };
-
   const navigate = useNavigate();
   const changed = game === undefined && shown === "ready" && core.tree !== repertoire;
   const [saveProblem, setSaveProblem] = useState<SavedRepertoireProblem | null>(null);
@@ -670,7 +571,7 @@ function RepertoirePlayer({
       score={topLine?.score ?? null}
       showEvalBar={engineOn && showEvalBar}
       boardOptions={boardOptions}
-      overlay={chanceOverlay}
+      overlay={explorer.overlay}
       panel={{
         header: (
           <>
@@ -838,17 +739,7 @@ function RepertoirePlayer({
                   {t("repertoires.detail.unreadable")}
                 </Typography>
               ) : (
-                <TreeMoveList
-                  tree={core.tree}
-                  mainlineNodes={core.mainlineNodes}
-                  nodeId={core.nodeId}
-                  onSelectNode={core.goToNode}
-                  extensionIds={extensionIds}
-                  evalsByFen={engine.evalsByFen}
-                  // The variations explorer's move menu (CTA-64): the
-                  // player's only — a game never writes.
-                  onEditTree={game === undefined ? core.replaceTree : undefined}
-                />
+                explorer.moves
               )),
           },
           ...(game !== undefined
@@ -891,24 +782,7 @@ function RepertoirePlayer({
                 {
                   id: "map",
                   label: t("repertoires.play.tabs.map"),
-                  content:
-                    shown === "ready" ? (
-                      <RepertoireMap
-                        testId={`${id}-map`}
-                        repertoire={game === undefined ? core.tree : repertoire}
-                        addedIds={game === undefined ? extensionIds : undefined}
-                        coverage={game === "backtrack" ? rules.coverage : undefined}
-                        nodeId={mapNodeId}
-                        // The player's full-screen map: a dot is a link to its
-                        // position. A game's is not — no skipping ahead.
-                        onSelectNode={game === undefined ? core.goToNode : undefined}
-                        // And its right-click is the move menu (CTA-67), the
-                        // Moves tab's own; a game's map binds none.
-                        onEditTree={game === undefined ? core.replaceTree : undefined}
-                      />
-                    ) : (
-                      reading || null
-                    ),
+                  content: shown === "ready" ? explorer.map : reading || null,
                 },
               ]
             : []),
@@ -956,15 +830,7 @@ function RepertoirePlayer({
         footer:
           shown !== "ready" ? undefined : (
             <>
-              {annotations !== null && (
-                <RepertoireAnnotationsBar
-                  testId={`${id}-annotations`}
-                  label={annotatedLabel}
-                  annotations={annotations}
-                  editing={commentEditing}
-                />
-              )}
-              <CommentDialog draft={commentDraft} onClose={() => setCommentEdit(null)} />
+              {explorer.annotations}
               {changed && changesOpen && (
                 <RepertoireChangesBar
                   testId={`${id}-changes`}
@@ -990,12 +856,7 @@ function RepertoirePlayer({
               {game !== undefined || autoplay ? (
                 statusLine
               ) : tab === "moves" ? (
-                <NextMovesBar
-                  nodes={continuations}
-                  onSelect={core.goToNode}
-                  onHover={setHovered}
-                  chances={chances}
-                />
+                explorer.nextMoves
               ) : null}
             </>
           ),

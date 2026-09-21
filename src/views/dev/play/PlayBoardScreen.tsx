@@ -12,7 +12,7 @@ import NextMovesBar from "../../tools/analysis/NextMovesBar";
 import { nextMoveArrowsOf } from "../../tools/analysis/nextMoveArrows";
 import CurrentOpening from "../../shared/CurrentOpening";
 import BoardShell from "../core/BoardShell";
-import TreeMoveList from "../core/TreeMoveList";
+import TreeMoveList from "../../explorer/TreeMoveList";
 import type { BoardPanelTab } from "../core/BoardPanel";
 import type { PlayBoardState } from "./usePlayBoard";
 

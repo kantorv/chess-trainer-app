@@ -1,4 +1,4 @@
-import { HOVERED_NEXT_MOVE_ARROW_COLOR } from "./nextMoveArrows";
+import { HOVERED_NEXT_MOVE_ARROW_COLOR } from "../tools/analysis/nextMoveArrows";
 
 /**
  * **The play-chance arrows' geometry** (CTA-71) — pure data in a file of its
@@ -25,7 +25,7 @@ import { HOVERED_NEXT_MOVE_ARROW_COLOR } from "./nextMoveArrows";
  * board and nothing ever measures a pixel. The square arithmetic is
  * deliberately our own — the vendored `getRelativeCoords`' doc example does
  * not agree with itself, and eight lines are cheaper than a workaround
- * (`lib/repertoireMap.ts` keeps its own for the same reason).
+ * (`lib/treeMap.ts` keeps its own for the same reason).
  */
 
 /** A point in the overlay's own units — square fractions, `0..8`. */

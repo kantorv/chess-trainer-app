@@ -17,14 +17,16 @@ import {
 } from "../../lib/moveAnnotations";
 
 /**
- * **What the PGN says here** (CTA-69) — the block the player shows above its
- * footer, where the changes strip sits, while the position on screen carries
- * an annotation: the move with its marks, the comment opening its variation,
- * the comments after it, and the attributes read out of them (an engine's
- * eval and depth, a `[%clk]`, …) as `key value` chips.
+ * **What the PGN says here** (CTA-69; was `RepertoireAnnotationsBar` until
+ * CTA-72) — the variations explorer's comment block, which the repertoire
+ * player shows above its footer, where the changes strip sits, while the
+ * position on screen carries an annotation: the move with its marks, the
+ * comment opening its variation, the comments after it, and the attributes
+ * read out of them (an engine's eval and depth, a `[%clk]`, …) as
+ * `key value` chips.
  *
  * Presentational: `annotationsAt` (`lib/moveAnnotations.ts`) decides what is
- * there and the player passes nothing when there is nothing. The block
+ * there and the explorer renders nothing when there is nothing. The block
  * scrolls itself past a few lines, so a long note does not push the board
  * controls off the panel — the footer is fixed, not the scrolling region.
  *
@@ -35,10 +37,10 @@ import {
  *
  * **Editing is opt-in** (`editing`): an add button beside the title, and an
  * edit and a delete on every comment. The block only says which comment —
- * its kind and its index in that list — and the player turns that into a
+ * its kind and its index in that list — and the explorer turns that into a
  * tree edit (`setComments`), a session change like any other.
  */
-function RepertoireAnnotationsBar({
+function AnnotationsBar({
   testId,
   label,
   annotations,
@@ -58,7 +60,7 @@ function RepertoireAnnotationsBar({
     <Box
       data-testid={testId}
       role="region"
-      aria-label={t("repertoires.annotations.title")}
+      aria-label={t("annotations.title")}
       sx={{
         mb: 1,
         px: 1,
@@ -72,7 +74,7 @@ function RepertoireAnnotationsBar({
       }}
     >
       <Typography variant="body2" sx={{ fontWeight: 600, display: "flex", alignItems: "center", flexWrap: "wrap" }}>
-        {t("repertoires.annotations.title")}
+        {t("annotations.title")}
         <Typography
           component="span"
           variant="body2"
@@ -100,10 +102,10 @@ function RepertoireAnnotationsBar({
           </Typography>
         ))}
         {editing !== undefined && (
-          <Tooltip title={t("repertoires.annotations.add")}>
+          <Tooltip title={t("annotations.add")}>
             <IconButton
               size="small"
-              aria-label={t("repertoires.annotations.add")}
+              aria-label={t("annotations.add")}
               data-testid={`${testId}-add`}
               onClick={editing.onAdd}
               sx={{ marginInlineStart: "auto" }}
@@ -117,7 +119,7 @@ function RepertoireAnnotationsBar({
       {annotations.before.length > 0 && (
         <Box data-testid={`${testId}-before`} sx={{ mt: 0.5 }}>
           <Typography variant="caption" sx={{ color: "text.secondary" }}>
-            {t("repertoires.annotations.before")}
+            {t("annotations.before")}
           </Typography>
           {annotations.before.map((comment, index) => (
             <Comment
@@ -144,7 +146,7 @@ function RepertoireAnnotationsBar({
   );
 }
 
-/** What the player does with the block's edit controls. */
+/** What the screen does with the block's edit controls — `useVariationsExplorer` builds it. */
 export type CommentEditing = {
   onAdd: () => void;
   /** `index` is the comment's place in its `kind` list at this position. */
@@ -190,7 +192,7 @@ function Comment({
               data-testid={`${testId}-attr-${key}`}
               label={
                 <>
-                  {t(`repertoires.annotations.keys.${key}`, { defaultValue: key })}{" "}
+                  {t(`annotations.keys.${key}`, { defaultValue: key })}{" "}
                   <Box component="bdi" dir="ltr" sx={{ fontWeight: 600 }}>
                     {value}
                   </Box>
@@ -203,13 +205,13 @@ function Comment({
       </Box>
       {onEdit !== undefined && onDelete !== undefined && (
         <Box sx={{ display: "flex", flexShrink: 0 }}>
-          <Tooltip title={t("repertoires.annotations.edit")}>
-            <IconButton size="small" aria-label={t("repertoires.annotations.edit")} data-testid={`${testId}-edit`} onClick={onEdit}>
+          <Tooltip title={t("annotations.edit")}>
+            <IconButton size="small" aria-label={t("annotations.edit")} data-testid={`${testId}-edit`} onClick={onEdit}>
               <EditOutlinedIcon sx={{ fontSize: "1rem" }} />
             </IconButton>
           </Tooltip>
-          <Tooltip title={t("repertoires.annotations.delete")}>
-            <IconButton size="small" aria-label={t("repertoires.annotations.delete")} data-testid={`${testId}-delete`} onClick={onDelete}>
+          <Tooltip title={t("annotations.delete")}>
+            <IconButton size="small" aria-label={t("annotations.delete")} data-testid={`${testId}-delete`} onClick={onDelete}>
               <DeleteOutlineRoundedIcon sx={{ fontSize: "1rem" }} />
             </IconButton>
           </Tooltip>
@@ -219,4 +221,4 @@ function Comment({
   );
 }
 
-export default RepertoireAnnotationsBar;
+export default AnnotationsBar;

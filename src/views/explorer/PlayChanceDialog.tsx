@@ -10,14 +10,14 @@ import InputAdornment from "@mui/material/InputAdornment";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { useTranslation } from "react-i18next";
-import { findNode, plyLabel, type GameTree, type VariationNode } from "../../../lib/gameTree";
+import { findNode, plyLabel, type GameTree, type VariationNode } from "../../lib/gameTree";
 import {
   formatPercent,
   linesWithin,
   playChanceOf,
   playChances,
   setPlayChances,
-} from "../../../lib/playChance";
+} from "../../lib/playChance";
 
 /** Which branch the dialog is open on: the position the moves are played from. */
 export type PlayChanceTarget = { parentId: string | null };

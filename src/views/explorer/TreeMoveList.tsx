@@ -1,21 +1,24 @@
 import { useCallback, useMemo, useState } from "react";
-import type { Score } from "../../../lib/engineAnalysis";
+import type { Score } from "../../lib/engineAnalysis";
 import {
   hasComments,
   mainlineGame,
   type GameTree,
   type VariationNode,
-} from "../../../lib/gameTree";
-import type { PieceMask } from "../../../lib/pieceMask";
-import MoveList from "../../shared/MoveList";
-import type { MenuAnchor } from "../../shared/moveContextMenu";
+} from "../../lib/gameTree";
+import type { PieceMask } from "../../lib/pieceMask";
+import MoveList from "../shared/MoveList";
+import type { MenuAnchor } from "../shared/moveContextMenu";
 import MoveContextMenu, { type MoveMenuTarget } from "./MoveContextMenu";
 
 /**
  * **The variations explorer, for every v2 board** — the shared `MoveList`
  * over a {@link GameTree}, with each side line hanging as an indented run
  * under the mainline move it branches from. (It was "the merged move list"
- * when CTA-53 introduced it; CTA-64 gave it its move menu and its name.)
+ * when CTA-53 introduced it; CTA-64 gave it its move menu and its name;
+ * CTA-72 moved it out of `views/dev/core/` into the shared explorer, whose
+ * Moves part it is — `useVariationsExplorer` renders it, and a screen that
+ * wants only the list may render it directly, as the dev boards do.)
  *
  * It exists because of the **ply↔node seam**. The list speaks plies over the
  * mainline; the navigation state is a node id, because a click inside a side

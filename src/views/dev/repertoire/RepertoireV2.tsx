@@ -27,7 +27,7 @@ import VariationTree from "../../tools/analysis/VariationTree";
 import CurrentOpening from "../../shared/CurrentOpening";
 import GameInfo from "../../shared/GameInfo";
 import BoardShell from "../core/BoardShell";
-import TreeMoveList from "../core/TreeMoveList";
+import TreeMoveList from "../../explorer/TreeMoveList";
 import { useBoardCore } from "../core/useBoardCore";
 import { useEngineModule } from "../core/useEngineModule";
 

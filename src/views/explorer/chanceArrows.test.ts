@@ -9,7 +9,7 @@ import {
   chanceArrowWidth,
   squareCenterOf,
 } from "./chanceArrows";
-import { HOVERED_NEXT_MOVE_ARROW_COLOR } from "./nextMoveArrows";
+import { HOVERED_NEXT_MOVE_ARROW_COLOR } from "../tools/analysis/nextMoveArrows";
 
 // The width of an arrow's shaft, read straight off its tail's two flank points.
 const tailWidthOf = (points: readonly { x: number; y: number }[]) =>
