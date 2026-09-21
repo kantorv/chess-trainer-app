@@ -115,6 +115,23 @@ describe("the side panel's filters", () => {
     expect(numbers({ color: "black" })).toEqual([1, 2, 3]);
   });
 
+  it("keeps the games whose line begins with the moves played, with the other filters on top", () => {
+    const lined = rows.map((row, index) => ({
+      ...row,
+      line: [["e4", "e5", "Nf3"], ["e4", "c5"], ["d4"]][index],
+    }));
+    const by = (filter: Partial<Parameters<typeof filteredRows>[1]>) =>
+      filteredRows(lined, { text: "", result: "", ...filter }).map((r) => r.number);
+    expect(by({ line: [] })).toEqual([1, 2, 3]);
+    expect(by({ line: ["e4"] })).toEqual([1, 2]);
+    expect(by({ line: ["e4", "e5", "Nf3"] })).toEqual([1]);
+    // Longer than a game's line: not a game that began that way.
+    expect(by({ line: ["e4", "c5", "Nf3"] })).toEqual([]);
+    expect(by({ line: ["e4"], player: "carlsen" })).toEqual([1]);
+    // A row without a line (an old index) is out once a line is set.
+    expect(numbers({ line: ["e4"] })).toEqual([]);
+  });
+
   it("finds an opening by its ECO code, its name, or the label picked from the list", () => {
     expect(numbers({ opening: "petrov" })).toEqual([1]);
     expect(numbers({ opening: "C4" })).toEqual([1]);
