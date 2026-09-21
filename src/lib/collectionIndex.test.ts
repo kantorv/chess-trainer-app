@@ -6,6 +6,7 @@ import {
   decodeCollectionIndex,
   encodeCollectionIndex,
   indexedRowOf,
+  LINE_PLIES,
   numberedRows,
   textHash,
   type OpeningLookup,
@@ -43,7 +44,24 @@ describe("a game's indexed row", () => {
       eco: "C42",
       opening: "Petrov",
       moves: 3,
+      line: ["e4", "e5", "Nf3", "Nf6", "Nxe5"],
     });
+  });
+
+  it("keeps the first 30 plies of the mainline as its line, from the standard start only", () => {
+    const long = `[Event "Long"]\n[Result "*"]\n\n${"1. Nf3 Nf6 2. Ng1 Ng8 ".repeat(10)}*`;
+    const row = indexedRowOf(long);
+    expect(row.moves).toBe(20); // 40 plies
+    expect(row.line).toHaveLength(LINE_PLIES);
+    expect(row.line?.slice(0, 4)).toEqual(["Nf3", "Nf6", "Ng1", "Ng8"]);
+    // A set-up position cannot join a tree from the standard start.
+    const setUp =
+      '[Event "Study"]\n[SetUp "1"]\n[FEN "4k3/8/8/8/8/8/4P3/4K3 w - - 0 1"]\n[Result "*"]\n\n1. e4 Kd7 *';
+    expect(indexedRowOf(setUp)).toMatchObject({ moves: 1 });
+    expect(indexedRowOf(setUp).unreadable).toBeUndefined();
+    expect(indexedRowOf(setUp).line).toBeUndefined();
+    expect(indexedRowOf(BROKEN).line).toBeUndefined();
+    expect(indexedRowOf('[Event "Empty"]\n[Result "*"]\n\n*').line).toBeUndefined();
   });
 
   it("fills the opening in from the book when the tags leave it out", () => {
@@ -109,6 +127,24 @@ describe("the index file", () => {
       rows: [[12, "whatever", "Tal"]],
     };
     expect(decodeCollectionIndex(file)).toEqual({ hash: "", rows: [{ white: "Tal", moves: 12, result: "*" }] });
+  });
+
+  it("writes a line as its SAN joined by spaces, and reads a file from before the column as no lines", () => {
+    const text = encodeCollectionIndex(buildCollectionIndex([PETROV, BROKEN]));
+    const file = JSON.parse(text);
+    expect(file.columns).toContain("line");
+    expect(file.rows[0][file.columns.indexOf("line")]).toBe("e4 e5 Nf3 Nf6 Nxe5");
+    expect(file.rows[1][file.columns.indexOf("line")]).toBeNull();
+    expect(decodeCollectionIndex(file)?.rows[0].line).toEqual(["e4", "e5", "Nf3", "Nf6", "Nxe5"]);
+
+    const old = {
+      ...file,
+      columns: file.columns.filter((column: string) => column !== "line"),
+      rows: file.rows.map((row: unknown[]) => row.slice(0, -1)),
+    };
+    const rows = decodeCollectionIndex(old)?.rows;
+    expect(rows?.[0]).toMatchObject({ white: "Carlsen", moves: 3 });
+    expect(rows?.every((row) => row.line === undefined)).toBe(true);
   });
 
   it("refuses what is not an index", () => {

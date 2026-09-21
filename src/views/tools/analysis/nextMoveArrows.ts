@@ -56,12 +56,15 @@ export const REQUIRED_MOVE_ARROW_COLOR = "#9c27b0";
  * {@link NEXT_MOVE_ARROW_COLOR}; the rest are side lines. A hovered
  * continuation takes {@link HOVERED_NEXT_MOVE_ARROW_COLOR} whichever it is.
  *
+ * Only a node's `id`, `from` and `to` are read, so a list that is not a
+ * tree's — the Library's opening-moves filter (CTA-76) — draws through it too.
+ *
  * The one place the v2 boards build their next-move arrows (CTA-63). The
  * shipped Analysis Board keeps its own copy — the shipped board screens are
  * not touched by v2 work (`chessboard-v2.md` §6).
  */
 export const nextMoveArrowsOf = (
-  nodes: readonly VariationNode[],
+  nodes: readonly Pick<VariationNode, "id" | "from" | "to">[],
   hoveredId: string | null = null,
 ): Arrow[] =>
   nodes.map((node, index) => ({

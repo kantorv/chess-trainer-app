@@ -1,3 +1,5 @@
+import { DEFAULT_POSITION } from "chess.js";
+
 import { mainline } from "./gameTree";
 import {
   collectionRowOf,
@@ -34,7 +36,11 @@ import { parsePgnTree } from "./pgn";
  *   so before the reader opens it;
  * - `eco` / `opening` filled in from the opening book (eco.json) when the
  *   game's tags leave them out — the deepest named position of its mainline,
- *   `openingOfLine`'s rule. A tag the game carries always wins.
+ *   `openingOfLine`'s rule. A tag the game carries always wins;
+ * - `line`, the first {@link LINE_PLIES} plies of its mainline as SAN
+ *   (CTA-76) — what the table's opening-moves board merges into a tree
+ *   (`lib/openingTree.ts`). Absent for a game that does not start from the
+ *   standard position: its moves cannot join a tree that does.
  *
  * The parse is the cost — about 8 ms a game (`chess.js` matching every SAN),
  * so ~80 s for 10,000 — which is why it is paid once and never on view.
@@ -55,6 +61,12 @@ export type CollectionIndex = {
   hash: string;
   rows: IndexedRow[];
 };
+
+/**
+ * How deep a game's `line` goes — 30 plies, 15 moves: past it the games of
+ * even a 10,000-game collection have long since gone their own ways.
+ */
+export const LINE_PLIES = 30;
 
 /** The opening a mainline (its positions, in order) ended in, or `undefined`. */
 export type OpeningLookup = (fens: readonly string[]) => { eco: string; name: string } | undefined;
@@ -81,13 +93,19 @@ export const indexedRowOf = (pgn: string, lookup?: OpeningLookup): IndexedRow =>
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { number, ...row } = collectionRowOf(pgn, 0);
   let fens: string[];
+  let line: string[] | undefined;
   try {
     const tree = parsePgnTree(pgn);
-    fens = [tree.startFen, ...mainline(tree).map((node) => node.fen)];
+    const nodes = mainline(tree);
+    fens = [tree.startFen, ...nodes.map((node) => node.fen)];
+    if (tree.startFen === DEFAULT_POSITION && nodes.length > 0) {
+      line = nodes.slice(0, LINE_PLIES).map((node) => node.san);
+    }
   } catch {
     return { ...row, unreadable: true };
   }
   const indexed: IndexedRow = { ...row, moves: Math.ceil((fens.length - 1) / 2) };
+  if (line !== undefined) indexed.line = line;
   if (lookup !== undefined && (indexed.eco === undefined || indexed.opening === undefined)) {
     const found = lookup(fens);
     if (found !== undefined) {
@@ -182,6 +200,8 @@ export const textHash = (text: string): string => {
  * found by its name, so a later version that adds one still reads an older
  * file (the new column absent, as an optional field is), and an unknown
  * column is ignored. One row per line, so a re-wired file diffs by game.
+ * `line` (CTA-76) is such a later column: its SAN joined by spaces, and a
+ * file from before it reads as games with no line.
  * ------------------------------------------------------------------ */
 
 export const COLLECTION_INDEX_FORMAT = "chessapp.collectionIndex";
@@ -202,6 +222,7 @@ const INDEX_COLUMNS = [
   "opening",
   "moves",
   "unreadable",
+  "line",
 ] as const satisfies readonly (keyof IndexedRow)[];
 
 type Cell = string | number | null;
@@ -212,6 +233,7 @@ export const encodeCollectionIndex = (index: CollectionIndex): string => {
     JSON.stringify(
       INDEX_COLUMNS.map((column): Cell => {
         if (column === "unreadable") return row.unreadable ? 1 : null;
+        if (column === "line") return row.line === undefined ? null : row.line.join(" ");
         return row[column] ?? null;
       }),
     ),
@@ -272,6 +294,8 @@ export const decodeCollectionIndex = (value: unknown): CollectionIndex | undefin
       if (typeof number === "number") row[field] = number;
     }
     if (cell("unreadable") === 1) row.unreadable = true;
+    const line = cell("line");
+    if (typeof line === "string" && line.trim() !== "") row.line = line.trim().split(/\s+/);
     rows.push(row);
   }
   return { hash: file.hash, rows };

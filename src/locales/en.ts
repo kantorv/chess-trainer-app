@@ -941,6 +941,16 @@ const en = {
       event: "Event",
       from: "From",
       to: "To",
+      /** The opening-moves board at the foot of the panel (CTA-76). */
+      moves: {
+        title: "Opening moves",
+        back: "Take back a move",
+        reset: "Back to the start",
+        flip: "Flip the board",
+        start: "Play a move to keep the games that began with it",
+        end: "No game in the collection goes further here",
+        none: "No game the other filters leave was played this way",
+      },
     },
     confirmDelete: {
       title: "Delete {{name}}?",

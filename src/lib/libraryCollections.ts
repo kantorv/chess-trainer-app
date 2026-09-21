@@ -113,6 +113,13 @@ export type CollectionRow = {
    * Set by the index's `chess.js` pass; absent when the game reads.
    */
   unreadable?: boolean;
+  /**
+   * The first 30 plies of its parsed mainline, as SAN (CTA-76) — what the
+   * opening-moves board filters by (`lib/openingTree.ts`). Set by the index's
+   * `chess.js` pass; absent for an unreadable game, one that does not start
+   * from the standard position, and every game of an index from before it.
+   */
+  line?: readonly string[];
 };
 
 /** The results a table can be narrowed to — PGN's four. */
@@ -279,6 +286,12 @@ export type RowFilter = {
   /** Inclusive bounds, `YYYY-MM-DD` (a date input's value). */
   from?: string;
   to?: string;
+  /**
+   * The opening moves played on the filter board, as SAN from the start
+   * (CTA-76): a game is kept when its `line` begins with them. Empty or
+   * absent narrows nothing; a game with no `line` is out once it is set.
+   */
+  line?: readonly string[];
 };
 
 /**
@@ -293,6 +306,12 @@ export type CollectionFilterValues = {
   from: string;
   to: string;
   result: string;
+  /**
+   * The opening-moves board's line, comma-joined SAN (`e4,c5,Nf3` — the
+   * `?at=` encoding, `lib/repertoireLink.ts`), as far as the collection's
+   * games follow it.
+   */
+  line: string;
 };
 
 /** The URL parameters the side panel owns — what its Clear removes. */
@@ -304,6 +323,7 @@ export const COLLECTION_FILTER_PARAMS = [
   "from",
   "to",
   "result",
+  "line",
 ] as const satisfies readonly (keyof CollectionFilterValues)[];
 
 const searchTextOf = (row: CollectionRow): string =>
@@ -357,7 +377,12 @@ export const filteredRows = (
   const event = filter.event ?? "";
   const from = filter.from ?? "";
   const to = filter.to ?? "";
+  const line = filter.line ?? [];
   return rows.filter((row) => {
+    if (line.length > 0) {
+      if (row.line === undefined || row.line.length < line.length) return false;
+      if (line.some((san, index) => row.line?.[index] !== san)) return false;
+    }
     if (filter.result !== "" && row.result !== filter.result) return false;
     if (player !== "") {
       const asWhite = filter.color !== "black" && (row.white?.toLowerCase().includes(player) ?? false);
