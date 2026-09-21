@@ -4,6 +4,7 @@ import {
   openingLineOfParam,
   openingLineParamOf,
   openingNodeAt,
+  openingNodeOn,
   openingTreeOf,
   type OpeningTreeNode,
 } from "./openingTree";
@@ -83,6 +84,12 @@ describe("walking the tree", () => {
     // A move no game played ends the walk.
     expect(openingNodeAt(tree, ["e4", "e6", "d4"])).toMatchObject({ line: ["e4"], node: { san: "e4" } });
     expect(openingNodeAt(tree, [])).toMatchObject({ line: [], node: tree });
+  });
+
+  it("reaches a node only when the tree holds the whole line — else a node of no games", () => {
+    expect(openingNodeOn(tree, ["e4", "c5"])).toMatchObject({ san: "c5", count: 1 });
+    expect(openingNodeOn(tree, [])).toBe(tree);
+    expect(openingNodeOn(tree, ["e4", "e6"])).toMatchObject({ count: 0, children: [] });
   });
 
   it("travels in the URL as comma-joined SAN", () => {

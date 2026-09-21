@@ -22,10 +22,10 @@ import { nextMoveArrowsOf } from "../tools/analysis/nextMoveArrows";
  * collection table's filters: the reader plays an opening on it, and the
  * table keeps the games that began that way.
  *
- * Presentational over a collection's opening tree (`lib/openingTree.ts`,
- * merged from the whole collection — the other filters narrow the table
- * after it, never the tree): `line` is the moves played so far, as far as
- * the games follow them, and every change goes out through `onLine`. From the
+ * Presentational over an opening tree (`lib/openingTree.ts`, merged from the
+ * games the table's other filters leave): `line` is the moves played so far,
+ * `node` where they lead in that tree — a node of no games when those games
+ * never played the line — and every change goes out through `onLine`. From the
  * position it reaches, the board shows
  *
  * - the **continuations** as arrows through the shared `nextMoveArrowsOf` —
@@ -223,7 +223,7 @@ function OpeningFilterBoard({ line, node, onLine }: OpeningFilterBoardProps) {
 
       {continuations.length === 0 ? (
         <Typography variant="caption" sx={{ color: "text.secondary" }} data-testid="library-filter-moves-end">
-          {t("library.filters.moves.end")}
+          {t(node.count === 0 ? "library.filters.moves.none" : "library.filters.moves.end")}
         </Typography>
       ) : (
         <Box

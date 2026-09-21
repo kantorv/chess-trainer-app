@@ -949,6 +949,7 @@ const en = {
         flip: "Flip the board",
         start: "Play a move to keep the games that began with it",
         end: "No game in the collection goes further here",
+        none: "No game the other filters leave was played this way",
       },
     },
     confirmDelete: {

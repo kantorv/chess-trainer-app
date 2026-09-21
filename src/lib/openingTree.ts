@@ -8,7 +8,8 @@ import type { CollectionRow } from "./libraryCollections";
  * It is built **in memory from the index's rows** — each row's `line`, the
  * first 30 plies of its mainline as SAN, written once when the collection came
  * in (`lib/collectionIndex.ts`) — so nothing is parsed and no `chess.js` runs:
- * a 10,000-game collection merges in a few tens of milliseconds. Keyed by SAN,
+ * 10,000 games merge in under 10 ms, so the table rebuilds it whenever its
+ * other filters change. Keyed by SAN,
  * as `mergeTrees` (`lib/gameTree.ts`) merges a repertoire, but a node records
  * the games through it instead of annotations.
  *
@@ -103,6 +104,19 @@ export const openingNodeAt = (
     node = child;
   }
   return { line, node };
+};
+
+/** A position no game reached — what a line the tree does not hold leads to. */
+const NO_GAMES: OpeningTreeNode = { san: "", count: 0, results: { white: 0, draw: 0, black: 0 }, children: [] };
+
+/**
+ * The node the **whole** of `sans` reaches, or a node of no games when the
+ * tree does not hold all of it — a line kept as written over a tree of fewer
+ * games (the table's other filters), which then has nothing to offer there.
+ */
+export const openingNodeOn = (tree: OpeningTreeNode, sans: readonly string[]): OpeningTreeNode => {
+  const { line, node } = openingNodeAt(tree, sans);
+  return line.length === sans.length ? node : NO_GAMES;
 };
 
 /** The URL parameter the board's line travels in — the `?at=` encoding, `lib/repertoireLink.ts`. */

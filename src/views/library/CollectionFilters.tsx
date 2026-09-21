@@ -31,7 +31,7 @@ import OpeningFilterBoard from "./OpeningFilterBoard";
  * and opening boxes also take any text: part of a name, or an ECO code's start.
  *
  * **The opening moves** close the panel (CTA-76): a small board over the
- * collection's opening tree (`OpeningFilterBoard.tsx`), shown once some game
+ * opening tree of the games the other filters leave (`OpeningFilterBoard.tsx`), shown once some game
  * has a `line` in the index — an index from before the column has none.
  *
  * The dates are the browser's own date inputs (`type="date"`). A PGN date is
@@ -44,7 +44,11 @@ export type CollectionFiltersProps = {
   values: CollectionFilterValues;
   onChange: (patch: Partial<CollectionFilterValues>) => void;
   onClear: () => void;
-  /** The whole collection's opening tree, the node `line` reaches, and the moves played. */
+  /**
+   * The whole collection's opening tree — the board shows once it has games —
+   * then the node `line` reaches in the tree of the games the other filters
+   * leave, and the moves played.
+   */
   openingTree: OpeningTreeNode;
   openingNode: OpeningTreeNode;
   line: readonly string[];
