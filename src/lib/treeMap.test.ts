@@ -18,7 +18,7 @@ import {
   mapLabelsIn,
   visibleRect,
   zoomViewAt,
-} from "./repertoireMap";
+} from "./treeMap";
 
 // Three lines: 1. e4 e5 2. Nf3 (the mainline) | 2. Bc4 | 1... c5 2. Nf3.
 const tree = parsePgnTree("1. e4 e5 (1... c5 2. Nf3) 2. Nf3 (2. Bc4) *");

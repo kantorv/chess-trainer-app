@@ -17,7 +17,7 @@ import AnalysisSettings from "../../tools/analysis/AnalysisSettings";
 import VariationTree from "../../tools/analysis/VariationTree";
 import CurrentOpening from "../../shared/CurrentOpening";
 import BoardShell from "../core/BoardShell";
-import TreeMoveList from "../core/TreeMoveList";
+import TreeMoveList from "../../explorer/TreeMoveList";
 import { findDevSavedOpening } from "../core/devStores";
 import { useOpeningsV2 } from "./useOpeningsV2";
 

@@ -3,7 +3,7 @@ import type { MouseEvent } from "react";
 /**
  * The move list's right-click (CTA-64): what a token reports when the reader
  * opens its context menu. The menu itself is the consumer's —
- * `views/dev/core/MoveContextMenu.tsx` for the variations explorer.
+ * `views/explorer/MoveContextMenu.tsx` for the variations explorer.
  */
 
 /** Where a move's context menu opens — viewport coordinates, MUI's `anchorPosition`. */

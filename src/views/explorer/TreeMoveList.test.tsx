@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
-import i18n from "../../../i18n";
-import AppThemeWithLang from "../../../theme/AppThemeWithLang";
-import type { Score } from "../../../lib/engineAnalysis";
-import { parsePgnTree } from "../../../lib/pgn";
-import { mainline, nodeAtSanPath, type GameTree } from "../../../lib/gameTree";
-import VariationTree from "../../tools/analysis/VariationTree";
+import i18n from "../../i18n";
+import AppThemeWithLang from "../../theme/AppThemeWithLang";
+import type { Score } from "../../lib/engineAnalysis";
+import { parsePgnTree } from "../../lib/pgn";
+import { mainline, nodeAtSanPath, type GameTree } from "../../lib/gameTree";
+import VariationTree from "../tools/analysis/VariationTree";
 import TreeMoveList from "./TreeMoveList";
 
 /*

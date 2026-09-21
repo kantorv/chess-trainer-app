@@ -31,10 +31,10 @@ import {
   setComments,
   subtreeCounts,
   type GameTree,
-} from "../../../lib/gameTree";
+} from "../../lib/gameTree";
 import CommentDialog, { type CommentDraft } from "./CommentDialog";
 import PlayChanceDialog, { type PlayChanceTarget } from "./PlayChanceDialog";
-import type { MenuAnchor } from "../../shared/moveContextMenu";
+import type { MenuAnchor } from "../shared/moveContextMenu";
 
 /** The move a menu was opened on, and where. */
 export type MoveMenuTarget = { nodeId: string; anchor: MenuAnchor };

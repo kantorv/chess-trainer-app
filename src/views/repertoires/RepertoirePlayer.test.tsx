@@ -14,7 +14,7 @@ import {
 import {
   CHANCE_ARROW_BORDER_COLOR,
   CHANCE_ARROW_FILL_COLOR,
-} from "../tools/analysis/chanceArrows";
+} from "../explorer/chanceArrows";
 import {
   NEXT_MOVE_ARROW_COLOR,
   SIDELINE_NEXT_MOVE_ARROW_COLOR,

@@ -1,11 +1,13 @@
 import { plyLabel, type GameTree, type VariationNode } from "./gameTree";
-import type { Coverage } from "./repertoireGames";
 
 /**
- * **The repertoire map** (CTA-63) — the layout of Backtracking's Map tab: the
- * repertoire's tree drawn as an SVG, so the reader sees where they are in it
- * and how much of it is left. Pure: coordinates and path strings in, nothing
- * rendered here (`views/repertoires/RepertoireMap.tsx` draws them).
+ * **The tree map** (CTA-63; was `lib/repertoireMap.ts` until CTA-72) — the
+ * layout of the variations explorer's Map: a game tree drawn as an SVG, so
+ * the reader sees where they are in it and how much of it is left. Pure:
+ * coordinates and path strings in, nothing rendered here
+ * (`views/explorer/TreeMap.tsx` draws them). It knows nothing of
+ * repertoires: a coverage is anything that counts the open lines under a
+ * position ({@link MapCoverage}), which Backtracking's `Coverage` is.
  *
  * ## The layout
  *
@@ -112,6 +114,16 @@ const edgeTo = (layout: MapLayout, node: VariationNode): string => {
     : `M${from.px} ${from.py}V${to.py}H${to.px}`;
 };
 
+/**
+ * How many lines are still open under each position — `under(null)` is the
+ * whole tree, `total` every line. A screen's own notion of "done" (a
+ * repertoire game's `Coverage` is one); with none, every line is open.
+ */
+export type MapCoverage = {
+  total: number;
+  under: (nodeId: string | null) => number;
+};
+
 const NOTHING_ADDED: ReadonlySet<string> = new Set();
 
 /**
@@ -122,7 +134,7 @@ const NOTHING_ADDED: ReadonlySet<string> = new Set();
  */
 export const mapEdgePaths = (
   layout: MapLayout,
-  coverage: Coverage,
+  coverage: MapCoverage,
   added: ReadonlySet<string> = NOTHING_ADDED,
 ): { covered: string; open: string; added: string } => {
   const covered: string[] = [];

@@ -21,7 +21,7 @@ import { nextMoveArrowsOf } from "../../tools/analysis/nextMoveArrows";
 import CopyableValue from "../../shared/CopyableValue";
 import CurrentOpening from "../../shared/CurrentOpening";
 import BoardShell from "../core/BoardShell";
-import TreeMoveList from "../core/TreeMoveList";
+import TreeMoveList from "../../explorer/TreeMoveList";
 import { findDevSavedAnalysis } from "../core/devStores";
 import { useAnalysisBoardV2 } from "./useAnalysisBoardV2";
 

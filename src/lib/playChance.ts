@@ -38,7 +38,7 @@ import { findNode, setComments, type GameTree, type VariationNode } from "./game
  *
  * Pure. The trainer's policy is {@link playChancePolicy} in
  * `lib/repertoireTrainer.ts`; the dialog that sets the marks is
- * `views/dev/core/PlayChanceDialog.tsx`.
+ * `views/explorer/PlayChanceDialog.tsx`.
  */
 
 /** How deep lichess-tools looks when it weighs a move by its lines. */

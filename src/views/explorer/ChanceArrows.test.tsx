@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 
-import { parsePgnTree } from "../../../lib/pgn";
-import { playChances } from "../../../lib/playChance";
+import { parsePgnTree } from "../../lib/pgn";
+import { playChances } from "../../lib/playChance";
 import ChanceArrows from "./ChanceArrows";
 import {
   CHANCE_ARROW_BORDER_COLOR,
   CHANCE_ARROW_FILL_COLOR,
 } from "./chanceArrows";
-import { HOVERED_NEXT_MOVE_ARROW_COLOR } from "./nextMoveArrows";
+import { HOVERED_NEXT_MOVE_ARROW_COLOR } from "../tools/analysis/nextMoveArrows";
 
 /*
   The overlay itself, alone: the player's test asserts the screen wires it in,

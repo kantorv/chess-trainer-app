@@ -225,6 +225,63 @@ const en = {
     save: "Save",
     cancel: "Cancel",
   },
+  /**
+   * The variations explorer's tree map (CTA-63, shared since CTA-72) — a
+   * game tree drawn as a tree, in a tab and full screen.
+   */
+  treeMap: {
+    title: "Map",
+    covered: "Lines covered: {{covered}} of {{total}}",
+    label: "The repertoire as a tree: covered lines in green, your way here highlighted",
+    here: "You are here",
+    left_one: "{{count}} line left",
+    left_other: "{{count}} lines left",
+    done: "Every line is covered.",
+    zoomIn: "Zoom in",
+    zoomOut: "Zoom out",
+    fullScreen: "Open the map full screen",
+    fit: "Fit the whole tree",
+    close: "Close the map",
+    mouseHint: "Scroll to zoom, drag to move",
+    showMoves: "Show moves",
+    zoomToRead: "Zoom in to read the moves",
+    goTo: "Go to {{move}}",
+    size: "{{lines}}, {{moves}}",
+    lines_one: "{{count}} line",
+    lines_other: "{{count}} lines",
+    moves_one: "{{count}} move",
+    moves_other: "{{count}} moves",
+    added_one: "{{count}} added",
+    added_other: "{{count}} added",
+  },
+  /**
+   * The variations explorer's comment block (CTA-69, shared since CTA-72):
+   * what the PGN says at the position on screen — its comments, and the
+   * attributes read out of them.
+   */
+  annotations: {
+    title: "Comment",
+    /** The comment opening a variation, above the ones after its move. */
+    before: "Before this move",
+    add: "Add a comment",
+    edit: "Edit this comment",
+    delete: "Delete this comment",
+    /**
+     * An attribute's name. `[%key value]` commands the app does not know
+     * print their own key; these are the ones it does.
+     */
+    keys: {
+      eval: "Eval",
+      depth: "Depth",
+      mate: "Mate in",
+      assessment: "Assessment",
+      clk: "Clock",
+      emt: "Time spent",
+      cal: "Arrows",
+      csl: "Squares",
+      prc: "Play chance",
+    },
+  },
   moveList: {
     title: "Moves",
     /** Ply 0, a selectable entry of its own. */
@@ -1070,30 +1127,6 @@ const en = {
         score: "Score",
         map: "Map",
       },
-      /** Backtracking's Map tab — the repertoire as a tree. */
-      map: {
-        label: "The repertoire as a tree: covered lines in green, your way here highlighted",
-        here: "You are here",
-        left_one: "{{count}} line left",
-        left_other: "{{count}} lines left",
-        done: "Every line is covered.",
-        zoomIn: "Zoom in",
-        zoomOut: "Zoom out",
-        fullScreen: "Open the map full screen",
-        fit: "Fit the whole tree",
-        close: "Close the map",
-        mouseHint: "Scroll to zoom, drag to move",
-        showMoves: "Show moves",
-        zoomToRead: "Zoom in to read the moves",
-        goTo: "Go to {{move}}",
-        size: "{{lines}}, {{moves}}",
-        lines_one: "{{count}} line",
-        lines_other: "{{count}} lines",
-        moves_one: "{{count}} move",
-        moves_other: "{{count}} moves",
-        added_one: "{{count}} added",
-        added_other: "{{count}} added",
-      },
       /** Game mode's tally — this session only. */
       score: {
         successes: "Right",
@@ -1116,33 +1149,6 @@ const en = {
         lineCovered: "Line covered. Going back to the next line to cover…",
         allCovered: "Every line is covered. Well done!",
         required: "Play the marked move: the other lines from here are already covered.",
-      },
-    },
-    /**
-     * The comment block (CTA-69): what the PGN says at the position on
-     * screen — its comments, and the attributes read out of them.
-     */
-    annotations: {
-      title: "Comment",
-      /** The comment opening a variation, above the ones after its move. */
-      before: "Before this move",
-      add: "Add a comment",
-      edit: "Edit this comment",
-      delete: "Delete this comment",
-      /**
-       * An attribute's name. `[%key value]` commands the app does not know
-       * print their own key; these are the ones it does.
-       */
-      keys: {
-        eval: "Eval",
-        depth: "Depth",
-        mate: "Mate in",
-        assessment: "Assessment",
-        clk: "Clock",
-        emt: "Time spent",
-        cal: "Arrows",
-        csl: "Squares",
-        prc: "Play chance",
       },
     },
     /**
