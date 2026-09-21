@@ -4,6 +4,7 @@ import {
   type LibraryGame,
 } from "./libraryCatalog";
 import { userPgnsLibrary } from "./pgnCatalog";
+import { playedGamesCatalog } from "./playedGameStore";
 import { savedAnalysesCatalog } from "./savedAnalysisStore";
 import { savedGamesCatalog } from "./savedGameStore";
 
@@ -29,10 +30,10 @@ import { savedGamesCatalog } from "./savedGameStore";
  *
  * A reference names a *game*, so it resolves only against a catalog that has
  * some, and the registry below is the single place that mapping lives. There
- * are three: the User PGNs library, the reader's own saved engine games
- * (`lib/savedGames.ts`) and their saved analysis boards
- * (`lib/savedAnalyses.ts`) — the last two presented as catalogs for exactly this
- * reason. A saved game or analysis reaches the Analysis Board and Load PGN
+ * are four: the User PGNs library, the reader's own saved engine games
+ * (`lib/savedGames.ts`), their saved analysis boards (`lib/savedAnalyses.ts`)
+ * and the games of Play with Engine v2 (`lib/playedGames.ts`, CTA-74) — the
+ * last three presented as catalogs for exactly this reason. A saved game or analysis reaches the Analysis Board and Load PGN
  * through the hand-off those screens already have, and neither learns that
  * either exists. **This registry is the whole cost of a new producer of games.**
  */
@@ -63,6 +64,9 @@ export const ENGINE_REFERENCE_KEY = "engine";
 /** The section key the reader's saved analysis boards carry. */
 export const ANALYSIS_REFERENCE_KEY = "analysis";
 
+/** The section key Play with Engine v2's games carry (CTA-74). */
+export const PLAY_REFERENCE_KEY = "play";
+
 /**
  * Which catalog a reference's first segment names. Read at call time rather
  * than passed in, so a destination screen needs no more than the string out of
@@ -76,6 +80,7 @@ const catalogsByKey: Record<string, () => LibraryCatalog> = {
   [LEGACY_PGN_REFERENCE_KEY]: userPgnsLibrary,
   [ENGINE_REFERENCE_KEY]: savedGamesCatalog,
   [ANALYSIS_REFERENCE_KEY]: savedAnalysesCatalog,
+  [PLAY_REFERENCE_KEY]: playedGamesCatalog,
 };
 
 /** The reference for one game — what a detail page puts in the link. */
