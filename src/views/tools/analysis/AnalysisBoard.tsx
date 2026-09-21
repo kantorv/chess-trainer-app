@@ -7,10 +7,12 @@ import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import FolderOpenRoundedIcon from "@mui/icons-material/FolderOpenRounded";
 import SaveRoundedIcon from "@mui/icons-material/SaveRounded";
+import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
 import SportsEsportsRoundedIcon from "@mui/icons-material/SportsEsportsRounded";
 import {
   createSearchParams,
   Link as RouterLink,
+  useLocation,
   useNavigate,
   useSearchParams,
 } from "react-router";
@@ -122,7 +124,10 @@ function AnalysisBoard() {
   const { core, engine, record } = state;
 
   const [tab, setTab] = useState("moves");
-  const [showArrows, setShowArrows] = useState(true);
+  const location = useLocation();
+  // Opens as the record's settings say (on for a new board); the Engine tab's
+  // switch is the session's.
+  const [showArrows, setShowArrows] = useState(record?.showArrows ?? true);
   const [changesOpen, setChangesOpen] = useState(false);
   const [saveOpen, setSaveOpen] = useState(false);
   // The strip closes itself once the changes are kept or dropped — adjusted
@@ -248,6 +253,19 @@ function AnalysisBoard() {
                 >
                   {name}
                 </Typography>
+                {record !== null && record.description !== "" && (
+                  // The reader's notes on it: one line here, all of it on hover.
+                  <Typography
+                    variant="caption"
+                    data-testid="analysis-description"
+                    dir="auto"
+                    title={record.description}
+                    sx={{ color: "text.secondary", display: "block" }}
+                    noWrap
+                  >
+                    {record.description}
+                  </Typography>
+                )}
                 <CurrentOpening fen={core.fen} testId="analysis-current-opening" />
               </Box>
               <Tooltip title={saveLabel}>
@@ -289,6 +307,30 @@ function AnalysisBoard() {
                   <FolderOpenRoundedIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
+              {record !== null && (
+                // Its settings — off while there are unsaved changes, which
+                // leaving the board would lose.
+                <Tooltip
+                  title={t(
+                    state.unsaved ? "analysis.settingsLink.unsaved" : "analysis.settingsLink.open",
+                  )}
+                >
+                  <span>
+                    <IconButton
+                      size="small"
+                      component={RouterLink}
+                      to={`/tools/analysis/saved/${encodeURIComponent(record.id)}/settings`}
+                      state={{ from: `${location.pathname}${location.search}` }}
+                      disabled={state.unsaved}
+                      aria-label={t("analysis.settingsLink.open")}
+                      data-testid="analysis-settings"
+                      sx={{ flexShrink: 0 }}
+                    >
+                      <SettingsRoundedIcon fontSize="small" />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+              )}
               <FormControlLabel
                 sx={{ flexShrink: 0, marginInlineEnd: 0 }}
                 control={
@@ -415,7 +457,7 @@ function AnalysisBoard() {
         open={saveOpen}
         initialName={savedAnalysisDerivedName(core.tree.headers)}
         onSave={(typed, folderId) => {
-          const saved = state.saveNew(typed, folderId);
+          const saved = state.saveNew(typed, folderId, showArrows);
           if (saved !== undefined) pointUrlAt(saved.id);
         }}
         onClose={() => setSaveOpen(false)}

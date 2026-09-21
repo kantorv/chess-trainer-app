@@ -13,7 +13,7 @@ import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import ArticleRounded from "@mui/icons-material/ArticleRounded";
 import CreateNewFolderRoundedIcon from "@mui/icons-material/CreateNewFolderRounded";
 import DriveFileMoveRoundedIcon from "@mui/icons-material/DriveFileMoveRounded";
-import EditRoundedIcon from "@mui/icons-material/EditRounded";
+import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
 import SportsEsportsRounded from "@mui/icons-material/SportsEsportsRounded";
 import { Link as RouterLink, useSearchParams } from "react-router";
 import { useTranslation } from "react-i18next";
@@ -55,7 +55,6 @@ import {
 import {
   fileSavedAnalysis,
   removeSavedAnalysis,
-  renameSavedAnalysis,
   savedAnalysesCatalog,
 } from "../../../../lib/savedAnalysisStore";
 import FolderDeleteDialog from "../../../engine/saved/FolderDeleteDialog";
@@ -136,7 +135,9 @@ import { useSavedAnalyses } from "./useSavedAnalyses";
  * ### 4. Named, and filed in a tree of folders (CTA-73)
  *
  * The Analysis Board saves explicitly now, so a record has the reader's name
- * for it (renamed here, in place) and a folder — the Saved games screen's
+ * for it and a folder — both, with its description, side and arrows, edited
+ * on its settings screen (`AnalysisSettingsScreen.tsx`, linked from every row
+ * and card) — the Saved games screen's
  * nested tree over the analyses' own store (`lib/savedAnalysisFolders.ts`),
  * through that screen's folder rows, cards, breadcrumb and dialogs. Folders
  * first, then this folder's analyses; create under the folder the reader is
@@ -188,8 +189,6 @@ type EntryProps = {
   saved: SavedAnalysis;
   /** File it under a folder — opens the move dialog. */
   onMove: (saved: SavedAnalysis) => void;
-  /** Rename it — opens the name dialog. */
-  onRename: (saved: SavedAnalysis) => void;
   /** The record's PGN as a tree, or `undefined` for one that will not read. */
   tree: GameTree | undefined;
   /** The catalog's parse of it, or `undefined` for the same reason. */
@@ -210,7 +209,7 @@ type CardProps = EntryProps & {
  * from a `.tsx` costs fast refresh. The `when` formatting and the join are the
  * shared `savedList.ts` helpers rather than a second copy of them.
  */
-const useCaption = ({ saved, tree, item }: Omit<EntryProps, "onMove" | "onRename">) => {
+const useCaption = ({ saved, tree, item }: Omit<EntryProps, "onMove">) => {
   const { t, i18n } = useTranslation();
   const summary = savedAnalysisSummary(saved, tree);
 
@@ -245,23 +244,26 @@ type RowProps = EntryProps & {
   onToggle: () => void;
 };
 
-/** The two organising controls every row and card carries: rename, and move. */
-function OrganiseButtons({
-  saved,
-  onMove,
-  onRename,
-}: Pick<EntryProps, "saved" | "onMove" | "onRename">) {
+/**
+ * The two organising controls every row and card carries: its settings (the
+ * title, description, side, arrows and folder — `AnalysisSettingsScreen`),
+ * and a quick move between folders.
+ */
+function OrganiseButtons({ saved, onMove }: Pick<EntryProps, "saved" | "onMove">) {
   const { t } = useTranslation();
   return (
     <>
-      <Tooltip title={t("savedAnalyses.rename")}>
+      <Tooltip title={t("analysis.settingsLink.open")}>
         <IconButton
           size="small"
-          aria-label={t("savedAnalyses.rename")}
-          data-testid={`saved-analyses-rename-${saved.id}`}
-          onClick={() => onRename(saved)}
+          component={RouterLink}
+          to={`/tools/analysis/saved/${encodeURIComponent(saved.id)}/settings`}
+          // Back to this list, in this folder.
+          state={{ from: `/tools/analysis/saved${saved.folderId === null ? "" : `?folder=${encodeURIComponent(saved.folderId)}`}` }}
+          aria-label={t("analysis.settingsLink.open")}
+          data-testid={`saved-analyses-settings-${saved.id}`}
         >
-          <EditRoundedIcon fontSize="small" />
+          <SettingsRoundedIcon fontSize="small" />
         </IconButton>
       </Tooltip>
       <Tooltip title={t("savedAnalyses.folder.moveGame")}>
@@ -278,7 +280,7 @@ function OrganiseButtons({
   );
 }
 
-function SavedAnalysisRow({ saved, tree, item, checked, onToggle, onMove, onRename }: RowProps) {
+function SavedAnalysisRow({ saved, tree, item, checked, onToggle, onMove }: RowProps) {
   const { t } = useTranslation();
   const { primary, secondary } = useCaption({ saved, tree, item });
   const to = destinationsOf(saved, tree, item);
@@ -347,7 +349,7 @@ function SavedAnalysisRow({ saved, tree, item, checked, onToggle, onMove, onRena
             </Button>
           </>
         )}
-        <OrganiseButtons saved={saved} onMove={onMove} onRename={onRename} />
+        <OrganiseButtons saved={saved} onMove={onMove} />
         <SavedListRemoveButton
           id={saved.id}
           onRemove={removeSavedAnalysis}
@@ -369,7 +371,7 @@ function SavedAnalysisRow({ saved, tree, item, checked, onToggle, onMove, onRena
   );
 }
 
-function SavedAnalysisCard({ saved, tree, item, opening, onMove, onRename }: CardProps) {
+function SavedAnalysisCard({ saved, tree, item, opening, onMove }: CardProps) {
   const { t } = useTranslation();
   const { primary, secondary } = useCaption({ saved, tree, item });
   const to = destinationsOf(saved, tree, item);
@@ -491,7 +493,7 @@ function SavedAnalysisCard({ saved, tree, item, opening, onMove, onRename }: Car
             </>
           )}
           <Box sx={{ marginInlineStart: "auto", display: "flex", alignItems: "center" }}>
-            <OrganiseButtons saved={saved} onMove={onMove} onRename={onRename} />
+            <OrganiseButtons saved={saved} onMove={onMove} />
             <SavedListRemoveButton
               id={saved.id}
               onRemove={removeSavedAnalysis}
@@ -505,11 +507,10 @@ function SavedAnalysisCard({ saved, tree, item, opening, onMove, onRename }: Car
   );
 }
 
-/** What the name dialog is open for — a folder made or renamed, or an analysis renamed. */
+/** What the name dialog is open for — a folder made, or renamed. */
 type NameDialogState =
   | { mode: "create"; parentId: string | null }
   | { mode: "rename"; folder: AnalysisFolder }
-  | { mode: "renameAnalysis"; analysis: SavedAnalysis }
   | null;
 
 /** A folder's download stem: its name slugified, else the fixed one. */
@@ -582,8 +583,6 @@ function SavedAnalyses() {
     tree: treeById.get(saved.id),
     item: itemById.get(saved.id),
     onMove: setFiling,
-    onRename: (analysis: SavedAnalysis) =>
-      setNameDialog({ mode: "renameAnalysis", analysis }),
   }));
 
   /*
@@ -865,22 +864,15 @@ function SavedAnalyses() {
             ? ""
             : nameDialog.mode === "create"
               ? t("savedAnalyses.folder.newFolder")
-              : nameDialog.mode === "rename"
-                ? t("savedAnalyses.folder.renameFolder")
-                : t("savedAnalyses.rename")
+              : t("savedAnalyses.folder.renameFolder")
         }
         initial={
-          nameDialog === null || nameDialog.mode === "create"
-            ? ""
-            : nameDialog.mode === "rename"
-              ? nameDialog.folder.name
-              : nameDialog.analysis.name
+          nameDialog === null || nameDialog.mode === "create" ? "" : nameDialog.folder.name
         }
         onSave={(name) => {
           if (nameDialog === null) return;
           if (nameDialog.mode === "create") createAnalysisFolder(name, nameDialog.parentId);
-          else if (nameDialog.mode === "rename") renameAnalysisFolder(nameDialog.folder.id, name);
-          else renameSavedAnalysis(nameDialog.analysis.id, name);
+          else renameAnalysisFolder(nameDialog.folder.id, name);
         }}
         onClose={() => setNameDialog(null)}
       />

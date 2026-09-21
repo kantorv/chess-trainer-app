@@ -66,7 +66,20 @@ import { parsePgnGame, parsePgnTree, readPgnTags } from "./pgn";
  * `lib/savedAnalysisFolders.ts`, the saved games' nested tree again. A record
  * from before either field reads as Unfiled, named from its tags
  * ({@link savedAnalysisDerivedName}), so there is no version bump.
+ *
+ * ## Its settings (CTA-73)
+ *
+ * What the reader sets on the analysis' settings screen
+ * (`/tools/analysis/saved/<id>/settings`), beside the name and the folder: a
+ * **description**, the **side** the board opens facing (`orientation` — the
+ * repertoire's main colour, so a flip on the board is the session's and an
+ * Update does not write it), and whether the board opens **showing the
+ * next-move arrows** (`showArrows`, on by default). Each reads as its default
+ * on a record from before it.
  */
+
+/** How long a description may be. */
+export const MAX_ANALYSIS_DESCRIPTION_CHARS = 2000;
 
 /** One analysis board the reader worked on. Plain JSON, deliberately. */
 export type SavedAnalysis = {
@@ -78,8 +91,15 @@ export type SavedAnalysis = {
   settings: AnalysisSettings;
   /** Where the reader was standing, as SAN from the start position. */
   path: readonly string[];
-  /** Which way the board was facing. */
+  /**
+   * The side the board opens facing — set when it is first saved, from the
+   * board as it faced, and changed on its settings screen.
+   */
   orientation: "white" | "black";
+  /** The reader's notes on it. May be empty. */
+  description: string;
+  /** Whether the board opens drawing the next-move arrows. */
+  showArrows: boolean;
   /**
    * The reader's name for it. May be empty — a row then names it by its
    * players, or by the generic "Analysis board".
@@ -202,6 +222,8 @@ export const savedAnalysisOf = (
   orientation,
   name: savedAnalysisDerivedName(tree.headers),
   folderId: null,
+  description: "",
+  showArrows: true,
   savedAt,
   updatedAt: now.toISOString(),
 });
@@ -271,8 +293,19 @@ export const savedAnalysisFrom = (value: unknown): SavedAnalysis | undefined => 
         : savedAnalysisDerivedName(readPgnTags(value.pgn)),
     folderId:
       typeof row.folderId === "string" && row.folderId !== "" ? row.folderId : null,
+    description:
+      typeof row.description === "string"
+        ? row.description.slice(0, MAX_ANALYSIS_DESCRIPTION_CHARS)
+        : "",
+    showArrows: typeof row.showArrows === "boolean" ? row.showArrows : true,
   };
 };
+
+/** What the settings screen edits — every field of it, written at once. */
+export type SavedAnalysisSettingsEdit = Pick<
+  SavedAnalysis,
+  "name" | "description" | "orientation" | "showArrows" | "folderId"
+>;
 
 /** What a row shows about an analysis without opening it. Pure, so it is testable. */
 export type SavedAnalysisSummary = {

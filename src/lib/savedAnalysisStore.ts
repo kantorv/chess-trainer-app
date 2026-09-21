@@ -2,9 +2,11 @@ import { sameAnalysisSettings } from "./analysisSettings";
 import type { LibraryCatalog } from "./libraryCatalog";
 import { recordStore } from "./recordStore";
 import {
+  MAX_ANALYSIS_DESCRIPTION_CHARS,
   savedAnalysisCatalogOf,
   savedAnalysisFrom,
   type SavedAnalysis,
+  type SavedAnalysisSettingsEdit,
 } from "./savedAnalyses";
 
 /**
@@ -60,6 +62,8 @@ const unchanged = (a: SavedAnalysis, b: SavedAnalysis): boolean =>
   a.pgn === b.pgn &&
   a.name === b.name &&
   a.folderId === b.folderId &&
+  a.description === b.description &&
+  a.showArrows === b.showArrows &&
   a.orientation === b.orientation &&
   a.path.length === b.path.length &&
   a.path.every((san, index) => san === b.path[index]) &&
@@ -137,6 +141,28 @@ export const renameSavedAnalysis = (
   const trimmed = name.trim();
   return editInPlace(id, (row) => (row.name === trimmed ? row : { ...row, name: trimmed }));
 };
+
+/**
+ * **The settings screen's Save** (CTA-73): the name, description, side,
+ * arrows and folder, written at once and in place — editing settings is not
+ * working on the analysis, so it keeps its place in the list. The texts are
+ * trimmed and the description bounded; nothing changed is a no-op.
+ */
+export const updateSavedAnalysisSettings = (
+  id: string,
+  edit: SavedAnalysisSettingsEdit,
+): SavedAnalysisProblem | undefined =>
+  editInPlace(id, (row) => {
+    const next = {
+      ...row,
+      name: edit.name.trim(),
+      description: edit.description.trim().slice(0, MAX_ANALYSIS_DESCRIPTION_CHARS),
+      orientation: edit.orientation,
+      showArrows: edit.showArrows,
+      folderId: edit.folderId,
+    };
+    return unchanged(row, next) ? row : next;
+  });
 
 /**
  * Every analysis filed directly under `folderId` back to Unfiled — the

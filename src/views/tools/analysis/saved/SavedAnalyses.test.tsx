@@ -445,17 +445,13 @@ describe("Saved analyses — named, and filed in folders (CTA-73)", () => {
     expect(screen.queryByTestId("saved-analyses-item-a1")).toBeNull();
   });
 
-  it("renames an analysis in place", async () => {
-    const user = userEvent.setup();
+  it("links every analysis to its settings", () => {
     saveAnalysis(save("a1", [[[], ["e4"]]]));
     renderScreen();
-
-    await user.click(screen.getByTestId("saved-analyses-rename-a1"));
-    const input = screen.getByTestId("analysis-folder-name-input");
-    await user.clear(input);
-    await user.type(input, "Renamed");
-    await user.click(screen.getByTestId("analysis-folder-name-save"));
-    expect(findSavedAnalysis("a1")?.name).toBe("Renamed");
+    expect(screen.getByTestId("saved-analyses-settings-a1")).toHaveAttribute(
+      "href",
+      "/tools/analysis/saved/a1/settings",
+    );
   });
 
   it("deletes a folder keeping its analyses, after asking", async () => {

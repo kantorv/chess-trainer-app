@@ -340,3 +340,49 @@ describe("the variations explorer on the Analysis Board", () => {
     expect(screen.getByTestId("analysis-save")).toBeEnabled();
   });
 });
+
+describe("a saved analysis' settings on the board", () => {
+  it("opens facing its side, with its description, and its arrows as set", () => {
+    stored("a1", "1. e4 e5 (1... c5) *", ["e4"], {
+      orientation: "black",
+      description: "Two replies.",
+      showArrows: false,
+    });
+    mount("/tools/analysis?analysis=a1");
+    expect(boardOptions().boardOrientation).toBe("black");
+    expect(screen.getByTestId("analysis-description")).toHaveTextContent("Two replies.");
+    // At a branch, with the arrows off: none drawn.
+    expect(boardOptions().arrows).toEqual([]);
+  });
+
+  it("links to its settings, but not while there are unsaved changes", () => {
+    stored("a1", "1. e4 *", ["e4"]);
+    mount("/tools/analysis?analysis=a1");
+    expect(screen.getByTestId("analysis-settings")).toHaveAttribute(
+      "href",
+      "/tools/analysis/saved/a1/settings",
+    );
+    drag("e7", "e5");
+    expect(screen.getByTestId("analysis-settings")).toHaveAttribute("aria-disabled", "true");
+  });
+
+  it("keeps the record's side and description when the session is updated", () => {
+    stored("a1", "1. e4 *", ["e4"], { orientation: "black", description: "Mine." });
+    mount("/tools/analysis?analysis=a1");
+    act(() => {
+      screen.getByTestId("board-control-flip").click();
+    });
+    drag("e7", "e5");
+    fireEvent.click(screen.getByTestId("analysis-save"));
+    fireEvent.click(screen.getByTestId("analysis-changes-update"));
+    expect(findSavedAnalysis("a1")).toMatchObject({
+      orientation: "black",
+      description: "Mine.",
+    });
+  });
+
+  it("has no settings link on a board that is not saved yet", () => {
+    mount();
+    expect(screen.queryByTestId("analysis-settings")).toBeNull();
+  });
+});

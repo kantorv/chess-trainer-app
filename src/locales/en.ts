@@ -511,8 +511,6 @@ const en = {
     selectAll: "Select all analyses",
     selected: "{{count}} selected",
     download: "Download selected as PGN",
-    /** Renaming one analysis, in place. */
-    rename: "Rename analysis",
     /**
      * The nested folders (CTA-73) — the savedGames block's `folder` keys, read
      * by the same components through `labelKey`.
@@ -735,6 +733,32 @@ const en = {
         folder: "Could not make a folder for them — the limit is {{max}} folders, or this browser's storage is full.",
         tooMany: "That would pass the limit of {{max}} analyses in this browser.",
       },
+    },
+    /** The link to a saved analysis' settings — on the board's header and every list row. */
+    settingsLink: {
+      open: "Analysis settings",
+      unsaved: "Save or discard your changes first",
+    },
+    /** A saved analysis' settings screen (`/tools/analysis/saved/<id>/settings`). */
+    settingsScreen: {
+      title: "Analysis settings",
+      missing: "There is no such analysis in this browser.",
+      back: "Back to saved analyses",
+      sections: {
+        general: "General",
+        board: "Board",
+        folder: "Folder",
+      },
+      name: "Title",
+      description: "Description",
+      descriptionHelp: "Your notes on this analysis — shown under its title on the board.",
+      color: "Side",
+      white: "White",
+      black: "Black",
+      colorHelp: "The side the board opens facing. Flipping the board while you work does not change it.",
+      arrowsHelp: "Whether the board opens drawing the next moves' arrows. The board's own switch changes them for a session.",
+      save: "Save",
+      cancel: "Cancel",
     },
     /** The Export tab: what the PGN keeps. */
     export: {

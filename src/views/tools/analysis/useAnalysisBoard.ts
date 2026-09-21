@@ -56,13 +56,19 @@ import { useEngineModule } from "../../dev/core/useEngineModule";
  * move already there does not (`addMove`), so it holds for moves added and
  * for every menu edit with nothing to keep in step. With a **record** (an
  * `?analysis=` arrival, or once saved) a change is kept by **Update** (the
- * record takes the tree, the place in it, the orientation and the settings),
+ * record takes the tree, the place in it and the engine settings),
  * **Save as copy** (a new record, the session moves to it) or **Discard**
  * (back to the baseline). Without one — a blank board, a `?fen=` or `?game=`
  * arrival, a PGN just loaded — **Save** names it and files it.
  *
  * The moves added since the baseline are the explorer's extensions — tinted in
  * the list and ringed on the map (`extensionIdsOf`, recomputed, never tracked).
+ *
+ * **A record's settings are the settings screen's** — its name, description,
+ * side (`orientation`), arrows and folder. Update keeps the stored ones: a
+ * flip or an arrows switch on the board is the session's. A new board's first
+ * save takes the side it faces and the arrows switch as it is; a copy takes
+ * the original's.
  */
 
 export type AnalysisBoardStart = {
@@ -197,6 +203,20 @@ export const useAnalysisBoard = ({
     );
   };
 
+  /** A record's settings as stored — what Update and Save as copy keep. */
+  const storedSettings = () => {
+    const stored = record === null ? null : (findSavedAnalysis(record.id) ?? record);
+    return stored === null
+      ? null
+      : {
+          name: stored.name,
+          folderId: stored.folderId,
+          orientation: stored.orientation,
+          description: stored.description,
+          showArrows: stored.showArrows,
+        };
+  };
+
   /** The session is the record now: its tree the baseline. */
   const settle = (saved: SavedAnalysis) => {
     setRecord(saved);
@@ -205,9 +225,18 @@ export const useAnalysisBoard = ({
     setProblem(null);
   };
 
-  /** A board with no record yet, saved: named and filed. `undefined` on failure. */
-  const saveNew = (name: string, folderId: string | null): SavedAnalysis | undefined => {
-    const saved = { ...recordOf(newSavedAnalysisId()), name: name.trim(), folderId };
+  /**
+   * A board with no record yet, saved: named, filed, facing the way the board
+   * faces and drawing arrows as the board does. `undefined` on failure.
+   */
+  const saveNew = (
+    name: string,
+    folderId: string | null,
+    showArrows: boolean,
+  ): SavedAnalysis | undefined =>
+    write({ ...recordOf(newSavedAnalysisId()), name: name.trim(), folderId, showArrows });
+
+  const write = (saved: SavedAnalysis): SavedAnalysis | undefined => {
     const failed = saveAnalysis(saved);
     if (failed !== undefined) {
       setProblem(failed);
@@ -218,32 +247,25 @@ export const useAnalysisBoard = ({
   };
 
   /**
-   * **Update**: the record takes the session. Its name and folder are the
-   * stored ones — renamed or filed on the saved list since it was opened, that
-   * stands.
+   * **Update**: the record takes the session's tree, place in it and engine
+   * settings. Its own settings are the stored ones — edited on its settings
+   * screen or filed on the saved list since it was opened, that stands.
    */
   const update = (): SavedAnalysis | undefined => {
-    if (record === null) return undefined;
-    const stored = findSavedAnalysis(record.id) ?? record;
-    const saved = {
-      ...recordOf(record.id, stored.savedAt),
-      name: stored.name,
-      folderId: stored.folderId,
-    };
-    const failed = saveAnalysis(saved);
-    if (failed !== undefined) {
-      setProblem(failed);
-      return undefined;
-    }
-    settle(saved);
-    return saved;
+    const stored = storedSettings();
+    if (record === null || stored === null) return undefined;
+    const savedAt = (findSavedAnalysis(record.id) ?? record).savedAt;
+    return write({ ...recordOf(record.id, savedAt), ...stored });
   };
 
-  /** **Save as copy**: a new record in the same folder; the session goes on in it. */
+  /**
+   * **Save as copy**: a new record with the original's settings and folder;
+   * the session goes on in it.
+   */
   const saveCopy = (name: string): SavedAnalysis | undefined => {
-    const folderId =
-      record === null ? null : (findSavedAnalysis(record.id)?.folderId ?? record.folderId);
-    return saveNew(name, folderId);
+    const stored = storedSettings();
+    if (stored === null) return undefined;
+    return write({ ...recordOf(newSavedAnalysisId()), ...stored, name: name.trim() });
   };
 
   /** **Discard**: back to the baseline, on the last of its positions on the way here. */

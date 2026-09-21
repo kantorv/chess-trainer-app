@@ -18,6 +18,7 @@ import {
   removeSavedAnalyses,
   renameSavedAnalysis,
   unfileAnalysesIn,
+  updateSavedAnalysisSettings,
   findSavedAnalysis,
   MAX_SAVED_ANALYSES,
   removeSavedAnalysis,
@@ -338,5 +339,46 @@ describe("the saved-analyses store, saved explicitly (CTA-73)", () => {
     addAnalyses([save("a", ["e4"]), save("b", ["d4"]), save("c", ["c4"])]);
     removeSavedAnalyses(["a", "c"]);
     expect(savedAnalysesSnapshot().map((row) => row.id)).toEqual(["b"]);
+  });
+});
+
+describe("a saved analysis' settings (CTA-73)", () => {
+  it("reads an older record with no description, arrows on", () => {
+    saveAnalysis(save("a", ["e4"]));
+    expect(findSavedAnalysis("a")).toMatchObject({ description: "", showArrows: true });
+  });
+
+  it("writes every setting at once, in place, trimmed", () => {
+    saveAnalysis(save("old", ["e4"]));
+    saveAnalysis(save("new", ["d4"]));
+    updateSavedAnalysisSettings("old", {
+      name: "  Scotch  ",
+      description: "  Main line only. ",
+      orientation: "black",
+      showArrows: false,
+      folderId: "f1",
+    });
+    expect(savedAnalysesSnapshot().map((row) => row.id)).toEqual(["new", "old"]);
+    expect(findSavedAnalysis("old")).toMatchObject({
+      name: "Scotch",
+      description: "Main line only.",
+      orientation: "black",
+      showArrows: false,
+      folderId: "f1",
+    });
+  });
+
+  it("writes nothing when nothing changed", () => {
+    const record = save("a", ["e4"]);
+    saveAnalysis(record);
+    const before = savedAnalysesSnapshot();
+    updateSavedAnalysisSettings("a", {
+      name: record.name,
+      description: "",
+      orientation: "white",
+      showArrows: true,
+      folderId: null,
+    });
+    expect(savedAnalysesSnapshot()).toBe(before);
   });
 });

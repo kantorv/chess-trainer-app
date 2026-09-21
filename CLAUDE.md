@@ -727,9 +727,19 @@ What is different, and it is the whole of it:
   (seeded from its tags) and a folder. A reload with changes unsaved asks
   first. The moves added since the baseline are the explorer's extensions,
   tinted in the list and ringed on the map.
-- **A record has a name and a folder.** `SavedAnalysis.name` (renamed in place
-  on the list) and `folderId` (`null` is Unfiled); a record from before either
-  reads as named by its tags and Unfiled, so there is no version bump. The
+- **A record has settings, edited on their own screen** —
+  `/tools/analysis/saved/<id>/settings` (`AnalysisSettingsScreen.tsx`, linked
+  from the board's header — off while there are unsaved changes — and from
+  every row and card of the list): the title (`name`), a `description` (shown
+  under the title on the board), the side the board opens facing
+  (`orientation`), whether it opens drawing the next-move arrows
+  (`showArrows`, on) and the folder (`folderId`, `null` is Unfiled) — one
+  draft, written on Save in place (`updateSavedAnalysisSettings`). A flip or
+  the arrows switch on the board is the session's: Update keeps the stored
+  settings, and a copy takes the original's; a new board's first save takes
+  the side it faces and its arrows switch. A record from before any of them
+  reads as its default (named by its tags, Unfiled, no description, arrows
+  on), so there is no version bump. The
   folders are the saved games' nested model over the analyses' own store
   (`lib/savedAnalysisFolders.ts`); the list screen reuses the Saved games
   screen's folder components. The cap is 500, not 30: nothing autosaves, and
