@@ -192,6 +192,24 @@ describe("the Library's collections", () => {
       expect(peekShippedGames(entry.id)).toBeUndefined();
     }
   });
+
+  it("downloads a whole collection from its row, reading its games only then", async () => {
+    vi.mocked(downloadPgn).mockClear();
+    const mine = await upload();
+    mount("/library");
+    expect(peekShippedGames("morphy")).toBeUndefined();
+
+    fireEvent.click(screen.getByTestId("library-collection-download-morphy"));
+    await waitFor(() => expect(downloadPgn).toHaveBeenCalledTimes(1));
+    const [stem, pgns] = vi.mocked(downloadPgn).mock.calls[0];
+    expect(stem).toBe("morphy");
+    expect(pgns).toHaveLength(211);
+    // The icon is beside the row's link, so the click did not open the collection.
+    expect(where()).toBe("/library");
+
+    fireEvent.click(screen.getByTestId(`library-collection-download-${mine.id}`));
+    await waitFor(() => expect(downloadPgn).toHaveBeenLastCalledWith("club-games", GAMES));
+  });
 });
 
 describe("a collection's table", () => {
@@ -203,6 +221,9 @@ describe("a collection's table", () => {
       i18n.t("library.table.shippedNote"),
     );
     expect(screen.queryByTestId("library-table-delete")).toBeNull();
+    // The whole collection downloads from its row on /library; here only the picks do.
+    expect(screen.queryByTestId("library-table-download")).toBeNull();
+    expect(screen.getByTestId("library-picks-download")).toBeInTheDocument();
   });
 
   it("sorts by a column, both ways, and keeps it in the URL", async () => {

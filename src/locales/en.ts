@@ -879,6 +879,8 @@ const en = {
     shipped: "Shipped",
     uploaded: "Uploaded",
     add: "Add collection",
+    /** A collection row's download — the whole collection, as one PGN. */
+    download: "Download the whole collection as PGN",
     hint: "A collection is one PGN file of many games — a tournament, a player's games. Open one to sort and filter its games, and open a game to analyse it: side lines, the engine, Play against it, the map and comments.",
     /** The table screen — `/library/<collection>`. */
     table: {
@@ -889,7 +891,6 @@ const en = {
       shown: "{{shown}} of {{count}} games",
       noMatches: "No games match the filter.",
       rowsPerPage: "Rows per page",
-      download: "Download PGN",
       delete: "Delete collection",
       loading: "Reading the collection…",
       /**

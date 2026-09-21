@@ -21,7 +21,6 @@ import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
-import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
 import WarningAmberRoundedIcon from "@mui/icons-material/WarningAmberRounded";
 import {
   Link as RouterLink,
@@ -76,8 +75,9 @@ import { loadCollectionGames, useCollectionRows } from "./useLibraryCollections"
  *
  * **The rows are the collection's index** (`lib/collectionIndex.ts`), read
  * whole — no game is parsed, or even fetched, to draw the table: a shipped
- * file's index is its own small chunk, and the PGN is fetched only for the
- * download. A game the index found unreadable is marked in its `#` cell.
+ * file's index is its own small chunk, and the PGN is fetched only for a
+ * download of the picked games. (The whole collection downloads from its row
+ * on `/library`.) A game the index found unreadable is marked in its `#` cell.
  *
  * The sort, the filters and the page are the URL's (`?sort=`, `?dir=`, `?q=`,
  * `?player=`, `?color=`, `?opening=`, `?event=`, `?from=`, `?to=`,
@@ -260,19 +260,6 @@ function CollectionTable({
             onClearSelected={() => setPicked(new Set())}
             onDownload={() => void downloadPicked()}
           />
-          <Tooltip title={t("library.table.download")}>
-            <IconButton
-              size="small"
-              aria-label={t("library.table.download")}
-              data-testid="library-table-download"
-              onClick={async () => {
-                const games = await loadCollectionGames(collection);
-                if (games !== null) downloadPgn(slugify(collection.name) || "collection", games);
-              }}
-            >
-              <DownloadRoundedIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
           {collection.source === "uploaded" && (
             <Tooltip title={t("library.table.delete")}>
               <IconButton
