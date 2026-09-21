@@ -8,7 +8,8 @@ import Typography from "@mui/material/Typography";
 import FolderOpenRoundedIcon from "@mui/icons-material/FolderOpenRounded";
 import SaveRoundedIcon from "@mui/icons-material/SaveRounded";
 import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
-import SportsEsportsRoundedIcon from "@mui/icons-material/SportsEsportsRounded";
+import PauseRoundedIcon from "@mui/icons-material/PauseRounded";
+import PlayArrowRoundedIcon from "@mui/icons-material/PlayArrowRounded";
 import {
   createSearchParams,
   Link as RouterLink,
@@ -41,8 +42,9 @@ import { useAnalysisBoard, type AnalysisBoardStart } from "./useAnalysisBoard";
 /**
  * **The Analysis Board** (`/tools/analysis`, CTA-73) — the board a game or a
  * position is taken apart on: both colours move from any node, side lines
- * branch off wherever the reader plays something else, the engine reads the
- * position on screen and never moves a piece.
+ * branch off wherever the reader plays something else, and the engine reads
+ * the position on screen — moving a piece only while the header's **Play** is
+ * on, when it plays its best move, search after search, until paused.
  *
  * Composed from the v2 core
  * ([`.claude/rules/chessboard-v2.md`](../../../../.claude/rules/chessboard-v2.md))
@@ -53,7 +55,7 @@ import { useAnalysisBoard, type AnalysisBoardStart } from "./useAnalysisBoard";
  * | Capability | Taken | Because |
  * | --- | --- | --- |
  * | Base | `useBoardCore`, through `useAnalysisBoard` | the tree, the node, the oracle, promotion, orientation |
- * | Engine | switch, **on by default**, **no reply** | the pinned lines, the eval bar and the Engine tab; it never moves a piece |
+ * | Engine | switch, **on by default**; its best move played **only while Play is on** (`onBestMove`, `useAnalysisBoard`) | the pinned lines, the eval bar and the Engine tab; Play is disabled while the engine is off |
  * | Tree view | `useVariationsExplorer` | Moves (side lines, comment marks, evals, the move menu), Map, the comment block, the next-moves bar and arrows — editing on, *Play chances…* off (nothing here plays by chance) |
  * | Saving | `useAnalysisBoard` — explicit | no autosave: the header's Save lights while the board differs from its record, and opens the changes strip (Update / Save as copy / Discard); a board with no record yet saves through a name-and-folder dialog |
  *
@@ -217,12 +219,6 @@ function AnalysisBoard() {
     if (copy !== undefined) pointUrlAt(copy.id);
   };
 
-  const onPlayFromHere = () =>
-    navigate({
-      pathname: "/engine/play",
-      search: createSearchParams({ fen: core.fen }).toString(),
-    });
-
   const saveLabel = t(
     record === null
       ? "analysis.save.open"
@@ -284,16 +280,35 @@ function AnalysisBoard() {
                   </IconButton>
                 </span>
               </Tooltip>
-              <Tooltip title={t("analysis.playFromHere")}>
-                <IconButton
-                  size="small"
-                  onClick={onPlayFromHere}
-                  aria-label={t("analysis.playFromHere")}
-                  data-testid="analysis-play-from-here"
-                  sx={{ flexShrink: 0 }}
-                >
-                  <SportsEsportsRoundedIcon fontSize="small" />
-                </IconButton>
+              {/* Play: the engine plays its best move, search after search,
+                  until paused — off (and disabled) while the engine is. */}
+              <Tooltip
+                title={t(
+                  !state.engineOn
+                    ? "analysis.play.engineOff"
+                    : state.playing
+                      ? "analysis.play.pause"
+                      : "analysis.play.start",
+                )}
+              >
+                <span>
+                  <IconButton
+                    size="small"
+                    disabled={!state.engineOn}
+                    color={state.playing ? "primary" : "default"}
+                    onClick={state.togglePlaying}
+                    aria-label={t(state.playing ? "analysis.play.pause" : "analysis.play.start")}
+                    aria-pressed={state.playing}
+                    data-testid="analysis-play"
+                    sx={{ flexShrink: 0 }}
+                  >
+                    {state.playing ? (
+                      <PauseRoundedIcon fontSize="small" />
+                    ) : (
+                      <PlayArrowRoundedIcon fontSize="small" />
+                    )}
+                  </IconButton>
+                </span>
               </Tooltip>
               <Tooltip title={t("savedAnalyses.title")}>
                 <IconButton

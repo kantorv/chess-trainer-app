@@ -448,7 +448,11 @@ const he: typeof en = {
       export: "ייצוא",
       engine: "מנוע",
     },
-    playFromHere: "שחקו מכאן",
+    play: {
+      start: "תנו למנוע לשחק את המהלכים הטובים ביותר",
+      pause: "עצירת המנוע",
+      engineOff: "הפעילו את המנוע כדי לתת לו לשחק",
+    },
     engineSwitch: "מנוע",
     save: {
       open: "שמירת הניתוח",

@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-import { DEFAULT_POSITION } from "chess.js";
+import { Chess, DEFAULT_POSITION } from "chess.js";
 
 import {
   ANALYSIS_UCI_OPTION,
@@ -28,7 +28,7 @@ import {
   saveAnalysis,
   type SavedAnalysisProblem,
 } from "../../../lib/savedAnalysisStore";
-import { turnOf, useBoardCore } from "../../dev/core/useBoardCore";
+import { isTerminal, turnOf, useBoardCore } from "../../dev/core/useBoardCore";
 import { useEngineModule } from "../../dev/core/useEngineModule";
 
 /**
@@ -44,8 +44,14 @@ import { useEngineModule } from "../../dev/core/useEngineModule";
  * (this hook)       — the record, the baseline, Save / Update / Save as copy / Discard
  * ```
  *
- * **An analysis board never moves a piece by itself**: it passes no
- * `onBestMove`, so the branch that plays one does not exist for it.
+ * **The engine moves a piece only when the reader presses Play** (CTA-73).
+ * While `playing` is on — and the engine is — every finished search of the
+ * position on screen (`onBestMove`) is played there, under the node on screen,
+ * so the engine goes on playing both sides from wherever the reader stands
+ * until paused, until the position is over, or until the engine is switched
+ * off. Pressing Play on a position whose search has already finished plays
+ * that search's first move at once. Off, `onBestMove` does nothing: nothing
+ * moves unasked.
  *
  * ## Explicit save, against a baseline
  *
@@ -169,6 +175,40 @@ export const useAnalysisBoard = ({
       }),
     [],
   );
+  /*
+    Play (CTA-73): the engine plays its best move, search after search. Off
+    whenever the engine is, and once the position on screen is over —
+    adjusted during render, not in an effect.
+  */
+  const [playing, setPlaying] = useState(false);
+  if (playing && (!engineOn || isTerminal(core.fen))) setPlaying(false);
+  const { playVariation } = core;
+  const playUci = useCallback(
+    (uci: string, fen: string) => {
+      let san: string;
+      try {
+        san = new Chess(fen).move({
+          from: uci.slice(0, 2),
+          to: uci.slice(2, 4),
+          promotion: uci.slice(4) || undefined,
+        }).san;
+      } catch {
+        return;
+      }
+      playVariation([san]);
+    },
+    [playVariation],
+  );
+  const onBestMove = useCallback(
+    (bestMove: string, searchedFen: string) => {
+      // Only a search of the position on screen, and only while playing.
+      if (!playing || !engineOn || searchedFen !== core.fen) return;
+      if (isTerminal(searchedFen)) return;
+      playUci(bestMove, searchedFen);
+    },
+    [playing, engineOn, core.fen, playUci],
+  );
+
   const engine = useEngineModule({
     enabled: engineOn,
     fen: core.fen,
@@ -179,9 +219,27 @@ export const useAnalysisBoard = ({
       [settings.multiPv],
     ),
     onUciOptionsReady,
-    // No `onBestMove`: this board never moves a piece.
+    onBestMove,
   });
   const { clearAnalysis } = engine;
+
+  /**
+   * Play on or off. On, with a finished search of the position on screen
+   * already in hand, its best move is played at once rather than waiting for
+   * a search that has already ended.
+   */
+  const togglePlaying = () => {
+    if (playing) {
+      setPlaying(false);
+      return;
+    }
+    if (!engineOn || isTerminal(core.fen)) return;
+    setPlaying(true);
+    const best = engine.analysis.lines[0]?.san[0];
+    if (engine.analysis.fen === core.fen && engine.evalsByFen.has(core.fen) && best) {
+      playVariation([best]);
+    }
+  };
 
   const updateSettings = useCallback(
     (patch: Partial<AnalysisSettings>) =>
@@ -318,6 +376,8 @@ export const useAnalysisBoard = ({
     updateSettings,
     engineOn,
     setEngineOn,
+    playing,
+    togglePlaying,
     showEvalBar,
     setShowEvalBar,
     record,

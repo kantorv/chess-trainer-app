@@ -80,6 +80,18 @@ const drag = (from: string, to: string) => {
   return accepted;
 };
 
+/** End the search for the position on screen with a line and a bestmove, as the wrapper would. */
+const engineSearches = (pv: string) => {
+  const engine = FakeEngine.latest();
+  const fen = engine.lastSearch;
+  act(() => {
+    engine.say({ fen, uciMessage: "info", depth: 12, multipv: 1, positionEvaluation: "20", pv });
+  });
+  act(() => {
+    engine.say({ fen, uciMessage: "bestmove", bestMove: pv.split(" ")[0] });
+  });
+};
+
 const openTab = (id: string) => fireEvent.click(screen.getByTestId(`analysis-panel-tab-${id}`));
 
 /** A saved analysis of `pgn`, standing at `path`, written to the store. */
@@ -384,5 +396,52 @@ describe("a saved analysis' settings on the board", () => {
   it("has no settings link on a board that is not saved yet", () => {
     mount();
     expect(screen.queryByTestId("analysis-settings")).toBeNull();
+  });
+});
+
+describe("Play — the engine plays its best move until paused", () => {
+  it("never moves a piece while Play is off", () => {
+    mount();
+    engineSearches("e2e4 e7e5");
+    expect(boardOptions().position).toBe(START);
+    expect(screen.getByTestId("analysis-play")).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("is disabled while the engine is off", () => {
+    mount();
+    fireEvent.click(screen.getByTestId("analysis-setting-engine"));
+    expect(screen.getByTestId("analysis-play")).toBeDisabled();
+  });
+
+  it("plays each finished search's best move, search after search, until paused", () => {
+    mount();
+    fireEvent.click(screen.getByTestId("analysis-play"));
+    expect(screen.getByTestId("analysis-play")).toHaveAttribute("aria-pressed", "true");
+
+    engineSearches("e2e4 e7e5");
+    expect(boardOptions().position).toBe(AFTER_E4);
+    engineSearches("e7e5 g1f3");
+    expect(boardOptions().position).toBe(AFTER_E4_E5);
+
+    fireEvent.click(screen.getByTestId("analysis-play"));
+    expect(screen.getByTestId("analysis-play")).toHaveAttribute("aria-pressed", "false");
+    engineSearches("g1f3 b8c6");
+    expect(boardOptions().position).toBe(AFTER_E4_E5);
+  });
+
+  it("plays at once from a search already finished for the position on screen", () => {
+    mount();
+    engineSearches("e2e4 e7e5");
+    expect(boardOptions().position).toBe(START);
+    fireEvent.click(screen.getByTestId("analysis-play"));
+    expect(boardOptions().position).toBe(AFTER_E4);
+  });
+
+  it("stops when the engine is switched off", () => {
+    mount();
+    fireEvent.click(screen.getByTestId("analysis-play"));
+    fireEvent.click(screen.getByTestId("analysis-setting-engine"));
+    fireEvent.click(screen.getByTestId("analysis-setting-engine"));
+    expect(screen.getByTestId("analysis-play")).toHaveAttribute("aria-pressed", "false");
   });
 });

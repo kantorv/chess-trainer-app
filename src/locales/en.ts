@@ -673,8 +673,15 @@ const en = {
       export: "Export",
       engine: "Engine",
     },
-    /** Hand the position on screen to Play with Engine — the Board Editor's wording. */
-    playFromHere: "Play from here",
+    /**
+     * The header's Play toggle (CTA-73): the engine plays its best move,
+     * search after search, until paused. Disabled while the engine is off.
+     */
+    play: {
+      start: "Let the engine play its best moves",
+      pause: "Pause the engine",
+      engineOff: "Switch the engine on to let it play",
+    },
     /** The header's engine switch — short, it sits beside three buttons. */
     engineSwitch: "Engine",
     /** Saving a board that is not a saved analysis yet: a name and a folder. */
