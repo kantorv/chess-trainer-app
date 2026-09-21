@@ -814,6 +814,46 @@ const writeNodes = (
 };
 
 /**
+ * What a PGN export keeps (CTA-73). Each field is on unless it is `false`, so
+ * `{}` is the whole tree.
+ */
+export type PgnExportOptions = {
+  /** Every `{ comment }` — after a move, opening a line, and the game's own. */
+  comments?: boolean;
+  /** The moves' NAGs, `$N` (the `!` / `?` marks among them). */
+  nags?: boolean;
+  /** The side lines; off, only the mainline is written. */
+  variations?: boolean;
+};
+
+/**
+ * The tree an export writes: `tree` with what `options` leaves out taken off —
+ * every comment, every NAG, or every side line (`children[0]` kept at every
+ * level). Pure and id-preserving; the same tree back when nothing is dropped.
+ */
+export const exportedTree = (tree: GameTree, options: PgnExportOptions): GameTree => {
+  const comments = options.comments !== false;
+  const nags = options.nags !== false;
+  const variations = options.variations !== false;
+  if (comments && nags && variations) return tree;
+
+  const strip = (nodes: readonly VariationNode[]): VariationNode[] =>
+    (variations ? nodes : nodes.slice(0, 1)).map((node) => {
+      const copy: VariationNode = { ...node, children: strip(node.children) };
+      if (!comments) {
+        delete copy.comments;
+        delete copy.preComments;
+      }
+      if (!nags) delete copy.nags;
+      return copy;
+    });
+
+  const next: GameTree = { ...tree, moves: strip(tree.moves) };
+  if (!comments) delete next.comments;
+  return next;
+};
+
+/**
  * The tree as PGN, side lines included — the export half of the round trip
  * `parsePgnTree` (`lib/pgn.ts`) is the import half of.
  *
@@ -823,8 +863,12 @@ const writeNodes = (
  * itself. Annotations are written where `parsePgnTree` reads them back from
  * (CTA-69): the game's comment first, then per move its opening comment, the
  * move, its NAGs as `$N` (a `!?` suffix comes back as `$5`) and its comments.
+ *
+ * `options` narrows what is written — the Analysis Board's Export tab (CTA-73):
+ * see {@link PgnExportOptions}. Absent, everything is.
  */
-export const treeToPgn = (tree: GameTree): string => {
+export const treeToPgn = (tree: GameTree, options?: PgnExportOptions): string => {
+  if (options !== undefined) tree = exportedTree(tree, options);
   const headers = headersWithStart(tree);
   const tags = Object.entries(headers)
     .map(([key, value]) => `[${key} "${value}"]`)

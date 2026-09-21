@@ -12,7 +12,12 @@ import {
 } from "./gameTree";
 import { savedAnalysisOf, type SavedAnalysis } from "./savedAnalyses";
 import {
+  addAnalyses,
   clearSavedAnalyses,
+  fileSavedAnalysis,
+  removeSavedAnalyses,
+  renameSavedAnalysis,
+  unfileAnalysesIn,
   findSavedAnalysis,
   MAX_SAVED_ANALYSES,
   removeSavedAnalysis,
@@ -287,5 +292,51 @@ describe("the saved analyses as a `?game=` destination", () => {
     const stored = findSavedAnalysis("a1")!;
     expect(stored.path).toEqual(["e4", "e5"]);
     expect(nodeAtSanPath(grownTree(["e4", "e5", "Nf3"]), stored.path)).not.toBeNull();
+  });
+});
+
+describe("the saved-analyses store, saved explicitly (CTA-73)", () => {
+  it("keeps several at once, and refuses a batch past the cap without writing any", () => {
+    expect(addAnalyses([save("s1", ["e4"]), save("s2", ["d4"])])).toBe(undefined);
+    expect(savedAnalysesSnapshot().map((row) => row.id)).toEqual(["s1", "s2"]);
+
+    const tooMany = Array.from({ length: MAX_SAVED_ANALYSES - 1 }, (_, index) =>
+      save(`x${index}`, ["c4"]),
+    );
+    expect(addAnalyses(tooMany)).toBe("too-many");
+    expect(savedAnalysesSnapshot()).toHaveLength(2);
+  });
+
+  it("files, renames and unfiles in place, keeping the list's order", () => {
+    saveAnalysis(save("old", ["e4"]));
+    saveAnalysis(save("new", ["d4"]));
+    expect(savedAnalysesSnapshot().map((row) => row.id)).toEqual(["new", "old"]);
+
+    fileSavedAnalysis("old", "folder-1");
+    renameSavedAnalysis("old", "  My Sicilian  ");
+    expect(savedAnalysesSnapshot().map((row) => row.id)).toEqual(["new", "old"]);
+    expect(findSavedAnalysis("old")).toMatchObject({
+      folderId: "folder-1",
+      name: "My Sicilian",
+    });
+
+    unfileAnalysesIn("folder-1");
+    expect(findSavedAnalysis("old")?.folderId).toBeNull();
+  });
+
+  it("treats a name or folder change as a change, and the same record as none", () => {
+    const record = save("a", ["e4"]);
+    saveAnalysis(record);
+    const first = savedAnalysesSnapshot();
+    saveAnalysis({ ...record });
+    expect(savedAnalysesSnapshot()).toBe(first);
+    saveAnalysis({ ...record, name: "Renamed" });
+    expect(findSavedAnalysis("a")?.name).toBe("Renamed");
+  });
+
+  it("forgets several at once", () => {
+    addAnalyses([save("a", ["e4"]), save("b", ["d4"]), save("c", ["c4"])]);
+    removeSavedAnalyses(["a", "c"]);
+    expect(savedAnalysesSnapshot().map((row) => row.id)).toEqual(["b"]);
   });
 });
