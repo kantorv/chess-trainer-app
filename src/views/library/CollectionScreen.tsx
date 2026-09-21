@@ -46,6 +46,13 @@ import {
   type CollectionSummary,
   type SortDirection,
 } from "../../lib/libraryCollections";
+import {
+  OPENING_LINE_PARAM,
+  openingLineOfParam,
+  openingLineParamOf,
+  openingNodeAt,
+  openingTreeOf,
+} from "../../lib/openingTree";
 import { downloadPgn } from "../../lib/pgnExport";
 import { slugify } from "../../lib/pgnText";
 import { RightPanel } from "../main/rightPanel";
@@ -61,7 +68,11 @@ import { loadCollectionGames, useCollectionRows } from "./useLibraryCollections"
  * **filtered** by words (matched against every text column, the box over the
  * table) and by the right-hand panel's filters — player and side, opening,
  * event, dates, result (`CollectionFilters.tsx`; each shown only where the
- * collection has its field). A row opens that game on the Library's
+ * collection has its field) — and, at its foot, the **opening moves** played
+ * on a small board (`OpeningFilterBoard.tsx`, CTA-76): the whole
+ * collection's opening tree (`lib/openingTree.ts`, merged once per `rows`
+ * from the index's `line` column), whose line narrows the table first and
+ * every other filter after it. A row opens that game on the Library's
  * analysis board.
  *
  * **Every row carries a checkbox**, and the top bar the saved lists' export
@@ -81,7 +92,7 @@ import { loadCollectionGames, useCollectionRows } from "./useLibraryCollections"
  *
  * The sort, the filters and the page are the URL's (`?sort=`, `?dir=`, `?q=`,
  * `?player=`, `?color=`, `?opening=`, `?event=`, `?from=`, `?to=`,
- * `?result=`, `?page=`, `?rows=`, written with history replace), so going back
+ * `?result=`, `?line=`, `?page=`, `?rows=`, written with history replace), so going back
  * from a game finds the table as it was left, and a filtered table is a link.
  * Pages rather than one long table: the World Cup file is 674 rows.
  */
@@ -114,6 +125,13 @@ function CollectionTable({
   const text = params.get("q") ?? "";
   const requestedResult = params.get("result") ?? "";
   const requestedColor = params.get("color");
+  const openingTree = useMemo(() => openingTreeOf(rows), [rows]);
+  const requestedLine = params.get(OPENING_LINE_PARAM) ?? "";
+  // Followed as far as the games go — a stale link lands where they part.
+  const opening = useMemo(
+    () => openingNodeAt(openingTree, openingLineOfParam(requestedLine)),
+    [openingTree, requestedLine],
+  );
   const isoDate = (value: string | null) => (/^\d{4}-\d{2}-\d{2}$/.test(value ?? "") ? (value as string) : "");
   const filters: CollectionFilterValues = {
     player: params.get("player") ?? "",
@@ -123,6 +141,7 @@ function CollectionTable({
     from: isoDate(params.get("from")),
     to: isoDate(params.get("to")),
     result: (RESULTS as readonly string[]).includes(requestedResult) ? requestedResult : "",
+    line: openingLineParamOf(opening.line),
   };
   const requestedRows = Number(params.get("rows"));
   const rowsPerPage = (ROWS_PER_PAGE as readonly number[]).includes(requestedRows)
@@ -130,15 +149,17 @@ function CollectionTable({
     : ROWS_PER_PAGE[0];
 
   const facets = useMemo(() => collectionFacetsOf(rows), [rows]);
-  const { player, color, opening, event, from, to, result } = filters;
+  const { player, color, event, from, to, result } = filters;
+  const openingName = filters.opening;
+  const line = opening.line;
   const shown = useMemo(
     () =>
       sortedRows(
-        filteredRows(rows, { text, result, player, color, opening, event, from, to }),
+        filteredRows(rows, { text, result, player, color, opening: openingName, event, from, to, line }),
         sort,
         direction,
       ),
-    [rows, text, result, player, color, opening, event, from, to, sort, direction],
+    [rows, text, result, player, color, openingName, event, from, to, line, sort, direction],
   );
   const pickedShown = useMemo(() => shown.filter((row) => picked.has(row.number)).length, [shown, picked]);
   const allShownPicked = shown.length > 0 && pickedShown === shown.length;
@@ -412,6 +433,10 @@ function CollectionTable({
             facets={facets}
             values={filters}
             onChange={(patch) => setState(patch)}
+            openingTree={openingTree}
+            openingNode={opening.node}
+            line={opening.line}
+            onLine={(next) => setState({ [OPENING_LINE_PARAM]: openingLineParamOf(next) })}
             onClear={() =>
               setState(Object.fromEntries(COLLECTION_FILTER_PARAMS.map((key) => [key, null])))
             }

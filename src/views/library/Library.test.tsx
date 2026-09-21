@@ -384,6 +384,103 @@ describe("the table's filters", () => {
   });
 });
 
+describe("the opening-moves filter", () => {
+  const RICH = [
+    '[Event "Spring Open"]\n[White "Carlsen"]\n[Black "Nepo"]\n[Result "1-0"]\n\n1. e4 e5 2. Nf3 Nf6 1-0',
+    '[Event "Spring Open"]\n[White "Nepo"]\n[Black "Carlsen"]\n[Result "0-1"]\n\n1. e4 c5 0-1',
+    '[Event "Autumn Cup"]\n[White "Ding"]\n[Black "Carlsen"]\n[Result "1/2-1/2"]\n\n1. d4 d5 1/2-1/2',
+  ];
+  const moves = () => within(screen.getByTestId("library-filter-moves"));
+  const dropOn = (from: string, to: string) => {
+    let accepted: boolean | undefined;
+    act(() => {
+      accepted = boardOptions().onPieceDrop!({ sourceSquare: from, targetSquare: to });
+    });
+    return accepted;
+  };
+
+  it("draws the whole collection's continuations, most played first, with their games", async () => {
+    const rich = await keep("Rich", RICH);
+    await mountTable(`/library/${rich.id}`);
+    expect(boardOptions().id).toBe("library-filter-board");
+    expect(boardOptions().arrows?.map((arrow) => [arrow.startSquare, arrow.endSquare])).toEqual([
+      ["e2", "e4"],
+      ["d2", "d4"],
+    ]);
+    expect(moves().getByTestId("library-filter-move-count-e4")).toHaveTextContent("2 games · 67%");
+    expect(moves().getByTestId("library-filter-move-count-d4")).toHaveTextContent("1 game · 33%");
+    // Hovering a move recolours its arrow.
+    const before = boardOptions().arrows?.[1].color;
+    fireEvent.mouseEnter(moves().getByTestId("library-filter-move-d4"));
+    expect(boardOptions().arrows?.[1].color).not.toBe(before);
+  });
+
+  it("narrows the rows to the games that began with the moves played, in the URL", async () => {
+    const rich = await keep("Rich", RICH);
+    await mountTable(`/library/${rich.id}`);
+    fireEvent.click(moves().getByTestId("library-filter-move-e4"));
+    expect(rowNumbers()).toEqual(["1", "2"]);
+    expect(where()).toBe(`/library/${rich.id}?line=e4`);
+    expect(dropOn("c7", "c5")).toBe(true);
+    expect(rowNumbers()).toEqual(["2"]);
+    expect(where()).toBe(`/library/${rich.id}?line=e4%2Cc5`);
+    expect(screen.getByTestId("library-table-count")).toHaveTextContent("1 of 3 games");
+    expect(moves().getByTestId("library-filter-moves-line")).toHaveTextContent("1. e4 c5");
+
+    fireEvent.click(moves().getByTestId("library-filter-moves-back"));
+    expect(rowNumbers()).toEqual(["1", "2"]);
+    fireEvent.click(moves().getByTestId("library-filter-moves-reset"));
+    expect(rowNumbers()).toEqual(["1", "2", "3"]);
+    expect(where()).toBe(`/library/${rich.id}`);
+  });
+
+  it("refuses a move no game played, and a drop off the board", async () => {
+    const rich = await keep("Rich", RICH);
+    await mountTable(`/library/${rich.id}?line=e4`);
+    const position = boardOptions().position;
+    expect(dropOn("e7", "e6")).toBe(false);
+    expect(dropOn("e7", "e5")).toBe(true);
+    expect(dropOn("g1", "f3")).toBe(true);
+    expect(rowNumbers()).toEqual(["1"]);
+    expect(boardOptions().position).not.toBe(position);
+    expect(dropOn("b8", null as unknown as string)).toBe(false);
+    expect(dropOn("b8", "c6")).toBe(false);
+    expect(where()).toContain("line=e4%2Ce5%2CNf3");
+  });
+
+  it("combines with the other filters, and Clear takes it off with them", async () => {
+    const rich = await keep("Rich", RICH);
+    await mountTable(`/library/${rich.id}?line=e4&player=carlsen&color=white`);
+    expect(rowNumbers()).toEqual(["1"]);
+    // The tree is the whole collection's: the other filters do not thin it.
+    expect(moves().getByTestId("library-filter-move-count-e5")).toHaveTextContent("1 game");
+    expect(moves().getByTestId("library-filter-move-count-c5")).toHaveTextContent("1 game");
+    fireEvent.click(within(screen.getByTestId("library-filters")).getByTestId("library-filter-clear"));
+    expect(rowNumbers()).toEqual(["1", "2", "3"]);
+    expect(where()).toBe(`/library/${rich.id}`);
+  });
+
+  it("follows a stale line from the URL as far as the games go", async () => {
+    const rich = await keep("Rich", RICH);
+    await mountTable(`/library/${rich.id}?line=e4,e6,d4`);
+    expect(rowNumbers()).toEqual(["1", "2"]);
+    expect(moves().getByTestId("library-filter-moves-line")).toHaveTextContent("1. e4");
+  });
+
+  it("is not offered where the index has no lines — one from before the column", async () => {
+    const rows = GAMES.map((pgn): IndexedRow => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { line, ...row } = indexedRowOf(pgn);
+      return row;
+    });
+    const added = await addCollection("Old", GAMES, rows);
+    if (!("collection" in added)) throw new Error("not added");
+    await mountTable(`/library/${added.collection.id}?line=e4`);
+    expect(screen.queryByTestId("library-filter-moves")).toBeNull();
+    expect(rowNumbers()).toEqual(["1", "2", "3"]);
+  });
+});
+
 describe("picking games to download", () => {
   const RICH = [
     '[Event "Spring Open"]\n[White "Carlsen"]\n[Black "Nepo"]\n[Result "1-0"]\n\n1. e4 e5 1-0',

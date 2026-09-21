@@ -14,6 +14,8 @@ import {
   type CollectionFilterValues,
   type PlayerColor,
 } from "../../lib/libraryCollections";
+import type { OpeningTreeNode } from "../../lib/openingTree";
+import OpeningFilterBoard from "./OpeningFilterBoard";
 
 /**
  * **A collection table's filters** (CTA-75) — the right-hand panel of
@@ -28,6 +30,10 @@ import {
  * opening (labelled with its ECO code first, in ECO order) — and the player
  * and opening boxes also take any text: part of a name, or an ECO code's start.
  *
+ * **The opening moves** close the panel (CTA-76): a small board over the
+ * collection's opening tree (`OpeningFilterBoard.tsx`), shown once some game
+ * has a `line` in the index — an index from before the column has none.
+ *
  * The dates are the browser's own date inputs (`type="date"`). A PGN date is
  * often partial — `1848`, `1858.10` — so a game counts as in range when any
  * day it could have been played is (`dateBounds`).
@@ -38,9 +44,23 @@ export type CollectionFiltersProps = {
   values: CollectionFilterValues;
   onChange: (patch: Partial<CollectionFilterValues>) => void;
   onClear: () => void;
+  /** The whole collection's opening tree, the node `line` reaches, and the moves played. */
+  openingTree: OpeningTreeNode;
+  openingNode: OpeningTreeNode;
+  line: readonly string[];
+  onLine: (line: string[]) => void;
 };
 
-function CollectionFilters({ facets, values, onChange, onClear }: CollectionFiltersProps) {
+function CollectionFilters({
+  facets,
+  values,
+  onChange,
+  onClear,
+  openingTree,
+  openingNode,
+  line,
+  onLine,
+}: CollectionFiltersProps) {
   const { t } = useTranslation();
   const active = COLLECTION_FILTER_PARAMS.some((key) => values[key] !== "");
 
@@ -175,6 +195,10 @@ function CollectionFilters({ facets, values, onChange, onClear }: CollectionFilt
             </MenuItem>
           ))}
         </TextField>
+      )}
+
+      {openingTree.count > 0 && (
+        <OpeningFilterBoard node={openingNode} line={line} onLine={onLine} />
       )}
     </Box>
   );
