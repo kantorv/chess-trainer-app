@@ -10,12 +10,7 @@ import {
   type GameTree,
   type VariationNode,
 } from "./gameTree";
-import {
-  libraryCatalogOf,
-  type LibraryCatalog,
-  type LibraryCategory,
-  type LibraryGame,
-} from "./libraryCatalog";
+import type { CatalogGame, GameCatalog } from "./gameCatalog";
 import { parsePgnGame, parsePgnTree } from "./pgn";
 import { resultOfFen, savedGameHeaders } from "./savedGames";
 
@@ -83,11 +78,8 @@ export const playedGameResult = (
   return resultOfFen(mainline(tree).at(-1)?.fen ?? tree.startFen);
 };
 
-/** The category path the played games sit under, and their reference segment. */
+/** The played games' catalog path — their `?game=play/<path>/<id>` segment. */
 export const PLAYED_GAMES_PATH = "games";
-
-/** The folder's name is chrome the app ships, so it is a locale key. */
-export const PLAYED_GAMES_LABEL_KEY = "playedGames.title";
 
 /** A fresh id — the saved games' minter; ids are unique within a store. */
 export { newSavedGameId as newPlayedGameId } from "./savedGames";
@@ -276,20 +268,14 @@ export const playedGameSummary = (
 };
 
 /**
- * The played games as a **library catalog** — one category, one `LibraryGame`
+ * The played games as a **game catalog** (`lib/gameCatalog.ts`) — one entry
  * per record that parses — so `?game=play/games/<id>` hands one to the
  * Analysis Board through the ordinary hand-off (`lib/gameReference.ts`). The
  * item's `game` is the mainline; the side lines stay in the `pgn`, which is
  * what the Analysis Board re-reads.
  */
-export const playedGameCatalogOf = (games: readonly PlayedGame[]): LibraryCatalog => {
-  const category: LibraryCategory = {
-    id: PLAYED_GAMES_PATH,
-    path: PLAYED_GAMES_PATH,
-    labelKey: PLAYED_GAMES_LABEL_KEY,
-    children: [],
-  };
-  const items: LibraryGame[] = [];
+export const playedGameCatalogOf = (games: readonly PlayedGame[]): GameCatalog => {
+  const entries: CatalogGame[] = [];
   for (const saved of games) {
     let game: Game;
     try {
@@ -297,19 +283,15 @@ export const playedGameCatalogOf = (games: readonly PlayedGame[]): LibraryCatalo
     } catch {
       continue;
     }
-    items.push({
-      kind: "game",
+    entries.push({
       id: saved.id,
-      category: PLAYED_GAMES_PATH,
       // English and never rendered here: the list writes its own rows.
-      name: {
-        en: `${gameTag(game.headers, "White") ?? "White"} – ${
-          gameTag(game.headers, "Black") ?? "Black"
-        }`,
-      },
+      name: `${gameTag(game.headers, "White") ?? "White"} – ${
+        gameTag(game.headers, "Black") ?? "Black"
+      }`,
       pgn: saved.pgn,
       game,
     });
   }
-  return libraryCatalogOf([category], items, []);
+  return { path: PLAYED_GAMES_PATH, games: entries };
 };

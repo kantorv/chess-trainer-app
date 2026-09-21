@@ -257,7 +257,7 @@ describe("the saved-analyses store — when storage will not co-operate", () => 
 });
 
 describe("the saved analyses as a `?game=` destination", () => {
-  it("resolves a reference into Load PGN's hand-off", () => {
+  it("resolves a reference, as the Analysis Board's hand-off does", () => {
     saveAnalysis(save("a1", ["e4", "e5", "Nf3"]));
 
     const resolved = resolveGameReference("analysis/saved/a1");

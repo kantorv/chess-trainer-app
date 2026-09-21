@@ -23,7 +23,7 @@ import { initialPlyOf, parseMoveParam } from "../../../lib/gameNavigation";
 import { resolveGameReference } from "../../../lib/gameReference";
 import type { GameTree } from "../../../lib/gameTree";
 import { parsePgnTree } from "../../../lib/pgn";
-import { slugify } from "../../../lib/pgnLibrary";
+import { slugify } from "../../../lib/pgnText";
 import { atParamOf, REPERTOIRE_AT_PARAM } from "../../../lib/repertoireLink";
 import { savedAnalysisDerivedName } from "../../../lib/savedAnalyses";
 import { findSavedAnalysis } from "../../../lib/savedAnalysisStore";

@@ -163,7 +163,7 @@ function BoardEditor() {
     event.target.value = "";
   };
 
-  const onLoadPgn = (event: FormEvent) => {
+  const onSubmitPgn = (event: FormEvent) => {
     event.preventDefault();
     loadPgnText(pgnText);
   };
@@ -341,7 +341,7 @@ function BoardEditor() {
                 error={pgnError}
                 pgnText={pgnText}
                 onPgnTextChange={setPgnText}
-                onLoadPgn={onLoadPgn}
+                onSubmitPgn={onSubmitPgn}
                 onFileChosen={onFileChosen}
               />
             }

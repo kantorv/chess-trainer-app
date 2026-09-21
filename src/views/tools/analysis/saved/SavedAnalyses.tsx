@@ -22,7 +22,7 @@ import {
   type OpeningEntry,
 } from "../../../../lib/openings";
 import { downloadPgn } from "../../../../lib/pgnExport";
-import { slugify } from "../../../../lib/pgnLibrary";
+import { slugify } from "../../../../lib/pgnText";
 import {
   savedAnalysisFen,
   savedAnalysisSummary,
@@ -68,14 +68,14 @@ import { useSavedAnalyses } from "./useSavedAnalyses";
 /**
  * **Saved analyses** (`/tools/analysis/saved`) — the analyses the reader has
  * saved on the Analysis Board, newest first, filed into a nested tree of
- * folders, as rows or as preview boards at the library's two card sizes.
+ * folders, as rows or as preview boards at the saved lists' two card sizes.
  *
  * Since CTA-73 it is laid out as the **Repertoires list**
  * (`views/repertoires/Repertoires.tsx`), without that list's Games menu:
  *
  * - **One destination.** An analysis opens on the Analysis Board
  *   (`?analysis=<id>`) — the Open button on a row, the board itself on a card.
- *   There is no Load PGN or Play with Engine button here: the board has Play
+ *   There is no Play with Engine button here: the board has Play
  *   from here and its Export tab, and the `?game=analysis/saved/<id>`
  *   reference still resolves for any screen that hands one on.
  * - **Its settings, from a gear** on every row and card

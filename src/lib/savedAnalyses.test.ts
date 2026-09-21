@@ -252,17 +252,14 @@ describe("savedAnalysisSummary — what a row says without opening it", () => {
 });
 
 describe("savedAnalysisCatalogOf — so ?game= already worked", () => {
-  it("presents each readable record as a game under one category", () => {
+  it("presents each readable record as a game under one path", () => {
     const catalog = savedAnalysisCatalogOf([
       save(grow([[[], ["e4", "e5"]]]), [], { id: "a1" }),
       save(grow([[[], ["d4"]]]), [], { id: "a2" }),
     ]);
 
-    expect(catalog.categories.map((category) => category.path)).toEqual([
-      SAVED_ANALYSES_PATH,
-    ]);
-    expect(catalog.items.map((item) => item.id)).toEqual(["a1", "a2"]);
-    expect(catalog.items.every((item) => item.kind === "game")).toBe(true);
+    expect(catalog.path).toBe(SAVED_ANALYSES_PATH);
+    expect(catalog.games.map((entry) => entry.id)).toEqual(["a1", "a2"]);
   });
 
   it("leaves a record that will not parse out, rather than failing the lot", () => {
@@ -271,7 +268,7 @@ describe("savedAnalysisCatalogOf — so ?game= already worked", () => {
       save(grow([[[], ["d4"]]]), [], { id: "a2" }),
     ]);
 
-    expect(catalog.items.map((item) => item.id)).toEqual(["a2"]);
+    expect(catalog.games.map((entry) => entry.id)).toEqual(["a2"]);
   });
 });
 
@@ -304,12 +301,12 @@ describe("a saved analysis' name and folder (CTA-73)", () => {
     });
   });
 
-  it("names a catalog item by the record's name", () => {
+  it("names a catalog entry by the record's name", () => {
     const saved = {
       ...savedAnalysisOf("a", tree, [], DEFAULT_ANALYSIS_SETTINGS, "white"),
       name: "Immortal",
     };
-    expect(savedAnalysisCatalogOf([saved]).items[0].name.en).toBe("Immortal");
+    expect(savedAnalysisCatalogOf([saved]).games[0].name).toBe("Immortal");
   });
 
   it("splits games into one record each, named by the game and filed together", () => {

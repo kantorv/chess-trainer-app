@@ -411,9 +411,9 @@ describe("fixed-width rails", () => {
   it("does not scroll the aside itself, so a panel can pin content to its foot", () => {
     renderShell();
 
-    // The Load PGN panel divides this height between a scrolling move list and
-    // the ingestion controls beneath it; a scrolling aside would let the
-    // controls slide out of view under a long game instead.
+    // A board's panel divides this height between a scrolling tab and the
+    // controls pinned beneath it; a scrolling aside would let the controls
+    // slide out of view under a long game instead.
     expect(screen.getByTestId("layout-board-square-sidebar")).toHaveStyle({
       display: "flex",
       flexDirection: "column",

@@ -64,10 +64,26 @@ vi.mock("../../lib/openings", async (importOriginal) => {
 
 import AnalysisBoard from "../tools/analysis/AnalysisBoard";
 import PlayWithEngine from "../engine/play/PlayWithEngine";
+import LibraryGameBoard from "../library/LibraryGameBoard";
+import { parsePgnTree } from "../../lib/pgn";
 import MaskedV2 from "./masked/MaskedV2";
 import OpeningsV2 from "./openings/OpeningsV2";
 import PlayV2 from "./play/PlayV2";
-import RepertoireV2 from "./repertoire/RepertoireV2";
+
+/** A game of an uploaded collection on the Library's board (CTA-75). */
+const LIBRARY_FIXTURE = {
+  id: "fixture",
+  name: "Fixture",
+  source: "uploaded" as const,
+  games: ['[White "A"]\n[Black "B"]\n\n1. e4 e5 *'],
+};
+const LibraryGame = () => (
+  <LibraryGameBoard
+    collection={LIBRARY_FIXTURE}
+    number={1}
+    tree={parsePgnTree(LIBRARY_FIXTURE.games[0])}
+  />
+);
 
 /** Every board of the Development section, by the name its route carries. */
 const BOARDS: readonly { name: string; panelId: string; Screen: () => ReactNode }[] =
@@ -77,14 +93,11 @@ const BOARDS: readonly { name: string; panelId: string; Screen: () => ReactNode 
     { name: "Analysis Board", panelId: "analysis-panel", Screen: AnalysisBoard },
     // Play with Engine, a v2 screen since CTA-74.
     { name: "Play with Engine", panelId: "play-with-engine-panel", Screen: PlayWithEngine },
+    // The Library's game board (CTA-75), composed as the Analysis Board is.
+    { name: "Library game", panelId: "library-game-panel", Screen: LibraryGame },
     { name: "Play with Engine v2", panelId: "dev-play-panel", Screen: PlayV2 },
     { name: "Masked Pieces v2", panelId: "dev-masked-panel", Screen: MaskedV2 },
     { name: "Openings v2", panelId: "dev-openings-panel", Screen: OpeningsV2 },
-    {
-      name: "Repertoire v2",
-      panelId: "dev-repertoire-panel",
-      Screen: RepertoireV2,
-    },
   ];
 
 const renderBoard = (Screen: () => ReactNode) =>

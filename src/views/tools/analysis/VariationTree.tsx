@@ -19,9 +19,8 @@ import { VariationLine } from "../../shared/VariationLine";
  *
  * The Analysis Board no longer renders this (CTA-53): its Moves tab is one
  * merged list — the shared `MoveList`, with each side line hanging under the
- * mainline move it branches from. The two screens that read a *flowing* line
- * still do: the Openings explorer and the Library repertoire viewer, where
- * the whole tree is the content and there is no numbered-pairs grid beside it.
+ * mainline move it branches from. The screen that reads a *flowing* line
+ * still does: the Openings explorer, where the whole tree is the content and there is no numbered-pairs grid beside it.
  * The move pieces themselves live in `views/shared/VariationLine.tsx`, shared
  * with `MoveList`, so the two renderings cannot drift apart.
  *

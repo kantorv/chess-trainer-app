@@ -18,7 +18,6 @@ import {
   navTree,
   type NavTreeNode,
 } from "./navTree";
-import { useUploads } from "../pgn/useUploads";
 
 
 
@@ -39,10 +38,9 @@ function TreeRow({ node, depth, expanded, pathname, onToggle }: RowProps) {
   const { t, i18n } = useTranslation();
   const Icon = node.icon;
   /*
-    Chrome comes out of the catalogs; a folder generated from a library's data
-    carries its own `{ en, he }` instead, because a category added to
-    `src/data/positions.json` must not need a locale edit. `navLabel` is the one
-    place that is decided — see `navTree.ts`.
+    Chrome comes out of the catalogs; a node named by data carries its own
+    `{ en, he }` instead. `navLabel` is the one place that is decided — see
+    `navTree.ts`.
   */
   const label = navLabel(node, (key) => t(key), asAppLanguage(i18n.language));
   /*
@@ -153,19 +151,10 @@ function SidebarLinks({ tree: given }: { tree?: NavTreeNode[] }) {
   const { t } = useTranslation();
 
   /*
-    The tree is **derived, not fixed**: the User PGNs section grows a folder
-    when the reader uploads a `.pgn` (`lib/pgnUploads.ts`), so this subscribes
-    to that store and rebuilds when it changes. `navTree()` is a walk over a few
-    dozen nodes, and memoising it also keeps the identity stable — the open-chain
-    state below is seeded from it.
+    `navTree()` is a walk over a few dozen nodes; memoising it keeps the
+    identity stable — the open-chain state below is seeded from it.
   */
-  const uploads = useUploads();
-  /* eslint-disable-next-line react-hooks/exhaustive-deps --
-     `navTree()` takes no arguments and reads the uploads store through
-     `navFolders()`, so `uploads` is not a value this callback uses — it is the
-     key that says the store changed, which is exactly what has to invalidate
-     the memo. */
-  const tree = useMemo(() => given ?? navTree(), [given, uploads]);
+  const tree = useMemo(() => given ?? navTree(), [given]);
 
   /*
     The single open chain, top down — the ancestors of one folder, never two

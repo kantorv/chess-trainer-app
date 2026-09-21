@@ -254,7 +254,7 @@ describe("the Load tab", () => {
   const paste = (text: string) => {
     openTab("load");
     fireEvent.change(screen.getByTestId("analysis-load-paste"), { target: { value: text } });
-    fireEvent.click(screen.getByTestId("analysis-load-pgn"));
+    fireEvent.click(screen.getByTestId("analysis-load-text"));
   };
 
   it("puts one game on the board as a new, unsaved analysis", () => {

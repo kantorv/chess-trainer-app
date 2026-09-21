@@ -359,7 +359,7 @@ describe("Board Editor — which way the board faces", () => {
 
     // 1. e4 leaves Black to move.
     await pasteInto("editor-pgn-input", "1. e4");
-    await userEvent.click(screen.getByRole("button", { name: "Load PGN" }));
+    await userEvent.click(screen.getByRole("button", { name: "Load game" }));
 
     expect(orientation()).toBe("black");
   });
@@ -570,7 +570,7 @@ describe("Board Editor — PGN in", () => {
     await openTab("pgn");
 
     await pasteInto("editor-pgn-input", "1. e4 e5 2. Nf3 Nc6");
-    await userEvent.click(screen.getByRole("button", { name: "Load PGN" }));
+    await userEvent.click(screen.getByRole("button", { name: "Load game" }));
 
     expect(placement()).toBe(
       "r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R",
@@ -597,7 +597,7 @@ describe("Board Editor — PGN in", () => {
         "1. d4 d5 0-1",
       ].join("\n"),
     );
-    await userEvent.click(screen.getByRole("button", { name: "Load PGN" }));
+    await userEvent.click(screen.getByRole("button", { name: "Load game" }));
 
     const picker = screen.getByTestId("editor-game-picker");
     expect(within(picker).getAllByRole("button")).toHaveLength(2);
@@ -613,7 +613,7 @@ describe("Board Editor — PGN in", () => {
     await openTab("pgn");
 
     await pasteInto("editor-pgn-input", "1. d4 Ke7");
-    await userEvent.click(screen.getByRole("button", { name: "Load PGN" }));
+    await userEvent.click(screen.getByRole("button", { name: "Load game" }));
 
     expect(screen.getByTestId("editor-pgn-error")).toBeInTheDocument();
   });

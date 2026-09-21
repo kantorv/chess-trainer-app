@@ -1,8 +1,6 @@
 /// <reference types="vitest/config" />
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import mdx from '@mdx-js/rollup'
-import remarkGfm from 'remark-gfm'
 import pkg from './package.json' with { type: 'json' }
 
 // https://vite.dev/config/
@@ -26,38 +24,24 @@ export default defineConfig({
     react-router as `import.meta.env.BASE_URL`.
   */
   base: '/chess-trainer-app/',
+  plugins: [react()],
   /*
-    MDX before React, which is what the plugin's own docs require: `@mdx-js/rollup`
-    compiles an `.mdx` file to JSX, and the React plugin has to see that output
-    rather than the MDX source. Rollup orders by declaration but Vite does not,
-    so `enforce: 'pre'` is what actually pins it ahead — and the React plugin's
-    `include` is widened to `.mdx` so an edited note hot-reloads like a component.
-
-    A folder's notes in the User PGNs library are authored as MDX
-    (`src/views/library/pgnFolderNotes.ts` globs them), and MDX rather than plain
-    Markdown so a note can import and render a React component later. Vitest runs
-    off this same config, so a test that mounts a list screen compiles them too.
-
-    `remark-gfm` because a table is the natural way to write half of what a
-    folder note says — three rosette types and what each is worth — and tables
-    are a GitHub-flavoured extension that MDX's core Markdown does not parse.
+    The Library indexes an upload in a module worker
+    (`src/lib/collectionIndex.worker.ts`), which loads the opening book's five
+    shards with dynamic `import()`. Vite's default worker format, `iife`,
+    cannot code-split, so the worker is built as an ES module — which a
+    `{ type: "module" }` worker is anyway.
   */
-  plugins: [
-    { enforce: 'pre', ...mdx({ remarkPlugins: [remarkGfm] }) },
-    react({ include: /\.(jsx|js|mdx|md|tsx|ts)$/ }),
-  ],
+  worker: { format: 'es' },
   test: {
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
     /*
-      Vitest's default is 5s per test, which the catalog-heavy screen suites
-      (`views/pgn/`, `views/main/Sidebar`, `views/library/`) sit close to: they
-      render a library of ~630 games across ~70 folders, and under full
-      parallelism the slowest of them cross it — not always the same one, which
-      is the tell that it is scheduling rather than a hang. The suite already
-      had one such test failing on `development` before the repertoire examples
-      were added (CTA-60); those took the margin away entirely.
+      Vitest's default is 5s per test, which the heavier screen suites (the
+      v2 boards, `views/main/Sidebar`, the Library's) sit close to under full
+      parallelism — not always the same one, which is the tell that it is
+      scheduling rather than a hang.
 
       Raised rather than papered over per-file: the tests are not wrong and the
       work is real, so the honest fix is to stop asserting that a render

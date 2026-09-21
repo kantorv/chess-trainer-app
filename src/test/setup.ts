@@ -1,4 +1,8 @@
 import "@testing-library/jest-dom/vitest";
+// jsdom has no IndexedDB, and the Library keeps its uploads there
+// (`lib/libraryCollectionStore.ts`). An in-memory implementation of the real
+// API, so the store's own code is what the tests run.
+import "fake-indexeddb/auto";
 import { afterEach, vi } from "vitest";
 import { cleanup } from "@testing-library/react";
 

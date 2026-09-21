@@ -1,5 +1,5 @@
 import type { CSSObject } from "@mui/material/styles";
-import { cardSizeTrack, type CardSize } from "../library/cardSize";
+import { cardSizeTrack, type CardSize } from "./cardSize";
 
 /**
  * **The saved-list view machinery** — the pure half of what the saved
@@ -7,7 +7,7 @@ import { cardSizeTrack, type CardSize } from "../library/cardSize";
  * and [`views/tools/openings/saved/SavedOpenings.tsx`](../tools/openings/saved/SavedOpenings.tsx)
  * all render the same two views (the list and the two board sizes) over the
  * same caption shape, and the parts of that that are *values* rather than
- * components live here — for the reason [`cardSize.ts`](../library/cardSize.ts)
+ * components live here — for the reason [`cardSize.ts`](./cardSize.ts)
  * gives: a component file that also exports values loses fast refresh.
  *
  * The component half — the view toggle, the export bar and the remove button —
@@ -24,8 +24,8 @@ export const SAVED_LIST_DEFAULT_VIEW: SavedListView = "list";
  * The board-view grid's styles. Identical in all three screens but for the
  * `cardSizeTrack` the pressed button chose, so the track is the one parameter.
  *
- * **`gridAutoRows: "max-content"` is the line that makes it scroll** — the same
- * trap `LibraryList` documents: an `auto` row inside a grid whose own height is
+ * **`gridAutoRows: "max-content"` is the line that makes it scroll** — the
+ * trap `chessboard.md` §5 documents: an `auto` row inside a grid whose own height is
  * definite is stretched to share that height out, so the cards would be
  * squashed and clipped by `Card`'s own `overflow: hidden` and there would be no
  * overflow to scroll. Sized by their content, the rows overflow.

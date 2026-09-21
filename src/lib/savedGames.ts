@@ -21,9 +21,8 @@ import { parsePgnGame } from "./pgn";
  * the rest of `src/lib/` is written in: it takes its games as a parameter, never
  * touches `localStorage`, and nothing here throws. The storage half is
  * [`savedGameStore.ts`](./savedGameStore.ts) and the React binding is
- * its reader was the Saved games list (deleted, CTA-74) — the same three-way split
- * `pgnUploads.ts` / `pgnUploadStore.ts` / `views/pgn/useUploads.ts` already
- * uses, and for the same reason.
+ * its reader was the Saved games list (deleted, CTA-74) — the three-way split
+ * every store in `src/lib/` keeps.
  *
  * ## A saved game is a PGN and the settings it was played under
  *
@@ -141,8 +140,8 @@ const engineName = (settings: EngineSettings): string =>
  * how it stands.
  *
  * The reader is named `"Player"` and the engine by its strength, because a PGN
- * tag is language-independent notation: it travels to Load PGN's Info tab, to
- * an export and to any other reader of the file, none of which know what
+ * tag is language-independent notation: it travels to an export and to any
+ * other reader of the file, none of which know what
  * language this app happened to be in. The game's *own* headers win over these
  * (`gameFromChess` writes a `FEN` tag for a game set up from a position), so a
  * game handed over by the Board Editor still reloads as itself.

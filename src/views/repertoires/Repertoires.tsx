@@ -35,7 +35,7 @@ import {
   type RepertoireFolder,
 } from "../../lib/savedRepertoireFolders";
 import { removeSavedRepertoires } from "../../lib/savedRepertoireStore";
-import { slugify } from "../../lib/pgnLibrary";
+import { slugify } from "../../lib/pgnText";
 import { RightPanel } from "../main/rightPanel";
 import SavedListExportBar from "../shared/SavedListExportBar";
 import SavedListViewToggle from "../shared/SavedListViewToggle";
@@ -58,7 +58,7 @@ import { useSavedRepertoires } from "./useSavedRepertoires";
 
 /**
  * **Repertoires** (`/repertoires`) — the reader's own repertoires, newest
- * first, as rows or as preview boards at the library's two card sizes (CTA-61).
+ * first, as rows or as preview boards at the saved lists' two card sizes (CTA-61).
  *
  * It is `views/tools/analysis/saved/SavedAnalyses.tsx` again, over the same
  * saved-list machinery (`views/shared/savedList.ts` and the `SavedList*.tsx`
@@ -73,8 +73,8 @@ import { useSavedRepertoires } from "./useSavedRepertoires";
  *
  * - **One destination, and its games.** A repertoire opens on its own view
  *   (`/repertoires/<id>`, the player) — there is no single position to hand
- *   Play with Engine and no single game to hand Load PGN, since a repertoire
- *   is many lines — and each row and card carries the Games menu
+ *   Play with Engine and no single game to hand on, since a repertoire is
+ *   many lines — and each row and card carries the Games menu
  *   (`RepertoireGamesMenu.tsx`, CTA-63) beside it.
  * - **Folders, one level deep.** The top level lists the folders, then the
  *   Unfiled repertoires; `?folder=<id>` opens one — its repertoires, with its

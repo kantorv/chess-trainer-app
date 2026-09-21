@@ -48,7 +48,7 @@ type PgnSetupProps = {
   error: string | null;
   pgnText: string;
   onPgnTextChange: (text: string) => void;
-  onLoadPgn: (event: FormEvent) => void;
+  onSubmitPgn: (event: FormEvent) => void;
   onFileChosen: (event: ChangeEvent<HTMLInputElement>) => void;
 };
 
@@ -59,7 +59,7 @@ function PgnSetup({
   error,
   pgnText,
   onPgnTextChange,
-  onLoadPgn,
+  onSubmitPgn,
   onFileChosen,
 }: PgnSetupProps) {
   const { t } = useTranslation();
@@ -116,7 +116,7 @@ function PgnSetup({
           </Typography>
         </Stack>
 
-        <Box component="form" onSubmit={onLoadPgn}>
+        <Box component="form" onSubmit={onSubmitPgn}>
           <TextField
             fullWidth
             multiline

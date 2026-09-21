@@ -1,5 +1,5 @@
 import { sameEngineSettings } from "./engineSettings";
-import type { LibraryCatalog } from "./libraryCatalog";
+import type { GameCatalog } from "./gameCatalog";
 import {
   playedGameCatalogOf,
   playedGameFrom,
@@ -102,13 +102,13 @@ export const removePlayedGame = (id: string): PlayedGameProblem | undefined =>
 export const clearPlayedGames = (): PlayedGameProblem | undefined => write([]);
 
 /* Memoised on the snapshot's identity, as `savedAnalysesCatalog()` is. */
-let live: { games: readonly PlayedGame[]; catalog: LibraryCatalog } | undefined;
+let live: { games: readonly PlayedGame[]; catalog: GameCatalog } | undefined;
 
 /**
- * **The played games as a library catalog**, so `?game=play/games/<id>`
+ * **The played games as a game catalog**, so `?game=play/games/<id>`
  * resolves through the ordinary hand-off (`lib/gameReference.ts`).
  */
-export const playedGamesCatalog = (): LibraryCatalog => {
+export const playedGamesCatalog = (): GameCatalog => {
   const snapshot = playedGamesSnapshot();
   if (live === undefined || live.games !== snapshot) {
     live = { games: snapshot, catalog: playedGameCatalogOf(snapshot) };

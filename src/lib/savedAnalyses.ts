@@ -13,12 +13,7 @@ import {
   type GameTree,
   type VariationNode,
 } from "./gameTree";
-import {
-  libraryCatalogOf,
-  type LibraryCatalog,
-  type LibraryCategory,
-  type LibraryGame,
-} from "./libraryCatalog";
+import type { CatalogGame, GameCatalog } from "./gameCatalog";
 import { parsePgnGame, parsePgnTree, readPgnTags } from "./pgn";
 
 /**
@@ -113,11 +108,8 @@ export type SavedAnalysis = {
   updatedAt: string;
 };
 
-/** The category path the saved analyses sit under, and their reference segment. */
+/** The saved analyses' catalog path — their `?game=analysis/<path>/<id>` segment. */
 export const SAVED_ANALYSES_PATH = "saved";
-
-/** The folder's name is chrome the app ships, so it is a locale key. */
-export const SAVED_ANALYSES_LABEL_KEY = "savedAnalyses.title";
 
 /** The `Event` tag a saved analysis carries when it is not a game's. */
 export const SAVED_ANALYSIS_EVENT = "Analysis Board";
@@ -153,9 +145,9 @@ const pgnDate = (when: Date): string =>
 /**
  * The tag pairs a saved analysis is written with.
  *
- * Language-independent, as a PGN tag has to be: the record travels to Load PGN's
- * Info tab, to an export and to any other reader of the file, none of which know
- * what language this app happened to be in. `Result` is `"*"` — an analysis is
+ * Language-independent, as a PGN tag has to be: the record travels to an
+ * export and to any other reader of the file, none of which know what language
+ * this app happened to be in. `Result` is `"*"` — an analysis is
  * not a game with an outcome, and `gameTag` already reports `"*"` as absent, so
  * nothing renders it. The tree's *own* headers win over these, so an analysis
  * begun from a library game keeps that game's players and event.
@@ -358,27 +350,17 @@ export const savedAnalysisSummary = (
 };
 
 /**
- * The saved analyses as a **library catalog** — one category, one `LibraryGame`
- * per record that parses, in the order they were given.
- *
- * The same one reason `savedGameCatalogOf` exists: `?game=` resolves a reference
- * against a catalog (`lib/gameReference.ts`), so presenting them as one is what
- * lets "open this in Load PGN" be the hand-off that screen already has rather
- * than a second transport. The item's `game` is the **mainline** — that is what
- * a `LibraryGame` is and what a replay screen walks; the side lines are still in
- * the `pgn` beside it, which is what the Analysis Board re-reads.
+ * The saved analyses as a **game catalog** (`lib/gameCatalog.ts`) — one entry
+ * per record that parses, in the order they were given — so
+ * `?game=analysis/saved/<id>` resolves through the ordinary hand-off
+ * (`lib/gameReference.ts`) rather than a transport of its own. The entry's
+ * `game` is the **mainline**; the side lines are still in the `pgn` beside it,
+ * which is what the Analysis Board re-reads.
  */
 export const savedAnalysisCatalogOf = (
   analyses: readonly SavedAnalysis[],
-): LibraryCatalog => {
-  const category: LibraryCategory = {
-    id: SAVED_ANALYSES_PATH,
-    path: SAVED_ANALYSES_PATH,
-    labelKey: SAVED_ANALYSES_LABEL_KEY,
-    children: [],
-  };
-
-  const items: LibraryGame[] = [];
+): GameCatalog => {
+  const games: CatalogGame[] = [];
   for (const saved of analyses) {
     let game: Game;
     try {
@@ -387,27 +369,21 @@ export const savedAnalysisCatalogOf = (
       continue;
     }
 
-    items.push({
-      kind: "game",
+    games.push({
       id: saved.id,
-      category: SAVED_ANALYSES_PATH,
       // English, and never rendered by this app: the Saved analyses screen
-      // writes its own translated rows. It is here because a `LibraryItem`
-      // carries a name, and a PGN's players are the honest answer to what this
-      // is — which for an analysis begun from a library game is that game.
-      name: {
-        en:
-          saved.name ||
-          `${gameTag(game.headers, "White") ?? "White"} – ${
-            gameTag(game.headers, "Black") ?? "Black"
-          }`,
-      },
+      // writes its own translated rows.
+      name:
+        saved.name ||
+        `${gameTag(game.headers, "White") ?? "White"} – ${
+          gameTag(game.headers, "Black") ?? "Black"
+        }`,
       pgn: saved.pgn,
       game,
     });
   }
 
-  return libraryCatalogOf([category], items, []);
+  return { path: SAVED_ANALYSES_PATH, games };
 };
 
 /**

@@ -11,7 +11,7 @@ import { useTranslation } from "react-i18next";
 import { mainlineGame, type GameTree } from "../../../../lib/gameTree";
 import { openingOfLine, type OpeningEntry } from "../../../../lib/openings";
 import { downloadPgn } from "../../../../lib/pgnExport";
-import { slugify } from "../../../../lib/pgnLibrary";
+import { slugify } from "../../../../lib/pgnText";
 import { savedOpeningToTree } from "../../../../lib/savedOpenings";
 import {
   openingFolderChildren,

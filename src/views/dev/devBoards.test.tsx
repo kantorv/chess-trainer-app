@@ -44,11 +44,27 @@ import { DEV_NAV_FOLDER_ID, devNavItems } from "./devNav";
 import { devSavedGamesSnapshot, devSavedOpeningsSnapshot } from "./core/devStores";
 import AnalysisBoard from "../tools/analysis/AnalysisBoard";
 import PlayWithEngine from "../engine/play/PlayWithEngine";
+import LibraryGameBoard from "../library/LibraryGameBoard";
+import { parsePgnTree } from "../../lib/pgn";
 import MaskedV2 from "./masked/MaskedV2";
 import OpeningsV2 from "./openings/OpeningsV2";
 import PlayV2 from "./play/PlayV2";
-import RepertoireV2 from "./repertoire/RepertoireV2";
 
+
+/** A game of an uploaded collection on the Library's board (CTA-75). */
+const LIBRARY_FIXTURE = {
+  id: "fixture",
+  name: "Fixture",
+  source: "uploaded" as const,
+  games: ['[White "A"]\n[Black "B"]\n\n1. e4 e5 *'],
+};
+const LibraryGame = () => (
+  <LibraryGameBoard
+    collection={LIBRARY_FIXTURE}
+    number={1}
+    tree={parsePgnTree(LIBRARY_FIXTURE.games[0])}
+  />
+);
 const BOARDS: readonly {
   name: string;
   id: string;
@@ -58,10 +74,10 @@ const BOARDS: readonly {
   { name: "Analysis Board", id: "analysis", Screen: AnalysisBoard },
   // Play with Engine, a v2 screen since CTA-74.
   { name: "Play with Engine", id: "play-with-engine", Screen: PlayWithEngine },
+  { name: "Library game", id: "library-game", Screen: LibraryGame },
   { name: "Play with Engine v2", id: "dev-play", Screen: PlayV2 },
   { name: "Masked Pieces v2", id: "dev-masked", Screen: MaskedV2 },
   { name: "Openings v2", id: "dev-openings", Screen: OpeningsV2 },
-  { name: "Repertoire v2", id: "dev-repertoire", Screen: RepertoireV2 },
 ];
 
 const renderBoard = (Screen: () => ReactNode, entry = "/dev") =>
@@ -138,9 +154,10 @@ describe("the Development section", () => {
     expect(navFolders().map((folder) => folder.id)).toContain(
       DEV_NAV_FOLDER_ID,
     );
-    // Four: Analysis v2 shipped as the Analysis Board (CTA-73).
+    // Three: Analysis v2 shipped as the Analysis Board (CTA-73), and
+    // Repertoire v2 was retired with the old Library (CTA-75).
     expect(navItems().filter((item) => item.folder === DEV_NAV_FOLDER_ID)).toHaveLength(
-      4,
+      3,
     );
   });
 
@@ -155,12 +172,11 @@ describe("the Development section", () => {
     }
   });
 
-  it("routes the four boards at /dev/*", () => {
+  it("routes the three boards at /dev/*", () => {
     expect(devNavItems().map((item) => item.to)).toEqual([
       "/dev/play",
       "/dev/masked",
       "/dev/openings",
-      "/dev/repertoire",
     ]);
   });
 });
@@ -379,20 +395,5 @@ describe("Openings v2", () => {
     expect(screen.getByTestId("dev-openings-panel-footer")).toContainElement(
       screen.getByTestId("dev-openings-explorer"),
     );
-  });
-});
-
-describe("Repertoire v2", () => {
-  it("replays a line out of the shipped catalog, tree and all", () => {
-    renderBoard(RepertoireV2);
-
-    // It falls back to the catalog's first game when no `?game=` arrived, so
-    // the screen is never a blank board in dev.
-    expect(screen.getByTestId("dev-repertoire-source")).toHaveTextContent(
-      i18n.t("dev.repertoire.source"),
-    );
-    // The flowing tree is the one view the merged list does not replace.
-    expect(screen.getByTestId("dev-repertoire-panel-tab-tree")).toBeInTheDocument();
-    expect(screen.getByTestId("dev-repertoire-panel-tab-info")).toBeInTheDocument();
   });
 });

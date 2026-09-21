@@ -28,7 +28,7 @@ import {
 import { emptyTree, pathTo, type GameTree } from "../../lib/gameTree";
 import { downloadPgn } from "../../lib/pgnExport";
 import { atParamOf, nodeAtParam, REPERTOIRE_AT_PARAM } from "../../lib/repertoireLink";
-import { slugify } from "../../lib/pgnLibrary";
+import { slugify } from "../../lib/pgnText";
 import type { RepertoireGameId } from "../../lib/repertoireGames";
 import {
   drillAccuracy,
@@ -305,7 +305,7 @@ function RepertoirePlayer({
 
   /*
     …and written back as the reader moves, with history **replace** (the
-    library detail's `?move=` rule), so the address bar is always a permanent
+    Analysis Board's rule too), so the address bar is always a permanent
     link to the position on screen and Back leaves the screen rather than
     stepping through it. Only once the tree is on the board, or the link it
     arrived with would be wiped before it was read.

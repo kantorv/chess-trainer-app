@@ -3,9 +3,10 @@
 How a board screen is **built out of one core** instead of written again. This
 is the spec the `/dev/*` screens implement (CTA-60). The shipped screens move
 onto it one issue at a time: the **Analysis Board** is Analysis v2, shipped
-(CTA-73), and **Play with Engine** is Play v2, shipped (CTA-74); Masked
-Pieces, the Openings explorer and the Library repertoire viewer are untouched
-by it and stay the reference.
+(CTA-73), **Play with Engine** is Play v2, shipped (CTA-74), and the
+**Library's game board** was built on it from the start (CTA-75, which
+replaced the old Library and its repertoire viewer); Masked Pieces and the
+Openings explorer are untouched by it and stay the reference.
 
 Read [`chessboard.md`](./chessboard.md) first — it is still the authority on
 what a board *is* (the library, the rules engine, the engine protocol, the
@@ -32,10 +33,10 @@ forgotten on three:
 | Repertoire viewer | ❌ | ❌ | ❌ | ❌ |
 
 Three separate behaviour hooks (`useAnalysisBoard` 712 lines,
-`usePlayWithEngine` 670, `useOpenings` 383) and one inline screen
-(`LibraryVariationDetail` 367) is four places to apply the fifth improvement
-to. **The layer that has no owner today is the composition** — and that is
-what this core is.
+`usePlayWithEngine` 670, `useOpenings` 383) and one inline screen (the old
+Library's repertoire viewer, 367 — gone with that Library in CTA-75) was four
+places to apply the fifth improvement to. **The layer that had no owner was
+the composition** — and that is what this core is.
 
 ### The mental model: base and derived, realized as composition
 
@@ -444,15 +445,15 @@ Every `/dev/*` screen, and exactly what it picks. Nothing else differs.
 | **Play v2** (dev) | `/dev/play` | `?fen=`, `?saved=`; `canMoveAt: isLive` | ✅ switch, **reply** | header line only | ✅ dev games | Moves · Engine | opening + New game + switch | next-moves bar | — | `TreeMoveList` alone (the **flat** mode is specified for it) |
 | **Masked v2** | `/dev/masked` | Play v2's, verbatim | ✅ switch, **reply** | header line only | ❌ (a mask cannot be restored on `/dev/play`) | Moves · Engine · Mask | Play v2's | Play v2's | `pieces: maskedPieces(mask)` | Play v2's, with `mask` |
 | **Openings v2** | `/dev/openings` | `?fen=`, `?openings=` | ✅ switch, no reply | ✅ continuations + arrows | ❌ **button-triggered save** | Moves · Engine · Tree | opening + Save + switch | the explorer list | book arrows | `TreeMoveList` alone |
-| **Repertoire v2** | `/dev/repertoire` | `?game=library/<path>/<id>` | ✅ switch, no reply | header line only | ❌ (a shipped file is not the reader's work) | Moves · Engine · Tree · Info | opening + switch | next-moves bar | next-move arrows | `TreeMoveList` alone |
+| **Library game** (shipped, CTA-75) | `/library/<collection>/<game>` | the game (`parsePgnTree`), `?at=` | ✅ switch; its best move played **for the opponent's side, only while Play is on** — the Analysis Board's session, `useAnalysisSession` | header line only | ❌ **explicit save** — the changes strip: an uploaded collection's game **Update**s in place or **Save as copy** inserts a copy after it; a shipped one is read-only (`readOnly`) and its copy goes to Saved analyses | Moves · Map · Info · Export · Engine | back + players + game N of M + opening + previous / next game + Save + Play/Pause + switch | comment block, the changes strip, Play's status line, the next-moves bar | next-move arrows (a switch, on) | **`useVariationsExplorer`** — the Analysis Board's options |
 | **Repertoire player** (shipped, CTA-63) | `/repertoires/<id>`, and `/games/<end\|backtrack>` | `orientation`: the reader's side | ✅ switch, **off by default**, no reply — the opponent is **`useTrainerModule`** (§2.5): behind Autoplay in the player, always in a game (game mode, a game's policy and required moves from `useRepertoireGame`) | ❌ | ❌ (session-only; leaves by download) | Moves — the variations explorer (extensions tinted; the player's right-click move menu, CTA-64) · Score (games) · Map (the player's; Backtracking's with coverage) · Settings (side, Autoplay, arrows, engine switch) · Engine (disabled while off) | name + opening + Games menu + Play (toggles Autoplay; CTA-65) + restart + download + settings link (a game: its title, back) | next-moves bar, or the trainer's status line | next-move arrows (off by default); a required move's arrow | **`useVariationsExplorer`** (CTA-72) — the explorer mode: Moves, Map, comment block, next-moves bar, arrows, chance overlay; editing and the comment block the player's only |
 
 **Next-move arrows are one helper.** `nextMoveArrowsOf` (`views/tools/analysis/nextMoveArrows.ts`)
 builds the arrows for a position's continuations — `children[0]`, the
 mainline, in `NEXT_MOVE_ARROW_COLOR`, every side line in
 `SIDELINE_NEXT_MOVE_ARROW_COLOR`, the hovered one in the hover colour.
-The Analysis Board, Play, Masked and Repertoire v2 and the two repertoire
-screens draw through it (Openings v2 draws its book arrows), so a change of
+The Analysis Board, Play with Engine, the Library's game board, Play and
+Masked v2 and the two repertoire screens draw through it (Openings v2 draws its book arrows), so a change of
 colour reaches them all.
 
 Read the table as the specification of the derived classes. Three things it
@@ -463,9 +464,16 @@ makes visible, which were the drift:
   differs by two props: `pieces` on the board options and `mask` on the
   notation. No mode flag reaches the core, and the masking stays between the
   state and the pixels exactly as §5 of `chessboard.md` requires.
-- **Openings v2 and Repertoire v2 gain CTA-51/53/54/55 by composition**, not by
-  four ports. They keep what is theirs: Openings its continuations and its
-  button-triggered save; Repertoire its tree replay.
+- **Openings v2 gains CTA-51/53/54/55 by composition**, not by four ports. It
+  keeps what is its own: its continuations and its button-triggered save.
+  (Repertoire v2, the old Library's line viewer on the core, was retired with
+  that Library in CTA-75; the Library's game board is its successor.)
+- **The Library's game board adds no behaviour hook.** It composes the
+  Analysis Board's own session, `useAnalysisSession`
+  (`views/tools/analysis/`: core + engine + `usePlayToggle` + a baseline,
+  extracted from `useAnalysisBoard` for exactly this), and writes the few
+  lines that are its own — where Update and Save as copy put the tree — in the
+  screen.
 - **Play v2 gains CTA-53/54/55** the same way, and loses its Variations tab —
   the lines are pinned above every tab now, so a tab for them would be the same
   component twice.
@@ -565,11 +573,11 @@ what a screen gains:
 - **`options.id` is unique on the page** — `analysis`, `dev-play`,
   `dev-masked`, and so on.
 - **The shipped board screens not yet on v2 are not touched.**
-  `views/masked/play`, `views/tools/openings` and
-  `views/library/LibraryVariationDetail.tsx` stay byte-identical (the Analysis
-  Board, `views/tools/analysis`, *is* v2 since CTA-73, and Play with Engine,
-  `views/engine/play`, since CTA-74 — which keeps `usePlayWithEngine.ts` and
-  `EngineSettings.tsx` for Masked Pieces); a shared piece
+  `views/masked/play` and `views/tools/openings` stay byte-identical (the
+  Analysis Board, `views/tools/analysis`, *is* v2 since CTA-73, Play with
+  Engine, `views/engine/play`, since CTA-74 — which keeps
+  `usePlayWithEngine.ts` and `EngineSettings.tsx` for Masked Pieces — and the
+  Library, `views/library`, since CTA-75); a shared piece
   under `views/shared/` or `src/lib/` may only change backward compatibly, with
   the shipped screens' tests passing unchanged.
 - **The Development section never ships.** Everything under `/dev/*` is gated
@@ -588,8 +596,9 @@ what a screen gains:
   shared explorer in `views/explorer/` since CTA-72 — see
   [`tree-views.md`](./tree-views.md).) Since CTA-63 `useTrainerModule` ships
   too — the repertoire player is a repertoire's own view — and since CTA-73
-  the Analysis Board is a core screen too. What the gate keeps out is
-  unchanged: the four derived `/dev/*` boards still there, `devNav.ts` and `devStores.ts` (the dev-prefixed
+  the Analysis Board is a core screen too, and since CTA-75 the Library's
+  game board. What the gate keeps out is unchanged: the three derived
+  `/dev/*` boards still there, `devNav.ts` and `devStores.ts` (the dev-prefixed
   keys), none of which a shipped screen imports. A shipped screen must not
   import `devStores.ts` or anything outside `core/` (the shared
   `views/explorer/` is not the dev section, and ships).
@@ -619,15 +628,16 @@ what a screen gains:
 | `src/views/dev/core/useTrainerModule.ts` + `src/lib/repertoireTrainer.ts` | §2.5 — the repertoire trainer: the reply guard and timer (the module), the policy and the extension fold (pure). |
 | `src/views/dev/core/BoardShell.tsx` | §3.1 — the board square, over the shared `EngineBoardSquare`. |
 | `src/views/dev/core/BoardPanel.tsx` | §3.2 — **the** panel skeleton and the pinned variations block. |
-| `src/views/explorer/` | **The shared tree views** (CTA-72; was `TreeMoveList.tsx` + `MoveContextMenu.tsx` here) — the variations explorer (the merged move list of CTA-53 with its opt-in right-click menu of CTA-64, the map, the comment block, the play-chance overlay) as a pluggable mode, `useVariationsExplorer`, over one seam (`treeView.ts`). A board attaches a tree view by passing `core` and placing the parts it gets back in this file's slots; its own spec is [`tree-views.md`](./tree-views.md). The repertoire player passes it everything; its games pass no `onEditTree`; the Analysis Board passes editing without the play chances; the four dev boards render `TreeMoveList` alone. |
-| `src/views/dev/play/` · `masked/` · `openings/` · `repertoire/` | §4 — the four derived boards still in the Development section. |
-| `src/views/tools/analysis/` | §4 — the Analysis Board, Analysis v2 shipped (CTA-73): `useAnalysisBoard.ts` (core + engine + the saved record and its baseline) and `AnalysisBoard.tsx`, plus `PlayToggleButton.tsx` / `EngineThinking.tsx` (Play's header button and status line, shared with Play with Engine). Under both propagation tests. |
+| `src/views/explorer/` | **The shared tree views** (CTA-72; was `TreeMoveList.tsx` + `MoveContextMenu.tsx` here) — the variations explorer (the merged move list of CTA-53 with its opt-in right-click menu of CTA-64, the map, the comment block, the play-chance overlay) as a pluggable mode, `useVariationsExplorer`, over one seam (`treeView.ts`). A board attaches a tree view by passing `core` and placing the parts it gets back in this file's slots; its own spec is [`tree-views.md`](./tree-views.md). The repertoire player passes it everything; its games pass no `onEditTree`; the Analysis Board, Play with Engine and the Library's game board pass editing without the play chances; the three dev boards render `TreeMoveList` alone. |
+| `src/views/dev/play/` · `masked/` · `openings/` | §4 — the three derived boards still in the Development section. |
+| `src/views/tools/analysis/` | §4 — the Analysis Board, Analysis v2 shipped (CTA-73): `useAnalysisSession.ts` (core + engine + Play + the baseline — shared with the Library's game board, CTA-75), `useAnalysisBoard.ts` (that session plus the saved record) and `AnalysisBoard.tsx`, plus `PlayToggleButton.tsx` / `EngineThinking.tsx` (Play's header button and status line, shared with Play with Engine). Under both propagation tests. |
 | `src/views/dev/core/usePlayToggle.ts` | **Play** — the engine playing the side not at the bottom while on, pausing on a step back, a change of side, the engine off, the game over or `finished` (a resignation) (CTA-73, a module since CTA-74). The Analysis Board (off at the start) and Play with Engine (on) compose it. |
 | `src/views/engine/play/` | §4 — Play with Engine, Play v2 shipped (CTA-74): `usePlayGame.ts` (core + engine + `usePlayToggle` + the autosave) and `PlayWithEngine.tsx`. Under both propagation tests. |
+| `src/views/library/LibraryGameBoard.tsx` | §4 — the Library's game board (CTA-75): `useAnalysisSession` + the explorer, and the collection's Update / Save as copy. Under both propagation tests. |
 | `src/views/dev/devNav.ts` | The dev-gated sidebar folder and its entries. |
-| `src/views/dev/devBoards.test.tsx` | The five boards — the four dev ones and the shipped Analysis Board — rendered for real: the shared square, the shared skeleton, and the one thing each board keeps as its own. `devPanelPropagation.test.tsx` renders the same five. |
+| `src/views/dev/devBoards.test.tsx` | The six boards — the three dev ones and the shipped Analysis Board, Play with Engine and Library game board — rendered for real: the shared square, the shared skeleton, and the one thing each board keeps as its own. `devPanelPropagation.test.tsx` renders the same six. |
 | `src/views/dev/devPanelPropagation.test.tsx` | The propagation assertion of §0 — `BoardPanel` replaced by a sentinel. |
 | `src/views/dev/core/devStores.test.ts` | The dev/shipped key isolation of §2.4, in both directions. |
-| `src/views/repertoires/RepertoireBoard.tsx` | The first **shipped** board composed from the core (CTA-61) — Repertoire v2 over the reader's own one-game repertoire; since CTA-63 the route over the player below. `RepertoirePropagation.test.tsx` puts it under the same propagation assertion as the five dev boards. |
+| `src/views/repertoires/RepertoireBoard.tsx` | The first **shipped** board composed from the core (CTA-61) — the core over the reader's own one-game repertoire; since CTA-63 the route over the player below. `RepertoirePropagation.test.tsx` puts it under the same propagation assertion as the five dev boards. |
 | `src/views/repertoires/RepertoirePlayer.tsx` | Since CTA-63 the screen behind `RepertoireBoard.tsx` and `RepertoireGame.tsx` — the repertoire player and its games, the trainer (§2.5) as the opponent. Both routes are under the same propagation assertion. |
 | `src/views/dev/devTestHarness.tsx` | The `Engine` and `<Chessboard>` stand-ins §8 of `chessboard.md` requires, written once for five boards. |

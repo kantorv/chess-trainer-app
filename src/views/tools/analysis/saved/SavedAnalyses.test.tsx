@@ -23,7 +23,7 @@ import {
   findSavedAnalysis,
   saveAnalysis,
 } from "../../../../lib/savedAnalysisStore";
-import { cardSizeTrack } from "../../../library/cardSize";
+import { cardSizeTrack } from "../../../shared/cardSize";
 import { RightPanelOutlet, RightPanelProvider } from "../../../main/rightPanel";
 import SavedAnalyses from "./SavedAnalyses";
 
@@ -258,7 +258,7 @@ describe("Saved analyses — where a row goes", () => {
       "href",
       "/tools/analysis?analysis=a1",
     );
-    // No hand-offs to Load PGN or Play with Engine, and no delete of its own.
+    // No hand-off to Play with Engine, and no delete of its own.
     expect(screen.queryByTestId("saved-analyses-loadpgn-a1")).toBeNull();
     expect(screen.queryByTestId("saved-analyses-play-a1")).toBeNull();
     expect(screen.queryByTestId("saved-analyses-remove-a1")).toBeNull();

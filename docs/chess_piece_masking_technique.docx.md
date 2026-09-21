@@ -262,5 +262,6 @@ edit away.
 
 The reveal and feedback modes (§9), and progressive / temporary / random masking
 and the difficulty ladder (§8, §10). All of them build on this same `PieceMask`
-rather than replacing it. Masking on the Analysis Board, Load PGN and the Board
-Editor is also out of scope: those screens study a game rather than play one.
+rather than replacing it. Masking on the Analysis Board, the Library's game board
+and the Board Editor is also out of scope: those screens study a game rather than
+play one.
