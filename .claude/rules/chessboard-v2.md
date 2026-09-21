@@ -433,14 +433,14 @@ Two rules it keeps for every consumer:
 
 Every `/dev/*` screen, and exactly what it picks. Nothing else differs.
 
-| Board | route | Base options | Engine | Book | Autosave | Tabs | Header slot | Footer slot | Board options slot |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| **Analysis v2** (the reference) | `/dev/analysis` | `?fen=`, `?game=`+`?move=`, `?analysis=` | ✅ switch, **no reply** | header line only | ✅ dev analyses | Moves · Engine · Position | opening + Play-from-here + switch | next-moves bar (CTA-54) | next-move arrows |
-| **Play v2** | `/dev/play` | `?fen=`, `?saved=`; `canMoveAt: isLive` | ✅ switch, **reply** | header line only | ✅ dev games | Moves · Engine | opening + New game + switch | next-moves bar | — |
-| **Masked v2** | `/dev/masked` | Play v2's, verbatim | ✅ switch, **reply** | header line only | ❌ (a mask cannot be restored on `/dev/play`) | Moves · Engine · Mask | Play v2's | Play v2's | `pieces: maskedPieces(mask)` |
-| **Openings v2** | `/dev/openings` | `?fen=`, `?openings=` | ✅ switch, no reply | ✅ continuations + arrows | ❌ **button-triggered save** | Moves · Engine · Tree | opening + Save + switch | the explorer list | book arrows |
-| **Repertoire v2** | `/dev/repertoire` | `?game=library/<path>/<id>` | ✅ switch, no reply | header line only | ❌ (a shipped file is not the reader's work) | Moves · Engine · Tree · Info | opening + switch | next-moves bar | next-move arrows |
-| **Repertoire player** (shipped, CTA-63) | `/repertoires/<id>`, and `/games/<end\|backtrack>` | `orientation`: the reader's side | ✅ switch, **off by default**, no reply — the opponent is **`useTrainerModule`** (§2.5): behind Autoplay in the player, always in a game (game mode, a game's policy and required moves from `useRepertoireGame`) | ❌ | ❌ (session-only; leaves by download) | Moves — the variations explorer (extensions tinted; the player's right-click move menu, CTA-64) · Score (games) · Map (the player's; Backtracking's with coverage) · Settings (side, Autoplay, arrows, engine switch) · Engine (disabled while off) | name + opening + Games menu + Play (toggles Autoplay; CTA-65) + restart + download + settings link (a game: its title, back) | next-moves bar, or the trainer's status line | next-move arrows (off by default); a required move's arrow |
+| Board | route | Base options | Engine | Book | Autosave | Tabs | Header slot | Footer slot | Board options slot | Tree view ([`tree-views.md`](./tree-views.md)) |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| **Analysis v2** (the reference) | `/dev/analysis` | `?fen=`, `?game=`+`?move=`, `?analysis=` | ✅ switch, **no reply** | header line only | ✅ dev analyses | Moves · Engine · Position | opening + Play-from-here + switch | next-moves bar (CTA-54) | next-move arrows | `TreeMoveList` alone (list only; a mode in the Analysis follow-up) |
+| **Play v2** | `/dev/play` | `?fen=`, `?saved=`; `canMoveAt: isLive` | ✅ switch, **reply** | header line only | ✅ dev games | Moves · Engine | opening + New game + switch | next-moves bar | — | `TreeMoveList` alone (the **flat** mode is specified for it) |
+| **Masked v2** | `/dev/masked` | Play v2's, verbatim | ✅ switch, **reply** | header line only | ❌ (a mask cannot be restored on `/dev/play`) | Moves · Engine · Mask | Play v2's | Play v2's | `pieces: maskedPieces(mask)` | Play v2's, with `mask` |
+| **Openings v2** | `/dev/openings` | `?fen=`, `?openings=` | ✅ switch, no reply | ✅ continuations + arrows | ❌ **button-triggered save** | Moves · Engine · Tree | opening + Save + switch | the explorer list | book arrows | `TreeMoveList` alone |
+| **Repertoire v2** | `/dev/repertoire` | `?game=library/<path>/<id>` | ✅ switch, no reply | header line only | ❌ (a shipped file is not the reader's work) | Moves · Engine · Tree · Info | opening + switch | next-moves bar | next-move arrows | `TreeMoveList` alone |
+| **Repertoire player** (shipped, CTA-63) | `/repertoires/<id>`, and `/games/<end\|backtrack>` | `orientation`: the reader's side | ✅ switch, **off by default**, no reply — the opponent is **`useTrainerModule`** (§2.5): behind Autoplay in the player, always in a game (game mode, a game's policy and required moves from `useRepertoireGame`) | ❌ | ❌ (session-only; leaves by download) | Moves — the variations explorer (extensions tinted; the player's right-click move menu, CTA-64) · Score (games) · Map (the player's; Backtracking's with coverage) · Settings (side, Autoplay, arrows, engine switch) · Engine (disabled while off) | name + opening + Games menu + Play (toggles Autoplay; CTA-65) + restart + download + settings link (a game: its title, back) | next-moves bar, or the trainer's status line | next-move arrows (off by default); a required move's arrow | **`useVariationsExplorer`** (CTA-72) — the explorer mode: Moves, Map, comment block, next-moves bar, arrows, chance overlay; editing and the comment block the player's only |
 
 **Next-move arrows are one helper.** `nextMoveArrowsOf` (`views/tools/analysis/nextMoveArrows.ts`)
 builds the arrows for a position's continuations — `children[0]`, the
@@ -574,13 +574,17 @@ what a screen gains:
   **The core is not the Development section, and since CTA-61 it ships.** The
   Repertoires board (`views/repertoires/RepertoireBoard.tsx`, `/repertoires/<id>`)
   is the first shipped screen composed from the core, so `useBoardCore`,
-  `useEngineModule`, `BoardShell`, `BoardPanel` and `TreeMoveList` are in the
+  `useEngineModule`, `BoardShell` and `BoardPanel` are in the
   production bundle by design — imported statically from `views/dev/core/`,
-  where they still live. Since CTA-63 `useTrainerModule` ships too — the
-  repertoire player is a repertoire's own view. What the gate keeps out is unchanged: the five
+  where they still live. (`TreeMoveList` and its menu ship too, from the
+  shared explorer in `views/explorer/` since CTA-72 — see
+  [`tree-views.md`](./tree-views.md).) Since CTA-63 `useTrainerModule` ships
+  too — the repertoire player is a repertoire's own view. What the gate keeps
+  out is unchanged: the five
   derived `/dev/*` boards, `devNav.ts` and `devStores.ts` (the dev-prefixed
   keys), none of which a shipped screen imports. A shipped screen must not
-  import `devStores.ts` or anything outside `core/`.
+  import `devStores.ts` or anything outside `core/` (the shared
+  `views/explorer/` is not the dev section, and ships).
 
   **The one residue, and why it stays.** The `dev.*` strings in
   `src/locales/en.ts` and `he.ts` *do* ship — a few hundred bytes of text that
@@ -607,7 +611,7 @@ what a screen gains:
 | `src/views/dev/core/useTrainerModule.ts` + `src/lib/repertoireTrainer.ts` | §2.5 — the repertoire trainer: the reply guard and timer (the module), the policy and the extension fold (pure). |
 | `src/views/dev/core/BoardShell.tsx` | §3.1 — the board square, over the shared `EngineBoardSquare`. |
 | `src/views/dev/core/BoardPanel.tsx` | §3.2 — **the** panel skeleton and the pinned variations block. |
-| `src/views/dev/core/TreeMoveList.tsx` + `MoveContextMenu.tsx` | **The variations explorer** — the merged move list of CTA-53 (the shared `MoveList` / `VariationLine` over a tree, the ply↔node seam) — and, opt-in through `onEditTree`, its right-click move menu (CTA-64): promote, make main line, delete from here, copy variation PGN, over the pure edits in `lib/gameTree.ts`. The repertoire player passes it; its games and the five dev boards do not. |
+| `src/views/explorer/` | **The shared tree views** (CTA-72; was `TreeMoveList.tsx` + `MoveContextMenu.tsx` here) — the variations explorer (the merged move list of CTA-53 with its opt-in right-click menu of CTA-64, the map, the comment block, the play-chance overlay) as a pluggable mode, `useVariationsExplorer`, over one seam (`treeView.ts`). A board attaches a tree view by passing `core` and placing the parts it gets back in this file's slots; its own spec is [`tree-views.md`](./tree-views.md). The repertoire player passes it everything; its games pass no `onEditTree`; the five dev boards render `TreeMoveList` alone. |
 | `src/views/dev/analysis/` · `play/` · `masked/` · `openings/` · `repertoire/` | §4 — the five derived boards. |
 | `src/views/dev/devNav.ts` | The dev-gated sidebar folder and its entries. |
 | `src/views/dev/devBoards.test.tsx` | The five boards rendered for real: the shared square, the shared skeleton, and the one thing each board keeps as its own. |
