@@ -22,6 +22,7 @@ import Typography from "@mui/material/Typography";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
+import WarningAmberRoundedIcon from "@mui/icons-material/WarningAmberRounded";
 import {
   Link as RouterLink,
   useLocation,
@@ -34,20 +35,20 @@ import { useTranslation } from "react-i18next";
 import { removeCollection } from "../../lib/libraryCollectionStore";
 import {
   COLLECTION_COLUMNS,
-  collectionRowsOf,
   filteredRows,
   gameTitleOf,
   RESULTS,
   sortedRows,
   type CollectionColumn,
-  type LibraryCollection,
+  type CollectionRow,
+  type CollectionSummary,
   type SortDirection,
 } from "../../lib/libraryCollections";
 import { downloadPgn } from "../../lib/pgnExport";
 import { slugify } from "../../lib/pgnText";
 import { RightPanel } from "../main/rightPanel";
 import LibraryMiss from "./LibraryMiss";
-import { useCollection } from "./useLibraryCollections";
+import { loadCollectionGames, useCollectionRows } from "./useLibraryCollections";
 
 /**
  * **A collection** (`/library/<collection>`, CTA-75) — its games as a table:
@@ -55,6 +56,11 @@ import { useCollection } from "./useLibraryCollections";
  * tags (and the length it counts), **sorted** by a click on any header and
  * **filtered** by words (matched against every text column) and by result.
  * A row opens that game on the Library's analysis board.
+ *
+ * **The rows are the collection's index** (`lib/collectionIndex.ts`), read
+ * whole — no game is parsed, or even fetched, to draw the table: a shipped
+ * file's index is its own small chunk, and the PGN is fetched only for the
+ * download. A game the index found unreadable is marked in its `#` cell.
  *
  * The sort, the filter and the page are the URL's (`?sort=`, `?dir=`, `?q=`,
  * `?result=`, `?page=`, `?rows=`, written with history replace), so going back
@@ -69,7 +75,13 @@ const NUMERIC: ReadonlySet<CollectionColumn> = new Set(["number", "whiteElo", "b
 const isColumn = (value: string | null): value is CollectionColumn =>
   (COLLECTION_COLUMNS as readonly string[]).includes(value ?? "");
 
-function CollectionTable({ collection }: { collection: LibraryCollection }) {
+function CollectionTable({
+  collection,
+  rows,
+}: {
+  collection: CollectionSummary;
+  rows: readonly CollectionRow[];
+}) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
@@ -87,7 +99,6 @@ function CollectionTable({ collection }: { collection: LibraryCollection }) {
     ? requestedRows
     : ROWS_PER_PAGE[0];
 
-  const rows = useMemo(() => collectionRowsOf(collection), [collection]);
   const shown = useMemo(
     () => sortedRows(filteredRows(rows, { text, result }), sort, direction),
     [rows, text, result, sort, direction],
@@ -179,7 +190,10 @@ function CollectionTable({ collection }: { collection: LibraryCollection }) {
               size="small"
               aria-label={t("library.table.download")}
               data-testid="library-table-download"
-              onClick={() => downloadPgn(slugify(collection.name) || "collection", collection.games)}
+              onClick={async () => {
+                const games = await loadCollectionGames(collection);
+                if (games !== null) downloadPgn(slugify(collection.name) || "collection", games);
+              }}
             >
               <DownloadRoundedIcon fontSize="small" />
             </IconButton>
@@ -257,7 +271,19 @@ function CollectionTable({ collection }: { collection: LibraryCollection }) {
                   data-testid={`library-table-row-${row.number}`}
                   sx={{ cursor: "pointer" }}
                 >
-                  <TableCell>{row.number}</TableCell>
+                  <TableCell sx={{ whiteSpace: "nowrap" }}>
+                    {row.number}
+                    {row.unreadable && (
+                      <Tooltip title={t("library.table.unreadable")}>
+                        <WarningAmberRoundedIcon
+                          color="warning"
+                          aria-label={t("library.table.unreadable")}
+                          data-testid={`library-table-unreadable-${row.number}`}
+                          sx={{ fontSize: 16, verticalAlign: "text-bottom", marginInlineStart: 0.5 }}
+                        />
+                      </Tooltip>
+                    )}
+                  </TableCell>
                   <TableCell dir="auto" sx={{ whiteSpace: "nowrap" }}>
                     {/* The row's link, for the keyboard and a middle click. */}
                     <Box
@@ -342,7 +368,7 @@ function CollectionTable({ collection }: { collection: LibraryCollection }) {
         <DialogTitle>{t("library.confirmDelete.title", { name: collection.name })}</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            {t("library.confirmDelete.body", { count: collection.games.length })}
+            {t("library.confirmDelete.body", { count: collection.count })}
           </DialogContentText>
         </DialogContent>
         <DialogActions>
@@ -350,8 +376,8 @@ function CollectionTable({ collection }: { collection: LibraryCollection }) {
           <Button
             color="error"
             data-testid="library-delete-confirm"
-            onClick={() => {
-              removeCollection(collection.id);
+            onClick={async () => {
+              await removeCollection(collection.id);
               navigate("/library");
             }}
           >
@@ -367,7 +393,7 @@ function CollectionTable({ collection }: { collection: LibraryCollection }) {
 function CollectionScreen() {
   const { collectionId } = useParams();
   const { t } = useTranslation();
-  const state = useCollection(collectionId);
+  const state = useCollectionRows(collectionId);
   if (state.status === "loading") {
     return (
       <Typography data-testid="library-loading" sx={{ color: "text.secondary", p: 2 }}>
@@ -376,7 +402,7 @@ function CollectionScreen() {
     );
   }
   if (state.status === "missing") return <LibraryMiss what="collection" />;
-  return <CollectionTable key={state.collection.id} collection={state.collection} />;
+  return <CollectionTable key={state.summary.id} collection={state.summary} rows={state.value} />;
 }
 
 export default CollectionScreen;

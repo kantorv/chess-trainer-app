@@ -1,0 +1,30 @@
+{
+  "format": "chessapp.libraryManifest",
+  "version": 1,
+  "collections": [
+    {
+      "id": "bucharest2023",
+      "name": "Bucharest 2023",
+      "pgn": "Bucharest2023.pgn",
+      "index": "Bucharest2023.index.json",
+      "games": 45,
+      "hash": "922b9e1a"
+    },
+    {
+      "id": "morphy",
+      "name": "Morphy",
+      "pgn": "Morphy.pgn",
+      "index": "Morphy.index.json",
+      "games": 211,
+      "hash": "335899fe"
+    },
+    {
+      "id": "worldcup2023",
+      "name": "World Cup 2023",
+      "pgn": "WorldCup2023.pgn",
+      "index": "WorldCup2023.index.json",
+      "games": 674,
+      "hash": "cc9f663e"
+    }
+  ]
+}

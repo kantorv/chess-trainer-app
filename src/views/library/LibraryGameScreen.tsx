@@ -6,15 +6,16 @@ import { Link as RouterLink, useParams } from "react-router";
 import { useTranslation } from "react-i18next";
 
 import type { GameTree } from "../../lib/gameTree";
+import type { LibraryCollection } from "../../lib/libraryCollections";
 import { parsePgnTree } from "../../lib/pgn";
 import LibraryGameBoard from "./LibraryGameBoard";
 import LibraryMiss from "./LibraryMiss";
-import { useCollection } from "./useLibraryCollections";
+import { useCollectionGames } from "./useLibraryCollections";
 
 /**
  * The route of one Library game — `/library/<collection>/<game>`, the game its
- * 1-based number: the collection resolved (a shipped file fetched on first
- * use), the game parsed **with its side lines** (`parsePgnTree` — `chess.js`
+ * 1-based number: the collection's games resolved (a shipped file's whole PGN
+ * fetched on first use, an upload's read from IndexedDB), the game parsed **with its side lines** (`parsePgnTree` — `chess.js`
  * `loadPgn` would drop them), then the board. A number the collection does not
  * have is the miss; a game that will not parse says so, with the way back.
  *
@@ -25,11 +26,19 @@ import { useCollection } from "./useLibraryCollections";
 function LibraryGameScreen() {
   const { collectionId, game } = useParams();
   const { t } = useTranslation();
-  const state = useCollection(collectionId);
+  const state = useCollectionGames(collectionId);
+  const summary = state.status === "ready" ? state.summary : undefined;
+  const games = state.status === "ready" ? state.value : undefined;
+  const collection = useMemo(
+    (): LibraryCollection | undefined =>
+      summary === undefined || games === undefined
+        ? undefined
+        : { id: summary.id, name: summary.name, source: summary.source, addedAt: summary.addedAt, games },
+    [summary, games],
+  );
 
   const number = /^\d+$/.test(game ?? "") ? Number(game) : NaN;
-  const pgn =
-    state.status === "ready" && number >= 1 ? state.collection.games[number - 1] : undefined;
+  const pgn = collection !== undefined && number >= 1 ? collection.games[number - 1] : undefined;
   const tree = useMemo((): GameTree | null | undefined => {
     if (pgn === undefined) return undefined;
     try {
@@ -46,7 +55,7 @@ function LibraryGameScreen() {
       </Typography>
     );
   }
-  if (state.status === "missing") return <LibraryMiss what="collection" />;
+  if (collection === undefined) return <LibraryMiss what="collection" />;
   if (tree === undefined) return <LibraryMiss what="game" />;
   if (tree === null) {
     return (
@@ -55,17 +64,17 @@ function LibraryGameScreen() {
         <Button
           variant="outlined"
           component={RouterLink}
-          to={`/library/${encodeURIComponent(state.collection.id)}`}
+          to={`/library/${encodeURIComponent(collection.id)}`}
         >
-          {t("library.game.back", { name: state.collection.name })}
+          {t("library.game.back", { name: collection.name })}
         </Button>
       </Box>
     );
   }
   return (
     <LibraryGameBoard
-      key={`${state.collection.id}/${number}`}
-      collection={state.collection}
+      key={`${collection.id}/${number}`}
+      collection={collection}
       number={number}
       tree={tree}
     />

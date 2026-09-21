@@ -876,8 +876,6 @@ const en = {
     count_other: "{{count}} collections",
     games_one: "{{count}} game",
     games_other: "{{count}} games",
-    /** A shipped file's count, while it is still being fetched. */
-    counting: "Counting games…",
     shipped: "Shipped",
     uploaded: "Uploaded",
     add: "Add collection",
@@ -894,6 +892,8 @@ const en = {
       download: "Download PGN",
       delete: "Delete collection",
       loading: "Reading the collection…",
+      /** The `#` cell's mark on a game the index could not parse. */
+      unreadable: "This game could not be read — its moves have an error.",
       /** The column headers — `lib/libraryCollections.ts`'s `COLLECTION_COLUMNS`. */
       columns: {
         number: "#",
@@ -931,11 +931,15 @@ const en = {
       read_other: "{{count}} games found",
       save: "Add collection",
       pastedName: "Pasted collection",
-      storage: "Collections you add are kept in this browser only. Clearing site data removes them, and they do not follow you to another device.",
+      storage: "Collections you add are kept in this browser only. Clearing site data removes them, and they do not follow you to another device. Every game is checked when it is added — a few seconds for a tournament, a minute or more for 10,000 games.",
+      /** The index pass over an upload's games, before it is kept. */
+      indexing: "Checking games… {{done}} of {{total}}",
+      cancel: "Cancel",
       problem: {
         empty: "There is no PGN in that.",
         unreadable: "No game could be read in that.",
-        "too-large": "That is too large to keep in this browser.",
+        "too-large": "That is too large — a collection can be up to about 30 million characters (some 30,000 games).",
+        index: "The games could not be checked. Nothing was added.",
         storage: "It could not be saved — this browser's storage is full or unavailable.",
         missing: "That collection is gone.",
         file: "Could not read that file.",

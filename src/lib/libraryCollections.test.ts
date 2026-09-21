@@ -7,10 +7,10 @@ import {
   collectionRowsOf,
   filteredRows,
   mainlinePlies,
+  MAX_COLLECTION_CHARS,
   readCollectionText,
   sortedRows,
 } from "./libraryCollections";
-import { MAX_UPLOAD_CHARS } from "./pgnText";
 
 const GAME = (tags: Record<string, string>, moves: string) =>
   `${Object.entries(tags)
@@ -124,7 +124,7 @@ describe("readCollectionText", () => {
   it("refuses an empty, an unreadable and an oversized text", () => {
     expect(readCollectionText("  \n")).toEqual({ ok: false, problem: "empty" });
     expect(readCollectionText("just words")).toEqual({ ok: false, problem: "unreadable" });
-    expect(readCollectionText(`${A}\n${" ".repeat(MAX_UPLOAD_CHARS)}`)).toEqual({
+    expect(readCollectionText(`${A}\n${" ".repeat(MAX_COLLECTION_CHARS)}`)).toEqual({
       ok: false,
       problem: "too-large",
     });

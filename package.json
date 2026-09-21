@@ -8,6 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "wirepgn": "node scripts/wirepgn.js",
     "test": "vitest",
     "test:run": "vitest run"
   },
@@ -45,6 +46,7 @@
     "eslint": "^10.9.1",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.5",
+    "fake-indexeddb": "^6.2.5",
     "globals": "^17.12.0",
     "jsdom": "^30.0.1",
     "typescript": "~6.0.3",

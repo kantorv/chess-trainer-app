@@ -13,13 +13,16 @@ import { useTranslation } from "react-i18next";
 
 import { shippedCollections } from "../../lib/shippedCollections";
 import { RightPanel } from "../main/rightPanel";
-import { useShippedGameCounts, useUploadedCollections } from "./useLibraryCollections";
+import { useUploadedCollections } from "./useLibraryCollections";
 
 /**
  * **The Library** (`/library`, CTA-75) — its collections, one level: the
- * shipped ones (one per `.pgn` under `src/data/library/`, by name) and then
- * the reader's uploads (newest first). Each row opens the collection's table.
- * A shipped file's game count arrives once the file has been fetched.
+ * shipped ones (wired by `scripts/wirepgn.js`, by name) and then the reader's
+ * uploads (newest first). Each row opens the collection's table.
+ *
+ * **Listing fetches nothing.** A shipped collection's name and game count are
+ * its manifest entry (`src/data/library/manifest.json`); an upload's are its
+ * small IndexedDB summary — no index and no game is read to draw this page.
  */
 function CollectionRow({
   id,
@@ -30,7 +33,7 @@ function CollectionRow({
   id: string;
   name: string;
   source: "shipped" | "uploaded";
-  games: number | undefined;
+  games: number;
 }) {
   const { t } = useTranslation();
   return (
@@ -46,9 +49,7 @@ function CollectionRow({
       <ListItemText
         primary={name}
         slotProps={{ primary: { dir: "auto", sx: { fontWeight: 600 } } }}
-        secondary={
-          games === undefined ? t("library.counting") : t("library.games", { count: games })
-        }
+        secondary={t("library.games", { count: games })}
       />
       <Chip
         size="small"
@@ -61,8 +62,7 @@ function CollectionRow({
 
 function LibraryHome() {
   const { t } = useTranslation();
-  const counts = useShippedGameCounts();
-  const uploaded = useUploadedCollections();
+  const uploaded = useUploadedCollections() ?? [];
   const total = shippedCollections.length + uploaded.length;
 
   return (
@@ -115,7 +115,7 @@ function LibraryHome() {
                 id={entry.id}
                 name={entry.name}
                 source="shipped"
-                games={counts.get(entry.id)}
+                games={entry.count}
               />
             ))}
             {uploaded.map((collection) => (
@@ -124,7 +124,7 @@ function LibraryHome() {
                 id={collection.id}
                 name={collection.name}
                 source="uploaded"
-                games={collection.games.length}
+                games={collection.count}
               />
             ))}
           </List>

@@ -13,6 +13,7 @@ import { Link as RouterLink, useLocation, useNavigate, useSearchParams } from "r
 import { useTranslation } from "react-i18next";
 import type { ChessboardOptions } from "react-chessboard";
 
+import { indexGame } from "../../lib/collectionIndex";
 import { initialPlyOf } from "../../lib/gameNavigation";
 import { mainlineGame, sanPathTo, treeToPgn, type GameTree } from "../../lib/gameTree";
 import {
@@ -57,7 +58,8 @@ import { useAnalysisSession } from "../tools/analysis/useAnalysisSession";
  *
  * - an **uploaded** collection's game: **Update** (the game is rewritten in
  *   place in the collection), **Save as copy** (a copy inserted right after
- *   it, and the board goes on in the copy) or **Discard**;
+ *   it, and the board goes on in the copy) or **Discard** — each write taking
+ *   the game's new index row with it (`indexGame`), so the table is in step;
  * - a **shipped** collection's game is read-only: **Save as copy** writes it
  *   into **Saved analyses** and opens it there (`?analysis=<id>`), or
  *   **Discard**.
@@ -144,18 +146,20 @@ function LibraryGameBoard({ collection, number, tree }: LibraryGameBoardProps) {
   const gamePath = (other: number) => `/library/${encodeURIComponent(collection.id)}/${other}`;
 
   /** **Update** — an uploaded collection's game, rewritten in place. */
-  const update = () => {
-    const failed = replaceCollectionGame(collection.id, number, treeToPgn(core.tree));
+  const update = async () => {
+    const tree = core.tree;
+    const pgn = treeToPgn(tree);
+    const failed = await replaceCollectionGame(collection.id, number, pgn, await indexGame(pgn));
     if (failed !== undefined) {
       setProblem(failed);
       return;
     }
     setProblem(null);
-    session.rebase(core.tree);
+    session.rebase(tree);
   };
 
   /** **Save as copy** — beside the original in an upload; into Saved analyses from a shipped file. */
-  const saveCopy = () => {
+  const saveCopy = async () => {
     if (shipped) {
       const record = {
         ...savedAnalysisOf(
@@ -176,7 +180,8 @@ function LibraryGameBoard({ collection, number, tree }: LibraryGameBoardProps) {
       navigate(`/tools/analysis?analysis=${encodeURIComponent(record.id)}`);
       return;
     }
-    const failed = insertCollectionGame(collection.id, number + 1, treeToPgn(core.tree));
+    const pgn = treeToPgn(core.tree);
+    const failed = await insertCollectionGame(collection.id, number + 1, pgn, await indexGame(pgn));
     if (failed !== undefined) {
       setProblem(failed);
       return;
@@ -375,8 +380,8 @@ function LibraryGameBoard({ collection, number, tree }: LibraryGameBoardProps) {
                     : t("library.changes.added", { count: session.extensionIds.size })
                 }
                 problem={problem}
-                onUpdate={update}
-                onCopy={saveCopy}
+                onUpdate={() => void update()}
+                onCopy={() => void saveCopy()}
                 onDiscard={discard}
               />
             )}

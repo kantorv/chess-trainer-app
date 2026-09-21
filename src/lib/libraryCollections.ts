@@ -1,6 +1,6 @@
 import { gameTag } from "./gameModel";
 import { readPgnParts, splitPgnGames } from "./pgn";
-import { MAX_UPLOAD_CHARS, slugify } from "./pgnText";
+import { slugify } from "./pgnText";
 
 /**
  * **The Library's collections** (CTA-75) — what one is, and how its games
@@ -18,15 +18,42 @@ import { MAX_UPLOAD_CHARS, slugify } from "./pgnText";
  * a PGN is an id (two games of one round can share every tag), and a number is
  * what a reader says ("game 12 of the Morphy collection").
  *
- * **The table is read without `chess.js`.** A row is the game's tags, read
- * with the same tag reader `parsePgnTree` uses, and its length, counted off
- * the movetext as text ({@link mainlinePlies}). Parsing all 674 games of the
- * World Cup file to fill one column would be seconds; a game is parsed when it
- * is opened, and one that will not parse says so there.
+ * **A row is read without `chess.js`** ({@link collectionRowOf}): the game's
+ * tags, read with the same tag reader `parsePgnTree` uses, and its length,
+ * counted off the movetext as text ({@link mainlinePlies}). The table does not
+ * build rows at all any more: it reads a collection's **index**
+ * (`lib/collectionIndex.ts`), made once — by `scripts/wirepgn.js` for a
+ * shipped file, on the way in for an upload — which starts from these rows
+ * and adds what only a real parse can say.
  */
 
 /** Where a collection came from — the one thing that decides what a save may write. */
 export type CollectionSource = "shipped" | "uploaded";
+
+/**
+ * **The most text one collection may be** — 30,000,000 characters, about
+ * 30,000 games of the World Cup file's ~950 characters each. An upload is kept
+ * in IndexedDB (`lib/libraryCollectionStore.ts`), whose quota is a share of
+ * the disk rather than `localStorage`'s few megabytes, so this is a guard on
+ * the tab's memory (a text is held twice while it is read), not on storage.
+ */
+export const MAX_COLLECTION_CHARS = 30_000_000;
+
+/**
+ * What is known of a collection **without its games** — enough for the
+ * Library's list and a table's header. A shipped file's summary is its
+ * manifest entry (`src/data/library/manifest.json`), so listing the Library
+ * fetches nothing; an upload's is its own IndexedDB record.
+ */
+export type CollectionSummary = {
+  id: string;
+  name: string;
+  source: CollectionSource;
+  /** How many games it holds. */
+  count: number;
+  /** ISO 8601 — when an upload was added. Absent for a shipped file. */
+  addedAt?: string;
+};
 
 export type LibraryCollection = {
   /** Its route segment: a shipped file's slug, or an upload's minted id. */
@@ -81,6 +108,11 @@ export type CollectionRow = {
   opening?: string;
   /** Full moves in the mainline — a game of 41 plies is 21 moves. */
   moves: number;
+  /**
+   * The game will not parse (`parsePgnTree` throws) — its board will say so.
+   * Set by the index's `chess.js` pass; absent when the game reads.
+   */
+  unreadable?: boolean;
 };
 
 /** The results a table can be narrowed to — PGN's four. */
@@ -284,20 +316,31 @@ export type CollectionReading =
   | { ok: false; problem: CollectionTextProblem };
 
 /**
+ * A text's games: cut where an `[Event …]` follows a blank line
+ * (`splitPgnGames`), each chunk kept as it stood, and a chunk holding no tag
+ * pair and no SAN move — stray prose — left out. The one cutting rule, shared
+ * by an upload ({@link readCollectionText}) and `scripts/wirepgn.js`, so a
+ * file wired into the build and the same file uploaded are the same games.
+ */
+export const collectionGamesOf = (text: string): string[] =>
+  splitPgnGames(text).filter((chunk) => {
+    const { headers, movetext } = readPgnParts(chunk);
+    return Object.keys(headers).length > 0 || mainlineTokens(movetext).some((token) => SAN.test(token));
+  });
+
+/**
  * A file's text or a paste, read as a collection: line endings normalised,
- * cut into games, each chunk kept as it stood. `name` is the `Event` every
- * game shares, when they do — what a tournament export is called. A text
- * holding no game (no tag pair and no SAN move) is `unreadable`.
+ * cut into games ({@link collectionGamesOf}), refused past
+ * {@link MAX_COLLECTION_CHARS}. `name` is the `Event` every game shares, when
+ * they do — what a tournament export is called. A text holding no game (no
+ * tag pair and no SAN move) is `unreadable`.
  */
 export const readCollectionText = (text: string): CollectionReading => {
   const normalised = text.replace(/\r\n?/g, "\n");
   if (normalised.trim() === "") return { ok: false, problem: "empty" };
-  if (normalised.length > MAX_UPLOAD_CHARS) return { ok: false, problem: "too-large" };
+  if (normalised.length > MAX_COLLECTION_CHARS) return { ok: false, problem: "too-large" };
 
-  const games = splitPgnGames(normalised).filter((chunk) => {
-    const { headers, movetext } = readPgnParts(chunk);
-    return Object.keys(headers).length > 0 || mainlineTokens(movetext).some((token) => SAN.test(token));
-  });
+  const games = collectionGamesOf(normalised);
   if (games.length === 0) return { ok: false, problem: "unreadable" };
 
   const events = new Set(games.map((pgn) => gameTag(readPgnParts(pgn).headers, "Event")));

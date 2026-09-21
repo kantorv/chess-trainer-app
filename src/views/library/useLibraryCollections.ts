@@ -1,102 +1,114 @@
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 
 import {
+  loadUploadedGames,
+  loadUploadedRows,
+  peekUploadedGames,
+  peekUploadedRows,
   subscribeUploadedCollections,
   uploadedCollectionsSnapshot,
 } from "../../lib/libraryCollectionStore";
-import type { LibraryCollection } from "../../lib/libraryCollections";
+import type { CollectionRow, CollectionSummary } from "../../lib/libraryCollections";
 import {
   findShippedCollection,
-  loadedShippedCollection,
-  shippedCollections,
+  peekShippedGames,
+  peekShippedRows,
+  subscribeShipped,
 } from "../../lib/shippedCollections";
 
 /**
- * The Library's React bindings (CTA-75) — the upload store through
- * `useSyncExternalStore`, and a shipped file fetched on first use — so
- * `src/lib/` stays free of React.
+ * The Library's React bindings (CTA-75), so `src/lib/` stays free of React. A
+ * collection comes in **three parts, each read only when a screen needs it**:
+ *
+ * - its **summary** — the Library's list (a shipped one's is the manifest's,
+ *   read with no fetch; an upload's is its IndexedDB record);
+ * - its **rows** — the table, off its index;
+ * - its **games** — a board, or the download.
+ *
+ * Each part is `useSyncExternalStore` over what the stores have already read
+ * (a second visit renders on its first frame), and an effect that asks for it
+ * when nothing has been — so an Update made on a board is in the table on
+ * the way back.
  */
 
-/** The reader's uploaded collections, newest first. */
-export const useUploadedCollections = (): readonly LibraryCollection[] =>
+/** The reader's uploaded collections, newest first — `undefined` while the first read is out. */
+export const useUploadedCollections = (): readonly CollectionSummary[] | undefined =>
   useSyncExternalStore(
     subscribeUploadedCollections,
     uploadedCollectionsSnapshot,
     uploadedCollectionsSnapshot,
   );
 
-export type CollectionState =
+export type CollectionPart<T> =
   | { status: "loading" }
   | { status: "missing" }
-  | { status: "ready"; collection: LibraryCollection };
+  | { status: "ready"; summary: CollectionSummary; value: T };
 
-/**
- * One collection by its route segment: a shipped file (fetched the first time,
- * synchronous after that) or an upload (live from the store, so an Update
- * made on its board is in the table on the way back).
- */
-export const useCollection = (id: string | undefined): CollectionState => {
+/** One collection's summary: a shipped file's, or an upload's once the list is read. */
+export const useCollectionSummary = (
+  id: string | undefined,
+): { status: "loading" } | { status: "missing" } | { status: "ready"; summary: CollectionSummary } => {
   const uploaded = useUploadedCollections();
-  const entry = findShippedCollection(id);
-  const [fetched, setFetched] = useState<LibraryCollection | null | undefined>(() =>
-    loadedShippedCollection(id),
-  );
-  const current = fetched === null || fetched?.id === id ? fetched : loadedShippedCollection(id);
+  const shipped = findShippedCollection(id);
+  if (shipped !== undefined) return { status: "ready", summary: shipped };
+  if (uploaded === undefined) return { status: "loading" };
+  const summary = uploaded.find((candidate) => candidate.id === id);
+  return summary === undefined ? { status: "missing" } : { status: "ready", summary };
+};
 
-  useEffect(() => {
-    if (entry === undefined || current !== undefined) return;
-    let live = true;
-    entry.load().then(
-      (collection) => live && setFetched(collection),
-      // A chunk that will not load is a collection that is not there.
-      () => live && setFetched(null),
-    );
-    return () => {
-      live = false;
-    };
-  }, [entry, current]);
+const subscribeAll = (listener: () => void) => {
+  const shipped = subscribeShipped(listener);
+  const uploaded = subscribeUploadedCollections(listener);
+  return () => {
+    shipped();
+    uploaded();
+  };
+};
 
-  if (entry !== undefined) {
-    if (current === null) return { status: "missing" };
-    return current === undefined ? { status: "loading" } : { status: "ready", collection: current };
+type Part = "rows" | "games";
+
+const peek = (summary: CollectionSummary | undefined, part: Part) => {
+  if (summary === undefined) return undefined;
+  if (summary.source === "shipped") {
+    return part === "rows" ? peekShippedRows(summary.id) : peekShippedGames(summary.id);
   }
-  const collection = uploaded.find((candidate) => candidate.id === id);
-  return collection === undefined ? { status: "missing" } : { status: "ready", collection };
+  return part === "rows" ? peekUploadedRows(summary.id) : peekUploadedGames(summary.id);
 };
 
-/**
- * How many games each shipped collection holds, by id — fetched in the
- * background for the Library's list, filled in as each file arrives.
- */
-export const useShippedGameCounts = (): ReadonlyMap<string, number> => {
-  const [counts, setCounts] = useState<ReadonlyMap<string, number>>(
-    () =>
-      new Map(
-        shippedCollections.flatMap((entry) => {
-          const loaded = loadedShippedCollection(entry.id);
-          return loaded === undefined ? [] : [[entry.id, loaded.games.length] as const];
-        }),
-      ),
-  );
+/** Ask for one part — fetched once, whatever asks. `null` when it is not there. */
+const load = (summary: CollectionSummary, part: Part): Promise<unknown> => {
+  if (summary.source === "shipped") {
+    const entry = findShippedCollection(summary.id);
+    if (entry === undefined) return Promise.resolve(null);
+    // A failure is kept by the store as `null`, which reads as "missing".
+    return (part === "rows" ? entry.loadRows() : entry.loadGames()).catch(() => null);
+  }
+  return part === "rows" ? loadUploadedRows(summary.id) : loadUploadedGames(summary.id);
+};
+
+function useCollectionPart<T>(id: string | undefined, part: Part): CollectionPart<T> {
+  const state = useCollectionSummary(id);
+  const summary = state.status === "ready" ? state.summary : undefined;
+  const value = useSyncExternalStore(subscribeAll, () => peek(summary, part)) as T | null | undefined;
 
   useEffect(() => {
-    let live = true;
-    for (const entry of shippedCollections) {
-      entry.load().then(
-        (collection) =>
-          live &&
-          setCounts((before) =>
-            before.get(entry.id) === collection.games.length
-              ? before
-              : new Map(before).set(entry.id, collection.games.length),
-          ),
-        () => undefined,
-      );
-    }
-    return () => {
-      live = false;
-    };
-  }, []);
+    if (summary !== undefined && value === undefined) void load(summary, part);
+  }, [summary, value, part]);
 
-  return counts;
-};
+  if (state.status !== "ready") return state;
+  if (value === null) return { status: "missing" };
+  return value === undefined ? { status: "loading" } : { status: "ready", summary: state.summary, value };
+}
+
+/** A collection's table rows, off its index. */
+export const useCollectionRows = (id: string | undefined) =>
+  useCollectionPart<readonly CollectionRow[]>(id, "rows");
+
+/** A collection's games — the whole PGN of a shipped file, or an upload's record. */
+export const useCollectionGames = (id: string | undefined) =>
+  useCollectionPart<readonly string[]>(id, "games");
+
+/** A collection's games, for a one-off (the table's download). `null` when they are not there. */
+export const loadCollectionGames = async (
+  summary: CollectionSummary,
+): Promise<readonly string[] | null> => (await load(summary, "games")) as readonly string[] | null;

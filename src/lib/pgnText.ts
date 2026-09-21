@@ -2,7 +2,7 @@
  * **Small text rules over PGN that no one reader owns** — a slug for a file
  * name, a repertoire chapter's `"N) "` prefix, and the most text one stored
  * PGN may be. Several screens and stores use each of them (the saved lists'
- * downloads, the repertoires' chapter names, the Library's uploads), so they
+ * downloads, the repertoires' chapter names), so they
  * live here rather than in any one of those. Pure.
  */
 
@@ -37,14 +37,13 @@ export const chapterPrefix = (
 };
 
 /**
- * The most one stored PGN text may be, in characters — a repertoire, or a
- * Library collection the reader uploads.
+ * The most one stored PGN text may be, in characters — a repertoire. (A
+ * Library collection is kept in IndexedDB, not `localStorage`, and has its own
+ * limit, `MAX_COLLECTION_CHARS` in `lib/libraryCollections.ts`.)
  *
  * `localStorage` is a few megabytes for the whole origin (browsers count
  * UTF-16 code units, so about five million characters), shared with anything
  * else the app keeps there, and a text refused with a reason is a better
- * outcome than a quota error halfway through a write. The largest shipped
- * collection, the 674-game World Cup 2023, is ~640,000 characters — about a
- * fifth of this.
+ * outcome than a quota error halfway through a write.
  */
 export const MAX_UPLOAD_CHARS = 3_000_000;

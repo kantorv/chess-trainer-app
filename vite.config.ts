@@ -25,6 +25,14 @@ export default defineConfig({
   */
   base: '/chess-trainer-app/',
   plugins: [react()],
+  /*
+    The Library indexes an upload in a module worker
+    (`src/lib/collectionIndex.worker.ts`), which loads the opening book's five
+    shards with dynamic `import()`. Vite's default worker format, `iife`,
+    cannot code-split, so the worker is built as an ES module — which a
+    `{ type: "module" }` worker is anyway.
+  */
+  worker: { format: 'es' },
   test: {
     environment: 'jsdom',
     globals: true,
