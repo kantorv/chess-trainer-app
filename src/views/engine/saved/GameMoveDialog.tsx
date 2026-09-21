@@ -22,6 +22,8 @@ import FolderPicker from "./FolderPicker";
  */
 function GameMoveDialog({
   open,
+  labelKey = "savedGames",
+  idPrefix = "game-folder",
   folders,
   game,
   onFile,
@@ -30,28 +32,34 @@ function GameMoveDialog({
   open: boolean;
   /** Every folder in the reader's tree, as the store holds them. */
   folders: readonly GameFolder[];
-  /** The game being filed. */
-  game: SavedGame | null;
+  /** The game being filed — only its folder is read, so any filed record fits. */
+  game: Pick<SavedGame, "folderId"> | null;
   onFile: (folderId: string | null) => void;
   onClose: () => void;
+  /** The locale block — `savedGames` by default; its `folder.*` keys are read. */
+  labelKey?: string;
+  /** The test-id prefix — `game-folder` by default. */
+  idPrefix?: string;
 }) {
   const { t } = useTranslation();
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="xs">
-      <DialogTitle>{t("savedGames.folder.moveGame")}</DialogTitle>
+      <DialogTitle>{t(`${labelKey}.folder.moveGame`)}</DialogTitle>
       <DialogContent>
         <FolderPicker
+          labelKey={labelKey}
+          idPrefix={idPrefix}
           folders={folders}
           value={game?.folderId ?? null}
           onChange={onFile}
-          noneLabel={t("savedGames.folder.unfiled")}
-          noneTestId="game-folder-unfiled"
+          noneLabel={t(`${labelKey}.folder.unfiled`)}
+          noneTestId={`${idPrefix}-unfiled`}
         />
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} data-testid="game-folder-move-cancel">
-          {t("savedGames.folder.cancel")}
+        <Button onClick={onClose} data-testid={`${idPrefix}-move-cancel`}>
+          {t(`${labelKey}.folder.cancel`)}
         </Button>
       </DialogActions>
     </Dialog>

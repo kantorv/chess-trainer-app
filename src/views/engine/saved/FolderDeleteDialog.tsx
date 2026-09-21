@@ -20,6 +20,8 @@ import type { GameFolder } from "../../../lib/savedGameFolders";
  */
 function FolderDeleteDialog({
   open,
+  labelKey = "savedGames",
+  idPrefix = "game-folder",
   folder,
   games,
   subFolders,
@@ -35,6 +37,10 @@ function FolderDeleteDialog({
   subFolders: number;
   onConfirm: () => void;
   onClose: () => void;
+  /** The locale block — `savedGames` by default; its `folder.*` keys are read. */
+  labelKey?: string;
+  /** The test-id prefix — `game-folder` by default. */
+  idPrefix?: string;
 }) {
   const { t } = useTranslation();
 
@@ -42,24 +48,24 @@ function FolderDeleteDialog({
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="xs">
       <DialogTitle>
         {folder === null
-          ? t("savedGames.folder.deleteFolder")
-          : `${t("savedGames.folder.deleteFolder")}: ${folder.name}`}
+          ? t(`${labelKey}.folder.deleteFolder`)
+          : `${t(`${labelKey}.folder.deleteFolder`)}: ${folder.name}`}
       </DialogTitle>
       <DialogContent>
         <Typography variant="body2">
-          {t("savedGames.folder.deleteConfirm")}
+          {t(`${labelKey}.folder.deleteConfirm`)}
         </Typography>
         <Typography
           variant="caption"
-          data-testid="game-folder-delete-counts"
+          data-testid={`${idPrefix}-delete-counts`}
           sx={{ display: "block", mt: 1, color: "text.secondary" }}
         >
-          {t("savedGames.folder.deleteCounts", { games, subFolders })}
+          {t(`${labelKey}.folder.deleteCounts`, { games, subFolders })}
         </Typography>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} data-testid="game-folder-delete-cancel">
-          {t("savedGames.folder.cancel")}
+        <Button onClick={onClose} data-testid={`${idPrefix}-delete-cancel`}>
+          {t(`${labelKey}.folder.cancel`)}
         </Button>
         <Button
           color="error"
@@ -68,9 +74,9 @@ function FolderDeleteDialog({
             onClose();
           }}
           variant="contained"
-          data-testid="game-folder-delete-confirm"
+          data-testid={`${idPrefix}-delete-confirm`}
         >
-          {t("savedGames.folder.deleteFolder")}
+          {t(`${labelKey}.folder.deleteFolder`)}
         </Button>
       </DialogActions>
     </Dialog>

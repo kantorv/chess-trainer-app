@@ -307,6 +307,7 @@ function TreeMap({
   nodeId,
   onSelectNode,
   onEditTree,
+  playChances,
   addedIds,
 }: {
   testId: string;
@@ -320,6 +321,8 @@ function TreeMap({
   onSelectNode?: (id: string) => void;
   /** Opt-in: the move menu on a written move, and where its edits go — the player's. */
   onEditTree?: (next: GameTree) => void;
+  /** Whether that menu offers *Play chances…* — `MoveContextMenu`'s default when absent. */
+  playChances?: boolean;
   /** The moves in `tree` the reader added this session — the player's. */
   addedIds?: ReadonlySet<string>;
 }) {
@@ -516,6 +519,7 @@ function TreeMap({
           open={menuOpen}
           onClose={() => setMenuOpen(false)}
           onEditTree={onEditTree}
+          playChances={playChances}
         />
       )}
     </Box>

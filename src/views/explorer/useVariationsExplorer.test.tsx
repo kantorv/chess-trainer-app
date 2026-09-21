@@ -90,6 +90,21 @@ describe("useVariationsExplorer — the opt-in parts", () => {
     expect(screen.getByTestId("move-menu")).toBeInTheDocument();
   });
 
+  it("offers Play chances at a branch unless told not to (CTA-73)", () => {
+    // 2. Nf3 has two alternatives, so its menu offers the branch's chances…
+    const { unmount } = mount({ onEditTree: vi.fn() });
+    fireEvent.contextMenu(screen.getByTestId("move-ply-3"));
+    expect(screen.getByTestId("move-menu-chances")).toBeInTheDocument();
+    unmount();
+
+    // …and a board with nothing to play by them (the Analysis Board) turns it off.
+    mount({ onEditTree: vi.fn(), playChances: false });
+    fireEvent.contextMenu(screen.getByTestId("move-ply-3"));
+    expect(screen.getByTestId("move-menu")).toBeInTheDocument();
+    expect(screen.getByTestId("move-menu-delete")).toBeInTheDocument();
+    expect(screen.queryByTestId("move-menu-chances")).toBeNull();
+  });
+
   it("renders the map and the comment block when asked for", () => {
     mount({ map: {}, annotations: true, nodeId: at(tree, "e4") });
     expect(screen.getByTestId("x-map")).toBeInTheDocument();

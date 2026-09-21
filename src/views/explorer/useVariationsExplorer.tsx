@@ -69,6 +69,11 @@ export type VariationsExplorerOptions = {
    * handed here (the core's `replaceTree`). Absent, the explorer is read-only.
    */
   onEditTree?: (next: GameTree) => void;
+  /**
+   * Whether the move menu offers *Play chances…* (on by default) — a board
+   * with no trainer to play by them (the Analysis Board, CTA-73) turns it off.
+   */
+  playChances?: boolean;
   /** Show the comment block. */
   annotations?: boolean;
   /** The arrows part; absent draws none but a hovered move's. */
@@ -105,6 +110,7 @@ export function useVariationsExplorer({
   evalsByFen,
   extensionIds,
   onEditTree,
+  playChances: offerPlayChances,
   annotations: showAnnotations = false,
   arrows: arrowOptions = NO_ARROWS,
   map,
@@ -230,6 +236,7 @@ export function useVariationsExplorer({
         extensionIds={extensionIds}
         evalsByFen={evalsByFen}
         onEditTree={onEditTree}
+        playChances={offerPlayChances}
       />
     ),
     map:
@@ -242,6 +249,7 @@ export function useVariationsExplorer({
           nodeId={map.nodeId === undefined ? nodeId : map.nodeId}
           onSelectNode={map.linked === true ? goToNode : undefined}
           onEditTree={onEditTree}
+          playChances={offerPlayChances}
         />
       ),
     annotations: showAnnotations ? (

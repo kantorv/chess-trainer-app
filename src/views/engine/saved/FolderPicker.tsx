@@ -30,6 +30,8 @@ import {
  */
 function FolderPicker({
   folders,
+  labelKey = "savedGames",
+  idPrefix = "game-folder",
   value,
   onChange,
   noneLabel,
@@ -46,6 +48,10 @@ function FolderPicker({
   noneTestId: string;
   /** Folder ids not offered — the moved folder's own subtree, when moving one. */
   exclude?: readonly string[];
+  /** The locale block — `savedGames` by default; its `folder.*` keys are read. */
+  labelKey?: string;
+  /** The test-id prefix — `game-folder` by default. */
+  idPrefix?: string;
 }) {
   const { t } = useTranslation();
 
@@ -55,7 +61,7 @@ function FolderPicker({
   );
 
   return (
-    <List dense disablePadding data-testid="game-folder-picker">
+    <List dense disablePadding data-testid={`${idPrefix}-picker`}>
       <ListItemButton
         selected={value === null}
         onClick={() => onChange(null)}
@@ -70,7 +76,7 @@ function FolderPicker({
           key={folder.id}
           selected={value === folder.id}
           onClick={() => onChange(folder.id)}
-          data-testid={`game-folder-picker-${folder.id}`}
+          data-testid={`${idPrefix}-picker-${folder.id}`}
           sx={{ borderRadius: 0.5, paddingInlineStart: 2 + depth * 2.5 }}
         >
           <FolderRoundedIcon
@@ -78,7 +84,7 @@ function FolderPicker({
             sx={{ mr: 1.5, color: "text.secondary", flexShrink: 0 }}
           />
           <ListItemText
-            primary={folder.name === "" ? t("savedGames.untitled") : folder.name}
+            primary={folder.name === "" ? t(`${labelKey}.folder.untitled`) : folder.name}
             slotProps={{ primary: { noWrap: true } }}
           />
         </ListItemButton>

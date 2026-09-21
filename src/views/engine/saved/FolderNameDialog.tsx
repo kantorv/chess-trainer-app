@@ -19,6 +19,8 @@ import { useTranslation } from "react-i18next";
  */
 function FolderNameDialog({
   open,
+  labelKey = "savedGames",
+  idPrefix = "game-folder",
   title,
   initial,
   onSave,
@@ -31,6 +33,10 @@ function FolderNameDialog({
   initial: string;
   onSave: (name: string) => void;
   onClose: () => void;
+  /** The locale block — `savedGames` by default; its `folder.*` keys are read. */
+  labelKey?: string;
+  /** The test-id prefix — `game-folder` by default. */
+  idPrefix?: string;
 }) {
   const { t } = useTranslation();
   const [name, setName] = useState(initial);
@@ -54,7 +60,7 @@ function FolderNameDialog({
         <TextField
           autoFocus
           fullWidth
-          label={t("savedGames.folder.name")}
+          label={t(`${labelKey}.folder.name`)}
           value={name}
           onChange={(event) => setName(event.target.value)}
           onKeyDown={(event) => {
@@ -63,12 +69,12 @@ function FolderNameDialog({
               if (name.trim() !== "") onSave(name);
             }
           }}
-          slotProps={{ htmlInput: { "data-testid": "game-folder-name-input" } }}
+          slotProps={{ htmlInput: { "data-testid": `${idPrefix}-name-input` } }}
         />
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} data-testid="game-folder-name-cancel">
-          {t("savedGames.folder.cancel")}
+        <Button onClick={onClose} data-testid={`${idPrefix}-name-cancel`}>
+          {t(`${labelKey}.folder.cancel`)}
         </Button>
         <Button
           disabled={name.trim() === ""}
@@ -77,9 +83,9 @@ function FolderNameDialog({
             onClose();
           }}
           variant="contained"
-          data-testid="game-folder-name-save"
+          data-testid={`${idPrefix}-name-save`}
         >
-          {t("savedGames.folder.save")}
+          {t(`${labelKey}.folder.save`)}
         </Button>
       </DialogActions>
     </Dialog>
