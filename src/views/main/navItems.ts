@@ -4,20 +4,20 @@ import LibraryAddRoundedIcon from "@mui/icons-material/LibraryAddRounded";
 import MenuBookRoundedIcon from "@mui/icons-material/MenuBookRounded";
 import SportsEsportsRoundedIcon from "@mui/icons-material/SportsEsportsRounded";
 import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
+import ViewListRoundedIcon from "@mui/icons-material/ViewListRounded";
 import DashboardCustomizeRoundedIcon from "@mui/icons-material/DashboardCustomizeRounded";
 import VisibilityOffRoundedIcon from "@mui/icons-material/VisibilityOffRounded";
 
-import type { LocalizedText } from "../../lib/libraryCatalog";
+import type { LocalizedText } from "../../lib/localizedText";
 import { devNavItems } from "../dev/devNav";
 import type { NavFolderId } from "./navFolders";
-import { userPgnsNavItems } from "./navFromLibrary";
 
 export type NavItem = {
   /** Route path, matched against `useLocation().pathname` for the active state. */
   to: string;
   /** i18n key — for an authored screen, whose name is chrome the app ships. */
   labelKey?: string;
-  /** Per-language name — for a screen generated from a data catalog. */
+  /** Per-language name — for a screen whose name is data, not chrome. */
   label?: LocalizedText;
   icon: SvgIconComponent;
   /** The folder this screen hangs under in the sidebar — an id from `navFolders`. */
@@ -29,15 +29,8 @@ export type NavItem = {
  * repeating a list item per route, so adding a screen is one entry here plus
  * the route in `App.tsx` and a string in both catalogs.
  *
- * The exception, and the reason `label` exists above, is the one generated
- * section: the User PGNs list screens come from the `.pgn` files under
- * `src/data/pgn/` (`navFromLibrary.ts`), one per category at any depth, named
- * from their data. They are served by a single splat route, so a new PGN file
- * needs no entry here and no route either.
- *
- * A **function**, for the reason `navFolders` is one: a `.pgn` the reader
- * uploads adds a screen while the app is running, so the list is built when it
- * is asked for rather than when this module is imported.
+ * A **function**, for the reason `navFolders` is one: the Development
+ * section's entries are a spread gated on `import.meta.env.DEV`.
  */
 export const navItems = (): readonly NavItem[] => [
   {
@@ -59,13 +52,23 @@ export const navItems = (): readonly NavItem[] => [
     icon: VisibilityOffRoundedIcon,
     folder: "masked-pieces",
   },
+  /*
+    The Library (CTA-75): the collections, and the screen one is brought in
+    on. A collection's table and a game's board are reached from the list —
+    routes, not nav entries.
+  */
   {
-    to: "/games/load-pgn",
-    labelKey: "nav.loadPgn",
-    icon: UploadFileRoundedIcon,
-    folder: "games",
+    to: "/library",
+    labelKey: "nav.libraryCollections",
+    icon: ViewListRoundedIcon,
+    folder: "library",
   },
-  ...userPgnsNavItems(),
+  {
+    to: "/library/new",
+    labelKey: "nav.addCollection",
+    icon: UploadFileRoundedIcon,
+    folder: "library",
+  },
   {
     to: "/tools/editor",
     labelKey: "nav.boardEditor",

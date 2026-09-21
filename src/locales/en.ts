@@ -21,7 +21,6 @@ const en = {
      * are two links a screen reader cannot tell apart.
      */
     maskedPlay: "Play with Engine (masked)",
-    loadPgn: "Load PGN",
     analysisBoard: "Analysis Board",
     savedAnalyses: "Saved analyses",
     boardEditor: "Board Editor",
@@ -29,21 +28,20 @@ const en = {
     /** The reader's own repertoires (CTA-61), and the screen they come in on. */
     repertoires: "My repertoires",
     addRepertoire: "Add repertoire",
+    /** The Library's two screens (CTA-75): the collections, and adding one. */
+    libraryCollections: "Collections",
+    addCollection: "Add collection",
     /** Sidebar folders — groupings over the routes, never routes themselves. */
     folders: {
       engine: "Engine",
       maskedPieces: "Masked Pieces",
-      games: "Games",
       tools: "Tools",
       analysisBoard: "Analysis Board",
       openings: "Openings",
       repertoires: "Repertoires",
       /**
-       * The Library section's root (was "User PGNs" before CTA-38). Its
-       * sub-folders have no key here and never will: they are generated — one
-       * per `.pgn` file under `src/data/pgn/` — and named from the file's own
-       * `StudyName` tag or from `src/data/pgn.json`, so dropping a PGN in never
-       * touches this catalog. The section itself is chrome, so it is named here.
+       * The Library (CTA-75). Its collections are not folders here — they are
+       * the rows of `/library`, named from their files and uploads.
        */
       library: "Library",
     },
@@ -62,15 +60,11 @@ const en = {
     analysisTitle: "Analysis",
     analysisPlaceholder: "Evaluation and move list will appear here.",
   },
-  /** The move list panel: chrome only — SAN itself is language-independent. */
+  /**
+   * The shared board controls and the shared tag table (`BoardControls.tsx`,
+   * `GameInfo.tsx`). Chrome only — SAN itself is language-independent.
+   */
   gamePanel: {
-    tabs: {
-      moves: "Moves",
-      info: "Info",
-      load: "Load PGN",
-      /** The Library game detail's third tab — its PGN annotation text. */
-      description: "Description",
-    },
     /** Accessible names for the icon-only board controls. */
     controls: {
       first: "Start position",
@@ -289,26 +283,6 @@ const en = {
     noMoves: "This game has no moves.",
     /** Read by a screen reader before a side line's moves. */
     variation: "Variation",
-  },
-  /** The Load PGN screen: the four ingestion controls, the picker, its errors. */
-  loadPgn: {
-    dropHint: "Drop a .pgn file here",
-    chooseFile: "Choose a .pgn file",
-    pasteLabel: "Or paste PGN text",
-    load: "Load",
-    gamesTitle: "Games in this file",
-    /** Fallback name for a game whose tags say nothing identifying. */
-    gameFallback: "Game {{number}}",
-    versus: "vs",
-    movesLoaded: "Moves: {{total}}",
-    emptyState: "No game loaded yet.",
-    errors: {
-      empty: "No PGN found in that input.",
-      /** `detail` is the underlying chess.js message — English, but specific. */
-      parse: "Could not read this PGN. {{detail}}",
-      parseGame: "Could not read game {{number}} in this file. {{detail}}",
-      file: "Could not read that file.",
-    },
   },
   /**
    * The Play with Engine screen — and Masked Pieces, which is that screen with
@@ -757,7 +731,8 @@ const en = {
     position: {
       chooseFile: "Choose a .pgn file",
       pasteLabel: "Or paste PGN text",
-      loadPgn: "Load PGN",
+      /** The paste box's button: the text onto the board. */
+      loadText: "Load",
       fenTitle: "Set a position up",
       fenLabel: "Paste a FEN",
       loadFen: "Set position",
@@ -840,7 +815,7 @@ const en = {
       chooseFile: "Choose a .pgn file",
       dropHint: "Drop a .pgn file here",
       pasteLabel: "Or paste PGN text",
-      load: "Load PGN",
+      load: "Load game",
       /** What loading one does here, which is not what it does elsewhere. */
       hint: "The game's final position is loaded into the editor.",
       gamesTitle: "Games in this file",
@@ -889,139 +864,146 @@ const en = {
     },
   },
   /**
-   * The **Library** section's chrome — `t(`${section.chromeKey}.…`)`, the
-   * shared key shape a library section carries, plus the keys a section whose
-   * items are **games** needs: `list.moves` for a card's caption and
-   * `detail.openInLoadPgn` for the hand-off only a game has. The shared key
-   * shape is a floor, not a ceiling; a section adds what its item kinds need.
-   * (Was `userPgns` before CTA-38 renamed "User PGNs" to "Library".)
-   *
-   * The folder and game names are *not* here. A folder is named from its file's
-   * `StudyName` tag or from `src/data/pgn.json`, and a game from its
-   * `ChapterName` or its players — which is what lets a new PGN file be a
-   * drop-in rather than a two-file locale edit.
+   * The **Library** (CTA-75) — collections of games, each a table, each game
+   * an analysis board. Chrome only: a collection is named from its file (or by
+   * the reader, for an upload) and a game by its players, so dropping a
+   * `.pgn` into `src/data/library/` never touches this catalog.
    */
   library: {
-    /** The list screen's panel. */
-    list: {
-      count: "Games: {{count}}",
-      /**
-       * A folder's sub-folders. In this section they are studies: a lichess
-       * export of every study an author wrote is one file holding many, and
-       * `loadPgnLibrary` gives each its own folder.
-       */
-      folders: "Studies: {{count}}",
-      empty: "No games in this file yet.",
-      hint: "Pick a game to replay it move by move, then hand it to the Analysis Board or take the position on screen to the engine.",
-      /**
-       * A game card's footer line, and the line under the name on its detail
-       * page. Plural forms rather than one string: the rosettes study ships a
-       * chapter that is a single move, and "1 moves" is the kind of thing a
-       * reader notices.
-       */
-      moves_one: "{{count}} move",
-      moves_other: "{{count}} moves",
-      /**
-       * The same two controls as the position sections carry, worded for a
-       * library of games — a search here matches a chapter's title, its
-       * players and its opening, not a position's name.
-       */
-      search: "Search games",
-      noMatches: "No games match that search.",
-      cardSize: {
-        label: "Card size",
-        compact: "Compact cards",
-        comfortable: "Comfortable cards",
+    /** `/library` — the collections. */
+    title: "Library",
+    count_one: "{{count}} collection",
+    count_other: "{{count}} collections",
+    games_one: "{{count}} game",
+    games_other: "{{count}} games",
+    /** A shipped file's count, while it is still being fetched. */
+    counting: "Counting games…",
+    shipped: "Shipped",
+    uploaded: "Uploaded",
+    add: "Add collection",
+    hint: "A collection is one PGN file of many games — a tournament, a player's games. Open one to sort and filter its games, and open a game to analyse it: side lines, the engine, Play against it, the map and comments.",
+    /** The table screen — `/library/<collection>`. */
+    table: {
+      back: "All collections",
+      filter: "Filter games",
+      result: "Result",
+      anyResult: "Any result",
+      shown: "{{shown}} of {{count}} games",
+      noMatches: "No games match the filter.",
+      rowsPerPage: "Rows per page",
+      download: "Download PGN",
+      delete: "Delete collection",
+      loading: "Reading the collection…",
+      /** The column headers — `lib/libraryCollections.ts`'s `COLLECTION_COLUMNS`. */
+      columns: {
+        number: "#",
+        white: "White",
+        whiteElo: "Elo",
+        black: "Black",
+        blackElo: "Elo",
+        result: "Result",
+        date: "Date",
+        round: "Round",
+        event: "Event",
+        eco: "ECO",
+        opening: "Opening",
+        moves: "Moves",
+      },
+      hint: "Click a column to sort by it, type to filter, and click a game to open it on an analysis board.",
+      shippedNote: "This collection ships with the app. Its games are read-only: changes you make on a game are saved as a copy in Saved analyses.",
+      uploadedNote: "You added this collection; it is kept in this browser only. Changes to a game can update it in place or be saved as a copy next to it.",
+    },
+    confirmDelete: {
+      title: "Delete {{name}}?",
+      body_one: "Its {{count}} game is removed from this browser. This cannot be undone.",
+      body_other: "Its {{count}} games are removed from this browser. This cannot be undone.",
+      cancel: "Cancel",
+      confirm: "Delete",
+    },
+    /** `/library/new` — a PGN file or a paste becomes a collection. */
+    upload: {
+      title: "Add a collection",
+      intro: "A collection is one PGN text of many games — a tournament export, a player's games. It becomes a folder of its own in the Library.",
+      name: "Name",
+      chooseFile: "Choose a .pgn file",
+      pasteLabel: "Or paste PGN text",
+      read_one: "{{count}} game found",
+      read_other: "{{count}} games found",
+      save: "Add collection",
+      pastedName: "Pasted collection",
+      storage: "Collections you add are kept in this browser only. Clearing site data removes them, and they do not follow you to another device.",
+      problem: {
+        empty: "There is no PGN in that.",
+        unreadable: "No game could be read in that.",
+        "too-large": "That is too large to keep in this browser.",
+        storage: "It could not be saved — this browser's storage is full or unavailable.",
+        missing: "That collection is gone.",
+        file: "Could not read that file.",
       },
     },
-    /**
-     * The **collection** screen — the index of a `.pgn` file that holds several
-     * studies (`views/pgn/PgnCollection.tsx`), and its left-hand nav.
-     *
-     * A section-specific block, which the shared key shape explicitly allows:
-     * only this section has files, so only this section has a kind of folder
-     * that is a shelf of studies rather than a folder of games.
-     */
-    /**
-     * The **Uploads** screen — the reader's own `.pgn` files
-     * (`views/pgn/PgnUploads.tsx`). Chrome, all of it: the folder ships with
-     * the app and is there before any file is, unlike the folders inside it,
-     * which are named from the files themselves.
-     */
-    uploads: {
-      /** The folder's name, in the sidebar and on the screen. */
-      title: "Uploads",
-      /** The button — a lichess study export is what it is mostly for. */
-      upload: "Upload lichess study",
-      count: "Files: {{count}}",
-      empty: "Nothing uploaded yet. Pick a .pgn file — a lichess study export, a chess.com download, or any PGN.",
-      hint: "In a lichess study, use the study menu → Export chapters, then pick the file here. An export of all of an author's studies works too: each study becomes a folder of its own.",
-      /** Said plainly: this is a browser, not a backup. */
-      storage: "Uploads are kept in this browser only. Clearing site data removes them, and they do not follow you to another device.",
-      remove: "Remove {{name}}",
-      /** What a file turned out to be — the `PgnKind` it loaded as. */
-      kinds: {
-        study: "Study",
-        collection: "Studies",
-        games: "Games",
-        shelf: "Folder",
-        uploads: "Uploads",
-      },
-      /** Why a picked file was not kept. Keyed by `UploadProblem`. */
-      problems: {
-        empty: "{{name}} is empty.",
-        unreadable: "{{name}} holds no game that could be read.",
-        "too-large": "{{name}} is too large to keep in this browser.",
-        storage: "{{name}} could not be saved — this browser's storage is full.",
-      },
-    },
-    collection: {
-      studies_one: "{{count}} study",
-      studies_other: "{{count}} studies",
-      chapters_one: "{{count}} chapter",
-      chapters_other: "{{count}} chapters",
-      /** The `Annotator` tag the chapters agree on, when they do. */
-      by: "by {{author}}",
-      search: "Search studies",
-      noMatches: "No studies match that search.",
-      hint: "Pick a study to see its chapters.",
-    },
-    /** The detail screen's panel. */
-    detail: {
-      back: "Back to {{category}}",
-      /** The top-right close button — the same destination as `back`, terser. */
-      close: "Close",
-      fen: "Position at this move (FEN)",
-      openInAnalysis: "Analysis",
-      openInLoadPgn: "PGN viewer",
-      playWithEngine: "Play Engine",
-      openInEditor: "Board Editor",
-      /** The Description tab's empty state — a game whose PGN carried no comments. */
-      noDescription: "This game has no annotations.",
-    },
-    /**
-     * Only the *not-found* screens read this, since a game card is captioned by
-     * its length rather than by whose move it is. Kept so the section carries
-     * the shared shape whole.
-     */
-    sideToMove: {
-      w: "White to play",
-      b: "Black to play",
-    },
-    /** A path or an id the URL names and the catalog does not have. */
+    /** A path the Library does not have. */
     notFound: {
-      category: "There is no such library folder.",
-      position: "There is no such game in this folder.",
-      back: "Back to the library",
+      collection: "There is no such collection.",
+      game: "There is no such game in this collection.",
+      back: "Back to the Library",
+    },
+    /** A game's board — `/library/<collection>/<game>`. */
+    game: {
+      tabs: {
+        moves: "Moves",
+        map: "Map",
+        info: "Info",
+        export: "Export",
+        engine: "Engine",
+      },
+      of: "Game {{number}} of {{count}}",
+      back: "Back to {{name}}",
+      previous: "Previous game",
+      next: "Next game",
+      engineSwitch: "Engine",
+      arrows: "Next-move arrows",
+      unreadable: "This game could not be read.",
     },
     /**
-     * The sibling-nav panel that replaces the sidebar while a detail screen is
-     * open (`views/library/LibrarySiblingNav.tsx`) — the landmark's own label
-     * and its close control, which returns to this category's list.
+     * The changes strip over a game of an **uploaded** collection — Update
+     * writes it in place, Save as copy puts a copy right after it.
      */
-    leftPanel: {
-      ariaLabel: "Other items in {{category}}",
-      close: "Close",
+    changes: {
+      title: "Unsaved changes",
+      saveOpen: "Unsaved changes — save or discard them",
+      saveNothing: "No unsaved changes",
+      added_one: "{{count}} move added",
+      added_other: "{{count}} moves added",
+      edited: "Lines or comments edited",
+      update: "Update game",
+      updateHelp: "Make these changes part of this game in the collection.",
+      copy: "Save as copy",
+      copyHelp: "Keep this game as it is, and add a copy with your changes right after it.",
+      discard: "Discard",
+      problem: {
+        storage: "It could not be saved — this browser's storage is full or unavailable.",
+        "too-large": "The collection would be too large to keep in this browser.",
+        missing: "The collection or the game is gone.",
+        "too-many": "There is no room for another analysis in this browser.",
+      },
+    },
+    /**
+     * The same strip over a game of a **shipped** collection, which is
+     * read-only: its changes are kept only as a copy in Saved analyses.
+     */
+    shippedChanges: {
+      title: "Unsaved changes",
+      readOnly: "This game ships with the app and cannot be changed: save your changes as a copy in Saved analyses.",
+      copy: "Save as copy",
+      copyHelp: "Save this game with your changes as a new analysis in Saved analyses.",
+      copyName: "{{name}} (copy)",
+      discard: "Discard",
+      problem: {
+        storage: "It could not be saved — this browser's storage is full or unavailable.",
+        "too-many": "There is no room for another analysis in this browser.",
+        "too-large": "That is too large to keep in this browser.",
+        missing: "The collection or the game is gone.",
+      },
     },
   },
   /**
@@ -1313,7 +1295,6 @@ const en = {
       play: "Play with Engine v2",
       masked: "Masked Pieces v2",
       openings: "Openings v2",
-      repertoire: "Repertoire v2",
     },
     /**
      * The panel's tab strip. Named here rather than read from five screens'
@@ -1326,7 +1307,6 @@ const en = {
       position: "Position",
       mask: "Mask",
       tree: "Tree",
-      info: "Info",
     },
     /** The header slot's controls, where a v2 board's differ from a shipped one's. */
     controls: {
@@ -1339,13 +1319,6 @@ const en = {
     book: {
       title: "Book continuations",
       empty: "No known continuations from here.",
-    },
-    /** Repertoire v2, whose line comes out of the shipped `.pgn` catalog. */
-    repertoire: {
-      /** No `?game=` arrived and the catalog offered nothing to fall back to. */
-      missing: "No repertoire line loaded.",
-      /** Above the line's name: where it came from. */
-      source: "From the library",
     },
   },
 };

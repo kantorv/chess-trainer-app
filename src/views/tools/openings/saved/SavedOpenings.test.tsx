@@ -14,7 +14,7 @@ import {
   findOpeningFolder,
   openingFoldersSnapshot,
 } from "../../../../lib/savedOpeningFolderStore";
-import { cardSizeTrack } from "../../../library/cardSize";
+import { cardSizeTrack } from "../../../shared/cardSize";
 import { RightPanelOutlet, RightPanelProvider } from "../../../main/rightPanel";
 import SavedOpenings from "./SavedOpenings";
 

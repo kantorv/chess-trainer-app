@@ -82,10 +82,9 @@ describe("the shipped nav tree", () => {
 
   it("lists every label key the sidebar renders, folders and screens alike", () => {
     /*
-      Only the nodes whose name *is* a catalog key. A folder or screen generated
-      from a library catalog is named from the data and has none — reporting a
-      stand-in key for one would make `locales.test.ts` demand a catalog entry
-      that must not exist.
+      Only the nodes whose name *is* a catalog key. A node named by data has
+      none — reporting a stand-in key for one would make `locales.test.ts`
+      demand a catalog entry that must not exist.
     */
     const authoredKeys = [
       ...navFolders().map((f) => f.labelKey),
@@ -106,21 +105,15 @@ describe("the shipped nav tree", () => {
     expect(navLabelKeys().every((key) => typeof key === "string")).toBe(true);
   });
 
-  it("leaves a node named from the data out of the catalog keys", () => {
-    // The Positions section's categories carry `{ en, he }` rather than a key —
-    // the reason `navLabelKeys` filters at all. Asserted through `navLabel`, so
-    // the node it skips is still one the sidebar can name.
+  it("names every shipped node by a catalog key", () => {
+    // Nothing shipped is named by data since the old Library's generated
+    // folders went (CTA-75), so every node is one `locales.test.ts` covers.
+    // `label` stays supported; the fixtures below carry it.
     const dataNamed = new TreeManager<NavTreeNode>(navTree())
       .toArray()
       .filter((node) => node.labelKey === undefined);
 
-    expect(dataNamed.length).toBeGreaterThan(0);
-    for (const node of dataNamed) {
-      expect(node.label?.en, `${node.id} has no data label either`).toBeTypeOf(
-        "string",
-      );
-      expect(navLabelKeys()).not.toContain(node.id);
-    }
+    expect(dataNamed).toEqual([]);
   });
 });
 

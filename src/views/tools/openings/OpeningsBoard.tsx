@@ -35,11 +35,10 @@ import { useOpenings } from "./useOpenings";
  * `/openings?fen=<position>` opens on that position — the same `?fen=`
  * hand-off the Board Editor, Play with Engine and the Analysis Board already
  * take (see the root `CLAUDE.md`, "An editor owns a position, not a game").
- * This screen does not replay anything, so unlike the two library hand-offs
- * that carry `?game=`, it only ever needs the position — which is exactly what
- * the four entry points that link here (Analysis Board, Load PGN, a library
- * game detail, the Board Editor) already have on screen at the ply the reader
- * is looking at.
+ * This screen does not replay anything, so unlike the `?game=` hand-off it
+ * only ever needs the position — which is exactly what the screens that link
+ * here (every game screen's opening line, the Board Editor) already have on
+ * screen at the ply the reader is looking at.
  *
  * Validated with `parseFen` and taken as *initial* state, like every other
  * screen that reads this parameter: a link nobody can read opens on the

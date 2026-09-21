@@ -1,5 +1,5 @@
 import { sameAnalysisSettings } from "./analysisSettings";
-import type { LibraryCatalog } from "./libraryCatalog";
+import type { GameCatalog } from "./gameCatalog";
 import { recordStore } from "./recordStore";
 import {
   MAX_ANALYSIS_DESCRIPTION_CHARS,
@@ -211,15 +211,15 @@ export const clearSavedAnalyses = (): SavedAnalysisProblem | undefined =>
   something to do twice. The same arrangement `savedGamesCatalog()` uses.
 */
 let live:
-  | { analyses: readonly SavedAnalysis[]; catalog: LibraryCatalog }
+  | { analyses: readonly SavedAnalysis[]; catalog: GameCatalog }
   | undefined;
 
 /**
- * **The saved analyses as a library catalog**, so
+ * **The saved analyses as a game catalog**, so
  * `?game=analysis/saved/<id>` resolves through the ordinary hand-off
  * (`lib/gameReference.ts`) rather than through a transport of its own.
  */
-export const savedAnalysesCatalog = (): LibraryCatalog => {
+export const savedAnalysesCatalog = (): GameCatalog => {
   const analyses = savedAnalysesSnapshot();
   if (live === undefined || live.analyses !== analyses) {
     live = { analyses, catalog: savedAnalysisCatalogOf(analyses) };

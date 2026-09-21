@@ -15,8 +15,8 @@ import { menuAnchorOf, type ContextMenuNodeHandler } from "./moveContextMenu";
  * indented block a side line sits in under the move it answers.
  *
  * Two screens render these, and that is why the file exists (CTA-53): the
- * flowing variation tree (`VariationTree.tsx` — the Openings explorer and the
- * Library repertoire viewer) and the shared move list (`MoveList.tsx`), which
+ * flowing variation tree (`VariationTree.tsx` — the Openings explorer) and the
+ * shared move list (`MoveList.tsx`), which
  * prints each side line as an indented run directly under the row holding the
  * move it branches from — the variations explorer, behind `TreeMoveList`.
  * Same tokens, same clicks, same numbering, one

@@ -6,9 +6,9 @@ import { gameTag, type Game } from "../../lib/gameModel";
 /**
  * The Info tab: a game's PGN tag pairs, as a two-column list.
  *
- * Shared, like `MoveList` and `BoardControls` beside it, because two screens
- * show a loaded game's headers: Load PGN's Info tab and the User PGNs detail
- * page. It takes a `Game` and knows nothing about which one is rendering it,
+ * Shared, like `MoveList` and `BoardControls` beside it: the Library's game
+ * board shows it as its Info tab (CTA-75). It takes a `Game` and knows nothing
+ * about which screen is rendering it,
  * and its keys are the top-level `gamePanel.info.*` the shared board controls
  * already read from.
  *

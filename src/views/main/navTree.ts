@@ -1,6 +1,6 @@
 import type { SvgIconComponent } from "@mui/icons-material";
 import type { AppLanguage } from "../../i18n";
-import { localizedText, type LocalizedText } from "../../lib/libraryCatalog";
+import { localizedText, type LocalizedText } from "../../lib/localizedText";
 import { TreeManager } from "../../lib/treeManager";
 import { navItemsInFolder } from "./navItems";
 import { navFolders } from "./navFolders";
@@ -14,10 +14,10 @@ import { navFolders } from "./navFolders";
  * **A node's name is either chrome or content.** `labelKey` is an `src/locales`
  * key, which is what an authored screen or folder carries — the app ships those
  * strings and `locales.test.ts` asserts both catalogs have them. `label` is a
- * per-language `{ en, he }` carried by the data, which is what a folder
- * *generated* from a library catalog carries (`navFromLibrary.ts`): a `.pgn`
- * file dropped into `src/data/pgn/` must not need a locale edit, and it has no
- * catalog key to assert. Exactly one of the two; `navLabel` reads whichever is
+ * per-language `{ en, he }` carried by data, for a node whose name is content
+ * rather than chrome — a name nobody should need a locale edit for, and which
+ * has no catalog key to assert. Nothing ships one today; the tests nest
+ * fixtures that do. Exactly one of the two; `navLabel` reads whichever is
  * there and `navLabelKeys` reports only the first kind.
  */
 export type NavTreeNode = {
@@ -93,8 +93,9 @@ export const buildNavTree = <Id extends string>(
 /**
  * Fold a redundant category folder into its list screen.
  *
- * A library section (User PGNs) models a category as a folder holding one
- * same-named list screen. For a **leaf** category that folder is pure overhead:
+ * A data-built section may model a category as a folder holding one
+ * same-named list screen (the old Library did, until CTA-75; nothing shipped
+ * does today). For a **leaf** category that folder is pure overhead:
  * a second click, a second copy of the name, and nothing inside it but the one
  * screen. So the sidebar renders it as just that screen.
  *
@@ -102,12 +103,12 @@ export const buildNavTree = <Id extends string>(
  *
  * - a category that also holds **sub-folders** keeps its folder, and its own
  *   list screen sits alongside them (two-or-more children — untouched);
- * - a manifest **group** that gathers several `.pgn` files under one named
- *   folder keeps its folder too — once its own leaf children have folded down
- *   to screens it holds several of them, which is again two-or-more children.
+ * - a **group** of several categories keeps its folder too — once its own
+ *   leaf children have folded down to screens it holds several of them,
+ *   which is again two-or-more children.
  *
  * Applied **below the top level only**: the top-level rows are app-area
- * groupings (Engine, Games, Tools…), not categories. A top-level folder is
+ * groupings (Engine, Library, Tools…), not categories. A top-level folder is
  * folded only by the other rule — `foldSingleEntryFolders`, for a folder
  * marked as one destination — so every level is folded by exactly one of the
  * two.

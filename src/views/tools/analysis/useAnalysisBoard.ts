@@ -1,21 +1,9 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 import { DEFAULT_POSITION } from "chess.js";
 
-import {
-  ANALYSIS_UCI_OPTION,
-  DEFAULT_ANALYSIS_SETTINGS,
-  type AnalysisSettings,
-} from "../../../lib/analysisSettings";
-import {
-  emptyTree,
-  findNode,
-  pathTo,
-  sanPathTo,
-  type GameTree,
-} from "../../../lib/gameTree";
+import { emptyTree, sanPathTo, type GameTree } from "../../../lib/gameTree";
 import { parseFen } from "../../../lib/fen";
 import { nodeAtParam } from "../../../lib/repertoireLink";
-import { extensionIdsOf, nodeIdsOf } from "../../../lib/repertoireTrainer";
 import {
   newSavedAnalysisId,
   savedAnalysisNode,
@@ -28,9 +16,8 @@ import {
   saveAnalysis,
   type SavedAnalysisProblem,
 } from "../../../lib/savedAnalysisStore";
-import { turnOf, useBoardCore } from "../../dev/core/useBoardCore";
-import { useEngineModule } from "../../dev/core/useEngineModule";
-import { usePlayToggle } from "../../dev/core/usePlayToggle";
+import { turnOf } from "../../dev/core/useBoardCore";
+import { useAnalysisSession } from "./useAnalysisSession";
 
 /**
  * **The Analysis Board's session** (CTA-73) — the v2 core
@@ -40,9 +27,8 @@ import { usePlayToggle } from "../../dev/core/usePlayToggle";
  * its changes.
  *
  * ```
- * useBoardCore      — the tree, the node, the oracle, promotion, orientation
- * useEngineModule   — searching the position on screen, per-FEN evals … and NO reply
- * (this hook)       — the record, the baseline, Save / Update / Save as copy / Discard
+ * useAnalysisSession — core + engine + Play + the baseline (shared with the Library's board)
+ * (this hook)        — the record: Save / Update / Save as copy, the Load tab's new boards
  * ```
  *
  * **The engine moves a piece only when the reader presses Play** (CTA-73), and
@@ -145,76 +131,26 @@ export const useAnalysisBoard = ({
     };
   });
 
-  const core = useBoardCore({
+  const session = useAnalysisSession({
     tree: start.tree,
     ply: start.ply,
     nodeId: start.nodeId,
     orientation: start.orientation,
+    settings: start.record?.settings,
   });
-  const { loadTree, goToNode, setOrientation } = core;
+  const { core, engine, settings, changed, rebase } = session;
+  const { loadTree, setOrientation } = core;
+  const { clearAnalysis } = engine;
 
   const [record, setRecord] = useState<SavedAnalysis | null>(start.record);
-  const [baseline, setBaseline] = useState<GameTree>(start.tree);
   /** A tree the reader loaded (Load tab, Clear) and has not saved yet. */
   const [loadedUnsaved, setLoadedUnsaved] = useState(false);
   const [problem, setProblem] = useState<SavedAnalysisProblem | null>(null);
 
-  const changed = core.tree !== baseline;
   /** Whether leaving now would lose something — what `beforeunload` asks about. */
   const unsaved = changed || (loadedUnsaved && !isBlankTree(core.tree));
   /** Whether there is anything Save could write. */
   const canSave = changed || (record === null && !isBlankTree(core.tree));
-
-  const baselineIds = useMemo(() => nodeIdsOf(baseline), [baseline]);
-  const extensionIds = useMemo(
-    () => extensionIdsOf(core.tree, baselineIds),
-    [core.tree, baselineIds],
-  );
-
-  /* The engine — on by default, as the Analysis Board always was. */
-  const [settings, setSettings] = useState<AnalysisSettings>(
-    () => record?.settings ?? DEFAULT_ANALYSIS_SETTINGS,
-  );
-  const [engineOn, setEngineOn] = useState(true);
-  const [showEvalBar, setShowEvalBar] = useState(true);
-  const onUciOptionsReady = useCallback(
-    (clamped: Readonly<Record<string, number>>) =>
-      setSettings((current) => {
-        const multiPv = clamped[ANALYSIS_UCI_OPTION.multiPv] ?? current.multiPv;
-        return multiPv === current.multiPv ? current : { ...current, multiPv };
-      }),
-    [],
-  );
-  /*
-    Play (CTA-73): the engine plays its best move for the opponent's side,
-    search after search, until paused — the shared toggle (`usePlayToggle`),
-    off at the start on this board.
-  */
-  const play = usePlayToggle({ core, engineOn });
-  const { playing, thinking } = play;
-
-  const engine = useEngineModule({
-    enabled: engineOn,
-    fen: core.fen,
-    depth: settings.depth,
-    moveTimeMs: settings.moveTimeMs,
-    uciOptions: useMemo(
-      () => ({ [ANALYSIS_UCI_OPTION.multiPv]: settings.multiPv }),
-      [settings.multiPv],
-    ),
-    onUciOptionsReady,
-    onBestMove: play.onBestMove,
-  });
-  const { clearAnalysis } = engine;
-
-  /** Play on or off — see `usePlayToggle`. */
-  const togglePlaying = () => play.toggle(engine.analysis, engine.evalsByFen);
-
-  const updateSettings = useCallback(
-    (patch: Partial<AnalysisSettings>) =>
-      setSettings((current) => ({ ...current, ...patch })),
-    [],
-  );
 
   /** The record the session would write under `id` — the tree, where the reader is, how it faces. */
   const recordOf = (id: string, savedAt?: string): SavedAnalysis => {
@@ -247,7 +183,7 @@ export const useAnalysisBoard = ({
   /** The session is the record now: its tree the baseline. */
   const settle = (saved: SavedAnalysis) => {
     setRecord(saved);
-    setBaseline(core.tree);
+    rebase(core.tree);
     setLoadedUnsaved(false);
     setProblem(null);
   };
@@ -297,16 +233,7 @@ export const useAnalysisBoard = ({
 
   /** **Discard**: back to the baseline, on the last of its positions on the way here. */
   const discard = () => {
-    const path = pathTo(core.tree, core.nodeId);
-    let back: string | null = null;
-    for (let index = path.length - 1; index >= 0; index -= 1) {
-      if (findNode(baseline, path[index].id) !== null) {
-        back = path[index].id;
-        break;
-      }
-    }
-    loadTree(baseline);
-    if (back !== null) goToNode(back);
+    session.discard();
     setProblem(null);
   };
 
@@ -319,11 +246,11 @@ export const useAnalysisBoard = ({
       loadTree(next);
       clearAnalysis();
       setRecord(null);
-      setBaseline(next);
+      rebase(next);
       setLoadedUnsaved(true);
       setProblem(null);
     },
-    [clearAnalysis, loadTree],
+    [clearAnalysis, loadTree, rebase],
   );
 
   /** A pasted FEN: a new analysis of that position, facing the side to move. Throws `FenParseError`. */
@@ -342,19 +269,19 @@ export const useAnalysisBoard = ({
     core,
     engine,
     settings,
-    updateSettings,
-    engineOn,
-    setEngineOn,
-    playing,
-    thinking,
-    togglePlaying,
-    showEvalBar,
-    setShowEvalBar,
+    updateSettings: session.updateSettings,
+    engineOn: session.engineOn,
+    setEngineOn: session.setEngineOn,
+    playing: session.playing,
+    thinking: session.thinking,
+    togglePlaying: session.togglePlaying,
+    showEvalBar: session.showEvalBar,
+    setShowEvalBar: session.setShowEvalBar,
     record,
     changed,
     unsaved,
     canSave,
-    extensionIds,
+    extensionIds: session.extensionIds,
     problem,
     saveNew,
     update,

@@ -32,10 +32,8 @@ const toolsFolder = () =>
 
 /**
  * The name a row renders, for a folder or a screen — through `navLabel`, the
- * same resolver the sidebar uses. Not `i18n.t(labelKey)` any more: a folder or
- * screen generated from a library catalog is named from the data and has no
- * catalog key at all, so a test that reached for one would be naming a row the
- * app does not render that way.
+ * same resolver the sidebar uses, so a node named by data (`label`) is named
+ * the way the app renders it.
  */
 const nameOf = (node: { labelKey?: string; label?: Parameters<typeof navLabel>[0]["label"] }) =>
   navLabel(node, (key) => i18n.t(key), "en");
@@ -86,17 +84,12 @@ describe("sidebar navigation", () => {
 
   /*
     Walks every screen in the tree, opening its whole folder chain on the way —
-    a click per folder, and `userEvent` is deliberately slow. The generated
-    User PGNs screens push the count up, which is real coverage rather than a
-    slow test to trim, so the budget is raised instead.
+    a click per folder, and `userEvent` is deliberately slow, so the budget
+    is raised.
 
-    CTA-60 raised it again, and it is worth saying why rather than letting the
-    number drift: the three shipped repertoire examples add ~9 screen nodes
-    between them (the 2.c3 sampler is a folder plus 6 chapter sub-folders),
-    and the dev-only Development section adds five more under Vitest, where
-    `import.meta.env.DEV` is true. Every one of those is another chain to open
-    and another click to wait on. The walk is still the right assertion — it is
-    the only thing checking that what the sidebar *renders* links where the
+    The dev-only Development section adds its screens under Vitest, where
+    `import.meta.env.DEV` is true. The walk is still the right assertion — it
+    is the only thing checking that what the sidebar *renders* links where the
     registry *says* — so the budget moves, not the coverage.
   */
   it("links to the route each entry declares", async () => {
@@ -107,8 +100,7 @@ describe("sidebar navigation", () => {
       Walks what the sidebar renders — every screen node in the tree, named as
       it renders (a single-entry folder's screen under the *folder's* name) —
       opening its whole folder chain on the way. `userEvent` is deliberately
-      slow; the generated User PGNs screens push the count up, which is real
-      coverage rather than a slow test to trim, so the budget is raised.
+      slow, so the budget is raised.
     */
     const screens = navTree().flatMap(function collect(
       node: NavTreeNode,
@@ -127,14 +119,7 @@ describe("sidebar navigation", () => {
         const row = screen.getByRole("button", { name: folderNameOf(id) });
         if (row.getAttribute("aria-expanded") === "false") await user.click(row);
       }
-      /*
-        `getAllBy`, because a name is not an id in a section built from
-        content: the shipped PGN library holds the "Queen vs Rook, Rosettes"
-        study twice — once as its own export, once as one study inside the
-        author's export of all of them — and two rows named alike is what the
-        data says rather than a bug in the tree. What must hold is that a row
-        with this name links here.
-      */
+      // `getAllBy`: what must hold is that a row with this name links here.
       const links = screen
         .getAllByRole("link", { name: nameOf(node) })
         .map((link) => link.getAttribute("href"));
@@ -202,9 +187,8 @@ describe("the folder tree", () => {
     renderAt("/tools/editor");
 
     // Top-level rows only: a sub-folder lives in its parent's `Collapse` body,
-    // which is unmounted while that parent is shut. Opening User PGNs is what
-    // brings its surviving sub-folder rows into the tree. A single-entry
-    // folder is a screen row, not a button — one fewer.
+    // which is unmounted while that parent is shut. A single-entry folder is
+    // a screen row, not a button — one fewer.
     expect(screen.getAllByRole("button")).toHaveLength(
       navFolders().filter((folder) => !folder.singleEntry).length,
     );
@@ -223,32 +207,20 @@ describe("the folder tree", () => {
     );
   });
 
-  it("brings a folder's sub-folders into the tree when it is opened", async () => {
+  it("has no Games folder, and the Library holds its two screens (CTA-75)", async () => {
     renderAt("/tools/analysis");
     const user = userEvent.setup();
 
+    expect(navFolders().map((folder) => folder.id)).not.toContain("games");
     await user.click(
       screen.getByRole("button", { name: i18n.t("nav.folders.library") }),
     );
-
-    /*
-      Opening User PGNs mounts its rows. A single-study file folds to a plain
-      link, but a **collection** — one `.pgn` holding several studies — keeps
-      its sub-folders, so it stays a collapsible folder row and comes in shut.
-      One chain is open at a time, so nothing under any other section is
-      mounted.
-    */
-    const collection = screen.getByRole("button", {
-      name: folderNameOf("library:methurst-public-studies"),
-    });
-    expect(collection).toHaveAttribute("aria-expanded", "false");
-
-    // Opening the section brought at least one sub-folder row in with it. The
-    // baseline is the top-level *button* count — a single-entry folder is a
-    // screen row, not a button, so it does not belong in this count.
-    expect(screen.getAllByRole("button").length).toBeGreaterThan(
-      navFolders().filter((folder) => !folder.singleEntry).length,
-    );
+    expect(
+      screen.getByRole("link", { name: i18n.t("nav.libraryCollections") }),
+    ).toHaveAttribute("href", "/library");
+    expect(
+      screen.getByRole("link", { name: i18n.t("nav.addCollection") }),
+    ).toHaveAttribute("href", "/library/new");
   });
 
   it("starts with everything shut on a route that is no screen", () => {
@@ -284,17 +256,17 @@ describe("the folder tree", () => {
     renderAt("/tools/editor");
     const user = userEvent.setup();
 
-    const games = () =>
-      screen.getByRole("button", { name: i18n.t("nav.folders.games") });
+    const library = () =>
+      screen.getByRole("button", { name: i18n.t("nav.folders.library") });
 
-    await user.click(games());
-    expect(games()).toHaveAttribute("aria-expanded", "true");
+    await user.click(library());
+    expect(library()).toHaveAttribute("aria-expanded", "true");
     // One chain at a time: opening a folder under a different parent shuts the
     // previous one rather than stacking a second open branch under it.
     expect(toolsFolder()).toHaveAttribute("aria-expanded", "false");
     await waitFor(() =>
       expect(screen.queryAllByRole("link")).toHaveLength(
-        navItemsInFolder("games").length + topLevelScreenCount(),
+        navItemsInFolder("library").length + topLevelScreenCount(),
       ),
     );
   });
@@ -329,16 +301,7 @@ describe("the folder tree", () => {
     await user.click(toolsFolder());
 
     expect(setItem).not.toHaveBeenCalled();
-    /*
-      The sidebar does read one key, and only one: the tree grows a folder per
-      uploaded `.pgn`, so it subscribes to that store and its snapshot checks
-      the revision stamp (`lib/pgnUploadStore.ts`). Nothing it reads is about
-      which folder is open — that is the claim, and it is narrowed rather than
-      dropped.
-    */
-    for (const [key] of getItem.mock.calls) {
-      expect(String(key)).toMatch(/^chessapp\.pgnUploads\.v1/);
-    }
+    expect(getItem).not.toHaveBeenCalled();
     vi.restoreAllMocks();
   });
 
@@ -378,34 +341,33 @@ describe("the folder tree", () => {
   });
 
   it("leaves the open folder alone on a route that is no screen", async () => {
-    const LIST = "/library/lichess-study-puzzles-custom-set-1-by-lalala732-2026-05-03";
+    const LIST = "/library";
     render(
       <AppThemeWithLang>
         <MemoryRouter initialEntries={[LIST]}>
           {/* A game's detail page is a route, not a nav entry — it has no
               chain of its own, and shutting the section the reader is inside
               would be the wrong answer to that. */}
-          <Link to={`${LIST}/some-game`}>go to a game</Link>
+          <Link to={`${LIST}/morphy`}>go to a collection</Link>
           <SideBar />
         </MemoryRouter>
       </AppThemeWithLang>,
     );
     const user = userEvent.setup();
 
-    // `LIST` is a plain link — the redundant leaf-category folder was folded
-    // away — so the section that holds it is User PGNs, and it opens with the
-    // route.
-    const userPgns = () =>
+    // The Library's list is a screen, so the folder that holds it opens with
+    // the route.
+    const library = () =>
       screen.getByRole("button", { name: i18n.t("nav.folders.library") });
-    const listName = "Puzzles, custom set #1";
-    expect(userPgns()).toHaveAttribute("aria-expanded", "true");
+    const listName = i18n.t("nav.libraryCollections");
+    expect(library()).toHaveAttribute("aria-expanded", "true");
     expect(
       screen.getByRole("link", { name: listName }),
     ).toHaveAttribute("aria-current", "page");
 
-    await user.click(screen.getByRole("link", { name: "go to a game" }));
+    await user.click(screen.getByRole("link", { name: "go to a collection" }));
 
-    expect(userPgns()).toHaveAttribute("aria-expanded", "true");
+    expect(library()).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByRole("link", { name: listName })).toBeVisible();
   });
 });

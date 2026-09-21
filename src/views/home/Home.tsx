@@ -26,8 +26,8 @@ const Home = () => {
   const language = asAppLanguage(i18n.language);
   /*
     A card's name is a catalog key for an authored screen and the data's own
-    `{ en, he }` for one generated from a library catalog — the same two kinds
-    the sidebar renders, resolved the same way. See `navTree.ts`.
+    `{ en, he }` for one named by data — the same two kinds the sidebar
+    renders, resolved the same way. See `navTree.ts`.
   */
   const labelOf = (node: NavTreeNode) => navLabel(node, (key) => t(key), language);
 

@@ -5,8 +5,6 @@ import Typography from "@mui/material/Typography";
 import { Link as RouterLink } from "react-router";
 import { useTranslation } from "react-i18next";
 
-import type { SavedRepertoireProblem } from "../../lib/savedRepertoireStore";
-
 /**
  * **What to do with a session's changes** (CTA-63) — the strip the player
  * shows above its footer while the session's tree differs from the record:
@@ -28,6 +26,11 @@ import type { SavedRepertoireProblem } from "../../lib/savedRepertoireStore";
  * `labelKey` names the locale block its words come from (the block carries
  * the same keys), and it never passes `protectedBy` — an analysis has no
  * protection.
+ *
+ * A Library game (CTA-75) shows it too: over an uploaded collection's game
+ * as the Analysis Board does (`library.changes`), and over a **shipped**
+ * one `readOnly` (`library.shippedChanges`) — no Update at all, a note saying
+ * why, and Save as copy (into Saved analyses) and Discard.
  */
 function RepertoireChangesBar({
   testId,
@@ -35,6 +38,7 @@ function RepertoireChangesBar({
   summary,
   problem,
   protectedBy,
+  readOnly = false,
   onUpdate,
   onCopy,
   onDiscard,
@@ -44,14 +48,16 @@ function RepertoireChangesBar({
   labelKey?: string;
   /** What changed, already worded — "2 moves added". */
   summary: string;
-  /** Why the last save did not happen, if it did not. */
-  problem: SavedRepertoireProblem | null;
+  /** Why the last save did not happen, if it did not — a key under `${labelKey}.problem`. */
+  problem: string | null;
   /**
    * Set when the repertoire is protected: its settings screen, and where that
    * screen comes back to. Update is replaced by a link there.
    */
   protectedBy?: { settingsPath: string; from: string };
-  onUpdate: () => void;
+  /** Nothing to update: the note `${labelKey}.readOnly`, and only copy and discard. */
+  readOnly?: boolean;
+  onUpdate?: () => void;
   onCopy: () => void;
   onDiscard: () => void;
 }) {
@@ -82,6 +88,15 @@ function RepertoireChangesBar({
           {summary}
         </Typography>
       </Typography>
+      {readOnly && (
+        <Typography
+          variant="caption"
+          data-testid={`${testId}-read-only`}
+          sx={{ display: "block", color: "text.secondary", mt: 0.25 }}
+        >
+          {t(`${labelKey}.readOnly`)}
+        </Typography>
+      )}
       {protectedBy !== undefined && (
         <Typography
           variant="caption"
@@ -92,7 +107,7 @@ function RepertoireChangesBar({
         </Typography>
       )}
       <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mt: 0.75 }}>
-        {protectedBy === undefined ? (
+        {readOnly ? null : protectedBy === undefined ? (
           <Tooltip title={t(`${labelKey}.updateHelp`)}>
             <Button
               size="small"

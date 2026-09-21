@@ -207,9 +207,9 @@ function AnalysisLoad({
           variant="contained"
           disabled={pasted.trim() === ""}
           onClick={() => bringIn(pasted)}
-          data-testid="analysis-load-pgn"
+          data-testid="analysis-load-text"
         >
-          {t("analysis.position.loadPgn")}
+          {t("analysis.position.loadText")}
         </Button>
       </Box>
       {problem !== null && (

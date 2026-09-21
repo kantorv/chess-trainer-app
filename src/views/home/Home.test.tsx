@@ -54,14 +54,12 @@ describe("the landing page", () => {
   it("still shows a card per screen of every other section", () => {
     renderHome();
 
-    // The nav shape changed for two folders only; every other screen keeps its
-    // card. A PGN section's screens are generated, so the exact set is the
-    // nav's own — one card per screen node in the tree.
+    // One card per screen node in the tree — the Library's among them.
     const cards = screen.getAllByRole("link").map((link) =>
       link.getAttribute("href"),
     );
     expect(cards).toContain("/engine/play");
     expect(cards).toContain("/tools/editor");
-    expect(cards.some((href) => href?.startsWith("/library"))).toBe(true);
+    expect(cards).toContain("/library");
   });
 });

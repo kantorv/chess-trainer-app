@@ -2,13 +2,12 @@ import ScienceRoundedIcon from "@mui/icons-material/ScienceRounded";
 import SportsEsportsRoundedIcon from "@mui/icons-material/SportsEsportsRounded";
 import VisibilityOffRoundedIcon from "@mui/icons-material/VisibilityOffRounded";
 import TravelExploreRoundedIcon from "@mui/icons-material/TravelExploreRounded";
-import MenuBookRoundedIcon from "@mui/icons-material/MenuBookRounded";
 
 import type { NavFolder } from "../main/navFolders";
 import type { NavItem } from "../main/navItems";
 
 /**
- * **The Development section's sidebar entries** — the folder and the four
+ * **The Development section's sidebar entries** — the folder and the three
  * screens composed from the unified board core
  * ([`.claude/rules/chessboard-v2.md`](../../../.claude/rules/chessboard-v2.md)).
  *
@@ -29,9 +28,8 @@ import type { NavItem } from "../main/navItems";
  *
  * ## The ids are namespaced
  *
- * `dev:*`, the way the generated Library subtree namespaces its own
- * (`navFromLibrary.ts`), so a dev id cannot collide with an authored one and a
- * screen filed under `dev` cannot appear anywhere else.
+ * `dev:*`, so a dev id cannot collide with an authored one and a screen filed
+ * under `dev` cannot appear anywhere else.
  */
 
 /** The folder id every Development screen files itself under. */
@@ -44,10 +42,11 @@ export const devNavFolder = (): NavFolder => ({
 });
 
 /**
- * The four boards, in the order the spec derives them: Play v2 the linear
- * case, Masked v2 derived from Play, then the two that had none of
- * CTA-51/53/54/55 before. (Analysis v2, the reference, shipped as the
- * Analysis Board in CTA-73 and left the section.)
+ * The three boards, in the order the spec derives them: Play v2 the linear
+ * case, Masked v2 derived from Play, then Openings v2. (Analysis v2, the
+ * reference, shipped as the Analysis Board in CTA-73 and left the section;
+ * Repertoire v2 read the old Library's catalog and was retired with it in
+ * CTA-75 — the Library's own board is its successor.)
  */
 export const devNavItems = (): readonly NavItem[] => [
   {
@@ -66,12 +65,6 @@ export const devNavItems = (): readonly NavItem[] => [
     to: "/dev/openings",
     labelKey: "dev.screens.openings",
     icon: TravelExploreRoundedIcon,
-    folder: DEV_NAV_FOLDER_ID,
-  },
-  {
-    to: "/dev/repertoire",
-    labelKey: "dev.screens.repertoire",
-    icon: MenuBookRoundedIcon,
     folder: DEV_NAV_FOLDER_ID,
   },
 ];

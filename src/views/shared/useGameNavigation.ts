@@ -73,9 +73,8 @@ export const useGameNavigation = (
 
   useEffect(() => {
     /*
-      Bound on `document` but tied to this hook's mount. Both screens that use
-      it — Load PGN and Play with Engine — are routes, so only one is ever
-      mounted: there is no second listener to collide with, and navigating away
+      Bound on `document` but tied to this hook's mount. The screens that use
+      it are routes, so only one is ever mounted: there is no second listener to collide with, and navigating away
       unmounts the hook and takes its listener with it.
 
       Nothing loaded means nothing to step through, so no listener at all: the

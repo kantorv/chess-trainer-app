@@ -3,7 +3,7 @@ import { DEFAULT_POSITION } from "chess.js";
 
 import { addMove, countVariations, mainline, mergeTrees } from "./gameTree";
 import { parsePgnTree } from "./pgn";
-import { MAX_UPLOAD_CHARS } from "./pgnUploads";
+import { MAX_UPLOAD_CHARS } from "./pgnText";
 import {
   isMultiGameRepertoire,
   mergedRepertoireOf,
@@ -20,20 +20,20 @@ import {
   withRepertoireTree,
 } from "./savedRepertoires";
 
-/** The three shipped repertoire files — the examples the issue names. */
-const files = import.meta.glob<string>("../data/pgn/*.pgn", {
+/** The three repertoire fixtures (`src/test/fixtures/pgn/`) — the examples CTA-61 named. */
+const files = import.meta.glob<string>("../test/fixtures/pgn/*.pgn", {
   query: "?raw",
   import: "default",
   eager: true,
 });
-const shipped = (name: string) => {
-  const text = files[`../data/pgn/${name}`];
-  if (text === undefined) throw new Error(`no shipped file ${name}`);
+const fixture = (name: string) => {
+  const text = files[`../test/fixtures/pgn/${name}`];
+  if (text === undefined) throw new Error(`no fixture ${name}`);
   return text;
 };
-const SAMPLER = shipped("sicilian-2c3-sampler.pgn");
-const ONE_TREE = shipped("live-chess-2026-09-18.pgn");
-const D4 = shipped("d2d4Variations.pgn");
+const SAMPLER = fixture("sicilian-2c3-sampler.pgn");
+const ONE_TREE = fixture("live-chess-2026-09-18.pgn");
+const D4 = fixture("d2d4Variations.pgn");
 
 /** One game, a mainline with a side line: a repertoire as it stands. */
 const ONE = '[Event "My Caro"]\n\n1. e4 c6 2. d4 d5 3. e5 Bf5 (3... c5 4. dxc5) 4. Nf3 *';
@@ -277,7 +277,7 @@ describe("split", () => {
   });
 });
 
-describe("the shipped one-tree example", () => {
+describe("the one-tree example", () => {
   it("is one game of 7,859 nodes — a repertoire as it stands", () => {
     // No wall-clock bound: a loaded suite run makes one flaky.
     const reading = read(ONE_TREE);

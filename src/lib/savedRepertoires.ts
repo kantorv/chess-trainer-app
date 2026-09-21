@@ -9,8 +9,7 @@ import {
   type VariationNode,
 } from "./gameTree";
 import { PgnParseError, parsePgnTree, readPgnTags, splitPgnGames } from "./pgn";
-import { chapterPrefix } from "./pgnLibrary";
-import { MAX_UPLOAD_CHARS } from "./pgnUploads";
+import { chapterPrefix, MAX_UPLOAD_CHARS } from "./pgnText";
 import {
   DEFAULT_REPERTOIRE_SETTINGS,
   repertoireSettingsFrom,

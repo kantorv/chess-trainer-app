@@ -35,12 +35,12 @@ vi.mock("../../lib/openings", async (importOriginal) => {
   );
 });
 
-const files = import.meta.glob<string>("../../data/pgn/*.pgn", {
+const files = import.meta.glob<string>("../../test/fixtures/pgn/*.pgn", {
   query: "?raw",
   import: "default",
   eager: true,
 });
-const shipped = (name: string) => files[`../../data/pgn/${name}`]!;
+const fixture = (name: string) => files[`../../test/fixtures/pgn/${name}`]!;
 
 const AFTER_NF3 = "rn1qkbnr/pp2pppp/2p5/3pPb2/3P4/5N2/PPP2PPP/RNBQKB1R b KQkq - 2 4";
 
@@ -141,8 +141,8 @@ describe("a repertoire's own view — the player, on the v2 board", () => {
     expect(screen.getByTestId("repertoire-board-missing")).toBeInTheDocument();
   });
 
-  it("opens the shipped one-tree example (7,859 nodes), reading first and then showing it", async () => {
-    const big = shipped("live-chess-2026-09-18.pgn");
+  it("opens the one-tree example (7,859 nodes), reading first and then showing it", async () => {
+    const big = fixture("live-chess-2026-09-18.pgn");
     renderSection(`/repertoires/${storeRepertoire("big", big)}`);
 
     // The screen is up before the tree is: it says it is reading.
