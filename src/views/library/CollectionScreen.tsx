@@ -7,7 +7,6 @@ import DialogContent from "@mui/material/DialogContent";
 import DialogContentText from "@mui/material/DialogContentText";
 import DialogTitle from "@mui/material/DialogTitle";
 import IconButton from "@mui/material/IconButton";
-import MenuItem from "@mui/material/MenuItem";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
@@ -35,11 +34,14 @@ import { useTranslation } from "react-i18next";
 import { removeCollection } from "../../lib/libraryCollectionStore";
 import {
   COLLECTION_COLUMNS,
+  COLLECTION_FILTER_PARAMS,
+  collectionFacetsOf,
   filteredRows,
   gameTitleOf,
   RESULTS,
   sortedRows,
   type CollectionColumn,
+  type CollectionFilterValues,
   type CollectionRow,
   type CollectionSummary,
   type SortDirection,
@@ -47,6 +49,7 @@ import {
 import { downloadPgn } from "../../lib/pgnExport";
 import { slugify } from "../../lib/pgnText";
 import { RightPanel } from "../main/rightPanel";
+import CollectionFilters from "./CollectionFilters";
 import LibraryMiss from "./LibraryMiss";
 import { loadCollectionGames, useCollectionRows } from "./useLibraryCollections";
 
@@ -54,15 +57,19 @@ import { loadCollectionGames, useCollectionRows } from "./useLibraryCollections"
  * **A collection** (`/library/<collection>`, CTA-75) — its games as a table:
  * one row per game, the columns `lib/libraryCollections.ts` reads off the
  * tags (and the length it counts), **sorted** by a click on any header and
- * **filtered** by words (matched against every text column) and by result.
- * A row opens that game on the Library's analysis board.
+ * **filtered** by words (matched against every text column, the box over the
+ * table) and by the right-hand panel's filters — player and side, opening,
+ * event, dates, result (`CollectionFilters.tsx`; each shown only where the
+ * collection has its field). A row opens that game on the Library's
+ * analysis board.
  *
  * **The rows are the collection's index** (`lib/collectionIndex.ts`), read
  * whole — no game is parsed, or even fetched, to draw the table: a shipped
  * file's index is its own small chunk, and the PGN is fetched only for the
  * download. A game the index found unreadable is marked in its `#` cell.
  *
- * The sort, the filter and the page are the URL's (`?sort=`, `?dir=`, `?q=`,
+ * The sort, the filters and the page are the URL's (`?sort=`, `?dir=`, `?q=`,
+ * `?player=`, `?color=`, `?opening=`, `?event=`, `?from=`, `?to=`,
  * `?result=`, `?page=`, `?rows=`, written with history replace), so going back
  * from a game finds the table as it was left, and a filtered table is a link.
  * Pages rather than one long table: the World Cup file is 674 rows.
@@ -93,15 +100,32 @@ function CollectionTable({
   const direction: SortDirection = params.get("dir") === "desc" ? "desc" : "asc";
   const text = params.get("q") ?? "";
   const requestedResult = params.get("result") ?? "";
-  const result = (RESULTS as readonly string[]).includes(requestedResult) ? requestedResult : "";
+  const requestedColor = params.get("color");
+  const isoDate = (value: string | null) => (/^\d{4}-\d{2}-\d{2}$/.test(value ?? "") ? (value as string) : "");
+  const filters: CollectionFilterValues = {
+    player: params.get("player") ?? "",
+    color: requestedColor === "white" || requestedColor === "black" ? requestedColor : "",
+    opening: params.get("opening") ?? "",
+    event: params.get("event") ?? "",
+    from: isoDate(params.get("from")),
+    to: isoDate(params.get("to")),
+    result: (RESULTS as readonly string[]).includes(requestedResult) ? requestedResult : "",
+  };
   const requestedRows = Number(params.get("rows"));
   const rowsPerPage = (ROWS_PER_PAGE as readonly number[]).includes(requestedRows)
     ? requestedRows
     : ROWS_PER_PAGE[0];
 
+  const facets = useMemo(() => collectionFacetsOf(rows), [rows]);
+  const { player, color, opening, event, from, to, result } = filters;
   const shown = useMemo(
-    () => sortedRows(filteredRows(rows, { text, result }), sort, direction),
-    [rows, text, result, sort, direction],
+    () =>
+      sortedRows(
+        filteredRows(rows, { text, result, player, color, opening, event, from, to }),
+        sort,
+        direction,
+      ),
+    [rows, text, result, player, color, opening, event, from, to, sort, direction],
   );
   const lastPage = Math.max(0, Math.ceil(shown.length / rowsPerPage) - 1);
   const page = Math.min(Math.max(0, Number(params.get("page")) || 0), lastPage);
@@ -221,22 +245,6 @@ function CollectionTable({
             slotProps={{ htmlInput: { "data-testid": "library-table-filter" } }}
             sx={{ flex: 1 }}
           />
-          <TextField
-            select
-            size="small"
-            label={t("library.table.result")}
-            value={result}
-            onChange={(event) => setState({ result: event.target.value })}
-            slotProps={{ htmlInput: { "data-testid": "library-table-result" } }}
-            sx={{ minWidth: 130 }}
-          >
-            <MenuItem value="">{t("library.table.anyResult")}</MenuItem>
-            {RESULTS.map((value) => (
-              <MenuItem key={value} value={value}>
-                {value}
-              </MenuItem>
-            ))}
-          </TextField>
         </Box>
 
         {/* The one region that scrolls, both ways: twelve columns in a square. */}
@@ -349,15 +357,26 @@ function CollectionTable({
         />
       </Box>
       <RightPanel>
-        <Box sx={{ color: "text.secondary", display: "grid", gap: 1 }}>
-          <Typography variant="body2">{t("library.table.hint")}</Typography>
-          <Typography variant="body2" data-testid="library-table-note">
-            {t(
-              collection.source === "shipped"
-                ? "library.table.shippedNote"
-                : "library.table.uploadedNote",
-            )}
-          </Typography>
+        {/* The aside does not scroll; the panel is its own scrolling column. */}
+        <Box sx={{ flex: 1, minHeight: 0, overflowY: "auto", display: "grid", alignContent: "start", gap: 3 }}>
+          <CollectionFilters
+            facets={facets}
+            values={filters}
+            onChange={(patch) => setState(patch)}
+            onClear={() =>
+              setState(Object.fromEntries(COLLECTION_FILTER_PARAMS.map((key) => [key, null])))
+            }
+          />
+          <Box sx={{ color: "text.secondary", display: "grid", gap: 1 }}>
+            <Typography variant="body2">{t("library.table.hint")}</Typography>
+            <Typography variant="body2" data-testid="library-table-note">
+              {t(
+                collection.source === "shipped"
+                  ? "library.table.shippedNote"
+                  : "library.table.uploadedNote",
+              )}
+            </Typography>
+          </Box>
         </Box>
       </RightPanel>
       <Dialog

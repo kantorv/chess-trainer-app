@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router";
 
 import i18n from "../../i18n";
@@ -85,6 +85,12 @@ const keep = async (name: string, games: string[]) => {
   return added.collection;
 };
 const upload = () => keep("Club games", GAMES);
+
+/** Unmount what is on screen and mount another entry. */
+const cleanupAndMount = (entry: string) => {
+  cleanup();
+  mount(entry);
+};
 
 /** Mount a collection's table and wait for its rows. */
 const mountTable = async (entry: string) => {
@@ -223,6 +229,82 @@ describe("a collection's table", () => {
     expect(await screen.findByTestId("library-not-found")).toHaveTextContent(
       i18n.t("library.notFound.collection"),
     );
+  });
+});
+
+describe("the table's filters", () => {
+  const RICH = [
+    '[Event "Spring Open"]\n[Date "2023.04.02"]\n[White "Carlsen"]\n[Black "Nepo"]\n[Result "1-0"]\n[ECO "C42"]\n[Opening "Petrov"]\n\n1. e4 e5 2. Nf3 Nf6 1-0',
+    '[Event "Spring Open"]\n[Date "2023.04.03"]\n[White "Nepo"]\n[Black "Carlsen"]\n[Result "0-1"]\n[ECO "B90"]\n[Opening "Sicilian"]\n\n1. e4 c5 0-1',
+    '[Event "Autumn Cup"]\n[Date "2023.10"]\n[White "Ding"]\n[Black "Carlsen"]\n[Result "1/2-1/2"]\n[ECO "D37"]\n[Opening "Queen\'s Gambit"]\n\n1. d4 d5 1/2-1/2',
+  ];
+  const panel = () => within(screen.getByTestId("library-filters"));
+  const typeInto = (testId: string, value: string) =>
+    fireEvent.change(within(screen.getByTestId(testId)).getByRole("combobox"), { target: { value } });
+
+  it("shows only the filters the collection's games can use", async () => {
+    // Club games: players and results, one event, no dates, no openings.
+    const club = await upload();
+    await mountTable(`/library/${club.id}`);
+    expect(screen.getByTestId("library-filter-player")).toBeInTheDocument();
+    expect(screen.getByTestId("library-table-result")).toBeInTheDocument();
+    expect(screen.queryByTestId("library-filter-opening")).toBeNull();
+    expect(screen.queryByTestId("library-filter-event")).toBeNull();
+    expect(screen.queryByTestId("library-filter-from")).toBeNull();
+  });
+
+  it("narrows to a player's games, then to the side they had", async () => {
+    const rich = await keep("Rich", RICH);
+    await mountTable(`/library/${rich.id}`);
+    expect(within(screen.getByTestId("library-filter-color")).getByTestId("library-filter-color-black")).toBeDisabled();
+
+    typeInto("library-filter-player", "carl");
+    expect(rowNumbers()).toEqual(["1", "2", "3"]);
+    fireEvent.click(panel().getByTestId("library-filter-color-black"));
+    expect(rowNumbers()).toEqual(["2", "3"]);
+    expect(where()).toContain("player=carl");
+    expect(where()).toContain("color=black");
+    expect(screen.getByTestId("library-table-count")).toHaveTextContent("2 of 3 games");
+  });
+
+  it("narrows by opening name or ECO, event and dates, all from the URL", async () => {
+    const rich = await keep("Rich", RICH);
+    await mountTable(`/library/${rich.id}?opening=sicil`);
+    expect(rowNumbers()).toEqual(["2"]);
+    cleanupAndMount(`/library/${rich.id}?opening=D3`);
+    await screen.findByTestId("library-table");
+    expect(rowNumbers()).toEqual(["3"]);
+    cleanupAndMount(`/library/${rich.id}?event=Spring+Open`);
+    await screen.findByTestId("library-table");
+    expect(rowNumbers()).toEqual(["1", "2"]);
+
+    cleanupAndMount(`/library/${rich.id}`);
+    await screen.findByTestId("library-table");
+    // "2023.10" is any day of October.
+    fireEvent.change(screen.getByTestId("library-filter-from"), { target: { value: "2023-04-03" } });
+    expect(rowNumbers()).toEqual(["2", "3"]);
+    fireEvent.change(screen.getByTestId("library-filter-to"), { target: { value: "2023-10-05" } });
+    expect(rowNumbers()).toEqual(["2", "3"]);
+    fireEvent.change(screen.getByTestId("library-filter-to"), { target: { value: "2023-09-30" } });
+    expect(rowNumbers()).toEqual(["2"]);
+    expect(screen.getByTestId("library-filter-from")).toHaveAttribute("min", "2023-04-02");
+  });
+
+  it("clears every filter at once, leaving the words box alone", async () => {
+    const rich = await keep("Rich", RICH);
+    await mountTable(`/library/${rich.id}?q=open&player=carl&color=white&result=1-0`);
+    expect(rowNumbers()).toEqual(["1"]);
+    fireEvent.click(panel().getByTestId("library-filter-clear"));
+    expect(rowNumbers()).toEqual(["1", "2"]);
+    expect(where()).toBe(`/library/${rich.id}?q=open`);
+    expect(panel().getByTestId("library-filter-clear")).toBeDisabled();
+  });
+
+  it("offers a shipped collection's openings, filled from the book where the file has none", async () => {
+    await mountTable("/library/morphy");
+    typeInto("library-filter-opening", "king's gambit");
+    expect(rowNumbers().length).toBeGreaterThan(0);
+    expect(screen.getByTestId("library-table-count")).toHaveTextContent(/of 211 games/);
   });
 });
 

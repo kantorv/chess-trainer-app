@@ -251,13 +251,56 @@ export const sortedRows = (
   });
 };
 
-/** The narrowing the table offers: words in any column, and one result. */
+/** The side a player had — what narrows a player filter to their games as White or as Black. */
+export type PlayerColor = "white" | "black";
+
+/**
+ * The narrowing the table offers: words in any column (the box over the
+ * table), and the side panel's structured filters. Every field but `text`
+ * and `result` is optional, and an empty one narrows nothing.
+ */
 export type RowFilter = {
   /** Every word must appear in some column, case aside. */
   text: string;
   /** One of {@link RESULTS}, or `""` for any. */
   result: string;
+  /** Part of a player's name, case aside — White's or Black's, as `color` says. */
+  player?: string;
+  /** The side `player` had; `""` / absent for either. Nothing without a `player`. */
+  color?: PlayerColor | "";
+  /** Part of the opening's name, or the start of its ECO code (`B9` is B90–B99). */
+  opening?: string;
+  /** The event, exactly. */
+  event?: string;
+  /** Inclusive bounds, `YYYY-MM-DD` (a date input's value). */
+  from?: string;
+  to?: string;
 };
+
+/**
+ * The side panel's filters as the table's URL holds them — every field a
+ * string, `""` for none (dates as `YYYY-MM-DD`).
+ */
+export type CollectionFilterValues = {
+  player: string;
+  color: PlayerColor | "";
+  opening: string;
+  event: string;
+  from: string;
+  to: string;
+  result: string;
+};
+
+/** The URL parameters the side panel owns — what its Clear removes. */
+export const COLLECTION_FILTER_PARAMS = [
+  "player",
+  "color",
+  "opening",
+  "event",
+  "from",
+  "to",
+  "result",
+] as const satisfies readonly (keyof CollectionFilterValues)[];
 
 const searchTextOf = (row: CollectionRow): string =>
   [
@@ -275,17 +318,101 @@ const searchTextOf = (row: CollectionRow): string =>
     .join(" ")
     .toLowerCase();
 
+/**
+ * The days a PGN date could be, as `YYYY-MM-DD` bounds: `2023.07.30` is that
+ * day; `1848` (its unknown parts already dropped) is the whole year; a month
+ * or day written `??` is any. `undefined` without a readable year.
+ */
+export const dateBounds = (date: string | undefined): [string, string] | undefined => {
+  const [year, month, day] = (date ?? "").split(".");
+  if (year === undefined || !/^\d{4}$/.test(year)) return undefined;
+  const part = (value: string | undefined, low: string, high: string): [string, string] =>
+    value !== undefined && /^\d{2}$/.test(value) ? [value, value] : [low, high];
+  const [monthLow, monthHigh] = part(month, "01", "12");
+  const [dayLow, dayHigh] = part(day, "01", "31");
+  return [`${year}-${monthLow}-${dayLow}`, `${year}-${monthHigh}-${dayHigh}`];
+};
+
 export const filteredRows = (
   rows: readonly CollectionRow[],
   filter: RowFilter,
 ): CollectionRow[] => {
   const words = filter.text.toLowerCase().split(/\s+/).filter(Boolean);
+  const player = filter.player?.trim().toLowerCase() ?? "";
+  const opening = filter.opening?.trim().toLowerCase() ?? "";
+  const event = filter.event ?? "";
+  const from = filter.from ?? "";
+  const to = filter.to ?? "";
   return rows.filter((row) => {
     if (filter.result !== "" && row.result !== filter.result) return false;
+    if (player !== "") {
+      const asWhite = filter.color !== "black" && (row.white?.toLowerCase().includes(player) ?? false);
+      const asBlack = filter.color !== "white" && (row.black?.toLowerCase().includes(player) ?? false);
+      if (!asWhite && !asBlack) return false;
+    }
+    if (
+      opening !== "" &&
+      !(row.opening?.toLowerCase().includes(opening) ?? false) &&
+      !(row.eco?.toLowerCase().startsWith(opening) ?? false)
+    ) {
+      return false;
+    }
+    if (event !== "" && row.event !== event) return false;
+    if (from !== "" || to !== "") {
+      // A game is in range when any day it could have been played is.
+      const bounds = dateBounds(row.date);
+      if (bounds === undefined) return false;
+      if (from !== "" && bounds[1] < from) return false;
+      if (to !== "" && bounds[0] > to) return false;
+    }
     if (words.length === 0) return true;
     const text = searchTextOf(row);
     return words.every((word) => text.includes(word));
   });
+};
+
+/**
+ * What a collection's rows offer the side panel's filters — **a filter is
+ * shown only where some game carries its field**, since a collection is
+ * whatever its PGN says (Morphy's file has no rounds, an upload may have no
+ * dates). The lists are distinct and sorted (numeric-aware); `dates` is the
+ * earliest and latest day any game could be.
+ */
+export type CollectionFacets = {
+  players: string[];
+  openings: string[];
+  events: string[];
+  results: string[];
+  dates?: { min: string; max: string };
+};
+
+export const collectionFacetsOf = (rows: readonly CollectionRow[]): CollectionFacets => {
+  const players = new Set<string>();
+  const openings = new Set<string>();
+  const events = new Set<string>();
+  const results = new Set<string>();
+  let min: string | undefined;
+  let max: string | undefined;
+  for (const row of rows) {
+    if (row.white !== undefined) players.add(row.white);
+    if (row.black !== undefined) players.add(row.black);
+    if (row.opening !== undefined) openings.add(row.opening);
+    if (row.event !== undefined) events.add(row.event);
+    results.add(row.result);
+    const bounds = dateBounds(row.date);
+    if (bounds !== undefined) {
+      if (min === undefined || bounds[0] < min) min = bounds[0];
+      if (max === undefined || bounds[1] > max) max = bounds[1];
+    }
+  }
+  const sorted = (values: Set<string>) => [...values].sort(collator.compare);
+  return {
+    players: sorted(players),
+    openings: sorted(openings),
+    events: sorted(events),
+    results: RESULTS.filter((result) => results.has(result)),
+    dates: min === undefined || max === undefined ? undefined : { min, max },
+  };
 };
 
 /**

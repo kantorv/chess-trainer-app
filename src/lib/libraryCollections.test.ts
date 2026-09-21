@@ -4,7 +4,9 @@ import {
   collectionIdOfStem,
   collectionNameOfStem,
   collectionRowOf,
+  collectionFacetsOf,
   collectionRowsOf,
+  dateBounds,
   filteredRows,
   mainlinePlies,
   MAX_COLLECTION_CHARS,
@@ -94,6 +96,60 @@ describe("sorting and filtering the rows", () => {
     expect(filteredRows(rows, { text: "carlsen petrov", result: "" }).map((r) => r.number)).toEqual([1]);
     expect(filteredRows(rows, { text: "", result: "0-1" }).map((r) => r.number)).toEqual([3]);
     expect(filteredRows(rows, { text: "", result: "" })).toHaveLength(3);
+  });
+});
+
+describe("the side panel's filters", () => {
+  const rows = collectionRowsOf({ games: [A, B, C] });
+  const numbers = (filter: Partial<Parameters<typeof filteredRows>[1]>) =>
+    filteredRows(rows, { text: "", result: "", ...filter }).map((r) => r.number);
+
+  it("finds a player's games, either side or the one asked for", () => {
+    expect(numbers({ player: "carlsen" })).toEqual([1, 3]);
+    expect(numbers({ player: "Carlsen", color: "white" })).toEqual([1]);
+    expect(numbers({ player: "carlsen", color: "black" })).toEqual([3]);
+    // A side alone narrows nothing.
+    expect(numbers({ color: "black" })).toEqual([1, 2, 3]);
+  });
+
+  it("finds an opening by its name or the start of its ECO code", () => {
+    expect(numbers({ opening: "petrov" })).toEqual([1]);
+    expect(numbers({ opening: "C4" })).toEqual([1]);
+    expect(numbers({ opening: "classical" })).toEqual([1]);
+    expect(numbers({ opening: "sicilian" })).toEqual([]);
+  });
+
+  it("matches an event exactly", () => {
+    expect(numbers({ event: "Test Open" })).toEqual([1, 2, 3]);
+    expect(numbers({ event: "Test" })).toEqual([]);
+  });
+
+  it("keeps a game any of whose possible days is in range, and drops one with no date", () => {
+    expect(numbers({ from: "2023-07-01" })).toEqual([1]);
+    expect(numbers({ to: "1848-06-15" })).toEqual([2]);
+    expect(numbers({ from: "1848-12-31", to: "1848-12-31" })).toEqual([2]);
+    expect(numbers({ from: "2023-07-31" })).toEqual([]);
+  });
+
+  it("reads a partial PGN date as the days it could be", () => {
+    expect(dateBounds("2023.07.30")).toEqual(["2023-07-30", "2023-07-30"]);
+    expect(dateBounds("1858.10")).toEqual(["1858-10-01", "1858-10-31"]);
+    expect(dateBounds("1848")).toEqual(["1848-01-01", "1848-12-31"]);
+    expect(dateBounds("2023.??.15")).toEqual(["2023-01-15", "2023-12-15"]);
+    expect(dateBounds(undefined)).toBeUndefined();
+    expect(dateBounds("????")).toBeUndefined();
+  });
+
+  it("offers only what the games carry", () => {
+    expect(collectionFacetsOf(rows)).toEqual({
+      players: ["Anderssen", "Carlsen,M", "Morphy, Paul", "Nepo,I", "Zed"],
+      openings: ["Petrov, Classical"],
+      events: ["Test Open"],
+      results: ["1-0", "0-1", "1/2-1/2"],
+      dates: { min: "1848-01-01", max: "2023-07-30" },
+    });
+    const bare = collectionRowsOf({ games: ["1. e4 *"] });
+    expect(collectionFacetsOf(bare)).toEqual({ players: [], openings: [], events: [], results: ["*"], dates: undefined });
   });
 });
 

@@ -909,9 +909,27 @@ const en = {
         opening: "Opening",
         moves: "Moves",
       },
-      hint: "Click a column to sort by it, type to filter, and click a game to open it on an analysis board.",
+      hint: "Click a column to sort by it, type in the box or use the filters above to narrow the games, and click a game to open it on an analysis board.",
       shippedNote: "This collection ships with the app. Its games are read-only: changes you make on a game are saved as a copy in Saved analyses.",
       uploadedNote: "You added this collection; it is kept in this browser only. Changes to a game can update it in place or be saved as a copy next to it.",
+    },
+    /**
+     * The table's filters, in the right-hand panel — each shown only where
+     * the collection's games carry that field.
+     */
+    filters: {
+      title: "Filters",
+      clear: "Clear",
+      player: "Player",
+      color: "Played as",
+      anyColor: "Either",
+      asWhite: "White",
+      asBlack: "Black",
+      opening: "Opening",
+      openingHelp: "A name, or the start of an ECO code (B9)",
+      event: "Event",
+      from: "From",
+      to: "To",
     },
     confirmDelete: {
       title: "Delete {{name}}?",
