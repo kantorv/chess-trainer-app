@@ -3,17 +3,14 @@ import { Chess } from "chess.js";
 
 import { DEFAULT_ENGINE_SETTINGS } from "./engineSettings";
 import { gameFromChess, type Game } from "./gameModel";
-import { resolveGameReference } from "./gameReference";
 import { savedGameOf, type SavedGame } from "./savedGames";
 import {
   clearSavedGames,
-  fileSavedGame,
   findSavedGame,
   MAX_SAVED_GAMES,
   removeSavedGame,
   SAVED_GAMES_STORAGE_KEY,
   saveGame,
-  savedGamesCatalog,
   savedGamesSnapshot,
   subscribeSavedGames,
 } from "./savedGameStore";
@@ -194,8 +191,16 @@ describe("the saved-games store", () => {
       list is not re-ordered by a game nobody played on.
     */
     saveGame(save("g1", ["e4"]));
-    saveGame(save("g2", ["d4"]));
-    fileSavedGame("g2", "folder-a");
+    saveGame(
+      savedGameOf(
+        "g2",
+        playedGame(["d4"]),
+        DEFAULT_ENGINE_SETTINGS,
+        new Date("2026-09-07T10:00:00.000Z"),
+        undefined,
+        "folder-a",
+      ),
+    );
     const before = savedGamesSnapshot();
 
     // What the screen's save effect does on mount of a resumed filed game:
@@ -313,37 +318,5 @@ describe("the saved-games store — when storage will not co-operate", () => {
     });
 
     expect(savedGamesSnapshot()).toEqual([]);
-  });
-});
-
-describe("the saved games as a `?game=` destination", () => {
-  it("resolves a reference into the Analysis Board and Load PGN's hand-off", () => {
-    saveGame(save("g1", ["e4", "e5", "Nf3"]));
-
-    const resolved = resolveGameReference("engine/saved/g1");
-
-    expect(resolved?.id).toBe("g1");
-    expect(resolved?.game.moves.map((move) => move.san)).toEqual([
-      "e4",
-      "e5",
-      "Nf3",
-    ]);
-  });
-
-  it("ignores a reference to a game that has been deleted", () => {
-    saveGame(save("g1", ["e4"]));
-    removeSavedGame("g1");
-
-    expect(resolveGameReference("engine/saved/g1")).toBe(undefined);
-  });
-
-  it("rebuilds the catalog only when the games change", () => {
-    saveGame(save("g1", ["e4"]));
-
-    expect(savedGamesCatalog()).toBe(savedGamesCatalog());
-
-    const before = savedGamesCatalog();
-    saveGame(save("g2", ["d4"]));
-    expect(savedGamesCatalog()).not.toBe(before);
   });
 });

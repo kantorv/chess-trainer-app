@@ -15,7 +15,7 @@ import type { RepertoireFolder } from "../../lib/savedRepertoireFolders";
  * confirm deleting one, and confirm deleting the picked repertoires. (Moving a
  * repertoire into a folder is its settings screen's, since CTA-68.)
  *
- * The saved games' dialogs (`views/engine/saved/`) are the model, reduced to
+ * The shared folder dialogs (`views/shared/folders/`) are the model, reduced to
  * what a one-level list needs: no nested picker, no folder moves, no
  * sub-folder counts. Presentational: each takes what it shows and reports
  * what was chosen, and the list screen makes the store call.

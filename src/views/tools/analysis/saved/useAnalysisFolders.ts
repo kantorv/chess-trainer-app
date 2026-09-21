@@ -9,7 +9,7 @@ import {
 /**
  * The reader's saved-analysis folders, as React state (CTA-73) — the binding
  * between [`lib/savedAnalysisFolderStore.ts`](../../../../lib/savedAnalysisFolderStore.ts)
- * and the components, `views/engine/saved/useGameFolders.ts` again.
+ * and the components, `useSavedAnalyses.ts` again.
  */
 export const useAnalysisFolders = (): readonly AnalysisFolder[] =>
   useSyncExternalStore(

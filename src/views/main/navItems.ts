@@ -53,13 +53,6 @@ export const navItems = (): readonly NavItem[] => [
     icon: HistoryRoundedIcon,
     folder: "engine",
   },
-  // The games played before CTA-74, in their folders — kept, not migrated.
-  {
-    to: "/engine/saved",
-    labelKey: "nav.savedGamesOld",
-    icon: HistoryRoundedIcon,
-    folder: "engine",
-  },
   {
     to: "/masked/play",
     labelKey: "nav.maskedPlay",

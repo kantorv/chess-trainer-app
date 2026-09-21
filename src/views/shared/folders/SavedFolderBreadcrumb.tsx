@@ -14,17 +14,17 @@ import type { GameFolder } from "../../../lib/savedGameFolders";
 export function SavedFolderBreadcrumb({
   crumbs,
   onOpen,
-  labelKey = "savedGames",
-  testIdPrefix = "saved-games",
+  labelKey,
+  testIdPrefix,
 }: {
   /** The chain from the top level down to the folder being looked at. */
   crumbs: readonly GameFolder[];
   /** Navigate to a crumb's folder, or to the top level with `null`. */
   onOpen: (id: string | null) => void;
-  /** The locale block — `savedGames` by default; its `folder.*` keys are read. */
-  labelKey?: string;
-  /** The test-id prefix — `saved-games` by default. */
-  testIdPrefix?: string;
+  /** The locale block — its `folder.*` keys are read. */
+  labelKey: string;
+  /** The test-id prefix. */
+  testIdPrefix: string;
 }) {
   const { t } = useTranslation();
 

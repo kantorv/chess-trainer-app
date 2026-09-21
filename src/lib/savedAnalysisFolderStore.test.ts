@@ -17,7 +17,8 @@ import {
   removeAnalysisFolder,
   renameAnalysisFolder,
 } from "./savedAnalysisFolderStore";
-import { GAME_FOLDERS_STORAGE_KEY } from "./savedGameFolderStore";
+/** The key the old saved games' folders were kept under (removed with that list, CTA-74). */
+const GAME_FOLDERS_STORAGE_KEY = "chessapp.savedGameFolders.v1";
 import {
   addAnalyses,
   findSavedAnalysis,

@@ -6,7 +6,6 @@ import {
 import { userPgnsLibrary } from "./pgnCatalog";
 import { playedGamesCatalog } from "./playedGameStore";
 import { savedAnalysesCatalog } from "./savedAnalysisStore";
-import { savedGamesCatalog } from "./savedGameStore";
 
 /**
  * How a **whole game** crosses between screens: `?game=library/<category path>/<id>`
@@ -30,10 +29,10 @@ import { savedGamesCatalog } from "./savedGameStore";
  *
  * A reference names a *game*, so it resolves only against a catalog that has
  * some, and the registry below is the single place that mapping lives. There
- * are four: the User PGNs library, the reader's own saved engine games
- * (`lib/savedGames.ts`), their saved analysis boards (`lib/savedAnalyses.ts`)
- * and the games of Play with Engine v2 (`lib/playedGames.ts`, CTA-74) — the
- * last three presented as catalogs for exactly this reason. A saved game or analysis reaches the Analysis Board and Load PGN
+ * are three: the User PGNs library, the reader's saved analysis boards
+ * (`lib/savedAnalyses.ts`) and their games against the engine
+ * (`lib/playedGames.ts`, CTA-74) — the last two presented as catalogs for
+ * exactly this reason. A saved game or analysis reaches the Analysis Board and Load PGN
  * through the hand-off those screens already have, and neither learns that
  * either exists. **This registry is the whole cost of a new producer of games.**
  */
@@ -58,9 +57,6 @@ export const LEGACY_PGN_REFERENCE_KEY = "pgn";
 /** @deprecated Use {@link LIBRARY_REFERENCE_KEY}. Retained for back-compat. */
 export const PGN_REFERENCE_KEY = LIBRARY_REFERENCE_KEY;
 
-/** The section key the reader's saved engine games carry. */
-export const ENGINE_REFERENCE_KEY = "engine";
-
 /** The section key the reader's saved analysis boards carry. */
 export const ANALYSIS_REFERENCE_KEY = "analysis";
 
@@ -78,7 +74,6 @@ const catalogsByKey: Record<string, () => LibraryCatalog> = {
   [LIBRARY_REFERENCE_KEY]: userPgnsLibrary,
   // The pre-rename alias: old `?game=pgn/…` links still resolve.
   [LEGACY_PGN_REFERENCE_KEY]: userPgnsLibrary,
-  [ENGINE_REFERENCE_KEY]: savedGamesCatalog,
   [ANALYSIS_REFERENCE_KEY]: savedAnalysesCatalog,
   [PLAY_REFERENCE_KEY]: playedGamesCatalog,
 };

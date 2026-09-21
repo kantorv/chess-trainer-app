@@ -2,9 +2,8 @@ import type { CSSObject } from "@mui/material/styles";
 import { cardSizeTrack, type CardSize } from "../library/cardSize";
 
 /**
- * **The saved-list view machinery** — the pure half of what the three saved
- * screens share: [`views/engine/saved/SavedGames.tsx`](../engine/saved/SavedGames.tsx),
- * [`views/tools/analysis/saved/SavedAnalyses.tsx`](../tools/analysis/saved/SavedAnalyses.tsx)
+ * **The saved-list view machinery** — the pure half of what the saved
+ * screens share: [`views/tools/analysis/saved/SavedAnalyses.tsx`](../tools/analysis/saved/SavedAnalyses.tsx)
  * and [`views/tools/openings/saved/SavedOpenings.tsx`](../tools/openings/saved/SavedOpenings.tsx)
  * all render the same two views (the list and the two board sizes) over the
  * same caption shape, and the parts of that that are *values* rather than

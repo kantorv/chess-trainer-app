@@ -1,9 +1,7 @@
 import { sameEngineSettings } from "./engineSettings";
-import type { LibraryCatalog } from "./libraryCatalog";
 import { recordStore } from "./recordStore";
 import {
   sameSavedGameEvals,
-  savedGameCatalogOf,
   savedGameFrom,
   type SavedGame,
 } from "./savedGames";
@@ -14,7 +12,7 @@ import {
  *
  * The store half of [`savedGames.ts`](./savedGames.ts), built over the shared
  * [`recordStore.ts`](./recordStore.ts) scaffolding — no React, so the pure
- * code can use it and `views/engine/saved/useSavedGames.ts` can wrap it in a
+ * code can use it and a view hook could wrap it in a
  * `useSyncExternalStore` without either knowing about the other. That module
  * owns the non-throwing read, the revision-stamped snapshot and the
  * `storage`-event subscription, and carries the reasoning for all of it. What
@@ -73,11 +71,10 @@ const write = games.write;
  *
  * **The stored folder is carried forward** (CTA-46), as `savedAt` is: the
  * record the autosave effect builds carries no folder knowledge — it cannot,
- * the effect runs on Play with Engine and filing happens on /engine/saved — so
+ * the effect ran on Play with Engine and filing happened on the old list — so
  * the idempotent compare does not read `folderId` (comparing it would make
  * every resume of a filed game a change and re-order the list) and the write
- * keeps the stored one. {@link fileSavedGame} is the only write that changes a
- * folder, so the store is the one place the rule lives.
+ * keeps the stored one.
  *
  * The compare **does** read the evals (CTA-50), the opposite of `folderId` for
  * the same reason in reverse: an eval arriving after the move is a real change
@@ -128,80 +125,5 @@ export const findSavedGame = (
 export const removeSavedGame = (id: string): SavedGameProblem | undefined =>
   write(savedGamesSnapshot().filter((row) => row.id !== id));
 
-/**
- * File one game under a folder — or to **Unfiled** with `null` — **in place**:
- * the record keeps its position in the list rather than jumping to the top,
- * because filing is organisation, not playing. A folder that has not actually
- * changed is a no-op, and an unknown id is one too.
- *
- * The parent is not checked against the folders store: the one caller is the
- * screen's move dialog, whose picker only offers folders that exist, and a
- * stale id a hand edit did produce reads as Unfiled on every
- * [`savedGameFolders.ts`](./savedGameFolders.ts) read anyway.
- */
-export const fileSavedGame = (
-  id: string,
-  folderId: string | null,
-): SavedGameProblem | undefined => {
-  const current = savedGamesSnapshot();
-  const existing = current.find((row) => row.id === id);
-  if (existing === undefined || existing.folderId === folderId) return undefined;
-
-  return write(
-    current.map((row) =>
-      row.id === id ? { ...row, folderId } : row,
-    ),
-  );
-};
-
-/**
- * File every game under a folder back to **Unfiled** — the games half of what
- * deleting a folder does to its contents
- * (`removeGameFolder` in [`savedGameFolderStore.ts`](./savedGameFolderStore.ts)).
- *
- * This is the one folder operation that changes *games*, which is why it lives
- * in the games store rather than beside the folder CRUD: a folder's own moves
- * (re-parenting sub-folders) are the folder store's to make, but the records
- * whose `folderId` is being set are these. Only the games *directly* in the
- * folder are unfiled — a sub-folder's games stay filed, because the sub-folder
- * itself is re-parented, not deleted. An unknown id changes nothing.
- */
-export const unfileGamesIn = (
-  folderId: string,
-): SavedGameProblem | undefined => {
-  const current = savedGamesSnapshot();
-  if (!current.some((row) => row.folderId === folderId)) return undefined;
-
-  return write(
-    current.map((row) =>
-      row.folderId === folderId ? { ...row, folderId: null } : row,
-    ),
-  );
-};
-
 /** Forget all of them. */
 export const clearSavedGames = (): SavedGameProblem | undefined => write([]);
-
-/*
-  The saved games as a catalog, memoised on the identity of the snapshot.
-
-  `savedGamesCatalog()` is called from `resolveGameReference` — on every
-  `?game=` arrival — and parsing fifty PGNs is not something to do twice for the
-  same data. The store returns the same array until its stored text changes, so
-  this rebuilds when a game is saved or removed and never in between. The same
-  arrangement `userPgnsLibrary()` uses over the uploads store.
-*/
-let live: { games: readonly SavedGame[]; catalog: LibraryCatalog } | undefined;
-
-/**
- * **The saved games as a library catalog**, so `?game=engine/saved/<id>`
- * resolves through the ordinary hand-off (`lib/gameReference.ts`) rather than
- * through a transport of its own.
- */
-export const savedGamesCatalog = (): LibraryCatalog => {
-  const games = savedGamesSnapshot();
-  if (live === undefined || live.games !== games) {
-    live = { games, catalog: savedGameCatalogOf(games) };
-  }
-  return live.catalog;
-};

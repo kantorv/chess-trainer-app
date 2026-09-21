@@ -10,9 +10,7 @@ import {
   chessFromSavedGame,
   newSavedGameId,
   resultOfFen,
-  SAVED_GAMES_PATH,
   sameSavedGameEvals,
-  savedGameCatalogOf,
   savedGameEvalsMap,
   savedGameFrom,
   savedGameOf,
@@ -388,43 +386,6 @@ describe("savedGameSummary", () => {
     const saved = save(playedGame(["e4"]), { pgn: "1. Zz9" });
 
     expect(savedGameSummary(saved, undefined).moves).toBe(0);
-  });
-});
-
-describe("savedGameCatalogOf — the games as a catalog", () => {
-  it("puts every readable game in one category, in the order given", () => {
-    const games = [
-      save(playedGame(["e4", "e5"]), { id: "g1" }),
-      save(playedGame(["d4"]), { id: "g2" }),
-    ];
-
-    const catalog = savedGameCatalogOf(games);
-
-    expect(catalog.categories.map((category) => category.path)).toEqual([
-      SAVED_GAMES_PATH,
-    ]);
-    expect(catalog.items.map((item) => item.id)).toEqual(["g1", "g2"]);
-    expect(catalog.items.every((item) => item.kind === "game")).toBe(true);
-    // Positions is a projection of items, and a library of games has none.
-    expect(catalog.positions).toEqual([]);
-  });
-
-  it("carries the parsed game, so a destination replays it without re-reading", () => {
-    const catalog = savedGameCatalogOf([save(playedGame(["e4", "e5", "Nf3"]))]);
-    const [item] = catalog.items;
-
-    expect(item.kind).toBe("game");
-    if (item.kind !== "game") return;
-    expect(item.game.moves.map((move) => move.san)).toEqual(["e4", "e5", "Nf3"]);
-  });
-
-  it("leaves out a record it cannot parse rather than throwing", () => {
-    const catalog = savedGameCatalogOf([
-      save(playedGame(["e4"]), { id: "good" }),
-      save(playedGame(["e4"]), { id: "bad", pgn: "1. Zz9" }),
-    ]);
-
-    expect(catalog.items.map((item) => item.id)).toEqual(["good"]);
   });
 });
 

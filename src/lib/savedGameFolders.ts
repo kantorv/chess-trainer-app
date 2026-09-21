@@ -13,7 +13,7 @@ import type { SavedGame } from "./savedGames";
  * [`savedGameFolderStore.ts`](./savedGameFolderStore.ts) — a versioned
  * `localStorage` key beside the games' own
  * ([`savedGameStore.ts`](./savedGameStore.ts)) — and the React binding is
- * `views/engine/saved/useGameFolders.ts`. A folder is **not** a game, which is
+ * its (deleted) view binding. A folder is **not** a game, which is
  * the whole reason it is a separate record in a separate store: a game carries
  * a PGN and the settings it was played under; a folder carries only a name and
  * a parent. What joins them is {@link SavedGame.folderId}, a plain id — no join

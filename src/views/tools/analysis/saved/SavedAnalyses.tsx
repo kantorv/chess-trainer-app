@@ -45,11 +45,11 @@ import {
   renameAnalysisFolder,
 } from "../../../../lib/savedAnalysisFolderStore";
 import { removeSavedAnalyses } from "../../../../lib/savedAnalysisStore";
-import FolderDeleteDialog from "../../../engine/saved/FolderDeleteDialog";
-import FolderMoveDialog from "../../../engine/saved/FolderMoveDialog";
-import FolderNameDialog from "../../../engine/saved/FolderNameDialog";
-import { SavedFolderBreadcrumb } from "../../../engine/saved/SavedFolderBreadcrumb";
-import { SavedFolderCard, SavedFolderRow } from "../../../engine/saved/SavedFolderViews";
+import FolderDeleteDialog from "../../../shared/folders/FolderDeleteDialog";
+import FolderMoveDialog from "../../../shared/folders/FolderMoveDialog";
+import FolderNameDialog from "../../../shared/folders/FolderNameDialog";
+import { SavedFolderBreadcrumb } from "../../../shared/folders/SavedFolderBreadcrumb";
+import { SavedFolderCard, SavedFolderRow } from "../../../shared/folders/SavedFolderViews";
 import { RightPanel } from "../../../main/rightPanel";
 import { RepertoireBulkDeleteDialog } from "../../../repertoires/RepertoireFolderDialogs";
 import SavedListExportBar from "../../../shared/SavedListExportBar";

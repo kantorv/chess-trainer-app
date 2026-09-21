@@ -18,7 +18,7 @@ import {
   type SavedAnalysisSettingsEdit,
 } from "../../../../lib/savedAnalyses";
 import { updateSavedAnalysisSettings } from "../../../../lib/savedAnalysisStore";
-import FolderPicker from "../../../engine/saved/FolderPicker";
+import FolderPicker from "../../../shared/folders/FolderPicker";
 import { RightPanel } from "../../../main/rightPanel";
 import { useAnalysisFolders } from "./useAnalysisFolders";
 import { useSavedAnalyses } from "./useSavedAnalyses";
