@@ -146,8 +146,16 @@ export function RepertoireBulkDeleteDialog({
   count,
   onConfirm,
   onClose,
+  labelKey = "repertoires",
+  testIdPrefix = "repertoires",
 }: {
   open: boolean;
+  /**
+   * The locale block (`bulkDelete.*`, `folder.cancel`) and the test-id prefix —
+   * the repertoires' by default; the Saved analyses list passes its own (CTA-73).
+   */
+  labelKey?: string;
+  testIdPrefix?: string;
   /** How many repertoires are picked — what goes. */
   count: number;
   onConfirm: () => void;
@@ -156,15 +164,15 @@ export function RepertoireBulkDeleteDialog({
   const { t } = useTranslation();
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="xs">
-      <DialogTitle data-testid="repertoires-delete-title">
-        {t("repertoires.bulkDelete.title", { count })}
+      <DialogTitle data-testid={`${testIdPrefix}-delete-title`}>
+        {t(`${labelKey}.bulkDelete.title`, { count })}
       </DialogTitle>
       <DialogContent>
-        <Typography variant="body2">{t("repertoires.bulkDelete.text")}</Typography>
+        <Typography variant="body2">{t(`${labelKey}.bulkDelete.text`)}</Typography>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} data-testid="repertoires-delete-cancel">
-          {t("repertoires.folder.cancel")}
+        <Button onClick={onClose} data-testid={`${testIdPrefix}-delete-cancel`}>
+          {t(`${labelKey}.folder.cancel`)}
         </Button>
         <Button
           color="error"
@@ -173,9 +181,9 @@ export function RepertoireBulkDeleteDialog({
             onConfirm();
             onClose();
           }}
-          data-testid="repertoires-delete-confirm"
+          data-testid={`${testIdPrefix}-delete-confirm`}
         >
-          {t("repertoires.bulkDelete.confirm")}
+          {t(`${labelKey}.bulkDelete.confirm`)}
         </Button>
       </DialogActions>
     </Dialog>

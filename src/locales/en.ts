@@ -467,7 +467,7 @@ const en = {
     count: "Analyses: {{count}}",
     empty:
       "No saved analyses yet. Work on a board at the Analysis Board and save it, and it appears here.",
-    hint: "Every analysis you save on the Analysis Board is kept here — side lines, comments and all — filed into your folders. Pick one up where you left it, or take the position somewhere else.",
+    hint: "Every analysis you save on the Analysis Board is kept here — side lines, comments and all — filed into your folders. Open one to pick it up where you left it.",
     /** Said plainly: this is a browser, not a backup — as the Uploads screen does. */
     storage:
       "Saved analyses are kept in this browser only. Clearing site data removes them, and they do not follow you to another device.",
@@ -496,11 +496,8 @@ const en = {
       compact: "Small boards",
       comfortable: "Big boards",
     },
-    /** The three destinations — see `SavedAnalyses.tsx` for why these three. */
-    continue: "Continue",
-    openInLoadPgn: "PGN viewer",
-    play: "Play from here",
-    remove: "Delete this analysis",
+    /** Opens it on the Analysis Board — the one destination (CTA-73). */
+    open: "Open",
     /**
      * The top-bar button to the Analysis Board — the screen the sidebar's
      * single Analysis entry hides (CTA-58), so the board is reached from here.
@@ -511,6 +508,14 @@ const en = {
     selectAll: "Select all analyses",
     selected: "{{count}} selected",
     download: "Download selected as PGN",
+    deleteSelected: "Delete selected",
+    /** Deleting the picks, asked first — the repertoires' dialog with these words. */
+    bulkDelete: {
+      title_one: "Delete {{count}} analysis?",
+      title_other: "Delete {{count}} analyses?",
+      text: "They are removed from this browser. This can't be undone.",
+      confirm: "Delete",
+    },
     /**
      * The nested folders (CTA-73) — the savedGames block's `folder` keys, read
      * by the same components through `labelKey`.

@@ -251,40 +251,31 @@ describe("Saved analyses — where a row goes", () => {
     saveAnalysis(save("a1", [[[], ["e4", "e5", "Nf3"]]], ["e4", "e5"]));
   });
 
-  it("offers to go on working on it, by its id", () => {
+  it("opens it on the Analysis Board, by its id — its one destination", () => {
     renderScreen();
 
-    expect(screen.getByTestId("saved-analyses-continue-a1")).toHaveAttribute(
+    expect(screen.getByTestId("saved-analyses-open-a1")).toHaveAttribute(
       "href",
       "/tools/analysis?analysis=a1",
     );
+    // No hand-offs to Load PGN or Play with Engine, and no delete of its own.
+    expect(screen.queryByTestId("saved-analyses-loadpgn-a1")).toBeNull();
+    expect(screen.queryByTestId("saved-analyses-play-a1")).toBeNull();
+    expect(screen.queryByTestId("saved-analyses-remove-a1")).toBeNull();
   });
 
-  it("hands the whole game to Load PGN as the reference it already takes", () => {
+  it("deletes the picks in bulk, after asking, and the list follows", async () => {
+    const user = userEvent.setup();
     renderScreen();
 
-    expect(screen.getByTestId("saved-analyses-loadpgn-a1")).toHaveAttribute(
-      "href",
-      `/games/load-pgn?game=${encodeURIComponent("analysis/saved/a1")}`,
+    await user.click(
+      within(screen.getByTestId("saved-analyses-select-a1")).getByRole("checkbox"),
     );
-  });
-
-  it("hands Play with Engine the position it was left on, not the last move", () => {
-    renderScreen();
-
-    const tree = grow([[[], ["e4", "e5", "Nf3"]]]);
-    const left = fenAtNode(tree, nodeAtSanPath(tree, ["e4", "e5"]));
-
-    expect(screen.getByTestId("saved-analyses-play-a1")).toHaveAttribute(
-      "href",
-      `/engine/play?fen=${encodeURIComponent(left)}`,
+    await user.click(screen.getByTestId("saved-analyses-delete"));
+    expect(screen.getByTestId("saved-analyses-delete-title")).toHaveTextContent(
+      "Delete 1 analysis?",
     );
-  });
-
-  it("deletes one, and the list follows without a reload", async () => {
-    renderScreen();
-
-    await userEvent.click(screen.getByTestId("saved-analyses-remove-a1"));
+    await user.click(screen.getByTestId("saved-analyses-delete-confirm"));
 
     expect(screen.queryByTestId("saved-analyses-item-a1")).not.toBeInTheDocument();
     expect(screen.getByTestId("saved-analyses-empty")).toBeInTheDocument();
@@ -302,17 +293,15 @@ describe("Saved analyses — where a row goes", () => {
 });
 
 describe("Saved analyses — a record that will not read", () => {
-  it("still lists it, and offers the one action that means anything", () => {
+  it("still lists it — nothing to open, but it can be picked (to delete or export)", () => {
     saveAnalysis({ ...save("a1", [[[], ["e4"]]]), pgn: "1. Zz9" });
 
     renderScreen();
 
     const row = screen.getByTestId("saved-analyses-item-a1");
     expect(row).toHaveTextContent("This analysis could not be read.");
-    expect(
-      screen.queryByTestId("saved-analyses-continue-a1"),
-    ).not.toBeInTheDocument();
-    expect(screen.getByTestId("saved-analyses-remove-a1")).toBeInTheDocument();
+    expect(screen.queryByTestId("saved-analyses-open-a1")).not.toBeInTheDocument();
+    expect(screen.getByTestId("saved-analyses-select-a1")).toBeInTheDocument();
   });
 });
 
@@ -428,7 +417,7 @@ describe("Saved analyses — named, and filed in folders (CTA-73)", () => {
     expect(screen.queryByTestId("saved-analyses-item-outside")).toBeNull();
   });
 
-  it("creates a folder where the reader stands, and files an analysis into it", async () => {
+  it("creates a folder where the reader stands", async () => {
     const user = userEvent.setup();
     saveAnalysis(save("a1", [[[], ["e4"]]]));
     renderScreen();
@@ -438,11 +427,22 @@ describe("Saved analyses — named, and filed in folders (CTA-73)", () => {
     await user.click(screen.getByTestId("analysis-folder-name-save"));
     const [folder] = analysisFoldersSnapshot();
     expect(folder).toMatchObject({ name: "Sicilian", parentId: null });
+    expect(screen.getByTestId(`saved-analyses-folder-${folder.id}`)).toBeInTheDocument();
+  });
 
-    await user.click(screen.getByTestId("saved-analyses-move-a1"));
-    await user.click(screen.getByTestId(`analysis-folder-picker-${folder.id}`));
-    expect(findSavedAnalysis("a1")?.folderId).toBe(folder.id);
-    expect(screen.queryByTestId("saved-analyses-item-a1")).toBeNull();
+  it("has a checkbox on every card too, and keeps the picks across a view switch", async () => {
+    const user = userEvent.setup();
+    saveAnalysis(save("a1", [[[], ["e4"]]]));
+    renderScreen();
+
+    await user.click(
+      within(screen.getByTestId("saved-analyses-select-a1")).getByRole("checkbox"),
+    );
+    await user.click(screen.getByTestId("saved-analyses-view-compact"));
+    expect(
+      within(screen.getByTestId("saved-analyses-select-a1")).getByRole("checkbox"),
+    ).toBeChecked();
+    expect(screen.getByTestId("saved-analyses-selected-count")).toHaveTextContent("1 selected");
   });
 
   it("links every analysis to its settings", () => {
