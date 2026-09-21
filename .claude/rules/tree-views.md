@@ -4,8 +4,9 @@ How a board screen **attaches a view of its game tree** — the move list, the
 map, the comments, the next-move arrows — instead of wiring them inline. This
 is the spec the shared explorer in [`src/views/explorer/`](../../src/views/explorer/)
 implements (CTA-72). The repertoire player (`/repertoires/<id>` and its games)
-and, since CTA-73, the Analysis Board (`/tools/analysis`) and, since CTA-74,
-Play with Engine (`/engine/play`) are built on it. The other screens will move
+and, since CTA-73, the Analysis Board (`/tools/analysis`), since CTA-74,
+Play with Engine (`/engine/play`) and, since CTA-75, the Library's game board
+(`/library/<collection>/<game>`) are built on it. The other screens will move
 onto it in later issues.
 
 Read [`chessboard-v2.md`](./chessboard-v2.md) first. It owns the board core a
@@ -207,6 +208,19 @@ tree there — a move by hand from an earlier position is a side line — so it
 takes the explorer rather than the flat mode below. It places `moves` and
 `map` in its Moves and Map tabs (both kept mounted) and `annotations`, Play's
 status line and `nextMoves` (on the Moves tab) in its footer.
+
+### The Library's game board — the fourth (CTA-75)
+
+`views/library/LibraryGameBoard.tsx` passes exactly the Analysis Board's
+options — `onEditTree: core.replaceTree`, `playChances: false`,
+`annotations: true`, `arrows: { show }` (a switch in its Engine tab, on) and
+`map: { addedIds, linked: true }`, with `extensionIds` the same set: the moves
+added since the game arrived (or was last kept), which is what its changes
+strip offers to keep. Its session is the Analysis Board's own
+(`useAnalysisSession`). It places `moves` and `map` in its Moves and Map tabs
+(both kept mounted) and `annotations`, its changes strip, Play's status line
+and `nextMoves` (on the Moves tab) in its footer — the Analysis Board's
+layout, with an Info tab (the game's tags) in place of Load.
 
 ---
 
