@@ -201,6 +201,7 @@ describe("a repertoire changed on its board", () => {
         description: "Mine",
         color: "black" as const,
         showArrows: false,
+        chanceArrows: false,
         protected: true,
       },
     };
@@ -307,7 +308,13 @@ describe("a stored row", () => {
       pgn: "1. e4 *",
       previewFen: DEFAULT_POSITION,
       // A record from before settings existed reads as the defaults.
-      settings: { description: "", color: "white", showArrows: true, protected: true },
+      settings: {
+        description: "",
+        color: "white",
+        showArrows: true,
+        chanceArrows: false,
+        protected: true,
+      },
       folderId: null,
       savedAt: "x",
       updatedAt: "x",

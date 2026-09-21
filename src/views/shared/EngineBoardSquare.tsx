@@ -1,6 +1,6 @@
 import Box from "@mui/material/Box";
 import { useTranslation } from "react-i18next";
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import {
   Chessboard,
   type ChessboardOptions,
@@ -69,6 +69,14 @@ type EngineBoardSquareProps = {
    */
   boardOptions?: ChessboardOptions;
 
+  /**
+   * Drawn over the board, inside its relative box — a screen's own overlay
+   * layer, positioned by itself (`ChanceArrows.tsx` is the user; the
+   * promotion picker below is the precedent). Rendered beneath the picker,
+   * so that stays on top.
+   */
+  overlay?: ReactNode;
+
   showEvalBar: boolean;
   /** Already normalised to White's perspective (`lib/engineAnalysis.ts`). */
   score: Score | null;
@@ -96,6 +104,7 @@ function EngineBoardSquare({
   allowDragging,
   onPieceDrop,
   boardOptions,
+  overlay,
   showEvalBar,
   score,
   captured,
@@ -199,6 +208,11 @@ function EngineBoardSquare({
           }}
         >
           <Chessboard options={chessboardOptions} />
+          {/*
+            The screen's own overlay — before the promotion picker, so the
+            picker, which asks a question, stays above it.
+          */}
+          {overlay}
 
           {promotion && (
             <PromotionPicker

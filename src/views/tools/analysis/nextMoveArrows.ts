@@ -14,6 +14,12 @@ import type { VariationNode } from "../../../lib/gameTree";
  * than shared ones, because the names are each screen's own — a known book
  * move and a tree's continuation are different ideas that happen to want
  * the same colours.
+ *
+ * The one thing these cannot carry is a **size**: `options.arrows` varies an
+ * arrow's colour alone and `arrowOptions` sizes every arrow at once, so the
+ * play-chance arrows — whose whole point is that the likelier move is the
+ * wider — are drawn by the player itself, over the board
+ * (`chanceArrows.ts`, CTA-71).
  */
 
 /**

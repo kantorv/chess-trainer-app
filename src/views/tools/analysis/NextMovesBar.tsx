@@ -37,6 +37,15 @@ import { moveSx, sanTokenSx } from "../../shared/moveTokenSx";
  * label, no space. The screen gates the board's arrows on the same fork, so
  * the two halves appear and vanish together.
  *
+ * **The play chances can print beside the SAN** (CTA-71): `Nf3 97.8%` — the
+ * lichess explorer's own grammar for the same idea, and the one encoding of a
+ * chance that needs no legend and reads under every kind of colour blindness.
+ * The chances arrive as the very array the board's arrows take
+ * (`nextMoveArrowsOf`'s third argument), so the number a token prints and the
+ * colour of its arrow are one fact, never two. Optional, and an `undefined`
+ * entry prints that move's SAN alone — a branch with no marks keeps today's
+ * bar, as its arrows keep the green and blue.
+ *
  * SAN is Latin text in a panel that may be RTL: each token carries the
  * `dir="ltr"` **attribute**, never a CSS direction declaration — under Hebrew
  * the panel's styles go through the RTL emotion cache, whose stylis plugin
@@ -45,10 +54,21 @@ import { moveSx, sanTokenSx } from "../../shared/moveTokenSx";
  * mirrors with the panel, so the reading order — mainline first — follows the
  * direction on its own.
  */
+/**
+ * `0.978` → "97.8%", `0.5` → "50%" — one decimal, a whole number kept whole.
+ * Rounded on the percent rather than formatted raw, so a `0.022…` that float
+ * arithmetic has drifted never prints as 2.2000000000000006.
+ */
+const formatChance = (chance: number): string => {
+  const percent = Math.round(chance * 1000) / 10;
+  return `${Number.isInteger(percent) ? percent : percent.toFixed(1)}%`;
+};
+
 function NextMovesBar({
   nodes,
   onSelect,
   onHover,
+  chances,
 }: {
   /** The continuations of the position on screen; `nodes[0]` is the mainline. */
   nodes: readonly VariationNode[];
@@ -60,6 +80,15 @@ function NextMovesBar({
    * explorer's rows report with.
    */
   onHover: (node: VariationNode | null) => void;
+  /**
+   * Each continuation's play chance, 0–1, in `nodes` order — the same array
+   * the board's arrows are tiered by (`nextMoveArrows.ts`), so what a token
+   * prints and what its arrow is coloured on cannot disagree. Optional, and
+   * an `undefined` entry prints that move's SAN alone: a branch with no
+   * play-chance marks has nothing to say here, exactly as its arrows keep
+   * the green and blue.
+   */
+  chances?: readonly (number | undefined)[];
 }) {
   const { t } = useTranslation();
 
@@ -93,25 +122,38 @@ function NextMovesBar({
       >
         {t("analysis.nextMoves")}
       </Typography>
-      {nodes.map((node, index) => (
-        <ButtonBase
-          key={node.id}
-          dir="ltr"
-          data-testid={`next-move-${node.id}`}
-          data-san={node.san}
-          onClick={() => onSelect(node.id)}
-          onMouseEnter={() => onHover(node)}
-          onMouseLeave={() => onHover(null)}
-          sx={{
-            ...moveSx,
-            ...sanTokenSx,
-            // The mainline token is standard text; the variations are dimmed.
-            ...(index === 0 ? {} : { color: "text.secondary" }),
-          }}
-        >
-          {node.san}
-        </ButtonBase>
-      ))}
+      {nodes.map((node, index) => {
+        // Undefined where the branch carries no mark — the SAN prints alone.
+        const chance = chances?.[index];
+        return (
+          <ButtonBase
+            key={node.id}
+            dir="ltr"
+            data-testid={`next-move-${node.id}`}
+            data-san={node.san}
+            onClick={() => onSelect(node.id)}
+            onMouseEnter={() => onHover(node)}
+            onMouseLeave={() => onHover(null)}
+            sx={{
+              ...moveSx,
+              ...sanTokenSx,
+              // The mainline token is standard text; the variations are dimmed.
+              ...(index === 0 ? {} : { color: "text.secondary" }),
+            }}
+          >
+            {node.san}
+            {chance !== undefined && (
+              <Typography
+                component="span"
+                variant="caption"
+                sx={{ ml: 0.5, color: "text.secondary" }}
+              >
+                {formatChance(chance)}
+              </Typography>
+            )}
+          </ButtonBase>
+        );
+      })}
     </Box>
   );
 }

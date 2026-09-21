@@ -38,6 +38,7 @@ import {
 } from "../../lib/gameTree";
 import { annotationsAt } from "../../lib/moveAnnotations";
 import { downloadPgn } from "../../lib/pgnExport";
+import { playChances, playChanceOf } from "../../lib/playChance";
 import { atParamOf, nodeAtParam, REPERTOIRE_AT_PARAM } from "../../lib/repertoireLink";
 import { slugify } from "../../lib/pgnLibrary";
 import type { RepertoireGameId } from "../../lib/repertoireGames";
@@ -67,6 +68,7 @@ import { useEngineModule } from "../dev/core/useEngineModule";
 import { useTrainerModule, type TrainerStatus } from "../dev/core/useTrainerModule";
 import CurrentOpening from "../shared/CurrentOpening";
 import AnalysisSettingsPanel from "../tools/analysis/AnalysisSettings";
+import ChanceArrows from "../tools/analysis/ChanceArrows";
 import NextMovesBar from "../tools/analysis/NextMovesBar";
 import {
   nextMoveArrowsOf,
@@ -381,6 +383,11 @@ function RepertoirePlayer({
   const [showArrows, setShowArrows] = useState(
     game === undefined && saved.settings.showArrows,
   );
+  // The play-chance arrows the same way: a session switch seeded from the
+  // setting, and off in a game — a drill must not show the answer's odds.
+  const [chanceArrows, setChanceArrows] = useState(
+    game === undefined && saved.settings.chanceArrows,
+  );
   const [hovered, setHovered] = useState<VariationNode | null>(null);
   const continuations = useMemo(
     () =>
@@ -389,8 +396,23 @@ function RepertoirePlayer({
         : (findNode(core.tree, core.nodeId)?.children ?? []),
     [core.tree, core.nodeId],
   );
+  // The chances the overlay's arrows are sized by and the bar's percentages
+  // print by, handed to the chance-arrows overlay and the next-moves bar
+  // only where the branch on screen carries an explicit `prc` mark — with
+  // none anywhere the green/blue pair stands, which is what the unmarked
+  // positions keep. Read off the session's tree, so a chance changed in the
+  // dialog counts before it is saved — the trainer's own rule.
+  const chances = useMemo(() => {
+    if (!chanceArrows || !continuations.some((node) => playChanceOf(node) !== undefined)) {
+      return undefined;
+    }
+    return playChances(continuations);
+  }, [chanceArrows, continuations]);
 
-  // A required move is an instruction, so it is drawn whatever the switch says.
+  // A required move is an instruction, so it is drawn whatever the switch
+  // says. Where the chances are on, the library arrows stand down entirely —
+  // colour is the only thing `options.arrows` can vary per arrow — and the
+  // overlay below draws them instead, sized by their chances.
   const arrows: Arrow[] =
     rules.required !== undefined
       ? rules.required.map((node) => ({
@@ -398,12 +420,29 @@ function RepertoirePlayer({
           endSquare: node.to,
           color: REQUIRED_MOVE_ARROW_COLOR,
         }))
-      : showArrows
-        ? nextMoveArrowsOf(continuations, hovered?.id ?? null)
-        : hovered !== null
-          ? nextMoveArrowsOf([hovered], hovered.id)
-          : [];
+      : chances !== undefined
+        ? []
+        : showArrows
+          ? nextMoveArrowsOf(continuations, hovered?.id ?? null)
+          : hovered !== null
+            ? nextMoveArrowsOf([hovered], hovered.id)
+            : [];
   const boardOptions: ChessboardOptions = { arrows };
+
+  // The play-chance arrows themselves, drawn over the board: white with a
+  // magenta border, the wider the likelier the move (CTA-71) — lichess's
+  // encoding, ours because the library's arrows cannot vary in size. The
+  // overlay says nothing where there are no chances to read.
+  const chanceOverlay =
+    chances === undefined ? null : (
+      <ChanceArrows
+        testId={`${id}-chance-arrows-overlay`}
+        nodes={continuations}
+        chances={chances}
+        hoveredId={hovered?.id ?? null}
+        orientation={core.orientation}
+      />
+    );
 
   const originalIds = useMemo(() => nodeIdsOf(repertoire), [repertoire]);
   const extensionIds = useMemo(
@@ -631,6 +670,7 @@ function RepertoirePlayer({
       score={topLine?.score ?? null}
       showEvalBar={engineOn && showEvalBar}
       boardOptions={boardOptions}
+      overlay={chanceOverlay}
       panel={{
         header: (
           <>
@@ -884,6 +924,8 @@ function RepertoirePlayer({
                 onAutoplayChange={changeAutoplay}
                 showArrows={showArrows}
                 onShowArrowsChange={setShowArrows}
+                chanceArrows={game === undefined ? chanceArrows : undefined}
+                onChanceArrowsChange={setChanceArrows}
                 engineOn={engineOn}
                 onEngineOnChange={setEngineOn}
               />
@@ -952,6 +994,7 @@ function RepertoirePlayer({
                   nodes={continuations}
                   onSelect={core.goToNode}
                   onHover={setHovered}
+                  chances={chances}
                 />
               ) : null}
             </>
@@ -998,8 +1041,9 @@ function SwitchSetting({
 
 /**
  * The Settings tab: the session's knobs — side, Autoplay (the player's only),
- * arrows, engine — one labelled row each. Presentational: the screen owns the
- * state, since changing side restarts the session.
+ * arrows, the play-chance arrows' switch (the player's only too), engine —
+ * one labelled row each. Presentational: the screen owns the state, since
+ * changing side restarts the session.
  */
 function PlaySettings({
   id,
@@ -1009,6 +1053,8 @@ function PlaySettings({
   onAutoplayChange,
   showArrows,
   onShowArrowsChange,
+  chanceArrows,
+  onChanceArrowsChange,
   engineOn,
   onEngineOnChange,
 }: {
@@ -1020,6 +1066,9 @@ function PlaySettings({
   onAutoplayChange: (next: boolean) => void;
   showArrows: boolean;
   onShowArrowsChange: (next: boolean) => void;
+  /** `undefined` where there is no switch — a game must not show the odds. */
+  chanceArrows: boolean | undefined;
+  onChanceArrowsChange: (next: boolean) => void;
   engineOn: boolean;
   onEngineOnChange: (next: boolean) => void;
 }) {
@@ -1069,6 +1118,15 @@ function PlaySettings({
         label={t("repertoires.play.arrows")}
         help={t("repertoires.play.arrowsHelp")}
       />
+      {chanceArrows !== undefined && (
+        <SwitchSetting
+          testId={`${id}-chance-arrows`}
+          checked={chanceArrows}
+          onChange={onChanceArrowsChange}
+          label={t("repertoires.play.chanceArrows")}
+          help={t("repertoires.play.chanceArrowsHelp")}
+        />
+      )}
       <SwitchSetting
         testId={`${id}-setting-engine`}
         checked={engineOn}

@@ -870,7 +870,15 @@ for the board. Only the differences are written out here:
   side it is played from, which the board opens facing and the preview card
   shows — whether the board opens drawing the next-move arrows
   (`showArrows`, on by default; CTA-63 — the player's Settings tab switches
-  them for a session, and the games open without them), and whether it is
+  them for a session, and the games open without them), whether it opens
+  **showing the play chances** (`chanceArrows`, off by default; CTA-71 — at
+  a branch that carries `prc` marks the arrows are drawn white with a magenta
+  border, the wider the likelier the move — an SVG overlay over the board,
+  drawn by the player itself because the library's arrows vary only in
+  colour (`views/tools/analysis/chanceArrows.ts`) — and the next-moves bar
+  prints each move's percentage; the player's Settings tab switches it for a
+  session, and the games see neither), and
+  whether it is
   **protected** (`protected`, on by default; CTA-63 — its board offers no
   "Update", only its settings and a copy; copies are never protected) — and,
   beside them though not one of them, the **folder** it is filed under
@@ -946,7 +954,16 @@ RepertoireGame.tsx ──┴─▶ RepertoirePlayer.tsx ── download: treeToP
   `showArrows` setting says (on by default), a game without them, and the
   Settings tab switches them for the session — every continuation at the
   node on screen through the shared `nextMoveArrowsOf` — the mainline's move
-  green, side lines blue. The v2 boards draw through the same helper; the
+  green, side lines blue. Where the branch on screen carries play-chance
+  marks and the `chanceArrows` switch is on (CTA-71, off by default, seeded
+  from the repertoire's settings, and never in a game), the library arrows
+  stand down and an SVG **overlay** draws the fork instead — every arrow
+  **white with a magenta border, the wider the likelier the move**
+  (`ChanceArrows.tsx` over pure `chanceArrows.ts`, drawn by the player
+  because `options.arrows` can vary only an arrow's colour) — and the
+  next-moves bar prints each move's percentage beside its SAN, the same
+  `chances` array feeding both, so the number and the width never disagree.
+  The v2 boards draw through the same helper; the
   shipped Analysis Board keeps its own copy. With Autoplay off the footer is
   the next-moves bar (CTA-54), whose hover draws that move's arrow; with it on,
   the trainer's status line.
