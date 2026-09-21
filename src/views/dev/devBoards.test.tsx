@@ -43,6 +43,7 @@ import { boardOptions, FakeEngine } from "./devTestHarness";
 import { DEV_NAV_FOLDER_ID, devNavItems } from "./devNav";
 import { devSavedGamesSnapshot, devSavedOpeningsSnapshot } from "./core/devStores";
 import AnalysisBoard from "../tools/analysis/AnalysisBoard";
+import PlayWithEngine from "../engine/play/PlayWithEngine";
 import MaskedV2 from "./masked/MaskedV2";
 import OpeningsV2 from "./openings/OpeningsV2";
 import PlayV2 from "./play/PlayV2";
@@ -55,6 +56,8 @@ const BOARDS: readonly {
 }[] = [
   // Analysis v2 shipped as the Analysis Board (CTA-73); it stays in the set.
   { name: "Analysis Board", id: "analysis", Screen: AnalysisBoard },
+  // Play with Engine, a v2 screen since CTA-74.
+  { name: "Play with Engine", id: "play-with-engine", Screen: PlayWithEngine },
   { name: "Play with Engine v2", id: "dev-play", Screen: PlayV2 },
   { name: "Masked Pieces v2", id: "dev-masked", Screen: MaskedV2 },
   { name: "Openings v2", id: "dev-openings", Screen: OpeningsV2 },
@@ -162,7 +165,7 @@ describe("the Development section", () => {
   });
 });
 
-describe("all five boards, from the same core", () => {
+describe("every v2 board, from the same core", () => {
   it.each(BOARDS)("$name renders the shared board square", ({ id, Screen }) => {
     // Criterion 3: the board, the eval bar and the captured strips are the
     // shared `EngineBoardSquare`'s, reached through `BoardShell` — so the

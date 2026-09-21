@@ -13,8 +13,10 @@ const en = {
     toggleColorMode: "Toggle light and dark mode",
     switchLanguage: "Switch language",
     playWithEngine: "Play with Engine",
-    /** The games played on that screen, kept in this browser. */
+    /** The games played on that screen, kept in this browser (CTA-74: the flat list at `/engine/games`). */
     savedGames: "Saved games",
+    /** The pre-CTA-74 list at `/engine/saved` — linear games in folders, kept, not migrated. */
+    savedGamesOld: "Saved games (old)",
     /**
      * The same screen as `playWithEngine`, with the pieces in disguise. The
      * qualifier is not decoration: two sidebar entries with one accessible name
@@ -321,6 +323,9 @@ const en = {
       game: "Game",
       engine: "Engine",
       lines: "Variations",
+      /** Play with Engine v2's (CTA-74) — the variations explorer's two tabs. */
+      moves: "Moves",
+      map: "Map",
     },
     status: {
       yourTurn: "Your move",
@@ -354,8 +359,50 @@ const en = {
    * notation is its PGN, and the tag pairs in it are written in PGN's own
    * vocabulary rather than in a language.
    */
-  savedGames: {
+  /**
+   * The **Saved games** list of Play with Engine v2 (CTA-74,
+   * `views/engine/games/`) — flat, newest first; each game a tree, resumed
+   * where the reader left it.
+   */
+  playedGames: {
     title: "Saved games",
+    count: "Games: {{count}}",
+    empty: "No saved games yet. Play a game against the engine and it appears here on its own.",
+    hint: "Every game you play against the engine is written down as you play it — side lines too. Pick one up where you left it, or open it on the Analysis Board.",
+    storage: "Saved games are kept in this browser only. Clearing site data removes them, and they do not follow you to another device.",
+    /** A pointer to the pre-CTA-74 list, whose games are not in this one. */
+    old: "Games from before are in Saved games (old).",
+    playingAs: {
+      white: "You played White",
+      black: "You played Black",
+    },
+    result: {
+      white: "White won",
+      black: "Black won",
+      draw: "Draw",
+      inProgress: "In progress",
+    },
+    level: "Level {{level}}",
+    moves_one: "{{count}} move",
+    moves_other: "{{count}} moves",
+    variations_one: "{{count}} side line",
+    variations_other: "{{count}} side lines",
+    unreadable: "This game could not be read.",
+    continue: "Continue",
+    analyse: "Analysis",
+    remove: "Delete this game",
+    confirmDelete: {
+      title: "Delete this game?",
+      body: "It is removed from this browser, side lines and all.",
+      cancel: "Cancel",
+      confirm: "Delete",
+    },
+    problem: {
+      storage: "The game could not be saved — this browser's storage refused it.",
+    },
+  },
+  savedGames: {
+    title: "Saved games (old)",
     count: "Games: {{count}}",
     empty: "No saved games yet. Play a game against the engine and it appears here on its own.",
     hint: "Every game you play against the engine is written down as you play it. Pick one up where you left it, file it into a folder, or open it for study.",

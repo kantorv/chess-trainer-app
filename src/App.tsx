@@ -7,6 +7,7 @@ import { default as HomeScreen  } from './views/home/Main'
 import { default as LoadPgnScreen  } from './views/games/load_pgn/Main'
 import { default as PlayWithEngineScreen  } from './views/engine/play/Main'
 import { default as SavedGamesScreen  } from './views/engine/saved/Main'
+import { default as PlayedGamesScreen  } from './views/engine/games/Main'
 import { default as MaskedPlayScreen  } from './views/masked/play/Main'
 import { default as AnalysisBoardScreen  } from './views/tools/analysis/Main'
 import { default as SavedAnalysesScreen  } from './views/tools/analysis/saved/Main'
@@ -99,8 +100,14 @@ const routes = createBrowserRouter(
           path: "/engine/play",
           element: <PlayWithEngineScreen />
         },
-        // The reader's own games against the engine, kept in `localStorage`
-        // (`lib/savedGameStore.ts`). A screen rather than a library section: the
+        // Play with Engine v2's games (CTA-74, `lib/playedGameStore.ts`): the
+        // flat, newest-first list.
+        {
+          path: "/engine/games",
+          element: <PlayedGamesScreen />
+        },
+        // The games played before CTA-74 — "Saved games (old)", kept and not
+        // migrated (`lib/savedGameStore.ts`). A screen rather than a library section: the
         // games are this app's own output, so there is no catalog to nest and no
         // splat to resolve.
         {

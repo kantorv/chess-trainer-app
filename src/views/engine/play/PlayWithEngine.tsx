@@ -1,138 +1,252 @@
-import { useMemo } from "react";
-import { useSearchParams } from "react-router";
-import { capturedSummaryOf } from "../../../lib/capturedPieces";
-import { initialFenOf } from "../../../lib/gameModel";
+import { useEffect, useState } from "react";
+import Box from "@mui/material/Box";
+import FormControlLabel from "@mui/material/FormControlLabel";
+import IconButton from "@mui/material/IconButton";
+import Switch from "@mui/material/Switch";
+import Tooltip from "@mui/material/Tooltip";
+import Typography from "@mui/material/Typography";
+import AddRoundedIcon from "@mui/icons-material/AddRounded";
+import HistoryRoundedIcon from "@mui/icons-material/HistoryRounded";
+import { createSearchParams, Link as RouterLink, useSearchParams } from "react-router";
+import { useTranslation } from "react-i18next";
+import type { ChessboardOptions } from "react-chessboard";
+import { DEFAULT_POSITION } from "chess.js";
+
 import { parseFen } from "../../../lib/fen";
+import { findPlayedGame } from "../../../lib/playedGameStore";
+import { newPlayedGameId, playedGameFromSavedGame } from "../../../lib/playedGames";
 import { findSavedGame } from "../../../lib/savedGameStore";
-import { RightPanel } from "../../main/rightPanel";
-import EngineBoardSquare from "../../shared/EngineBoardSquare";
-import EnginePanel from "./EnginePanel";
-import { usePlayWithEngine } from "./usePlayWithEngine";
+import BoardShell from "../../dev/core/BoardShell";
+import { useVariationsExplorer } from "../../explorer/useVariationsExplorer";
+import CurrentOpening from "../../shared/CurrentOpening";
+import EngineThinking from "../../tools/analysis/EngineThinking";
+import PlayToggleButton from "../../tools/analysis/PlayToggleButton";
+import EngineSettings from "./EngineSettings";
+import { usePlayGame, type PlayGameStart } from "./usePlayGame";
 
 /**
- * Play with Engine — a full game against Stockfish, with the game and the
- * engine's thinking in the shell's right-hand panel.
+ * **Play with Engine** (`/engine/play`, v2 since CTA-74) — a game against
+ * Stockfish, built like the Analysis Board: the v2 core, the engine module
+ * and the shared variations explorer, composed by `usePlayGame`, placed in
+ * `BoardShell` / `BoardPanel`
+ * ([`.claude/rules/chessboard-v2.md`](../../../../.claude/rules/chessboard-v2.md),
+ * [`.claude/rules/tree-views.md`](../../../../.claude/rules/tree-views.md)).
  *
- * The screen fills two of the shell's regions and draws no columns of its own:
+ * | Capability | Taken | Because |
+ * | --- | --- | --- |
+ * | Base | `useBoardCore`, no `canMoveAt` | a move from an earlier position is a side line |
+ * | Engine | switch, on; its reply through **Play**, **on from the start** (`usePlayToggle`) | the Analysis Board's rule — the side not at the bottom, paused by a step back or a change of side |
+ * | Tree view | `useVariationsExplorer` | Moves (side lines, evals, the move menu), Map, the comment block, the next-moves bar and arrows — editing on, *Play chances…* off |
+ * | Saving | `useAutosave` → `lib/playedGameStore.ts` | every move, no button; the flat list at `/engine/games` |
  *
- * - the **board square** holds the evaluation bar, the board and the promotion
- *   picker — all three of which are `<EngineBoardSquare>` (`views/shared/`),
- *   shared with the Masked Pieces screen so the width discipline that squares
- *   the board exists in one place;
- * - the **right-hand panel** (`<RightPanel>`) holds `EnginePanel` — the Game /
- *   Engine / Variations tabs over the board controls.
+ * **Tabs: Moves · Map · Engine.** The Engine tab is the shipped engine
+ * strength panel (`EngineSettings.tsx`, which Masked Pieces renders too), its
+ * *Play as* the board's side, its New game this screen's.
  *
- * ### Arriving from the Board Editor
- *
- * `/engine/play?fen=<position>` starts the game from that position, the same way
- * `/tools/analysis` does — the FEN travels in the URL so the link survives being
- * bookmarked, shared or reloaded. It is validated here with `parseFen`, and a
- * parameter that will not pass is ignored rather than allowed to throw on
- * someone else's mistyped link. The hook takes it as its *initial* state, so
- * nothing is written from an effect.
- *
- * ### Resuming a saved game
- *
- * `/engine/play?saved=<id>` picks a game the reader was playing back up: the
- * moves, the side they were on and the engine settings all come out of the
- * store (`lib/savedGameStore.ts`) and are handed to the hook as initial state,
- * exactly as the `?fen=` arrival is. An id that names nothing opens an ordinary
- * new game, the way an unreadable `?fen=` does.
- *
- * This is also **the screen that saves**. `persist` is passed here and nowhere
- * else: Masked Pieces runs the same hook verbatim, and a masked game resumed
- * here would come back with its costume gone — see the hook.
- *
- * All the behaviour lives in `usePlayWithEngine`; this component is the layout.
- * `<RightPanel>` portals the panel out of this tree, so it still shares this
- * screen's state by closure and nothing is threaded through the shell.
+ * **Arrivals, read once:** `?fen=` (a position — the reader plays the side to
+ * move, the board facing it) and `?saved=<id>` (a played game, at the node and
+ * on the side it was left). An id of the **old** Saved games store
+ * (`/engine/saved`, which still links here) resumes that game at its end,
+ * written as a new game of this store once played on. Once the game is
+ * written, the URL is `?saved=<its id>` (history replace), so a reload goes on
+ * with it.
  */
-function PlayWithEngine() {
-  const [searchParams] = useSearchParams();
 
-  /*
-    The position handed over by the Board Editor, if this is that arrival. Only
-    the first render's value is ever used (see `usePlayWithEngine`), but parsing
-    it on every render would build a `chess.js` instance for nothing.
-  */
-  const requested = searchParams.get("fen");
-  const initialFen = useMemo(() => {
-    if (requested === null) return undefined;
+/** The tabs that stay mounted once opened: a long move list, and the Map's view. */
+const KEEP_MOUNTED = ["moves", "map"] as const;
+
+/** Everything the URL hands the screen, read once. */
+const arrivalOf = (params: URLSearchParams): PlayGameStart => {
+  let fen: string | undefined;
+  const requestedFen = params.get("fen");
+  if (requestedFen !== null) {
     try {
-      return parseFen(requested);
+      fen = parseFen(requestedFen);
     } catch {
-      // A link nobody can read starts an ordinary game, as if the parameter had
-      // not been there at all.
-      return undefined;
+      // A link nobody can read starts an ordinary game.
+      fen = undefined;
     }
-  }, [requested]);
+  }
+  const savedId = params.get("saved");
+  const played = findPlayedGame(savedId);
+  if (played !== undefined) return { fen, resume: played };
+  const legacy = findSavedGame(savedId);
+  const resume =
+    legacy === undefined ? undefined : playedGameFromSavedGame(legacy, newPlayedGameId());
+  return resume === undefined ? { fen } : { fen, resume, resumeStored: false };
+};
+
+function PlayWithEngine() {
+  const { t } = useTranslation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [arrival] = useState(() => arrivalOf(searchParams));
+
+  const state = usePlayGame(arrival);
+  const { core, engine } = state;
+
+  const [tab, setTab] = useState("moves");
+  const [showArrows, setShowArrows] = useState(true);
+
+  const explorer = useVariationsExplorer({
+    testId: "play-with-engine",
+    source: core,
+    evalsByFen: state.evalsByFen,
+    onEditTree: core.replaceTree,
+    playChances: false,
+    annotations: true,
+    arrows: { show: showArrows },
+    map: { linked: true },
+  });
+  const boardOptions: ChessboardOptions = { arrows: explorer.arrows };
+  const topLine = engine.analysis.lines.find((line) => line !== undefined);
 
   /*
-    The saved game being resumed, if this is that arrival. Looked up once: the
-    hook reads it on the first render only, and walking the store on every
-    render would parse every stored PGN for nothing.
+    The URL: `?saved=<id>` once the game is written — so a reload goes on with
+    it — and until then what arrived. Written back with history replace.
   */
-  const requestedSaved = searchParams.get("saved");
-  const resume = useMemo(
-    () => findSavedGame(requestedSaved),
-    [requestedSaved],
-  );
+  const wanted =
+    state.savedId !== null
+      ? createSearchParams({ saved: state.savedId }).toString()
+      : searchParams.toString();
+  useEffect(() => {
+    if (searchParams.toString() !== wanted) setSearchParams(wanted, { replace: true });
+  }, [wanted, searchParams, setSearchParams]);
 
-  const state = usePlayWithEngine({ fen: initialFen, resume, persist: true });
-
-  const topLine = state.analysis.lines.find((line) => line !== undefined);
-
-  /*
-    The captured pieces for the ply on screen, walked from the game's own start
-    position — the study-friendly baseline, not the standard one. The diff is
-    the position on screen against that same start, so a promotion counts as a
-    gain for the side that made it.
-  */
-  const captured = useMemo(
-    () =>
-      capturedSummaryOf(
-        state.game.moves.slice(0, state.ply),
-        initialFenOf(state.game),
-        state.fen,
-      ),
-    [state.game, state.ply, state.fen],
-  );
+  const newGame = () => {
+    state.newGame();
+    // The game left behind keeps its row; the URL names nothing until the
+    // next one is written — the start position it began from, if not the standard.
+    const startFen = core.tree.startFen;
+    setSearchParams(
+      startFen === DEFAULT_POSITION ? "" : createSearchParams({ fen: startFen }).toString(),
+      { replace: true },
+    );
+  };
 
   return (
-    <>
-      <EngineBoardSquare
-        id="play-with-engine"
-        position={state.fen}
-        orientation={state.orientation}
-        /*
-          The move that produced the position on screen. External square styles
-          are never cleared by the board itself (`.claude/rules/chessboard.md`
-          §3.3), so this is the whole set for the current ply, recomputed on
-          every change.
-        */
-        squareStyles={state.squareStyles}
-        /*
-          Draggable only on the live position, on the human's turn, with no
-          promotion picker open. Off the live position the board is a review of
-          an earlier ply and a drag would apply to a position nobody is looking
-          at.
-        */
-        allowDragging={
-          state.isLive && !state.isEngineThinking && state.promotion === null
-        }
-        onPieceDrop={state.onPieceDrop}
-        showEvalBar={state.showEvalBar}
-        score={topLine?.score ?? null}
-        captured={captured}
-        promotion={state.promotion}
-        humanColor={state.humanColor}
-        onResolvePromotion={state.resolvePromotion}
-      />
-
-      <RightPanel>
-        <EnginePanel state={state} />
-      </RightPanel>
-    </>
+    <BoardShell
+      id="play-with-engine"
+      core={core}
+      score={topLine?.score ?? null}
+      showEvalBar={state.engineOn && state.showEvalBar}
+      boardOptions={boardOptions}
+      overlay={explorer.overlay}
+      panel={{
+        header: (
+          <>
+            <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+              <CurrentOpening fen={core.fen} testId="play-with-engine-current-opening" />
+            </Box>
+            <PlayToggleButton
+              testId="play-with-engine-play"
+              engineOn={state.engineOn}
+              playing={state.playing}
+              thinking={state.thinking}
+              onToggle={state.togglePlaying}
+            />
+            <Tooltip title={t("playEngine.settings.newGame")}>
+              <IconButton
+                size="small"
+                onClick={newGame}
+                aria-label={t("playEngine.settings.newGame")}
+                data-testid="play-with-engine-new-game"
+                sx={{ flexShrink: 0 }}
+              >
+                <AddRoundedIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title={t("playedGames.title")}>
+              <IconButton
+                size="small"
+                component={RouterLink}
+                to="/engine/games"
+                aria-label={t("playedGames.title")}
+                data-testid="play-with-engine-games"
+                sx={{ flexShrink: 0 }}
+              >
+                <HistoryRoundedIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+            <FormControlLabel
+              sx={{ flexShrink: 0, marginInlineEnd: 0 }}
+              control={
+                <Switch
+                  size="small"
+                  checked={state.engineOn}
+                  data-testid="play-with-engine-setting-engine"
+                  onChange={(event) => state.setEngineOn(event.target.checked)}
+                />
+              }
+              label={t("playEngine.settings.engineOn")}
+            />
+          </>
+        ),
+        analysis: engine.analysis,
+        requestedMultiPv: state.settings.multiPv,
+        engineOn: state.engineOn,
+        // Present, so the pinned lines are clickable (CTA-55).
+        onPlayVariation: core.playVariation,
+        activeTab: tab,
+        onTabChange: setTab,
+        keepMounted: KEEP_MOUNTED,
+        tabs: [
+          { id: "moves", label: t("playEngine.tabs.moves"), content: explorer.moves },
+          { id: "map", label: t("playEngine.tabs.map"), content: explorer.map },
+          {
+            id: "engine",
+            label: t("playEngine.tabs.engine"),
+            content: (
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                <FormControlLabel
+                  sx={{ m: 0 }}
+                  control={
+                    <Switch
+                      size="small"
+                      checked={showArrows}
+                      data-testid="play-with-engine-arrows"
+                      onChange={(event) => setShowArrows(event.target.checked)}
+                    />
+                  }
+                  label={t("analysis.settings.arrows")}
+                />
+                <EngineSettings
+                  settings={state.settings}
+                  onChange={state.updateSettings}
+                  engineOptions={engine.engineOptions}
+                  showEvalBar={state.showEvalBar}
+                  onShowEvalBarChange={state.setShowEvalBar}
+                  onNewGame={newGame}
+                />
+              </Box>
+            ),
+          },
+        ],
+        footer: (
+          <>
+            {explorer.annotations}
+            {state.problem !== null && (
+              <Typography
+                variant="caption"
+                role="alert"
+                data-testid="play-with-engine-save-problem"
+                sx={{ display: "block", color: "error.main", px: 1 }}
+              >
+                {t("playedGames.problem.storage")}
+              </Typography>
+            )}
+            {/* Play's status — the engine thinking, or the reader's move. */}
+            {state.playing && (
+              <EngineThinking
+                testId="play-with-engine-play"
+                thinking={state.thinking}
+                depth={engine.analysis.fen === core.fen ? engine.analysis.depth : 0}
+              />
+            )}
+            {tab === "moves" && explorer.nextMoves}
+          </>
+        ),
+      }}
+    />
   );
 }
 

@@ -1,0 +1,258 @@
+import { useCallback, useMemo, useState } from "react";
+
+import {
+  DEFAULT_ENGINE_SETTINGS,
+  SETTING_UCI_OPTION,
+  type EngineSettings,
+} from "../../../lib/engineSettings";
+import { emptyTree, sanPathTo } from "../../../lib/gameTree";
+import { savePlayedGame, type PlayedGameProblem } from "../../../lib/playedGameStore";
+import {
+  newPlayedGameId,
+  playedGameEvalsMap,
+  playedGameNode,
+  playedGameOf,
+  playedGameToTree,
+  type PlayedGame,
+} from "../../../lib/playedGames";
+import { useAutosave } from "../../dev/core/useAutosave";
+import { turnOf, useBoardCore } from "../../dev/core/useBoardCore";
+import { useEngineModule } from "../../dev/core/useEngineModule";
+import { usePlayToggle } from "../../dev/core/usePlayToggle";
+
+/**
+ * **Play with Engine's session** (CTA-74) — the v2 core
+ * ([`.claude/rules/chessboard-v2.md`](../../../../.claude/rules/chessboard-v2.md))
+ * composed for a game against the engine: the Analysis Board's composition
+ * (`useAnalysisBoard`), with three differences.
+ *
+ * ```
+ * useBoardCore      — the tree, the node, the oracle, promotion, orientation
+ * useEngineModule   — searching the position on screen, per-FEN evals, and the reply…
+ * usePlayToggle     — …played for the side not at the bottom, only while Play is on
+ * useAutosave       — the game written down on every move (lib/playedGameStore.ts)
+ * ```
+ *
+ * 1. **Play is on from the start.** A new board — the standard start, or the
+ *    `?fen=` hand-off (a position with Black to move sets the reader to Black
+ *    and turns the board) — with the reader on the side at the bottom and the
+ *    engine answering. Everything that pauses Play on the Analysis Board
+ *    pauses it here (`usePlayToggle`): a step that is not one move forward,
+ *    the reader switching side (the flip, or the Engine tab's *Play as*), the
+ *    engine off, the game over. Pressing Play goes on from wherever the reader
+ *    stands, the engine now playing whichever side is at the top.
+ * 2. **The game is a tree.** There is no `canMoveAt`: a move played by hand
+ *    from an earlier position is a side line under it, and Play resumes from
+ *    there. The shipped screen could not branch; this one is the Analysis
+ *    Board's rule.
+ * 3. **It saves itself.** No Save button — a game played is a game kept
+ *    (`useAutosave`). The id is stable for the life of a game and New game
+ *    mints a new one, so the game just left stays in the list. The record is
+ *    the tree, the settings (their `playAs` the reader's side, which is the
+ *    orientation), where the reader stands and the evals; the store is
+ *    idempotent, so a mount or the settings clamp re-orders nothing.
+ *
+ * The reader's side *is* the orientation, so the Engine tab's *Play as* turns
+ * the board, and the board's flip changes the side — one state, not two to
+ * keep in step.
+ */
+
+export type PlayGameStart = {
+  /** The position the game starts from — the `?fen=` hand-off. */
+  fen?: string;
+  /** A played game to go on with — the `?saved=` hand-off. Beats `fen`. */
+  resume?: PlayedGame;
+  /**
+   * Whether `resume` is already a record of this store. A game read out of the
+   * old one is not: nothing is written until the reader moves, and then under
+   * its own new id.
+   */
+  resumeStored?: boolean;
+};
+
+export const usePlayGame = ({ fen, resume, resumeStored = true }: PlayGameStart = {}) => {
+  /*
+    What the board opens on, built once: a resumed game (parsed, at its place
+    in the tree, facing its side), else a position, else the standard start.
+    A record that will not parse opens as a new game, like an unreadable
+    `?fen=`.
+  */
+  const [start] = useState(() => {
+    const tree = resume === undefined ? undefined : playedGameToTree(resume);
+    if (resume !== undefined && tree !== undefined) {
+      return {
+        tree,
+        nodeId: playedGameNode(resume, tree),
+        orientation: resume.settings.playAs,
+        settings: resume.settings,
+        evals: playedGameEvalsMap(resume.evals),
+        id: resume.id,
+        startedAt: resume.savedAt,
+        stored: resumeStored,
+      };
+    }
+    // A position turns the board, and the reader plays the side to move.
+    const orientation: "white" | "black" =
+      fen !== undefined && turnOf(fen) === "b" ? "black" : "white";
+    return {
+      tree: fen === undefined ? emptyTree() : emptyTree(fen),
+      nodeId: null,
+      orientation,
+      settings: DEFAULT_ENGINE_SETTINGS,
+      evals: new Map(),
+      id: newPlayedGameId(),
+      startedAt: new Date().toISOString(),
+      stored: false,
+    };
+  });
+
+  const core = useBoardCore({
+    tree: start.tree,
+    nodeId: start.nodeId,
+    orientation: start.orientation,
+  });
+
+  const [settings, setSettings] = useState<EngineSettings>(start.settings);
+  const [engineOn, setEngineOn] = useState(true);
+  const [showEvalBar, setShowEvalBar] = useState(true);
+
+  const onUciOptionsReady = useCallback(
+    (clamped: Readonly<Record<string, number>>) =>
+      setSettings((current) => {
+        const next: EngineSettings = {
+          ...current,
+          skillLevel: clamped[SETTING_UCI_OPTION.skillLevel] ?? current.skillLevel,
+          multiPv: clamped[SETTING_UCI_OPTION.multiPv] ?? current.multiPv,
+          threads: clamped[SETTING_UCI_OPTION.threads] ?? current.threads,
+          hashMb: clamped[SETTING_UCI_OPTION.hashMb] ?? current.hashMb,
+        };
+        // A new object here would re-run the search effect for nothing.
+        return next.skillLevel === current.skillLevel &&
+          next.multiPv === current.multiPv &&
+          next.threads === current.threads &&
+          next.hashMb === current.hashMb
+          ? current
+          : next;
+      }),
+    [],
+  );
+
+  const play = usePlayToggle({ core, engineOn, initial: true });
+
+  const engine = useEngineModule({
+    enabled: engineOn,
+    // The position ON SCREEN: everything the panel shows describes it.
+    fen: core.fen,
+    depth: settings.depth,
+    moveTimeMs: settings.moveTimeMs,
+    uciOptions: useMemo(
+      () => ({
+        [SETTING_UCI_OPTION.skillLevel]: settings.skillLevel,
+        [SETTING_UCI_OPTION.multiPv]: settings.multiPv,
+        [SETTING_UCI_OPTION.threads]: settings.threads,
+        [SETTING_UCI_OPTION.hashMb]: settings.hashMb,
+      }),
+      [settings.skillLevel, settings.multiPv, settings.threads, settings.hashMb],
+    ),
+    onUciOptionsReady,
+    onBestMove: play.onBestMove,
+  });
+
+  /*
+    A resumed game's evals come out of its record; everything learned from here
+    on comes from the engine module. Merged, not seeded: the module owns what
+    it learned and this hook what arrived.
+  */
+  const evalsByFen = useMemo(() => {
+    if (start.evals.size === 0) return engine.evalsByFen;
+    const merged = new Map(start.evals);
+    for (const [key, score] of engine.evalsByFen) merged.set(key, score);
+    return merged;
+  }, [engine.evalsByFen, start.evals]);
+
+  /** The reader's side — the side at the bottom of the board. */
+  const playAs = core.orientation;
+
+  const [gameId, setGameId] = useState(start.id);
+  /** When the game began — its `savedAt`, and so its PGN `Date`. */
+  const [startedAt, setStartedAt] = useState(start.startedAt);
+  /** Whether this game is a row of the store yet — what the URL names. */
+  const [stored, setStored] = useState(start.stored);
+  const [problem, setProblem] = useState<PlayedGameProblem | null>(null);
+
+  /*
+    The game as a record, or `undefined` while there is nothing worth writing:
+    no moves, or a game the reader has not touched (a resumed game re-saves
+    nothing until something happens; the old store's games are written only
+    once played on).
+  */
+  const record = useMemo(() => {
+    if (core.tree.moves.length === 0 || !(core.dirty || stored)) return undefined;
+    return playedGameOf(
+      gameId,
+      core.tree,
+      sanPathTo(core.tree, core.nodeId),
+      { ...settings, playAs },
+      evalsByFen,
+      new Date(),
+      startedAt,
+    );
+  }, [core.tree, core.nodeId, core.dirty, stored, gameId, startedAt, settings, playAs, evalsByFen]);
+
+  const save = useCallback((game: PlayedGame) => {
+    const failed = savePlayedGame(game);
+    setProblem(failed ?? null);
+    if (failed === undefined) setStored(true);
+  }, []);
+
+  useAutosave({ enabled: true, record, save });
+
+  const { reset, setOrientation } = core;
+  const { clearAnalysis } = engine;
+
+  /**
+   * A new game from the position this one started from, on the same side,
+   * under a new id — the game just left stays in the list as it was. Play is
+   * on again.
+   */
+  const newGame = () => {
+    reset();
+    clearAnalysis();
+    setGameId(newPlayedGameId());
+    setStartedAt(new Date().toISOString());
+    setStored(false);
+    setProblem(null);
+    play.restart();
+  };
+
+  /** The Engine tab's changes; *Play as* is the orientation. */
+  const updateSettings = useCallback(
+    (patch: Partial<EngineSettings>) => {
+      const { playAs: side, ...rest } = patch;
+      if (side !== undefined) setOrientation(side);
+      if (Object.keys(rest).length > 0) setSettings((current) => ({ ...current, ...rest }));
+    },
+    [setOrientation],
+  );
+
+  return {
+    core,
+    engine,
+    evalsByFen,
+    settings: { ...settings, playAs },
+    updateSettings,
+    engineOn,
+    setEngineOn,
+    showEvalBar,
+    setShowEvalBar,
+    playing: play.playing,
+    thinking: play.thinking,
+    togglePlaying: () => play.toggle(engine.analysis, evalsByFen),
+    newGame,
+    /** The id the game is written under, once it has been — what `?saved=` names. */
+    savedId: stored ? gameId : null,
+    problem,
+  };
+};
+
+export type PlayGameState = ReturnType<typeof usePlayGame>;
