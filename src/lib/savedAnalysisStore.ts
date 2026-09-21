@@ -2,9 +2,11 @@ import { sameAnalysisSettings } from "./analysisSettings";
 import type { LibraryCatalog } from "./libraryCatalog";
 import { recordStore } from "./recordStore";
 import {
+  MAX_ANALYSIS_DESCRIPTION_CHARS,
   savedAnalysisCatalogOf,
   savedAnalysisFrom,
   type SavedAnalysis,
+  type SavedAnalysisSettingsEdit,
 } from "./savedAnalyses";
 
 /**
@@ -27,15 +29,19 @@ export const SAVED_ANALYSES_STORAGE_KEY = "chessapp.savedAnalyses.v1";
 /**
  * How many analyses are kept.
  *
- * The same budget the saved games get, for the same reason — a record is
- * rewritten on every move, and an unbounded list would fill a shared few
- * megabytes over a few evenings. A tree with side lines is a little larger than
- * one line of play, which is why this is the smaller of the two numbers.
+ * It was 30 while the board wrote itself on every move (an autosave slot per
+ * board opened adds up fast). Since CTA-73 a record is written only when the
+ * reader saves one — and a split of a many-game text makes a record per game —
+ * so the bound is the repertoires' generous one. `saveAnalysis` still drops
+ * the oldest past it; `addAnalyses` refuses rather than drop anything.
  */
-export const MAX_SAVED_ANALYSES = 30;
+export const MAX_SAVED_ANALYSES = 500;
 
-/** What went wrong with a write. One case, but named rather than boolean. */
-export type SavedAnalysisProblem = "storage";
+/**
+ * What went wrong with a write: storage refused it, or a batch
+ * ({@link addAnalyses}) would pass {@link MAX_SAVED_ANALYSES}.
+ */
+export type SavedAnalysisProblem = "storage" | "too-many";
 
 const analyses = recordStore<SavedAnalysis>(
   SAVED_ANALYSES_STORAGE_KEY,
@@ -54,18 +60,22 @@ const write = analyses.write;
 /** Whether two records would restore the same screen. */
 const unchanged = (a: SavedAnalysis, b: SavedAnalysis): boolean =>
   a.pgn === b.pgn &&
+  a.name === b.name &&
+  a.folderId === b.folderId &&
+  a.description === b.description &&
+  a.showArrows === b.showArrows &&
   a.orientation === b.orientation &&
   a.path.length === b.path.length &&
   a.path.every((san, index) => san === b.path[index]) &&
   sameAnalysisSettings(a.settings, b.settings);
 
 /**
- * Keep one analysis, newest first.
+ * Keep one analysis, newest first — a new board saved, or one updated.
  *
- * Replaced in place and moved to the top when the id is already there, which is
- * what makes "save on every move" one growing record rather than forty of them;
- * a record identical to the one stored is a **no-op**, which is what keeps the
- * effect that calls this from re-ordering the list every time the screen mounts.
+ * Replaced and moved to the top when the id is already there, which is what
+ * keeps an analysis one record however often it is updated; a record
+ * identical to the one stored is a **no-op**, so saving twice re-orders
+ * nothing.
  */
 export const saveAnalysis = (
   analysis: SavedAnalysis,
@@ -84,6 +94,90 @@ export const saveAnalysis = (
   );
 };
 
+/**
+ * Keep several at once, all or nothing — a split's records (CTA-73). Refused
+ * with `"too-many"`, nothing written, when they would pass the cap: a split is
+ * the reader's whole file, and dropping the oldest analyses to fit it in would
+ * lose work nobody asked to lose.
+ */
+export const addAnalyses = (
+  records: readonly SavedAnalysis[],
+): SavedAnalysisProblem | undefined => {
+  if (records.length === 0) return undefined;
+  const ids = new Set(records.map((record) => record.id));
+  const rest = savedAnalysesSnapshot().filter((row) => !ids.has(row.id));
+  if (rest.length + records.length > MAX_SAVED_ANALYSES) return "too-many";
+  return write([...records, ...rest]);
+};
+
+/** Change one record in place — its place in the list kept, `updatedAt` too. */
+const editInPlace = (
+  id: string,
+  edit: (row: SavedAnalysis) => SavedAnalysis,
+): SavedAnalysisProblem | undefined => {
+  const current = savedAnalysesSnapshot();
+  const existing = current.find((row) => row.id === id);
+  if (existing === undefined) return undefined;
+  const next = edit(existing);
+  if (next === existing) return undefined;
+  return write(current.map((row) => (row.id === id ? next : row)));
+};
+
+/**
+ * File one analysis under a folder, or Unfiled with `null` — in place, since
+ * filing is organising, not working on it. The same folder is a no-op.
+ */
+export const fileSavedAnalysis = (
+  id: string,
+  folderId: string | null,
+): SavedAnalysisProblem | undefined =>
+  editInPlace(id, (row) => (row.folderId === folderId ? row : { ...row, folderId }));
+
+/** Rename one analysis in place. A name that has not changed is a no-op. */
+export const renameSavedAnalysis = (
+  id: string,
+  name: string,
+): SavedAnalysisProblem | undefined => {
+  const trimmed = name.trim();
+  return editInPlace(id, (row) => (row.name === trimmed ? row : { ...row, name: trimmed }));
+};
+
+/**
+ * **The settings screen's Save** (CTA-73): the name, description, side,
+ * arrows and folder, written at once and in place — editing settings is not
+ * working on the analysis, so it keeps its place in the list. The texts are
+ * trimmed and the description bounded; nothing changed is a no-op.
+ */
+export const updateSavedAnalysisSettings = (
+  id: string,
+  edit: SavedAnalysisSettingsEdit,
+): SavedAnalysisProblem | undefined =>
+  editInPlace(id, (row) => {
+    const next = {
+      ...row,
+      name: edit.name.trim(),
+      description: edit.description.trim().slice(0, MAX_ANALYSIS_DESCRIPTION_CHARS),
+      orientation: edit.orientation,
+      showArrows: edit.showArrows,
+      folderId: edit.folderId,
+    };
+    return unchanged(row, next) ? row : next;
+  });
+
+/**
+ * Every analysis filed directly under `folderId` back to Unfiled — the
+ * analyses' half of deleting a folder (`removeAnalysisFolder`).
+ */
+export const unfileAnalysesIn = (
+  folderId: string,
+): SavedAnalysisProblem | undefined => {
+  const current = savedAnalysesSnapshot();
+  if (!current.some((row) => row.folderId === folderId)) return undefined;
+  return write(
+    current.map((row) => (row.folderId === folderId ? { ...row, folderId: null } : row)),
+  );
+};
+
 /** One saved analysis by id, or `undefined` — what reopening one starts from. */
 export const findSavedAnalysis = (
   id: string | null | undefined,
@@ -98,6 +192,14 @@ export const removeSavedAnalysis = (
 ): SavedAnalysisProblem | undefined =>
   write(savedAnalysesSnapshot().filter((row) => row.id !== id));
 
+/** Forget several. */
+export const removeSavedAnalyses = (
+  ids: readonly string[],
+): SavedAnalysisProblem | undefined => {
+  const gone = new Set(ids);
+  return write(savedAnalysesSnapshot().filter((row) => !gone.has(row.id)));
+};
+
 /** Forget all of them. */
 export const clearSavedAnalyses = (): SavedAnalysisProblem | undefined =>
   write([]);
@@ -105,7 +207,7 @@ export const clearSavedAnalyses = (): SavedAnalysisProblem | undefined =>
 /*
   The saved analyses as a catalog, memoised on the identity of the snapshot —
   `savedAnalysesCatalog()` is called from `resolveGameReference`, on every
-  `?game=` arrival, and re-parsing thirty PGNs for the same data is not
+  `?game=` arrival, and re-parsing every record's PGN for the same data is not
   something to do twice. The same arrangement `savedGamesCatalog()` uses.
 */
 let live:

@@ -1,10 +1,5 @@
-import { sameAnalysisSettings } from "../../../lib/analysisSettings";
 import { sameEngineSettings } from "../../../lib/engineSettings";
 import { recordStore } from "../../../lib/recordStore";
-import {
-  savedAnalysisFrom,
-  type SavedAnalysis,
-} from "../../../lib/savedAnalyses";
 import {
   sameSavedGameEvals,
   savedGameFrom,
@@ -21,18 +16,19 @@ import {
  *
  * The Development screens persist to **separate dev-prefixed `localStorage`
  * keys**, through the shipped [`lib/recordStore.ts`](../../../lib/recordStore.ts)
- * factory and the shipped normalisers (`savedGameFrom`, `savedAnalysisFrom`,
- * `savedOpeningFrom`). Same record shape, same code path, different key.
+ * factory and the shipped normalisers (`savedGameFrom`, `savedOpeningFrom`).
+ * Same record shape, same code path, different key. (The dev analyses key went
+ * with Analysis v2, which shipped as the Analysis Board in CTA-73 and writes
+ * the real store — explicitly, on the reader's say-so.)
  *
  * That is the whole point of the arrangement: autosave, resume and reopen are
  * genuinely exercised — not stubbed, not mocked — while a v2 bug can never
- * damage a real saved game, analysis or opening. Wiping the dev keys leaves the
+ * damage a real saved game or opening. Wiping the dev keys leaves the
  * shipped records untouched, which `devStores.test.ts` asserts in both
  * directions.
  *
  * The caps and the idempotency comparisons are the shipped stores', reused
- * rather than restated: `sameEngineSettings`, `sameAnalysisSettings` and
- * `sameSavedGameEvals` all live in `src/lib/`, so "a record identical to the
+ * rather than restated: `sameEngineSettings` and `sameSavedGameEvals` live in `src/lib/`, so "a record identical to the
  * one stored is a no-op" means here exactly what it means there. The
  * cross-store folder operations are **not** reproduced: a dev board files
  * nothing, so the folder stores stay out of the Development section entirely.
@@ -43,13 +39,11 @@ import {
 
 /** The dev keys. `dev` sits between the namespace and the record name. */
 export const DEV_SAVED_GAMES_STORAGE_KEY = "chessapp.dev.savedGames.v1";
-export const DEV_SAVED_ANALYSES_STORAGE_KEY = "chessapp.dev.savedAnalyses.v1";
 export const DEV_SAVED_OPENINGS_STORAGE_KEY = "chessapp.dev.savedOpenings.v1";
 
 /** Every dev key, so a test — or a wipe — can name the whole set at once. */
 export const DEV_STORAGE_KEYS = [
   DEV_SAVED_GAMES_STORAGE_KEY,
-  DEV_SAVED_ANALYSES_STORAGE_KEY,
   DEV_SAVED_OPENINGS_STORAGE_KEY,
 ] as const;
 
@@ -107,52 +101,6 @@ export const findDevSavedGame = (
 export const clearDevSavedGames = (): DevStoreProblem | undefined =>
   devGames.write([]);
 
-/* ── dev saved analyses ───────────────────────────────────────────────────── */
-
-const devAnalyses = recordStore<SavedAnalysis>(
-  DEV_SAVED_ANALYSES_STORAGE_KEY,
-  savedAnalysisFrom,
-);
-
-export const devSavedAnalysesSnapshot = devAnalyses.snapshot;
-export const subscribeDevSavedAnalyses = devAnalyses.subscribe;
-
-/** `saveAnalysis`'s rules, over the dev key — including where the reader stood. */
-export const saveDevAnalysis = (
-  analysis: SavedAnalysis,
-): DevStoreProblem | undefined => {
-  const current = devSavedAnalysesSnapshot();
-  const existing = current.find((row) => row.id === analysis.id);
-
-  if (
-    existing !== undefined &&
-    existing.pgn === analysis.pgn &&
-    existing.orientation === analysis.orientation &&
-    existing.path.length === analysis.path.length &&
-    existing.path.every((san, index) => san === analysis.path[index]) &&
-    sameAnalysisSettings(existing.settings, analysis.settings)
-  ) {
-    return undefined;
-  }
-
-  return devAnalyses.write(
-    [
-      { ...analysis, savedAt: existing?.savedAt ?? analysis.savedAt },
-      ...current.filter((row) => row.id !== analysis.id),
-    ].slice(0, MAX_DEV_ROWS),
-  );
-};
-
-export const findDevSavedAnalysis = (
-  id: string | null | undefined,
-): SavedAnalysis | undefined =>
-  id === null || id === undefined
-    ? undefined
-    : devSavedAnalysesSnapshot().find((row) => row.id === id);
-
-export const clearDevSavedAnalyses = (): DevStoreProblem | undefined =>
-  devAnalyses.write([]);
-
 /* ── dev saved openings ───────────────────────────────────────────────────── */
 
 const devOpenings = recordStore<SavedOpening>(
@@ -205,6 +153,5 @@ export const clearDevSavedOpenings = (): DevStoreProblem | undefined =>
 /** Wipe every dev key at once — what a Development screen's reset offers. */
 export const clearDevStores = (): void => {
   clearDevSavedGames();
-  clearDevSavedAnalyses();
   clearDevSavedOpenings();
 };

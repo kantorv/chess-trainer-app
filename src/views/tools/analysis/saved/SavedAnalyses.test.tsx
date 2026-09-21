@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { act, render, screen } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { Chess } from "chess.js";
@@ -15,7 +15,14 @@ import {
   type GameTree,
 } from "../../../../lib/gameTree";
 import { savedAnalysisOf, type SavedAnalysis } from "../../../../lib/savedAnalyses";
-import { saveAnalysis } from "../../../../lib/savedAnalysisStore";
+import {
+  createAnalysisFolder,
+  analysisFoldersSnapshot,
+} from "../../../../lib/savedAnalysisFolderStore";
+import {
+  findSavedAnalysis,
+  saveAnalysis,
+} from "../../../../lib/savedAnalysisStore";
 import { cardSizeTrack } from "../../../library/cardSize";
 import { RightPanelOutlet, RightPanelProvider } from "../../../main/rightPanel";
 import SavedAnalyses from "./SavedAnalyses";
@@ -103,10 +110,10 @@ const save = (
     now,
   );
 
-const renderScreen = () =>
+const renderScreen = (entry = "/tools/analysis/saved") =>
   render(
     <AppThemeWithLang>
-      <MemoryRouter initialEntries={["/tools/analysis/saved"]}>
+      <MemoryRouter initialEntries={[entry]}>
         <RightPanelProvider>
           <SavedAnalyses />
           <RightPanelOutlet />
@@ -244,40 +251,31 @@ describe("Saved analyses — where a row goes", () => {
     saveAnalysis(save("a1", [[[], ["e4", "e5", "Nf3"]]], ["e4", "e5"]));
   });
 
-  it("offers to go on working on it, by its id", () => {
+  it("opens it on the Analysis Board, by its id — its one destination", () => {
     renderScreen();
 
-    expect(screen.getByTestId("saved-analyses-continue-a1")).toHaveAttribute(
+    expect(screen.getByTestId("saved-analyses-open-a1")).toHaveAttribute(
       "href",
       "/tools/analysis?analysis=a1",
     );
+    // No hand-offs to Load PGN or Play with Engine, and no delete of its own.
+    expect(screen.queryByTestId("saved-analyses-loadpgn-a1")).toBeNull();
+    expect(screen.queryByTestId("saved-analyses-play-a1")).toBeNull();
+    expect(screen.queryByTestId("saved-analyses-remove-a1")).toBeNull();
   });
 
-  it("hands the whole game to Load PGN as the reference it already takes", () => {
+  it("deletes the picks in bulk, after asking, and the list follows", async () => {
+    const user = userEvent.setup();
     renderScreen();
 
-    expect(screen.getByTestId("saved-analyses-loadpgn-a1")).toHaveAttribute(
-      "href",
-      `/games/load-pgn?game=${encodeURIComponent("analysis/saved/a1")}`,
+    await user.click(
+      within(screen.getByTestId("saved-analyses-select-a1")).getByRole("checkbox"),
     );
-  });
-
-  it("hands Play with Engine the position it was left on, not the last move", () => {
-    renderScreen();
-
-    const tree = grow([[[], ["e4", "e5", "Nf3"]]]);
-    const left = fenAtNode(tree, nodeAtSanPath(tree, ["e4", "e5"]));
-
-    expect(screen.getByTestId("saved-analyses-play-a1")).toHaveAttribute(
-      "href",
-      `/engine/play?fen=${encodeURIComponent(left)}`,
+    await user.click(screen.getByTestId("saved-analyses-delete"));
+    expect(screen.getByTestId("saved-analyses-delete-title")).toHaveTextContent(
+      "Delete 1 analysis?",
     );
-  });
-
-  it("deletes one, and the list follows without a reload", async () => {
-    renderScreen();
-
-    await userEvent.click(screen.getByTestId("saved-analyses-remove-a1"));
+    await user.click(screen.getByTestId("saved-analyses-delete-confirm"));
 
     expect(screen.queryByTestId("saved-analyses-item-a1")).not.toBeInTheDocument();
     expect(screen.getByTestId("saved-analyses-empty")).toBeInTheDocument();
@@ -295,17 +293,15 @@ describe("Saved analyses — where a row goes", () => {
 });
 
 describe("Saved analyses — a record that will not read", () => {
-  it("still lists it, and offers the one action that means anything", () => {
+  it("still lists it — nothing to open, but it can be picked (to delete or export)", () => {
     saveAnalysis({ ...save("a1", [[[], ["e4"]]]), pgn: "1. Zz9" });
 
     renderScreen();
 
     const row = screen.getByTestId("saved-analyses-item-a1");
     expect(row).toHaveTextContent("This analysis could not be read.");
-    expect(
-      screen.queryByTestId("saved-analyses-continue-a1"),
-    ).not.toBeInTheDocument();
-    expect(screen.getByTestId("saved-analyses-remove-a1")).toBeInTheDocument();
+    expect(screen.queryByTestId("saved-analyses-open-a1")).not.toBeInTheDocument();
+    expect(screen.getByTestId("saved-analyses-select-a1")).toBeInTheDocument();
   });
 });
 
@@ -392,5 +388,99 @@ describe("Saved analyses — the panel", () => {
     expect(screen.getByTestId("saved-analyses-storage-note")).toHaveTextContent(
       "this browser only",
     );
+  });
+});
+
+describe("Saved analyses — named, and filed in folders (CTA-73)", () => {
+  it("names a row by the record's name", () => {
+    saveAnalysis({ ...save("a1", [[[], ["e4"]]]), name: "My Scotch" });
+    renderScreen();
+    expect(screen.getByTestId("saved-analyses-item-a1")).toHaveTextContent("My Scotch");
+  });
+
+  it("lists the folders first, and opens one from ?folder= with its breadcrumb", () => {
+    const folder = createAnalysisFolder("Openings", null)!;
+    saveAnalysis({ ...save("inside", [[[], ["e4"]]]), folderId: folder.id });
+    saveAnalysis(save("outside", [[[], ["d4"]]]));
+
+    const { unmount } = renderScreen();
+    expect(screen.getByTestId(`saved-analyses-folder-${folder.id}`)).toHaveTextContent(
+      "1 analysis",
+    );
+    expect(screen.getByTestId("saved-analyses-item-outside")).toBeInTheDocument();
+    expect(screen.queryByTestId("saved-analyses-item-inside")).toBeNull();
+    unmount();
+
+    renderScreen(`/tools/analysis/saved?folder=${folder.id}`);
+    expect(screen.getByTestId("saved-analyses-breadcrumb")).toHaveTextContent("Openings");
+    expect(screen.getByTestId("saved-analyses-item-inside")).toBeInTheDocument();
+    expect(screen.queryByTestId("saved-analyses-item-outside")).toBeNull();
+  });
+
+  it("creates a folder where the reader stands", async () => {
+    const user = userEvent.setup();
+    saveAnalysis(save("a1", [[[], ["e4"]]]));
+    renderScreen();
+
+    await user.click(screen.getByTestId("saved-analyses-new-folder"));
+    await user.type(screen.getByTestId("analysis-folder-name-input"), "Sicilian");
+    await user.click(screen.getByTestId("analysis-folder-name-save"));
+    const [folder] = analysisFoldersSnapshot();
+    expect(folder).toMatchObject({ name: "Sicilian", parentId: null });
+    expect(screen.getByTestId(`saved-analyses-folder-${folder.id}`)).toBeInTheDocument();
+  });
+
+  it("has a checkbox on every card too, and keeps the picks across a view switch", async () => {
+    const user = userEvent.setup();
+    saveAnalysis(save("a1", [[[], ["e4"]]]));
+    renderScreen();
+
+    await user.click(
+      within(screen.getByTestId("saved-analyses-select-a1")).getByRole("checkbox"),
+    );
+    await user.click(screen.getByTestId("saved-analyses-view-compact"));
+    expect(
+      within(screen.getByTestId("saved-analyses-select-a1")).getByRole("checkbox"),
+    ).toBeChecked();
+    expect(screen.getByTestId("saved-analyses-selected-count")).toHaveTextContent("1 selected");
+  });
+
+  it("links every analysis to its settings", () => {
+    saveAnalysis(save("a1", [[[], ["e4"]]]));
+    renderScreen();
+    expect(screen.getByTestId("saved-analyses-settings-a1")).toHaveAttribute(
+      "href",
+      "/tools/analysis/saved/a1/settings",
+    );
+  });
+
+  it("deletes a folder keeping its analyses, after asking", async () => {
+    const user = userEvent.setup();
+    const folder = createAnalysisFolder("Old", null)!;
+    saveAnalysis({ ...save("a1", [[[], ["e4"]]]), folderId: folder.id });
+    renderScreen();
+
+    await user.click(screen.getByTestId(`saved-analyses-folder-delete-${folder.id}`));
+    expect(screen.getByTestId("analysis-folder-delete-counts")).toHaveTextContent(
+      "1 analyses",
+    );
+    await user.click(screen.getByTestId("analysis-folder-delete-confirm"));
+    expect(analysisFoldersSnapshot()).toEqual([]);
+    expect(findSavedAnalysis("a1")?.folderId).toBeNull();
+    expect(screen.getByTestId("saved-analyses-item-a1")).toBeInTheDocument();
+  });
+
+  it("keeps picks across folders, select-all adding the rows on screen", async () => {
+    const user = userEvent.setup();
+    const folder = createAnalysisFolder("F", null)!;
+    saveAnalysis({ ...save("in", [[[], ["e4"]]]), folderId: folder.id });
+    saveAnalysis(save("out", [[[], ["d4"]]]));
+    renderScreen();
+
+    const box = (testId: string) => within(screen.getByTestId(testId)).getByRole("checkbox");
+    await user.click(box("saved-analyses-select-out"));
+    await user.click(screen.getByTestId(`saved-analyses-folder-open-${folder.id}`));
+    await user.click(box("saved-analyses-select-all"));
+    expect(screen.getByTestId("saved-analyses-selected-count")).toHaveTextContent("2 selected");
   });
 });

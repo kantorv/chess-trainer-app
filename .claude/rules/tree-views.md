@@ -4,7 +4,8 @@ How a board screen **attaches a view of its game tree** — the move list, the
 map, the comments, the next-move arrows — instead of wiring them inline. This
 is the spec the shared explorer in [`src/views/explorer/`](../../src/views/explorer/)
 implements (CTA-72). The repertoire player (`/repertoires/<id>` and its games)
-is built on it. The other screens will move onto it in later issues.
+and, since CTA-73, the Analysis Board (`/tools/analysis`) are built on it. The
+other screens will move onto it in later issues.
 
 Read [`chessboard-v2.md`](./chessboard-v2.md) first. It owns the board core a
 tree view reads from (`useBoardCore`), the shell and panel a view's parts are
@@ -108,6 +109,7 @@ const parts = useVariationsExplorer({
   evalsByFen?: ReadonlyMap<string, Score>,
   extensionIds?: ReadonlySet<string>,
   onEditTree?: (next: GameTree) => void,  // the one switch for every edit — `core.replaceTree`
+  playChances?: boolean,                  // the menu's *Play chances…* (default on); off where no trainer plays by them (CTA-73)
   annotations?: boolean,                  // the comment block
   arrows?: { show: boolean; chances?: boolean; required?: readonly VariationNode[] },
   map?: { tree?: GameTree; nodeId?: string | null; coverage?: MapCoverage; addedIds?: ReadonlySet<string>; linked?: boolean },
@@ -124,7 +126,7 @@ const parts = useVariationsExplorer({
 | **Comment marker** on a commented move, in the mainline and in side lines (CTA-69) | `moves` | required | — | `hasComments`, `annotatedPlies`, `markCommentedNodes` |
 | **Evals** on the mainline's cells only | `moves` | opt-in | `evalsByFen` | `MoveList`'s `mainlineEvalsOnly` |
 | **Extension tint** on moves added this session (CTA-63) | `moves` | opt-in | `extensionIds` | the selection store, keyed by node and by ply |
-| **Right-click move menu**: promote variation, make main line, delete from here (confirmed, with a count), copy variation PGN, add comment, play chances… (CTA-64/69) | `moves`, `map` | opt-in | `onEditTree` | `MoveContextMenu`, `CommentDialog`, `PlayChanceDialog`, over the pure edits in `lib/gameTree.ts` and `lib/playChance.ts` |
+| **Right-click move menu**: promote variation, make main line, delete from here (confirmed, with a count), copy variation PGN, add comment, play chances… (CTA-64/69) | `moves`, `map` | opt-in | `onEditTree` (*Play chances…* also `playChances`, on by default) | `MoveContextMenu`, `CommentDialog`, `PlayChanceDialog`, over the pure edits in `lib/gameTree.ts` and `lib/playChance.ts` |
 | **Comment block**: the move with its marks, the comment that opens its line, the comments after it, and their attributes as chips | `annotations` | opt-in | `annotations` | `AnnotationsBar` over `lib/moveAnnotations.ts` |
 | **Comment editing** in the block (add, edit, delete) | `annotations` | opt-in | `onEditTree` | `CommentDialog` + `setComments` |
 | **Next-moves bar** (CTA-54): the continuations at a branch, and hovering one draws its arrow | `nextMoves` | required (renders nothing where there is no choice) | — | `views/tools/analysis/NextMovesBar.tsx` |
@@ -179,6 +181,19 @@ These are the explorer's own rules, and every future mode keeps them too:
 The trainer, the game rules, the saved record, `?at=`, the changes strip and
 the Settings and Score tabs are all the player's, and the explorer never sees
 any of them.
+
+### The Analysis Board — the second screen on it (CTA-73)
+
+`views/tools/analysis/AnalysisBoard.tsx` passes the player's options minus
+the trainer's: `onEditTree: core.replaceTree` (the menu and the comment
+block edit, a session change like a move added), `playChances: false`
+(nothing on the board plays by chance, so the menu does not offer to set
+them), `annotations: true`, `arrows: { show }` (a switch in its Engine tab,
+on), and `map: { addedIds, linked: true }` — the session's tree, the moves
+added since the saved record (or the arrival) ringed, every dot a link. The
+extension tint is the same set. It places `moves` and `map` in its Moves
+and Map tabs (both kept mounted) and `annotations`, its changes strip and
+`nextMoves` (on the Moves tab) in its footer.
 
 ---
 
@@ -259,7 +274,7 @@ const parts = usePuzzleView({
 | `src/views/explorer/TreeMap.tsx` | The map: `MapViewport`, the full-screen dialog, links and the menu. The pure layout is `src/lib/treeMap.ts` (it was `lib/repertoireMap.ts`), with `MapCoverage`. |
 | `src/views/explorer/AnnotationsBar.tsx` | The comment block. It is presentational; the reading is `lib/moveAnnotations.ts`. |
 | `src/views/explorer/ChanceArrows.tsx` + `chanceArrows.ts` (+ tests) | The play-chance overlay and its geometry. |
-| `src/views/tools/analysis/nextMoveArrows.ts`, `NextMovesBar.tsx` | **Not moved**: the shipped Analysis Board imports them, and it stays byte-identical. The explorer imports them from there. |
+| `src/views/tools/analysis/nextMoveArrows.ts`, `NextMovesBar.tsx` | **Not moved**: they stayed beside the Analysis Board, which since CTA-73 is itself built on the explorer. The explorer imports them from there. |
 | `src/views/shared/MoveList.tsx`, `VariationLine.tsx`, `moveSelection.ts`, `moveContextMenu.ts` | The shared tokens under every list, unchanged. |
 
 The locale keys follow the shared-pieces rule (root `CLAUDE.md`): the map's

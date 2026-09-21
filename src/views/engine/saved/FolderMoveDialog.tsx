@@ -22,6 +22,8 @@ import FolderPicker from "./FolderPicker";
  */
 function FolderMoveDialog({
   open,
+  labelKey = "savedGames",
+  idPrefix = "game-folder",
   folders,
   folder,
   currentParentName,
@@ -37,25 +39,31 @@ function FolderMoveDialog({
   currentParentName: string;
   onMove: (newParentId: string | null) => void;
   onClose: () => void;
+  /** The locale block — `savedGames` by default; its `folder.*` keys are read. */
+  labelKey?: string;
+  /** The test-id prefix — `game-folder` by default. */
+  idPrefix?: string;
 }) {
   const { t } = useTranslation();
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="xs">
-      <DialogTitle>{t("savedGames.folder.moveFolder")}</DialogTitle>
+      <DialogTitle>{t(`${labelKey}.folder.moveFolder`)}</DialogTitle>
       <DialogContent>
         <FolderPicker
+          labelKey={labelKey}
+          idPrefix={idPrefix}
           folders={folders}
           value={folder?.parentId ?? null}
           onChange={onMove}
           noneLabel={currentParentName}
-          noneTestId="game-folder-move-top"
+          noneTestId={`${idPrefix}-move-top`}
           exclude={folder === null ? undefined : [...gameFolderSubtree(folders, folder.id)]}
         />
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} data-testid="game-folder-move-cancel">
-          {t("savedGames.folder.cancel")}
+        <Button onClick={onClose} data-testid={`${idPrefix}-move-cancel`}>
+          {t(`${labelKey}.folder.cancel`)}
         </Button>
       </DialogActions>
     </Dialog>

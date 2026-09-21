@@ -10,6 +10,7 @@ import { default as SavedGamesScreen  } from './views/engine/saved/Main'
 import { default as MaskedPlayScreen  } from './views/masked/play/Main'
 import { default as AnalysisBoardScreen  } from './views/tools/analysis/Main'
 import { default as SavedAnalysesScreen  } from './views/tools/analysis/saved/Main'
+import { default as AnalysisSettingsScreen  } from './views/tools/analysis/saved/AnalysisSettingsScreenMain'
 import { default as BoardEditorScreen  } from './views/tools/editor/Main'
 import { default as OpeningsScreen  } from './views/tools/openings/Main'
 import { default as SavedOpeningsScreen  } from './views/tools/openings/saved/Main'
@@ -73,7 +74,6 @@ const devScreen = (load: Parameters<typeof lazy>[0]): ReactNode => {
 
 const devRoutes: RouteObject[] = import.meta.env.DEV
   ? [
-      { path: "/dev/analysis", element: devScreen(() => import("./views/dev/analysis/Main")) },
       { path: "/dev/play", element: devScreen(() => import("./views/dev/play/Main")) },
       { path: "/dev/masked", element: devScreen(() => import("./views/dev/masked/Main")) },
       { path: "/dev/openings", element: devScreen(() => import("./views/dev/openings/Main")) },
@@ -126,6 +126,11 @@ const routes = createBrowserRouter(
         {
           path: "/tools/analysis/saved",
           element: <SavedAnalysesScreen />
+        },
+        // A saved analysis' title, description, side, arrows and folder (CTA-73).
+        {
+          path: "/tools/analysis/saved/:id/settings",
+          element: <AnalysisSettingsScreen />
         },
         {
           path: "/tools/editor",

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { Chess, DEFAULT_POSITION } from "chess.js";
 
 import { DEFAULT_ANALYSIS_SETTINGS } from "./analysisSettings";
+import { parsePgnTree } from "./pgn";
 import {
   addMove,
   emptyTree,
@@ -21,6 +22,7 @@ import {
   savedAnalysisOf,
   savedAnalysisSummary,
   savedAnalysisToTree,
+  splitAnalysesOf,
   type SavedAnalysis,
 } from "./savedAnalyses";
 
@@ -270,5 +272,61 @@ describe("savedAnalysisCatalogOf — so ?game= already worked", () => {
     ]);
 
     expect(catalog.items.map((item) => item.id)).toEqual(["a2"]);
+  });
+});
+
+describe("a saved analysis' name and folder (CTA-73)", () => {
+  const tree = parsePgnTree('[White "Tal"]\n[Black "Botvinnik"]\n\n1. e4 e5 *');
+
+  it("is named by its players and Unfiled when written", () => {
+    const saved = savedAnalysisOf("a", tree, [], DEFAULT_ANALYSIS_SETTINGS, "white");
+    expect(saved.name).toBe("Tal – Botvinnik");
+    expect(saved.folderId).toBeNull();
+  });
+
+  it("names a board of its own by nothing — the screen's generic", () => {
+    const saved = savedAnalysisOf("a", emptyTree(), [], DEFAULT_ANALYSIS_SETTINGS, "white");
+    expect(saved.name).toBe("");
+  });
+
+  it("reads a record from before names and folders as named by its tags, and Unfiled", () => {
+    const written = savedAnalysisOf("a", tree, [], DEFAULT_ANALYSIS_SETTINGS, "white");
+    const legacy: Record<string, unknown> = { ...written };
+    delete legacy.name;
+    delete legacy.folderId;
+    expect(savedAnalysisFrom(legacy)).toMatchObject({
+      name: "Tal – Botvinnik",
+      folderId: null,
+    });
+    expect(savedAnalysisFrom({ ...legacy, name: "Mine", folderId: 7 })).toMatchObject({
+      name: "Mine",
+      folderId: null,
+    });
+  });
+
+  it("names a catalog item by the record's name", () => {
+    const saved = {
+      ...savedAnalysisOf("a", tree, [], DEFAULT_ANALYSIS_SETTINGS, "white"),
+      name: "Immortal",
+    };
+    expect(savedAnalysisCatalogOf([saved]).items[0].name.en).toBe("Immortal");
+  });
+
+  it("splits games into one record each, named by the game and filed together", () => {
+    let next = 0;
+    const records = splitAnalysesOf(
+      () => `id${(next += 1)}`,
+      [
+        { name: "Line 1", tree },
+        { name: "Line 2", tree: parsePgnTree("1. d4 d5 *") },
+      ],
+      "folder",
+      DEFAULT_ANALYSIS_SETTINGS,
+    );
+    expect(records.map((record) => [record.id, record.name, record.folderId])).toEqual([
+      ["id1", "Line 1", "folder"],
+      ["id2", "Line 2", "folder"],
+    ]);
+    expect(savedAnalysisToTree(records[1])?.moves[0].san).toBe("d4");
   });
 });

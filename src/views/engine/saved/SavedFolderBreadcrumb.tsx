@@ -14,17 +14,23 @@ import type { GameFolder } from "../../../lib/savedGameFolders";
 export function SavedFolderBreadcrumb({
   crumbs,
   onOpen,
+  labelKey = "savedGames",
+  testIdPrefix = "saved-games",
 }: {
   /** The chain from the top level down to the folder being looked at. */
   crumbs: readonly GameFolder[];
   /** Navigate to a crumb's folder, or to the top level with `null`. */
   onOpen: (id: string | null) => void;
+  /** The locale block — `savedGames` by default; its `folder.*` keys are read. */
+  labelKey?: string;
+  /** The test-id prefix — `saved-games` by default. */
+  testIdPrefix?: string;
 }) {
   const { t } = useTranslation();
 
   return (
     <Box
-      data-testid="saved-games-breadcrumb"
+      data-testid={`${testIdPrefix}-breadcrumb`}
       sx={{
         flexShrink: 0,
         display: "flex",
@@ -36,18 +42,18 @@ export function SavedFolderBreadcrumb({
     >
       <Button
         size="small"
-        data-testid="saved-games-breadcrumb-root"
+        data-testid={`${testIdPrefix}-breadcrumb-root`}
         onClick={() => onOpen(null)}
         sx={{ minWidth: 0, px: 1, textTransform: "none" }}
       >
-        {t("savedGames.folder.root")}
+        {t(`${labelKey}.folder.root`)}
       </Button>
       {crumbs.map((crumb, index) =>
         index === crumbs.length - 1 ? (
           <Typography
             key={crumb.id}
             variant="body2"
-            data-testid={`saved-games-breadcrumb-${crumb.id}`}
+            data-testid={`${testIdPrefix}-breadcrumb-${crumb.id}`}
             sx={{ color: "text.secondary" }}
           >
             {crumb.name}
@@ -61,7 +67,7 @@ export function SavedFolderBreadcrumb({
             /
             <Button
               size="small"
-              data-testid={`saved-games-breadcrumb-${crumb.id}`}
+              data-testid={`${testIdPrefix}-breadcrumb-${crumb.id}`}
               onClick={() => onOpen(crumb.id)}
               sx={{ minWidth: 0, px: 1, textTransform: "none" }}
             >

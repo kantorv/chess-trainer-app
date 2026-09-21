@@ -42,7 +42,7 @@ vi.mock("../../lib/openings", async (importOriginal) => {
 import { boardOptions, FakeEngine } from "./devTestHarness";
 import { DEV_NAV_FOLDER_ID, devNavItems } from "./devNav";
 import { devSavedGamesSnapshot, devSavedOpeningsSnapshot } from "./core/devStores";
-import AnalysisV2 from "./analysis/AnalysisV2";
+import AnalysisBoard from "../tools/analysis/AnalysisBoard";
 import MaskedV2 from "./masked/MaskedV2";
 import OpeningsV2 from "./openings/OpeningsV2";
 import PlayV2 from "./play/PlayV2";
@@ -53,7 +53,8 @@ const BOARDS: readonly {
   id: string;
   Screen: () => ReactNode;
 }[] = [
-  { name: "Analysis v2", id: "dev-analysis", Screen: AnalysisV2 },
+  // Analysis v2 shipped as the Analysis Board (CTA-73); it stays in the set.
+  { name: "Analysis Board", id: "analysis", Screen: AnalysisBoard },
   { name: "Play with Engine v2", id: "dev-play", Screen: PlayV2 },
   { name: "Masked Pieces v2", id: "dev-masked", Screen: MaskedV2 },
   { name: "Openings v2", id: "dev-openings", Screen: OpeningsV2 },
@@ -134,8 +135,9 @@ describe("the Development section", () => {
     expect(navFolders().map((folder) => folder.id)).toContain(
       DEV_NAV_FOLDER_ID,
     );
+    // Four: Analysis v2 shipped as the Analysis Board (CTA-73).
     expect(navItems().filter((item) => item.folder === DEV_NAV_FOLDER_ID)).toHaveLength(
-      5,
+      4,
     );
   });
 
@@ -150,9 +152,8 @@ describe("the Development section", () => {
     }
   });
 
-  it("routes the five boards at /dev/*", () => {
+  it("routes the four boards at /dev/*", () => {
     expect(devNavItems().map((item) => item.to)).toEqual([
-      "/dev/analysis",
       "/dev/play",
       "/dev/masked",
       "/dev/openings",
@@ -282,9 +283,9 @@ describe("Play with Engine v2", () => {
   });
 });
 
-describe("Analysis v2", () => {
+describe("the Analysis Board (Analysis v2, shipped)", () => {
   it("never moves a piece, whatever the engine says", () => {
-    renderBoard(AnalysisV2);
+    renderBoard(AnalysisBoard);
 
     const before = boardOptions().position;
     engineReports({ depth: 12, cp: 10, pv: "e2e4" });
@@ -295,7 +296,7 @@ describe("Analysis v2", () => {
   });
 
   it("accepts moves for both colours, from any node", () => {
-    renderBoard(AnalysisV2);
+    renderBoard(AnalysisBoard);
 
     expect(drag("e2", "e4")).toBe(true);
     expect(drag("e7", "e5")).toBe(true);

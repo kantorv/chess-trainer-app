@@ -19,7 +19,7 @@ import {
   type LibraryCategory,
   type LibraryGame,
 } from "./libraryCatalog";
-import { parsePgnGame, parsePgnTree } from "./pgn";
+import { parsePgnGame, parsePgnTree, readPgnTags } from "./pgn";
 
 /**
  * **The reader's analysis boards** — what one is when it is written down, and
@@ -57,7 +57,29 @@ import { parsePgnGame, parsePgnTree } from "./pgn";
  * been re-parsed. The board's orientation rides along for the same reason the
  * engine settings do — coming back to your own analysis should not turn it
  * around.
+ *
+ * ## Written when the reader says so, named, and filed (CTA-73)
+ *
+ * The board used to write itself on every move; it is saved explicitly now
+ * (Update / Save as copy / a new board's Save dialog), so a record carries
+ * the reader's own **name** for it and the **folder** it is filed under —
+ * `lib/savedAnalysisFolders.ts`, the saved games' nested tree again. A record
+ * from before either field reads as Unfiled, named from its tags
+ * ({@link savedAnalysisDerivedName}), so there is no version bump.
+ *
+ * ## Its settings (CTA-73)
+ *
+ * What the reader sets on the analysis' settings screen
+ * (`/tools/analysis/saved/<id>/settings`), beside the name and the folder: a
+ * **description**, the **side** the board opens facing (`orientation` — the
+ * repertoire's main colour, so a flip on the board is the session's and an
+ * Update does not write it), and whether the board opens **showing the
+ * next-move arrows** (`showArrows`, on by default). Each reads as its default
+ * on a record from before it.
  */
+
+/** How long a description may be. */
+export const MAX_ANALYSIS_DESCRIPTION_CHARS = 2000;
 
 /** One analysis board the reader worked on. Plain JSON, deliberately. */
 export type SavedAnalysis = {
@@ -69,8 +91,22 @@ export type SavedAnalysis = {
   settings: AnalysisSettings;
   /** Where the reader was standing, as SAN from the start position. */
   path: readonly string[];
-  /** Which way the board was facing. */
+  /**
+   * The side the board opens facing — set when it is first saved, from the
+   * board as it faced, and changed on its settings screen.
+   */
   orientation: "white" | "black";
+  /** The reader's notes on it. May be empty. */
+  description: string;
+  /** Whether the board opens drawing the next-move arrows. */
+  showArrows: boolean;
+  /**
+   * The reader's name for it. May be empty — a row then names it by its
+   * players, or by the generic "Analysis board".
+   */
+  name: string;
+  /** The folder it is filed under (`savedAnalysisFolders.ts`), or `null` for Unfiled. */
+  folderId: string | null;
   /** ISO 8601, when the analysis was first written down. */
   savedAt: string;
   /** ISO 8601, when it was last worked on. What "newest first" sorts on. */
@@ -135,11 +171,33 @@ export const savedAnalysisHeaders = (now: Date = new Date()): GameHeaders => ({
 });
 
 /**
+ * The name an analysis' tags give it, when the reader has given none: its
+ * players, unless they are this screen's placeholder, else its `Event` unless
+ * that is the placeholder too — else empty, which a row shows as the generic.
+ * How a record from before names existed is named, and a new one's default.
+ */
+export const savedAnalysisDerivedName = (headers: GameHeaders): string => {
+  const white = gameTag(headers, "White");
+  const black = gameTag(headers, "Black");
+  if (
+    white !== undefined &&
+    black !== undefined &&
+    white !== SAVED_ANALYSIS_PLAYER &&
+    black !== SAVED_ANALYSIS_PLAYER
+  ) {
+    return `${white} – ${black}`;
+  }
+  const event = gameTag(headers, "Event");
+  return event !== undefined && event !== SAVED_ANALYSIS_EVENT ? event : "";
+};
+
+/**
  * Write an analysis down: the whole tree as PGN, the knobs it was worked under,
- * and where the reader was standing.
+ * and where the reader was standing. Named from its tags and Unfiled — a
+ * caller with a name or a folder spreads them over the result.
  *
- * `savedAt` is carried in rather than derived so that adding a move to an
- * analysis begun yesterday keeps yesterday's date — the record is updated, not
+ * `savedAt` is carried in rather than derived so that updating an analysis
+ * begun yesterday keeps yesterday's date — the record is updated, not
  * replaced, which is what makes the id stable across the whole of it.
  */
 export const savedAnalysisOf = (
@@ -162,6 +220,10 @@ export const savedAnalysisOf = (
   settings,
   path: [...path],
   orientation,
+  name: savedAnalysisDerivedName(tree.headers),
+  folderId: null,
+  description: "",
+  showArrows: true,
   savedAt,
   updatedAt: now.toISOString(),
 });
@@ -224,8 +286,26 @@ export const savedAnalysisFrom = (value: unknown): SavedAnalysis | undefined => 
       ? row.path.filter((san): san is string => typeof san === "string")
       : [],
     orientation: row.orientation === "black" ? "black" : "white",
+    // A record from before names (CTA-73) is named by its tags.
+    name:
+      typeof row.name === "string"
+        ? row.name
+        : savedAnalysisDerivedName(readPgnTags(value.pgn)),
+    folderId:
+      typeof row.folderId === "string" && row.folderId !== "" ? row.folderId : null,
+    description:
+      typeof row.description === "string"
+        ? row.description.slice(0, MAX_ANALYSIS_DESCRIPTION_CHARS)
+        : "",
+    showArrows: typeof row.showArrows === "boolean" ? row.showArrows : true,
   };
 };
+
+/** What the settings screen edits — every field of it, written at once. */
+export type SavedAnalysisSettingsEdit = Pick<
+  SavedAnalysis,
+  "name" | "description" | "orientation" | "showArrows" | "folderId"
+>;
 
 /** What a row shows about an analysis without opening it. Pure, so it is testable. */
 export type SavedAnalysisSummary = {
@@ -316,9 +396,11 @@ export const savedAnalysisCatalogOf = (
       // carries a name, and a PGN's players are the honest answer to what this
       // is — which for an analysis begun from a library game is that game.
       name: {
-        en: `${gameTag(game.headers, "White") ?? "White"} – ${
-          gameTag(game.headers, "Black") ?? "Black"
-        }`,
+        en:
+          saved.name ||
+          `${gameTag(game.headers, "White") ?? "White"} – ${
+            gameTag(game.headers, "Black") ?? "Black"
+          }`,
       },
       pgn: saved.pgn,
       game,
@@ -327,3 +409,23 @@ export const savedAnalysisCatalogOf = (
 
   return libraryCatalogOf([category], items, []);
 };
+
+/**
+ * **Split** (CTA-73): each game of a many-game text its own analysis, in file
+ * order — named by the game (`readRepertoireText`'s names), opened at its
+ * start facing White, worked under `settings`, and filed under `folderId`
+ * (the folder the split makes, named after the text). `newId` is called once
+ * per record.
+ */
+export const splitAnalysesOf = (
+  newId: () => string,
+  games: readonly { name: string; tree: GameTree }[],
+  folderId: string | null,
+  settings: AnalysisSettings,
+  now: Date = new Date(),
+): SavedAnalysis[] =>
+  games.map((game) => ({
+    ...savedAnalysisOf(newId(), game.tree, [], settings, "white", now),
+    name: game.name,
+    folderId,
+  }));

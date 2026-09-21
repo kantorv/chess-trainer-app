@@ -62,7 +62,7 @@ vi.mock("../../lib/openings", async (importOriginal) => {
   );
 });
 
-import AnalysisV2 from "./analysis/AnalysisV2";
+import AnalysisBoard from "../tools/analysis/AnalysisBoard";
 import MaskedV2 from "./masked/MaskedV2";
 import OpeningsV2 from "./openings/OpeningsV2";
 import PlayV2 from "./play/PlayV2";
@@ -71,7 +71,9 @@ import RepertoireV2 from "./repertoire/RepertoireV2";
 /** Every board of the Development section, by the name its route carries. */
 const BOARDS: readonly { name: string; panelId: string; Screen: () => ReactNode }[] =
   [
-    { name: "Analysis v2", panelId: "dev-analysis-panel", Screen: AnalysisV2 },
+    // Analysis v2, shipped as the Analysis Board (CTA-73) and kept under the
+    // assertion it was built to pass.
+    { name: "Analysis Board", panelId: "analysis-panel", Screen: AnalysisBoard },
     { name: "Play with Engine v2", panelId: "dev-play-panel", Screen: PlayV2 },
     { name: "Masked Pieces v2", panelId: "dev-masked-panel", Screen: MaskedV2 },
     { name: "Openings v2", panelId: "dev-openings-panel", Screen: OpeningsV2 },

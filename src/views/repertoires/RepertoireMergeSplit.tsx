@@ -1,10 +1,4 @@
 import { useState } from "react";
-import Alert from "@mui/material/Alert";
-import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
-import Typography from "@mui/material/Typography";
-import CallMergeRoundedIcon from "@mui/icons-material/CallMergeRounded";
-import CallSplitRoundedIcon from "@mui/icons-material/CallSplitRounded";
 import { useTranslation } from "react-i18next";
 
 import type { RepertoireSettings } from "../../lib/repertoireSettings";
@@ -25,6 +19,7 @@ import {
   MAX_SAVED_REPERTOIRES,
   type SavedRepertoireProblem,
 } from "../../lib/savedRepertoireStore";
+import MergeSplitChoice from "../shared/MergeSplitChoice";
 
 /**
  * **The choice a text of many games has to make** — merge them into one
@@ -41,7 +36,9 @@ import {
  * Merge is offered only when the games share a start position; otherwise the
  * button says why it is off. Split says how many repertoires it makes, and
  * puts them in a folder of their own, named after the text; the reader lands
- * inside it. Both write through `addRepertoires`, all or nothing.
+ * inside it. Both write through `addRepertoires`, all or nothing. The layout
+ * is the shared `MergeSplitChoice` (the Analysis Board's Load tab offers the
+ * same choice, CTA-73); what each button does is this file's.
  */
 type RepertoireMergeSplitProps = {
   reading: Extract<RepertoireReading, { ok: true }>;
@@ -101,77 +98,24 @@ function RepertoireMergeSplit({
   };
 
   return (
-    <Box
-      data-testid="repertoire-choice"
-      sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}
-    >
-      <Box>
-        <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-          {t("repertoires.choice.title", { count })}
-        </Typography>
-        <Typography variant="body2" sx={{ color: "text.secondary" }}>
-          {t("repertoires.choice.explain")}
-        </Typography>
-        {reading.skipped > 0 && (
-          <Typography
-            variant="caption"
-            data-testid="repertoire-choice-skipped"
-            sx={{ display: "block", color: "text.secondary", mt: 0.5 }}
-          >
-            {t("repertoires.choice.skipped", { count: reading.skipped })}
-          </Typography>
-        )}
-      </Box>
-
-      <Box>
-        <Button
-          variant="contained"
-          startIcon={<CallMergeRoundedIcon />}
-          disabled={!reading.mergeable}
-          onClick={merge}
-          data-testid="repertoire-choice-merge"
-        >
-          {t("repertoires.choice.merge")}
-        </Button>
-        <Typography
-          variant="caption"
-          sx={{ display: "block", color: "text.secondary", mt: 0.5 }}
-        >
-          {t(
-            reading.mergeable
-              ? "repertoires.choice.mergeHelp"
-              : "repertoires.choice.mergeUnavailable",
-          )}
-        </Typography>
-      </Box>
-
-      <Box>
-        <Button
-          variant="outlined"
-          startIcon={<CallSplitRoundedIcon />}
-          onClick={split}
-          data-testid="repertoire-choice-split"
-        >
-          {t("repertoires.choice.split", { count })}
-        </Button>
-        <Typography
-          variant="caption"
-          sx={{ display: "block", color: "text.secondary", mt: 0.5 }}
-        >
-          {t("repertoires.choice.splitHelp")}
-        </Typography>
-      </Box>
-
-      {problem !== null && (
-        <Alert severity="error" data-testid="repertoire-choice-problem">
-          {problem === "too-many"
+    <MergeSplitChoice
+      labelKey="repertoires.choice"
+      testIdPrefix="repertoire-choice"
+      count={count}
+      skipped={reading.skipped}
+      mergeable={reading.mergeable}
+      onMerge={merge}
+      onSplit={split}
+      problem={
+        problem === null
+          ? null
+          : problem === "too-many"
             ? t("repertoires.choice.tooMany", { max: MAX_SAVED_REPERTOIRES })
             : problem === "folder"
               ? t("repertoires.choice.folderFailed", { max: MAX_REPERTOIRE_FOLDERS })
-              : t("repertoires.upload.problem.storage")}
-        </Alert>
-      )}
-    </Box>
+              : t("repertoires.upload.problem.storage")
+      }
+    />
   );
 }
 

@@ -36,6 +36,8 @@ import type { GameFolder } from "../../../lib/savedGameFolders";
  */
 function FolderActions({
   folder,
+  labelKey = "savedGames",
+  testIdPrefix = "saved-games",
   downloadDisabled,
   onDownload,
   onRename,
@@ -43,6 +45,10 @@ function FolderActions({
   onDelete,
 }: {
   folder: GameFolder;
+  /** The locale block — `savedGames` by default; its `folder.*` keys are read. */
+  labelKey?: string;
+  /** The test-id prefix — `saved-games` by default. */
+  testIdPrefix?: string;
   downloadDisabled: boolean;
   onDownload: (folder: GameFolder) => void;
   onRename: (folder: GameFolder) => void;
@@ -60,46 +66,46 @@ function FolderActions({
   */
   return (
     <Box sx={{ display: "flex", alignItems: "center" }}>
-      <Tooltip title={t("savedGames.folder.download")}>
+      <Tooltip title={t(`${labelKey}.folder.download`)}>
         {/* A disabled button takes no pointer events, so the tooltip needs a
             wrapper that still does — the same wrapper the board controls use. */}
         <Box component="span" sx={{ display: "inline-flex" }}>
           <IconButton
             size="small"
             disabled={downloadDisabled}
-            aria-label={t("savedGames.folder.download")}
-            data-testid={`saved-games-folder-download-${folder.id}`}
+            aria-label={t(`${labelKey}.folder.download`)}
+            data-testid={`${testIdPrefix}-folder-download-${folder.id}`}
             onClick={() => onDownload(folder)}
           >
             <DownloadRoundedIcon fontSize="small" />
           </IconButton>
         </Box>
       </Tooltip>
-      <Tooltip title={t("savedGames.folder.renameFolder")}>
+      <Tooltip title={t(`${labelKey}.folder.renameFolder`)}>
         <IconButton
           size="small"
-          aria-label={t("savedGames.folder.renameFolder")}
-          data-testid={`saved-games-folder-rename-${folder.id}`}
+          aria-label={t(`${labelKey}.folder.renameFolder`)}
+          data-testid={`${testIdPrefix}-folder-rename-${folder.id}`}
           onClick={() => onRename(folder)}
         >
           <EditRoundedIcon fontSize="small" />
         </IconButton>
       </Tooltip>
-      <Tooltip title={t("savedGames.folder.moveFolder")}>
+      <Tooltip title={t(`${labelKey}.folder.moveFolder`)}>
         <IconButton
           size="small"
-          aria-label={t("savedGames.folder.moveFolder")}
-          data-testid={`saved-games-folder-move-${folder.id}`}
+          aria-label={t(`${labelKey}.folder.moveFolder`)}
+          data-testid={`${testIdPrefix}-folder-move-${folder.id}`}
           onClick={() => onMove(folder)}
         >
           <DriveFileMoveRoundedIcon fontSize="small" />
         </IconButton>
       </Tooltip>
-      <Tooltip title={t("savedGames.folder.deleteFolder")}>
+      <Tooltip title={t(`${labelKey}.folder.deleteFolder`)}>
         <IconButton
           size="small"
-          aria-label={t("savedGames.folder.deleteFolder")}
-          data-testid={`saved-games-folder-delete-${folder.id}`}
+          aria-label={t(`${labelKey}.folder.deleteFolder`)}
+          data-testid={`${testIdPrefix}-folder-delete-${folder.id}`}
           onClick={() => onDelete(folder)}
         >
           <DeleteOutlineRoundedIcon fontSize="small" />
@@ -117,6 +123,8 @@ function FolderActions({
  */
 export function SavedFolderRow({
   folder,
+  labelKey = "savedGames",
+  testIdPrefix = "saved-games",
   count,
   onOpen,
   onDownload,
@@ -125,6 +133,10 @@ export function SavedFolderRow({
   onDelete,
 }: {
   folder: GameFolder;
+  /** The locale block — `savedGames` by default; its `folder.*` keys are read. */
+  labelKey?: string;
+  /** The test-id prefix — `saved-games` by default. */
+  testIdPrefix?: string;
   /** Games under this folder, across its whole subtree. */
   count: number;
   onOpen: (id: string) => void;
@@ -138,7 +150,7 @@ export function SavedFolderRow({
   return (
     <ListItem
       disableGutters
-      data-testid={`saved-games-folder-${folder.id}`}
+      data-testid={`${testIdPrefix}-folder-${folder.id}`}
       sx={{
         display: "flex",
         alignItems: "center",
@@ -150,7 +162,7 @@ export function SavedFolderRow({
     >
       <ListItemButton
         onClick={() => onOpen(folder.id)}
-        data-testid={`saved-games-folder-open-${folder.id}`}
+        data-testid={`${testIdPrefix}-folder-open-${folder.id}`}
         sx={{ minWidth: 0, flex: 1, borderRadius: 1, px: 1 }}
       >
         <FolderRoundedIcon
@@ -159,15 +171,17 @@ export function SavedFolderRow({
         />
         <ListItemText
           primary={
-            folder.name === "" ? t("savedGames.untitled") : folder.name
+            folder.name === "" ? t(`${labelKey}.folder.untitled`) : folder.name
           }
-          secondary={t("savedGames.folder.count", { count })}
+          secondary={t(`${labelKey}.folder.count`, { count })}
           slotProps={{ primary: { noWrap: true } }}
         />
       </ListItemButton>
       <Box sx={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
         <FolderActions
           folder={folder}
+          labelKey={labelKey}
+          testIdPrefix={testIdPrefix}
           downloadDisabled={count === 0}
           onDownload={onDownload}
           onRename={onRename}
@@ -182,6 +196,8 @@ export function SavedFolderRow({
 /** The same folder as a card, for the two board views. */
 export function SavedFolderCard({
   folder,
+  labelKey = "savedGames",
+  testIdPrefix = "saved-games",
   count,
   onOpen,
   onDownload,
@@ -190,6 +206,10 @@ export function SavedFolderCard({
   onDelete,
 }: {
   folder: GameFolder;
+  /** The locale block — `savedGames` by default; its `folder.*` keys are read. */
+  labelKey?: string;
+  /** The test-id prefix — `saved-games` by default. */
+  testIdPrefix?: string;
   /** Games under this folder, across its whole subtree. */
   count: number;
   onOpen: (id: string) => void;
@@ -201,10 +221,10 @@ export function SavedFolderCard({
   const { t } = useTranslation();
 
   return (
-    <Card variant="outlined" data-testid={`saved-games-folder-${folder.id}`}>
+    <Card variant="outlined" data-testid={`${testIdPrefix}-folder-${folder.id}`}>
       <CardActionArea
         onClick={() => onOpen(folder.id)}
-        data-testid={`saved-games-folder-open-${folder.id}`}
+        data-testid={`${testIdPrefix}-folder-open-${folder.id}`}
         aria-label={folder.name}
       >
         <Box sx={{ p: 2, minHeight: 140, display: "grid", placeItems: "center" }}>
@@ -214,10 +234,10 @@ export function SavedFolderCard({
               variant="subtitle2"
               sx={{ fontWeight: 600, lineHeight: 1.3, mt: 1 }}
             >
-              {folder.name === "" ? t("savedGames.untitled") : folder.name}
+              {folder.name === "" ? t(`${labelKey}.folder.untitled`) : folder.name}
             </Typography>
             <Typography variant="caption" sx={{ color: "text.secondary" }}>
-              {t("savedGames.folder.count", { count })}
+              {t(`${labelKey}.folder.count`, { count })}
             </Typography>
           </Box>
         </Box>
@@ -226,6 +246,8 @@ export function SavedFolderCard({
         <Box sx={{ marginInlineStart: "auto" }}>
           <FolderActions
             folder={folder}
+            labelKey={labelKey}
+            testIdPrefix={testIdPrefix}
             downloadDisabled={count === 0}
             onDownload={onDownload}
             onRename={onRename}

@@ -408,18 +408,19 @@ const en = {
     selected: "{{count}} selected",
     download: "Download selected as PGN",
     /**
-     * A folder with no readable name — a half-broken store can produce one
-     * (`gameFolderFrom` normalises a broken name to empty rather than dropping
-     * the folder). The folders' CRUD refuses empty names; only a hand-edited
-     * store reaches this.
-     */
-    untitled: "Untitled folder",
-    /**
      * The folder system (CTA-46), the savedOpenings block's `folder` below over
      * the games' own store. Chrome only — a folder's name is the reader's own
-     * words, never a key.
+     * words, never a key. The folder rows, cards, breadcrumb and dialogs read
+     * it through a `labelKey`, so the savedAnalyses block's `folder` carries
+     * the same keys.
      */
     folder: {
+      /**
+       * A folder with no readable name — a half-broken store can produce one
+       * (`gameFolderFrom` normalises a broken name to empty rather than
+       * dropping the folder). Only a hand-edited store reaches this.
+       */
+      untitled: "Untitled folder",
       /** The breadcrumb's first crumb — standing at the top of the tree. */
       root: "All games",
       /** The top bar's create button. */
@@ -465,8 +466,8 @@ const en = {
     title: "Saved analyses",
     count: "Analyses: {{count}}",
     empty:
-      "No saved analyses yet. Play a move on the Analysis Board, or load a game into it, and the board appears here on its own.",
-    hint: "Every board you work on at the Analysis Board is written down as you go — side lines and all. Pick one up where you left it, or take the position somewhere else.",
+      "No saved analyses yet. Work on a board at the Analysis Board and save it, and it appears here.",
+    hint: "Every analysis you save on the Analysis Board is kept here — side lines, comments and all — filed into your folders. Open one to pick it up where you left it.",
     /** Said plainly: this is a browser, not a backup — as the Uploads screen does. */
     storage:
       "Saved analyses are kept in this browser only. Clearing site data removes them, and they do not follow you to another device.",
@@ -495,11 +496,8 @@ const en = {
       compact: "Small boards",
       comfortable: "Big boards",
     },
-    /** The three destinations — see `SavedAnalyses.tsx` for why these three. */
-    continue: "Continue",
-    openInLoadPgn: "PGN viewer",
-    play: "Play from here",
-    remove: "Delete this analysis",
+    /** Opens it on the Analysis Board — the one destination (CTA-73). */
+    open: "Open",
     /**
      * The top-bar button to the Analysis Board — the screen the sidebar's
      * single Analysis entry hides (CTA-58), so the board is reached from here.
@@ -510,6 +508,41 @@ const en = {
     selectAll: "Select all analyses",
     selected: "{{count}} selected",
     download: "Download selected as PGN",
+    deleteSelected: "Delete selected",
+    /** Deleting the picks, asked first — the repertoires' dialog with these words. */
+    bulkDelete: {
+      title_one: "Delete {{count}} analysis?",
+      title_other: "Delete {{count}} analyses?",
+      text: "They are removed from this browser. This can't be undone.",
+      confirm: "Delete",
+    },
+    /**
+     * The nested folders (CTA-73) — the savedGames block's `folder` keys, read
+     * by the same components through `labelKey`.
+     */
+    folder: {
+      untitled: "Untitled folder",
+      root: "All analyses",
+      newFolder: "New folder",
+      renameFolder: "Rename folder",
+      moveFolder: "Move folder",
+      /** Filing one analysis — the key the shared move dialog reads. */
+      moveGame: "Move analysis",
+      deleteFolder: "Delete folder",
+      download: "Download this folder as PGN",
+      unfiled: "Unfiled",
+      topLevel: "Top level",
+      name: "Name",
+      save: "Save",
+      cancel: "Cancel",
+      deleteConfirm:
+        "Deleting this folder keeps its contents: analyses filed in it become Unfiled, and its sub-folders move up one level.",
+      deleteCounts:
+        "This folder holds {{games}} analyses and {{subFolders}} sub-folders.",
+      count_one: "{{count}} analysis",
+      count_other: "{{count}} analyses",
+      empty: "This folder is empty.",
+    },
   },
   /**
    * The **Saved openings** screen — the positions the reader has saved on the
@@ -632,13 +665,128 @@ const en = {
    * and stay language-independent.
    */
   analysis: {
+    /** The Analysis Board's tabs (CTA-73). */
     tabs: {
       moves: "Moves",
+      map: "Map",
+      load: "Load",
+      export: "Export",
       engine: "Engine",
-      position: "Position",
     },
-    /** Hand the position on screen to Play with Engine — the Board Editor's wording. */
-    playFromHere: "Play from here",
+    /**
+     * The header's Play toggle (CTA-73): the engine plays the side not at
+     * the bottom of the board, its best move each turn, until paused (or the
+     * reader steps back). Disabled while the engine is off.
+     */
+    play: {
+      start: "Let the engine play the other side",
+      pause: "Pause the engine",
+      engineOff: "Switch the engine on to let it play",
+      /** The status line while Play is on: the engine searching, dots moving… */
+      thinking: "Engine is thinking",
+      /** …the depth its search has reached so far… */
+      depth: "depth {{depth}}",
+      /** …or the reader's turn. */
+      yourMove: "Your move",
+    },
+    /** The header's engine switch — short, it sits beside three buttons. */
+    engineSwitch: "Engine",
+    /** Saving a board that is not a saved analysis yet: a name and a folder. */
+    save: {
+      open: "Save this analysis",
+      title: "Save analysis",
+      name: "Name",
+      folder: "Folder",
+      confirm: "Save",
+    },
+    /**
+     * The changes strip over a saved analysis — `RepertoireChangesBar` with
+     * this block's words (no protection: an analysis has none).
+     */
+    changes: {
+      title: "Unsaved changes",
+      saveOpen: "Unsaved changes — save or discard them",
+      saveNothing: "No unsaved changes",
+      added_one: "{{count}} move added",
+      added_other: "{{count}} moves added",
+      edited: "Lines or comments edited",
+      update: "Update analysis",
+      updateHelp: "Make these changes part of this saved analysis.",
+      copy: "Save as copy",
+      copyHelp: "Keep the saved analysis as it is, and save a copy with your changes.",
+      discard: "Discard",
+      copyName: "{{name}} (copy)",
+      problem: {
+        storage: "It could not be saved — this browser's storage is full or unavailable.",
+        "too-many": "There is no room for another analysis in this browser.",
+      },
+    },
+    /** The Load tab: a PGN (file or paste) or a FEN onto the board, unsaved. */
+    load: {
+      pgnTitle: "Load a game",
+      pgnHelp: "It opens as a new analysis; save it to keep it. A file of several games can be merged into one tree or split into a folder of analyses.",
+      loaded: "Loaded — a new analysis, not saved yet.",
+      /** A split's folder, when the text names nothing. */
+      splitFolder: "Imported analyses",
+      choice: {
+        title_one: "This PGN holds {{count}} game",
+        title_other: "This PGN holds {{count}} games",
+        explain: "Merge them into one tree on the board, or save each as an analysis of its own.",
+        skipped_one: "{{count}} game has no moves or could not be read, and is left out.",
+        skipped_other: "{{count}} games have no moves or could not be read, and are left out.",
+        merge: "Merge onto the board",
+        mergeHelp:
+          "One tree: the first game's line is the mainline, and wherever another game leaves it becomes a side line. Comments and move marks are kept. Not saved until you save it.",
+        mergeUnavailable:
+          "These games start from different positions, so they cannot share one tree.",
+        split_one: "Save as {{count}} analysis",
+        split_other: "Split into {{count}} analyses",
+        splitHelp:
+          "Each game is saved as an analysis of its own, named after the game, all in a new folder named after the file.",
+      },
+      problem: {
+        empty: "There is no PGN in that.",
+        "too-large": "That is too large to load.",
+        unreadable: "That could not be read as PGN.",
+        storage: "It could not be saved — this browser's storage is full or unavailable.",
+        folder: "Could not make a folder for them — the limit is {{max}} folders, or this browser's storage is full.",
+        tooMany: "That would pass the limit of {{max}} analyses in this browser.",
+      },
+    },
+    /** The link to a saved analysis' settings — on the board's header and every list row. */
+    settingsLink: {
+      open: "Analysis settings",
+      unsaved: "Save or discard your changes first",
+    },
+    /** A saved analysis' settings screen (`/tools/analysis/saved/<id>/settings`). */
+    settingsScreen: {
+      title: "Analysis settings",
+      missing: "There is no such analysis in this browser.",
+      back: "Back to saved analyses",
+      sections: {
+        general: "General",
+        board: "Board",
+        folder: "Folder",
+      },
+      name: "Title",
+      description: "Description",
+      descriptionHelp: "Your notes on this analysis — shown under its title on the board.",
+      color: "Side",
+      white: "White",
+      black: "Black",
+      colorHelp: "The side the board opens facing. Flipping the board while you work does not change it.",
+      arrowsHelp: "Whether the board opens drawing the next moves' arrows. The board's own switch changes them for a session.",
+      save: "Save",
+      cancel: "Cancel",
+    },
+    /** The Export tab: what the PGN keeps. */
+    export: {
+      include: "Include in the PGN",
+      comments: "Comments",
+      nags: "Move marks (NAGs)",
+      variations: "Side lines",
+      download: "Download .pgn",
+    },
     /** The pinned next-moves bar under the moves list — a fork's choices (CTA-54). */
     nextMoves: "Next moves",
     /** The empty-tree hint of the flowing tree view (the Openings explorer, a Library repertoire line). */
@@ -656,29 +804,22 @@ const en = {
       moveTimeNone: "No limit",
       multiPv: "Variations to show",
       evalBar: "Show evaluation bar",
+      /** The arrows of the next moves from the position on screen. */
+      arrows: "Show next-move arrows",
       clear: "Clear the board",
     },
+    /** The Load and Export tabs' shared words. */
     position: {
-      pgnTitle: "Load a game",
       chooseFile: "Choose a .pgn file",
-      dropHint: "Drop a .pgn file here",
       pasteLabel: "Or paste PGN text",
       loadPgn: "Load PGN",
-      gamesTitle: "Games in this file",
-      gameFallback: "Game {{number}}",
-      versus: "vs",
       fenTitle: "Set a position up",
       fenLabel: "Paste a FEN",
       loadFen: "Set position",
-      currentTitle: "This position",
       currentFen: "Current FEN",
-      currentPgn: "Current PGN",
+      currentPgn: "PGN",
       errors: {
-        emptyPgn: "No PGN found in that input.",
-        pgn: "Could not read this PGN. {{detail}}",
-        pgnGame: "Could not read game {{number}} in this file. {{detail}}",
         fen: "Could not read this FEN. {{detail}}",
-        file: "Could not read that file.",
       },
     },
   },
@@ -1224,7 +1365,6 @@ const en = {
     folder: "Development",
     /** The five boards, in the order the spec derives them. */
     screens: {
-      analysis: "Analysis v2",
       play: "Play with Engine v2",
       masked: "Masked Pieces v2",
       openings: "Openings v2",

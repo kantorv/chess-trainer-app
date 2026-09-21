@@ -67,6 +67,7 @@ function MoveContextMenu({
   open,
   onClose,
   onEditTree,
+  playChances = true,
 }: {
   tree: GameTree;
   /** The last move a menu was opened on — kept while the menu fades out. */
@@ -74,6 +75,11 @@ function MoveContextMenu({
   open: boolean;
   onClose: () => void;
   onEditTree: (next: GameTree) => void;
+  /**
+   * Offer *Play chances…* (on by default). A board nothing plays by chance on
+   * — the Analysis Board (CTA-73) — turns it off.
+   */
+  playChances?: boolean;
 }) {
   const { t } = useTranslation();
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -193,7 +199,7 @@ function MoveContextMenu({
           </ListItemIcon>
           <ListItemText>{t("moveMenu.addComment")}</ListItemText>
         </MenuItem>
-        {branchSize > 1 && (
+        {playChances && branchSize > 1 && (
           <MenuItem
             data-testid="move-menu-chances"
             onClick={() => {

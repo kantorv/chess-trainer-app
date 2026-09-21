@@ -1,5 +1,4 @@
 import ScienceRoundedIcon from "@mui/icons-material/ScienceRounded";
-import AccountTreeRoundedIcon from "@mui/icons-material/AccountTreeRounded";
 import SportsEsportsRoundedIcon from "@mui/icons-material/SportsEsportsRounded";
 import VisibilityOffRoundedIcon from "@mui/icons-material/VisibilityOffRounded";
 import TravelExploreRoundedIcon from "@mui/icons-material/TravelExploreRounded";
@@ -9,7 +8,7 @@ import type { NavFolder } from "../main/navFolders";
 import type { NavItem } from "../main/navItems";
 
 /**
- * **The Development section's sidebar entries** — the folder and the five
+ * **The Development section's sidebar entries** — the folder and the four
  * screens composed from the unified board core
  * ([`.claude/rules/chessboard-v2.md`](../../../.claude/rules/chessboard-v2.md)).
  *
@@ -45,17 +44,12 @@ export const devNavFolder = (): NavFolder => ({
 });
 
 /**
- * The five boards, in the order the spec derives them: Analysis v2 is the
- * reference, Play v2 the linear case, Masked v2 derived from Play, then the two
- * that had none of CTA-51/53/54/55 before.
+ * The four boards, in the order the spec derives them: Play v2 the linear
+ * case, Masked v2 derived from Play, then the two that had none of
+ * CTA-51/53/54/55 before. (Analysis v2, the reference, shipped as the
+ * Analysis Board in CTA-73 and left the section.)
  */
 export const devNavItems = (): readonly NavItem[] => [
-  {
-    to: "/dev/analysis",
-    labelKey: "dev.screens.analysis",
-    icon: AccountTreeRoundedIcon,
-    folder: DEV_NAV_FOLDER_ID,
-  },
   {
     to: "/dev/play",
     labelKey: "dev.screens.play",

@@ -71,6 +71,7 @@ function TreeMoveList({
   mask,
   extensionIds,
   onEditTree,
+  playChances,
 }: {
   tree: GameTree;
   /** The mainline, already walked by the core — not re-walked here. */
@@ -85,6 +86,8 @@ function TreeMoveList({
   extensionIds?: ReadonlySet<string>;
   /** Opt-in: the move menu, and where its edits go (CTA-64). */
   onEditTree?: (next: GameTree) => void;
+  /** Whether the menu offers *Play chances…* — `MoveContextMenu`'s default when absent. */
+  playChances?: boolean;
 }) {
   // Memoised on the tree: the walk reads the whole line, and stepping around
   // inside a side line re-renders the panel without touching it.
@@ -188,6 +191,7 @@ function TreeMoveList({
         open={menuOpen}
         onClose={closeMenu}
         onEditTree={onEditTree}
+        playChances={playChances}
       />
     </>
   );
