@@ -31,8 +31,9 @@ the `/dev/*` Development screens are composed from. A base hook, optional
 capability modules (engine, opening book, persistence), and one slotted
 shell/panel layer, plus a derivation table for the five boards and a recipe for
 adding a sixth. Nothing there overrides this file — it says who *owns* which of
-these rules once five screens share one implementation. The five shipped board
-screens of §5 below are untouched by it and stay the reference.
+these rules once five screens share one implementation. The Analysis Board of
+§5 below is built on it since CTA-73 (Analysis v2, shipped); the other shipped
+board screens of §5 are untouched by it and stay the reference.
 
 **And, for how such a board shows its game tree** —
 [`tree-views.md`](./tree-views.md) (CTA-72): the move list, map, comments
@@ -359,8 +360,8 @@ Consequences for a caller:
 | `/engine/saved` | [`views/engine/saved/SavedGames.tsx`](../../src/views/engine/saved/SavedGames.tsx) | (composed) | The games played on the screen above, kept in `localStorage` and listed newest first, filed into a tree of folders (CTA-46) — as rows, or as read-only preview boards at either of the library's two card sizes, each showing the position that game was **left at**. `?saved=<id>` resumes one there; `?game=engine/saved/<id>` hands it to the Analysis Board or Load PGN; folders are display organisation only and the hand-offs are untouched |
 | `/masked/play` | [`views/masked/play/MaskedPlay.tsx`](../../src/views/masked/play/MaskedPlay.tsx) | `Pieces` | The same screen with the pieces in disguise: `options.pieces` built from a `PieceMask` (`lib/pieceMask.ts`), and the notation masked to match. `usePlayWithEngine` reused verbatim |
 | `/games/load-pgn` | [`views/games/load_pgn/LoadPgn.tsx`](../../src/views/games/load_pgn/LoadPgn.tsx) | (composed) | A PGN pasted in, parsed to a `Game`, walked with the shared `MoveList` / `useGameNavigation` / `BoardControls` |
-| `/tools/analysis` | [`views/tools/analysis/AnalysisBoard.tsx`](../../src/views/tools/analysis/AnalysisBoard.tsx) | (composed) | Analysis: a **variation tree** (`lib/gameTree.ts`), PGN/FEN set-up and export, both colours movable, engine and eval bar switched independently. Written to `localStorage` as it is worked on; takes `?fen=`, `?game=` and `?analysis=` |
-| `/tools/analysis/saved` | [`views/tools/analysis/saved/SavedAnalyses.tsx`](../../src/views/tools/analysis/saved/SavedAnalyses.tsx) | (composed) | The boards worked on above, kept in `localStorage` and listed newest first — as rows, or as read-only preview boards at either card size, each showing the position and the side the reader **was standing on**. `?analysis=<id>` reopens one; `?game=analysis/saved/<id>` hands it to Load PGN and `?fen=` to Play with Engine. The Saved games screen with two changes — see the root `CLAUDE.md` |
+| `/tools/analysis` | [`views/tools/analysis/AnalysisBoard.tsx`](../../src/views/tools/analysis/AnalysisBoard.tsx) | (composed) | **A v2 screen since CTA-73** — the core, the engine module (no reply) and the shared **variations explorer** ([`tree-views.md`](./tree-views.md); editing on, *Play chances…* off): a **variation tree** (`lib/gameTree.ts`), both colours movable from any node, the engine and the eval bar switched independently. Tabs Moves · Map · Load · Export · Engine: Load takes a PGN (one game; several merged onto the board or split into a folder of saved analyses) or a FEN, Export copies the FEN and copies or downloads the PGN with or without comments, NAGs and side lines. **Saved explicitly** — the header's Save opens the changes strip (Update / Save as copy / Discard) over a record, or a name-and-folder dialog for a new board. Takes `?fen=`, `?game=`+`?move=`, `?analysis=` and writes `?at=` back. `options.id` is `analysis` |
+| `/tools/analysis/saved` | [`views/tools/analysis/saved/SavedAnalyses.tsx`](../../src/views/tools/analysis/saved/SavedAnalyses.tsx) | (composed) | The analyses saved above, kept in `localStorage`, newest first, filed into a nested tree of folders (CTA-73; `?folder=<id>`) — as rows, or as read-only preview boards at either card size, each showing the position and the side the reader **was standing on**. Each is renamed and filed from its row or card; folders are created, renamed, moved (never into their own subtree), deleted keeping their contents and downloaded as one `.pgn`. `?analysis=<id>` reopens one; `?game=analysis/saved/<id>` hands it to Load PGN and `?fen=` to Play with Engine. The Saved games screen again — see the root `CLAUDE.md` |
 | `/openings` | [`views/tools/openings/OpeningsBoard.tsx`](../../src/views/tools/openings/OpeningsBoard.tsx) | (composed) | Opening exploration: a regular board the reader plays through, the book continuations from the position on screen listed explorer-style, and the Analysis Board's variation tree behind it all. Takes `?fen=` (the arrival the three board screens share) and `?openings=<id>` (a saved opening to go on exploring); hands Play with Engine `?fen=` from the position on screen |
 | `/openings/saved` | [`views/tools/openings/saved/SavedOpenings.tsx`](../../src/views/tools/openings/saved/SavedOpenings.tsx) | (composed) | The openings saved from the screen above, newest first, filed into a tree of folders — as rows, or as read-only preview boards at either card size, each showing the end of the mainline. Drilling in, a breadcrumb back up, and folder CRUD; the view toggle, the export bar and the delete control are the shared saved-list machinery (`views/shared/savedList.ts`). `?openings=<id>` reopens one there; `?fen=` hands Play with Engine the end of the mainline. The Saved analyses screen over the same view machinery — see the root `CLAUDE.md` |
 | `/library/*` | [`views/pgn/UserPgnsSection.tsx`](../../src/views/pgn/UserPgnsSection.tsx) | (composed) | The one browsable library (was "User PGNs" at `/pgn/*` — old URLs redirect), over items that are whole **games** out of the project's `.pgn` files, behind one splat route resolved against a catalog nested to any depth. The list screen is [`views/library/LibraryList.tsx`](../../src/views/library/LibraryList.tsx) — a read-only preview board per card, several on one page, so `options.id` is the item's id, not a constant, under a fixed top bar (name + count, search, card-size toggle) over the one region that scrolls. The detail screen is [`views/library/LibraryDetail.tsx`](../../src/views/library/LibraryDetail.tsx), which resolves the URL and dispatches on the item's kind: a game replays over the shared `MoveList` / `BoardControls` / `useGameNavigation` (`LibraryGameDetail.tsx`) and hands on with `?game=`; a **repertoire** line instead opens in [`LibraryVariationDetail.tsx`](../../src/views/library/LibraryVariationDetail.tsx) — `parsePgnTree` + the shared `VariationTree`, since a repertoire's `( )` side lines are the content; a position (`LibraryPositionDetail.tsx`, kept for a future section) is read-only, faces the side to move, and hands on with `?fen=` |
@@ -458,25 +459,23 @@ you need the smallest version of one.
   `usePlayWithEngine` with no edits at all. Never reach for `squareRenderer`,
   a doctored `position`, or anything that would change what `chess.js` is holding.
 
-**And two the Analysis Board adds:**
+**And three the Analysis Board adds:**
 
 - **An analysis board never moves a piece by itself.** It reads `info` lines and
-  ignores `bestmove` entirely — the branch that plays one does not exist in
-  `useAnalysisBoard`. That is why it is a separate hook rather than
-  `usePlayWithEngine` with a mode flag: the two differ on whether the engine
-  moves and whether both colours are draggable — since CTA-50 both engines are
-  switchable (`engineOn` gates searching and, on the play screen, the reply),
-  so searching is no longer a difference. That is all of the behaviour there
-  is.
+  ignores `bestmove` entirely — it passes `useEngineModule` no `onBestMove`, so
+  the branch that plays one does not exist for it (`chessboard-v2.md` §2.1).
+  That is the whole Play/Analysis difference, with whether both colours are
+  draggable (`canMoveAt`) — not a mode flag.
 - **A screen that can branch navigates by node, not by ply.** See the root
   `CLAUDE.md` on the tree; the shared `BoardControls` still take a ply, and
   `useTreeNavigation` derives one from the line the reader is standing on.
-- **The board is written down as it is worked on, and so is where you are
-  standing.** An effect in `useAnalysisBoard` saves the tree, the settings, the
-  orientation and the SAN path to the current node (`lib/savedAnalyses.ts`),
-  gated on `persist` and on the reader having actually changed something —
-  merely opening a library game here writes nothing. Reopening is `?analysis=`.
-  See the root `CLAUDE.md`.
+- **The board is written down when the reader says so, and so is where they
+  are standing** (CTA-73 — it used to autosave). `useAnalysisBoard` holds the
+  saved record and a baseline tree; `tree !== baseline` lights the Save button,
+  and Update / Save as copy / a new board's Save write the tree, the settings,
+  the orientation and the SAN path to the current node (`lib/savedAnalyses.ts`),
+  with the reader's name and folder. Reopening is `?analysis=`. See the root
+  `CLAUDE.md`.
 
 **And two the Board Editor adds:**
 
