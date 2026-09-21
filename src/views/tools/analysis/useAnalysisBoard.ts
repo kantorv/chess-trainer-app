@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-import { Chess, DEFAULT_POSITION } from "chess.js";
+import { DEFAULT_POSITION } from "chess.js";
 
 import {
   ANALYSIS_UCI_OPTION,
@@ -28,8 +28,9 @@ import {
   saveAnalysis,
   type SavedAnalysisProblem,
 } from "../../../lib/savedAnalysisStore";
-import { isTerminal, turnOf, useBoardCore } from "../../dev/core/useBoardCore";
+import { turnOf, useBoardCore } from "../../dev/core/useBoardCore";
 import { useEngineModule } from "../../dev/core/useEngineModule";
+import { usePlayToggle } from "../../dev/core/usePlayToggle";
 
 /**
  * **The Analysis Board's session** (CTA-73) — the v2 core
@@ -56,9 +57,11 @@ import { useEngineModule } from "../../dev/core/useEngineModule";
  * an earlier move, ↑ / ↓ to another line, a load: the reader has gone to look
  * or to try something, and goes on moving by hand until pressing Play again.
  * A move played (the reader's or the engine's) is a step to a child of the
- * node that was on screen, and keeps it on. It also pauses once the position
- * is over, and whenever the engine is switched off. Off, `onBestMove` does
- * nothing: nothing moves unasked.
+ * node that was on screen, and keeps it on. It also pauses when the board is
+ * flipped (the engine's side changed under it), once the position is over,
+ * and whenever the engine is switched off. Off, `onBestMove` does nothing:
+ * nothing moves unasked. All of it is the shared `usePlayToggle`
+ * (`views/dev/core/`), which Play with Engine runs too (CTA-74).
  *
  * ## Explicit save, against a baseline
  *
@@ -183,60 +186,12 @@ export const useAnalysisBoard = ({
     [],
   );
   /*
-    Play (CTA-73): the engine plays its best move, search after search. Off
-    whenever the engine is, and once the position on screen is over —
-    adjusted during render, not in an effect.
+    Play (CTA-73): the engine plays its best move for the opponent's side,
+    search after search, until paused — the shared toggle (`usePlayToggle`),
+    off at the start on this board.
   */
-  const [playing, setPlaying] = useState(false);
-  if (playing && (!engineOn || isTerminal(core.fen))) setPlaying(false);
-  /** The engine's side: the one not at the bottom of the board. */
-  const engineTurn = core.orientation === "white" ? "b" : "w";
-  /**
-   * Whether Play is waiting on the engine — its turn, a search under way. What
-   * the board's "thinking" feedback shows (a long search otherwise looks like
-   * nothing happened).
-   */
-  const thinking =
-    playing && engineOn && turnOf(core.fen) === engineTurn && !isTerminal(core.fen);
-  /*
-    A step that is not one move forward — to anything but a child of the node
-    that was on screen — pauses Play (the header note). Adjusted during render
-    against the node last seen.
-  */
-  const [seenNodeId, setSeenNodeId] = useState(core.nodeId);
-  if (seenNodeId !== core.nodeId) {
-    setSeenNodeId(core.nodeId);
-    const parentId =
-      core.nodeId === null ? undefined : (pathTo(core.tree, core.nodeId).at(-2)?.id ?? null);
-    if (playing && parentId !== seenNodeId) setPlaying(false);
-  }
-  const { playVariation } = core;
-  const playUci = useCallback(
-    (uci: string, fen: string) => {
-      let san: string;
-      try {
-        san = new Chess(fen).move({
-          from: uci.slice(0, 2),
-          to: uci.slice(2, 4),
-          promotion: uci.slice(4) || undefined,
-        }).san;
-      } catch {
-        return;
-      }
-      playVariation([san]);
-    },
-    [playVariation],
-  );
-  const onBestMove = useCallback(
-    (bestMove: string, searchedFen: string) => {
-      // Only a search of the position on screen, only while playing, and
-      // only for the engine's side.
-      if (!playing || !engineOn || searchedFen !== core.fen) return;
-      if (turnOf(searchedFen) !== engineTurn || isTerminal(searchedFen)) return;
-      playUci(bestMove, searchedFen);
-    },
-    [playing, engineOn, core.fen, engineTurn, playUci],
-  );
+  const play = usePlayToggle({ core, engineOn });
+  const { playing, thinking } = play;
 
   const engine = useEngineModule({
     enabled: engineOn,
@@ -248,28 +203,12 @@ export const useAnalysisBoard = ({
       [settings.multiPv],
     ),
     onUciOptionsReady,
-    onBestMove,
+    onBestMove: play.onBestMove,
   });
   const { clearAnalysis } = engine;
 
-  /**
-   * Play on or off. On at the engine's turn, with a finished search of the
-   * position on screen already in hand, its best move is played at once
-   * rather than waiting for a search that has already ended.
-   */
-  const togglePlaying = () => {
-    if (playing) {
-      setPlaying(false);
-      return;
-    }
-    if (!engineOn || isTerminal(core.fen)) return;
-    setPlaying(true);
-    if (turnOf(core.fen) !== engineTurn) return;
-    const best = engine.analysis.lines[0]?.san[0];
-    if (engine.analysis.fen === core.fen && engine.evalsByFen.has(core.fen) && best) {
-      playVariation([best]);
-    }
-  };
+  /** Play on or off — see `usePlayToggle`. */
+  const togglePlaying = () => play.toggle(engine.analysis, engine.evalsByFen);
 
   const updateSettings = useCallback(
     (patch: Partial<AnalysisSettings>) =>

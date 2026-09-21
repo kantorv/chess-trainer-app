@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import Box from "@mui/material/Box";
-import CircularProgress from "@mui/material/CircularProgress";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import IconButton from "@mui/material/IconButton";
 import Switch from "@mui/material/Switch";
@@ -9,8 +8,6 @@ import Typography from "@mui/material/Typography";
 import FolderOpenRoundedIcon from "@mui/icons-material/FolderOpenRounded";
 import SaveRoundedIcon from "@mui/icons-material/SaveRounded";
 import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
-import PauseRoundedIcon from "@mui/icons-material/PauseRounded";
-import PlayArrowRoundedIcon from "@mui/icons-material/PlayArrowRounded";
 import {
   createSearchParams,
   Link as RouterLink,
@@ -36,6 +33,7 @@ import RepertoireChangesBar from "../../repertoires/RepertoireChangesBar";
 import CurrentOpening from "../../shared/CurrentOpening";
 import AnalysisExport from "./AnalysisExport";
 import EngineThinking from "./EngineThinking";
+import PlayToggleButton from "./PlayToggleButton";
 import AnalysisLoad from "./AnalysisLoad";
 import AnalysisSettingsPanel from "./AnalysisSettings";
 import SaveAnalysisDialog from "./SaveAnalysisDialog";
@@ -283,45 +281,13 @@ function AnalysisBoard() {
                   </IconButton>
                 </span>
               </Tooltip>
-              {/* Play: the engine plays the other side's best move each turn,
-                  until paused or a step back — disabled while the engine is off. */}
-              <Tooltip
-                title={t(
-                  !state.engineOn
-                    ? "analysis.play.engineOff"
-                    : state.playing
-                      ? "analysis.play.pause"
-                      : "analysis.play.start",
-                )}
-              >
-                <span>
-                  <IconButton
-                    size="small"
-                    disabled={!state.engineOn}
-                    color={state.playing ? "primary" : "default"}
-                    onClick={state.togglePlaying}
-                    aria-label={t(state.playing ? "analysis.play.pause" : "analysis.play.start")}
-                    aria-pressed={state.playing}
-                    data-testid="analysis-play"
-                    sx={{ flexShrink: 0, position: "relative" }}
-                  >
-                    {/* A ring round the button while the engine thinks. */}
-                    {state.thinking && (
-                      <CircularProgress
-                        size={30}
-                        thickness={3}
-                        data-testid="analysis-play-spinner"
-                        sx={{ position: "absolute", pointerEvents: "none" }}
-                      />
-                    )}
-                    {state.playing ? (
-                      <PauseRoundedIcon fontSize="small" />
-                    ) : (
-                      <PlayArrowRoundedIcon fontSize="small" />
-                    )}
-                  </IconButton>
-                </span>
-              </Tooltip>
+              <PlayToggleButton
+                testId="analysis-play"
+                engineOn={state.engineOn}
+                playing={state.playing}
+                thinking={state.thinking}
+                onToggle={state.togglePlaying}
+              />
               <Tooltip title={t("savedAnalyses.title")}>
                 <IconButton
                   size="small"

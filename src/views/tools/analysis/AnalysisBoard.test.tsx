@@ -450,6 +450,16 @@ describe("Play — the engine plays the opponent's best move until paused", () =
     expect(boardOptions().position).toBe(AFTER_E4);
   });
 
+  it("pauses when the board is flipped — the engine's side changed under it (CTA-74)", () => {
+    mount();
+    play();
+    act(() => {
+      screen.getByTestId("board-control-flip").click();
+    });
+    expect(pressed()).toBe("false");
+    expect(boardOptions().position).toBe(START);
+  });
+
   it("pauses when the reader steps back, and they go on by hand until Play again", () => {
     mount();
     play();
