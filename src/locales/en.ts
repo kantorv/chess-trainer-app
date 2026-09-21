@@ -974,7 +974,7 @@ const en = {
         "The board opens with arrows for the moves that follow the position on it: the main line in green, side lines in blue. You can still switch them for a session. Games always start without them.",
       chanceArrows: "Show play chances",
       chanceArrowsHelp:
-        "At the branches that carry play-chance marks, each arrow is coloured by how often the trainer plays its move — green for the most likely, amber for a real alternative, gray for almost never — and the moves bar prints each move's percentage. Unmarked branches keep the green and blue. You can still switch this for a session. Games always start without it.",
+        "At the branches that carry play-chance marks, each arrow is drawn white with a magenta border — the likelier the move, the wider its arrow — and the moves bar prints each move's percentage. Unmarked branches keep the green and blue. You can still switch this for a session. Games always start without it.",
       white: "White",
       black: "Black",
       save: "Save",
@@ -1061,7 +1061,7 @@ const en = {
       /** The switch that shows the play chances — off by default. */
       chanceArrows: "Show play chances",
       chanceArrowsHelp:
-        "Where the position's branch carries play-chance marks: the arrows take their colours by how often the trainer plays each move — green for the most likely, amber for a real alternative, gray for almost never — and the bar prints each move's percentage.",
+        "Where the position's branch carries play-chance marks: the arrows are drawn white with a magenta border — the likelier the move, the wider its arrow — and the bar prints each move's percentage.",
       autoplay: "Autoplay",
       autoplayHelp:
         "The trainer answers your moves from the repertoire, picking among its lines at random. Off, you move both sides.",

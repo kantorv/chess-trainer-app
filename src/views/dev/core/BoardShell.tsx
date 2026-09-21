@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import Box from "@mui/material/Box";
 import type { ChessboardOptions, PieceRenderObject } from "react-chessboard";
 import { capturedSummaryOf } from "../../../lib/capturedPieces";
@@ -44,8 +44,11 @@ import type { BoardCore } from "./useBoardCore";
  * `boardOptions` — the arrows a board draws, the `pieces` renderer a masked
  * board hands over, anything else `react-chessboard` takes. It is merged
  * *under* the options derived here, so a screen cannot quietly take over the
- * id, the position or the drop handler. And every panel slot, because what
- * goes in them is the whole of what one board is and another is not.
+ * id, the position or the drop handler. And `overlay`, for the one thing
+ * those options cannot express — a screen's own drawing over the board, in
+ * its own SVG, when per-arrow size is the message (`chanceArrows.ts`). And
+ * every panel slot, because what goes in them is the whole of what one
+ * board is and another is not.
  */
 
 export type BoardShellProps = {
@@ -79,6 +82,12 @@ export type BoardShellProps = {
    */
   hideMaterialDiff?: boolean;
 
+  /**
+   * Drawn over the board, inside its relative box — the screen's own overlay
+   * layer, passed straight through to `EngineBoardSquare`'s slot.
+   */
+  overlay?: ReactNode;
+
   /** Everything the panel needs but its `ply`/`lastPly`/`onSelectPly`/`onFlip`. */
   panel: Omit<
     BoardPanelProps,
@@ -102,6 +111,7 @@ function BoardShell({
   capturedPieces,
   allowDragging = true,
   hideMaterialDiff = false,
+  overlay,
   panel,
   regionProps,
 }: BoardShellProps) {
@@ -137,6 +147,7 @@ function BoardShell({
           allowDragging={allowDragging && core.promotion === null}
           onPieceDrop={core.onPieceDrop}
           boardOptions={boardOptions}
+          overlay={overlay}
           showEvalBar={showEvalBar}
           score={score}
           captured={captured}

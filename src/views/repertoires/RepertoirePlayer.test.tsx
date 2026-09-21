@@ -12,8 +12,11 @@ import {
   updateRepertoireSettings,
 } from "../../lib/savedRepertoireStore";
 import {
+  CHANCE_ARROW_BORDER_COLOR,
+  CHANCE_ARROW_FILL_COLOR,
+} from "../tools/analysis/chanceArrows";
+import {
   NEXT_MOVE_ARROW_COLOR,
-  RARE_NEXT_MOVE_ARROW_COLOR,
   SIDELINE_NEXT_MOVE_ARROW_COLOR,
 } from "../tools/analysis/nextMoveArrows";
 import { boardOptions, FakeEngine } from "../dev/devTestHarness";
@@ -57,7 +60,7 @@ const CARO = [
 
 /**
  * A marked fork — `2. Nf3 {prc:97.8}` against `2. Bc4 {prc:2.2}`, and under it
- * the unmarked `2... Nc6 (2... f5)` — one fixture for the play-chance tiers'
+ * the unmarked `2... Nc6 (2... f5)` — one fixture for the play-chance arrows'
  * on and off cases (CTA-71).
  */
 const MARKED = [
@@ -315,46 +318,60 @@ describe("the repertoire player, Autoplay on", () => {
     expect(boardOptions().arrows).toEqual([]);
   });
 
-  it("colours the arrows by play chance at a marked fork, switched for a session", () => {
+  it("draws the arrows by play chance at a marked fork, switched for a session", () => {
     // Autoplay off, so the reader walks both sides to the fork at move 2.
     mountIdle(`/repertoires/${storeRepertoire("r", MARKED)}`);
     drop("e2", "e4");
     drop("e7", "e5");
-    // Off by default: today's pair stands even where the moves carry marks,
-    // and the bar prints the SANs alone.
+    // Off by default: the green/blue pair stands even where the moves carry
+    // marks, no overlay is drawn, and the bar prints the SANs alone.
     expect(boardOptions().arrows).toEqual([
       { startSquare: "g1", endSquare: "f3", color: NEXT_MOVE_ARROW_COLOR },
       { startSquare: "f1", endSquare: "c4", color: SIDELINE_NEXT_MOVE_ARROW_COLOR },
     ]);
+    expect(
+      screen.queryByTestId("repertoire-board-chance-arrows-overlay"),
+    ).not.toBeInTheDocument();
     expect(screen.getByTestId("analysis-next-moves")).not.toHaveTextContent("97.8%");
 
-    // Switched on in the Settings tab: each arrow by its move's chance tier —
-    // 97.8% green as the most likely, 2.2% gray as almost never — and the
-    // bar prints the same numbers beside the SANs. The record is untouched.
+    // Switched on in the Settings tab: the library arrows stand down and the
+    // overlay draws each continuation white with a magenta border, the wider
+    // the likelier — and the bar prints the same numbers beside the SANs.
+    // The record is untouched.
     const stored = localStorage.getItem(SAVED_REPERTOIRES_STORAGE_KEY);
     openSettings();
     fireEvent.click(screen.getByTestId("repertoire-board-chance-arrows").querySelector("input")!);
-    expect(boardOptions().arrows).toEqual([
-      { startSquare: "g1", endSquare: "f3", color: NEXT_MOVE_ARROW_COLOR },
-      { startSquare: "f1", endSquare: "c4", color: RARE_NEXT_MOVE_ARROW_COLOR },
-    ]);
+    expect(boardOptions().arrows).toEqual([]);
+    const overlay = screen.getByTestId("repertoire-board-chance-arrows-overlay");
+    const likely = overlay.querySelector('path[data-from="g1"]')!;
+    const rare = overlay.querySelector('path[data-from="f1"]')!;
+    expect(likely.getAttribute("data-to")).toBe("f3");
+    expect(likely.getAttribute("fill")).toBe(CHANCE_ARROW_FILL_COLOR);
+    expect(likely.getAttribute("stroke")).toBe(CHANCE_ARROW_BORDER_COLOR);
+    expect(rare.getAttribute("data-to")).toBe("c4");
+    expect(
+      Number(likely.getAttribute("stroke-width")),
+    ).toBeGreaterThan(Number(rare.getAttribute("stroke-width")));
     fireEvent.click(screen.getByTestId("repertoire-board-panel-tab-moves"));
     expect(screen.getByTestId("analysis-next-moves")).toHaveTextContent("97.8%");
     expect(screen.getByTestId("analysis-next-moves")).toHaveTextContent("2.2%");
     expect(localStorage.getItem(SAVED_REPERTOIRES_STORAGE_KEY)).toBe(stored);
 
     // The unmarked fork under it keeps the green and blue: with no mark to
-    // read anywhere at the branch, the tiers say nothing and the bar prints
-    // the SANs alone.
+    // read anywhere at the branch, the overlay says nothing and the bar
+    // prints the SANs alone.
     drop("g1", "f3");
     expect(boardOptions().arrows).toEqual([
       { startSquare: "b8", endSquare: "c6", color: NEXT_MOVE_ARROW_COLOR },
       { startSquare: "f7", endSquare: "f5", color: SIDELINE_NEXT_MOVE_ARROW_COLOR },
     ]);
+    expect(
+      screen.queryByTestId("repertoire-board-chance-arrows-overlay"),
+    ).not.toBeInTheDocument();
     expect(screen.getByTestId("analysis-next-moves")).not.toHaveTextContent("%");
   });
 
-  it("seeds the chance-coloured arrows from the repertoire's settings", () => {
+  it("seeds the chance arrows from the repertoire's settings", () => {
     storeRepertoire("r", MARKED);
     updateRepertoireSettings("r", "", {
       ...findSavedRepertoire("r")!.settings,
@@ -363,17 +380,17 @@ describe("the repertoire player, Autoplay on", () => {
     mountIdle("/repertoires/r");
     drop("e2", "e4");
     drop("e7", "e5");
-    expect(boardOptions().arrows).toEqual([
-      { startSquare: "g1", endSquare: "f3", color: NEXT_MOVE_ARROW_COLOR },
-      { startSquare: "f1", endSquare: "c4", color: RARE_NEXT_MOVE_ARROW_COLOR },
-    ]);
+    expect(boardOptions().arrows).toEqual([]);
+    const overlay = screen.getByTestId("repertoire-board-chance-arrows-overlay");
+    expect(overlay.querySelector('path[data-from="g1"]')).not.toBeNull();
+    expect(overlay.querySelector('path[data-from="f1"]')).not.toBeNull();
     // The same switch's other half: the percentages print beside the SANs.
     expect(screen.getByTestId("analysis-next-moves")).toHaveTextContent("97.8%");
     openSettings();
     expect(screen.getByTestId("repertoire-board-chance-arrows").querySelector("input")).toBeChecked();
   });
 
-  it("opens a game without the chance-coloured arrows whatever the setting says", () => {
+  it("opens a game without the chance arrows whatever the setting says", () => {
     storeRepertoire("r", MARKED);
     updateRepertoireSettings("r", "", {
       ...findSavedRepertoire("r")!.settings,
@@ -381,6 +398,9 @@ describe("the repertoire player, Autoplay on", () => {
     });
     mountIdle("/repertoires/r/games/end");
     expect(boardOptions().arrows).toEqual([]);
+    expect(
+      screen.queryByTestId("repertoire-game-chance-arrows-overlay"),
+    ).not.toBeInTheDocument();
     // The bar never renders in a game — its footer is the trainer's status
     // line — so a drill shows no percentages either.
     expect(screen.queryByTestId("analysis-next-moves")).not.toBeInTheDocument();
