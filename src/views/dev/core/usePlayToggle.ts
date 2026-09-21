@@ -25,7 +25,8 @@ import { isTerminal, turnOf, type BoardCore } from "./useBoardCore";
  *   screen, and keeps it on;
  * - a **change of side** (the board flipped): the engine's side has changed
  *   under it, and nothing would search the position again to answer it;
- * - the engine switched off, or the position over.
+ * - the engine switched off, the position over, or the game ended some other
+ *   way the screen knows of (`finished` — a resignation).
  *
  * Each is adjusted during render against what was last seen, not in an effect
  * (`react-hooks/set-state-in-effect`).
@@ -38,14 +39,17 @@ export const usePlayToggle = ({
   core,
   engineOn,
   initial = false,
+  finished = false,
 }: {
   core: BoardCore;
   engineOn: boolean;
   /** Whether Play starts on — the Analysis Board's is off, Play with Engine's on. */
   initial?: boolean;
+  /** Whether the game is over by the screen's own rule (a resignation): Play stays off. */
+  finished?: boolean;
 }) => {
   const [playing, setPlaying] = useState(initial);
-  if (playing && (!engineOn || isTerminal(core.fen))) setPlaying(false);
+  if (playing && (!engineOn || finished || isTerminal(core.fen))) setPlaying(false);
 
   /** The engine's side: the one not at the bottom of the board. */
   const engineTurn = core.orientation === "white" ? "b" : "w";
@@ -102,7 +106,7 @@ export const usePlayToggle = ({
       setPlaying(false);
       return;
     }
-    if (!engineOn || isTerminal(core.fen)) return;
+    if (!engineOn || finished || isTerminal(core.fen)) return;
     setPlaying(true);
     if (turnOf(core.fen) !== engineTurn) return;
     const best = analysis.lines[0]?.san[0];

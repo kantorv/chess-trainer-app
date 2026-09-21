@@ -5,7 +5,6 @@ import {
   countVariations,
   fenAtNode,
   mainline,
-  mainlineGame,
   nodeAtSanPath,
   treeToPgn,
   type GameTree,
@@ -18,12 +17,7 @@ import {
   type LibraryGame,
 } from "./libraryCatalog";
 import { parsePgnGame, parsePgnTree } from "./pgn";
-import {
-  resultOfFen,
-  savedGameEvalsMap,
-  savedGameHeaders,
-  type SavedGame,
-} from "./savedGames";
+import { resultOfFen, savedGameHeaders } from "./savedGames";
 
 /**
  * **The reader's games on Play with Engine v2** (CTA-74) — what one is when it
@@ -72,6 +66,21 @@ export type PlayedGame = {
   updatedAt: string;
   /** The engine's finished scores for the positions the tree reaches. Absent until one is learned. */
   evals?: PlayedGameEval[];
+  /** The side that resigned — the reader's; absent while the game is on. It decides the result. */
+  resigned?: "white" | "black";
+};
+
+/**
+ * How a game stands, as a PGN result: a resignation decides it (the side that
+ * resigned loses), else the end of the mainline — mate, stalemate, a draw by
+ * rule, or `"*"` while it is on.
+ */
+export const playedGameResult = (
+  tree: GameTree,
+  resigned?: "white" | "black",
+): string => {
+  if (resigned !== undefined) return resigned === "white" ? "0-1" : "1-0";
+  return resultOfFen(mainline(tree).at(-1)?.fen ?? tree.startFen);
 };
 
 /** The category path the played games sit under, and their reference segment. */
@@ -131,21 +140,23 @@ export const playedGameOf = (
   evalsByFen?: ReadonlyMap<string, Score>,
   now: Date = new Date(),
   savedAt: string = now.toISOString(),
+  resigned?: "white" | "black",
 ): PlayedGame => {
-  const line = mainline(tree);
-  const result = resultOfFen(line.at(-1)?.fen ?? tree.startFen);
+  const result = playedGameResult(tree, resigned);
   const evals = evalsOf(tree, evalsByFen);
+  const headers = { ...tree.headers, ...savedGameHeaders(settings, result, new Date(savedAt)) };
+  if (resigned !== undefined) {
+    headers.Termination = `${resigned === "white" ? "White" : "Black"} resigns`;
+  }
   return {
     id,
-    pgn: treeToPgn({
-      ...tree,
-      headers: { ...tree.headers, ...savedGameHeaders(settings, result, new Date(savedAt)) },
-    }),
+    pgn: treeToPgn({ ...tree, headers }),
     settings,
     path: [...path],
     savedAt,
     updatedAt: now.toISOString(),
     ...(evals.length > 0 ? { evals } : {}),
+    ...(resigned !== undefined ? { resigned } : {}),
   };
 };
 
@@ -173,36 +184,6 @@ export const playedGameEvalsMap = (
   evals: readonly PlayedGameEval[] | undefined,
 ): Map<string, Score> =>
   new Map((evals ?? []).map((entry) => [entry.fen, { kind: entry.kind, value: entry.value }]));
-
-/**
- * A game out of the **old** store (`lib/savedGames.ts`), read as a played game
- * under a new id — what `?saved=<old id>` resumes from, since the old Saved
- * games list still links to `/engine/play`. The record is not migrated: nothing
- * is written until the reader moves, and then as a new row. It stands at the
- * end of its line, as the old screen resumed it; `undefined` when it will not
- * parse.
- */
-export const playedGameFromSavedGame = (
-  saved: SavedGame,
-  id: string,
-): PlayedGame | undefined => {
-  let tree: GameTree;
-  try {
-    tree = parsePgnTree(saved.pgn);
-  } catch {
-    return undefined;
-  }
-  const evals = evalsOf(tree, savedGameEvalsMap(saved.evals, mainlineGame(tree)));
-  return {
-    id,
-    pgn: saved.pgn,
-    settings: saved.settings,
-    path: mainline(tree).map((node) => node.san),
-    savedAt: saved.savedAt,
-    updatedAt: saved.updatedAt,
-    ...(evals.length > 0 ? { evals } : {}),
-  };
-};
 
 /** Whether two records' evals would read back identically. */
 export const samePlayedGameEvals = (
@@ -263,6 +244,7 @@ export const playedGameFrom = (value: unknown): PlayedGame | undefined => {
     savedAt: row.savedAt,
     updatedAt: row.updatedAt,
     ...(evals.length > 0 ? { evals } : {}),
+    ...(row.resigned === "white" || row.resigned === "black" ? { resigned: row.resigned } : {}),
   };
 };
 
@@ -272,8 +254,8 @@ export type PlayedGameSummary = {
   moves: number;
   /** How many side lines branch off it. */
   variations: number;
-  /** The result terminator of the mainline, or `undefined` while it is on. */
-  result?: string;
+  /** How it stands, as a PGN result — `"*"` while it is on. */
+  result: string;
   /** The side the reader plays. */
   playAs: EngineSettings["playAs"];
   /** `Skill Level` the engine is set to. */
@@ -284,12 +266,10 @@ export const playedGameSummary = (
   saved: PlayedGame,
   tree: GameTree | undefined,
 ): PlayedGameSummary => {
-  const result =
-    tree === undefined ? undefined : resultOfFen(mainline(tree).at(-1)?.fen ?? tree.startFen);
   return {
     moves: tree === undefined ? 0 : Math.ceil(mainline(tree).length / 2),
     variations: tree === undefined ? 0 : countVariations(tree),
-    ...(result === undefined || result === "*" ? {} : { result }),
+    result: tree === undefined ? "*" : playedGameResult(tree, saved.resigned),
     playAs: saved.settings.playAs,
     skillLevel: saved.settings.skillLevel,
   };

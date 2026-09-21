@@ -4,11 +4,9 @@ import { MemoryRouter, Route, Routes, useLocation } from "react-router";
 
 import i18n from "../../../i18n";
 import { DEFAULT_ENGINE_SETTINGS } from "../../../lib/engineSettings";
-import { parsePgnGame, parsePgnTree } from "../../../lib/pgn";
+import { parsePgnTree } from "../../../lib/pgn";
 import { findPlayedGame, playedGamesSnapshot, savePlayedGame } from "../../../lib/playedGameStore";
 import { playedGameOf } from "../../../lib/playedGames";
-import { saveGame } from "../../../lib/savedGameStore";
-import { savedGameOf } from "../../../lib/savedGames";
 import AppThemeWithLang from "../../../theme/AppThemeWithLang";
 import { boardOptions, FakeEngine } from "../../dev/devTestHarness";
 import { RightPanelOutlet, RightPanelProvider } from "../../main/rightPanel";
@@ -163,12 +161,15 @@ describe("Play with Engine — the engine plays the other side", () => {
     expect(boardOptions().position).toBe(AFTER_D4);
   });
 
-  it("takes the Engine tab's Play as for the side — the board turns and Play pauses", () => {
+  it("takes the header's side toggle for the side — the board turns and Play pauses", () => {
     mount();
-    click("play-with-engine-panel-tab-engine");
-    click("engine-setting-playas-black");
+    click("play-with-engine-side-black");
     expect(boardOptions().boardOrientation).toBe("black");
     expect(isPlaying()).toBe(false);
+    // …and it is no longer in the Engine tab, nor is New game.
+    click("play-with-engine-panel-tab-engine");
+    expect(screen.queryByTestId("engine-setting-playas")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("engine-new-game")).not.toBeInTheDocument();
   });
 
   it("pauses on a step back, and a move by hand there is a side line Play goes on from", () => {
@@ -237,19 +238,27 @@ describe("Play with Engine — the game saves itself", () => {
     expect(playedGamesSnapshot()[0].pgn).toMatch(/1\. e4 \(1\. d4\)/);
   });
 
-  it("starts a new row on New game, leaving the last one as it was", () => {
+  it("discards the game's saved progress on Replay, once asked, and starts over", () => {
     mount();
     drag("e2", "e4");
     const first = playedGamesSnapshot()[0];
-    click("play-with-engine-new-game");
+
+    click("play-with-engine-replay");
+    // Asked first: cancelling keeps everything.
+    fireEvent.click(screen.getByText("Cancel"));
+    expect(playedGamesSnapshot()).toHaveLength(1);
+
+    click("play-with-engine-replay");
+    click("play-with-engine-confirm-ok");
     expect(boardOptions().position).toBe(START);
     expect(isPlaying()).toBe(true);
     expect(where()).toBe("/engine/play");
+    expect(findPlayedGame(first.id)).toBeUndefined();
+    expect(playedGamesSnapshot()).toHaveLength(0);
 
     drag("d2", "d4");
-    expect(playedGamesSnapshot()).toHaveLength(2);
+    expect(playedGamesSnapshot()).toHaveLength(1);
     expect(playedGamesSnapshot()[0].id).not.toBe(first.id);
-    expect(findPlayedGame(first.id)?.pgn).toBe(first.pgn);
   });
 });
 
@@ -293,19 +302,62 @@ describe("Play with Engine — resuming", () => {
     expect(findPlayedGame("p1")?.path).toEqual(["e4", "e5", "Nf3"]);
   });
 
-  it("resumes a game of the old store at its end, written as a new game once played on", () => {
-    saveGame(
-      savedGameOf("old1", parsePgnGame("1. e4 e5 *"), { ...DEFAULT_ENGINE_SETTINGS, playAs: "white" }),
+  it("opens a resigned game still resigned", () => {
+    savePlayedGame(
+      playedGameOf(
+        "r1",
+        parsePgnTree("1. e4 e5 *"),
+        ["e4", "e5"],
+        DEFAULT_ENGINE_SETTINGS,
+        undefined,
+        new Date(),
+        undefined,
+        "white",
+      ),
     );
-    mount("/engine/play?saved=old1");
-    expect(boardOptions().position).toBe(AFTER_E4_E5);
-    expect(playedGamesSnapshot()).toHaveLength(0);
+    mount("/engine/play?saved=r1");
+    expect(screen.getByTestId("play-with-engine-resigned")).toHaveTextContent("0-1");
+    expect(isPlaying()).toBe(false);
+    expect(boardOptions().allowDragging).toBe(false);
+  });
+});
 
-    drag("g1", "f3");
-    expect(playedGamesSnapshot()).toHaveLength(1);
+describe("Play with Engine — resigning", () => {
+  it("is off until a move is played", () => {
+    mount();
+    expect(screen.getByTestId("play-with-engine-resign")).toBeDisabled();
+  });
+
+  it("ends the game once asked: the reader's side loses, Play stops, the board takes no moves", () => {
+    mount();
+    drag("e2", "e4");
+    engineSearches("e7e5");
+
+    click("play-with-engine-resign");
+    click("play-with-engine-confirm-ok");
+
+    expect(screen.getByTestId("play-with-engine-resigned")).toHaveTextContent(
+      "You resigned · 0-1",
+    );
+    expect(isPlaying()).toBe(false);
+    expect(playButton()).toBeDisabled();
+    expect(boardOptions().allowDragging).toBe(false);
+    expect(screen.getByTestId("play-with-engine-resign")).toBeDisabled();
+
     const [game] = playedGamesSnapshot();
-    expect(game.id).not.toBe("old1");
-    expect(game.path).toEqual(["e4", "e5", "Nf3"]);
-    expect(where()).toBe(`/engine/play?saved=${game.id}`);
+    expect(game.resigned).toBe("white");
+    expect(game.pgn).toContain('[Result "0-1"]');
+  });
+
+  it("is undone by Replay, which starts a new game", () => {
+    mount();
+    drag("e2", "e4");
+    click("play-with-engine-resign");
+    click("play-with-engine-confirm-ok");
+    click("play-with-engine-replay");
+    click("play-with-engine-confirm-ok");
+    expect(screen.queryByTestId("play-with-engine-resigned")).not.toBeInTheDocument();
+    expect(isPlaying()).toBe(true);
+    expect(boardOptions().allowDragging).toBe(true);
   });
 });

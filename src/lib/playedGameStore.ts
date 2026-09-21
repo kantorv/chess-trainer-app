@@ -70,6 +70,7 @@ export const savePlayedGame = (game: PlayedGame): PlayedGameProblem | undefined 
     !movesChanged &&
     samePath(existing.path, game.path) &&
     sameEngineSettings(existing.settings, game.settings) &&
+    existing.resigned === game.resigned &&
     samePlayedGameEvals(existing.evals, game.evals)
   ) {
     return undefined;
@@ -100,7 +101,7 @@ export const removePlayedGame = (id: string): PlayedGameProblem | undefined =>
 /** Forget all of them. */
 export const clearPlayedGames = (): PlayedGameProblem | undefined => write([]);
 
-/* Memoised on the snapshot's identity, as `savedGamesCatalog()` is. */
+/* Memoised on the snapshot's identity, as `savedAnalysesCatalog()` is. */
 let live: { games: readonly PlayedGame[]; catalog: LibraryCatalog } | undefined;
 
 /**

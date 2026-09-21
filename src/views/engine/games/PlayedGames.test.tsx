@@ -45,7 +45,7 @@ describe("Saved games (v2) — the list", () => {
     expect(screen.getByTestId("played-games-count")).toHaveTextContent("Games: 0");
   });
 
-  it("lists the games newest first, each with its side, length, side lines and level", () => {
+  it("lists the games newest first, titled by the pairing, White first", () => {
     store("a", "1. e4 (1. d4) 1... e5 *");
     store("b", "1. d4 d5 *", "black");
     mount();
@@ -55,10 +55,22 @@ describe("Saved games (v2) — the list", () => {
       "played-games-item-b",
       "played-games-item-a",
     ]);
-    expect(rows[0]).toHaveTextContent("You played Black");
-    expect(screen.getByTestId("played-games-caption-a")).toHaveTextContent(
-      /1 move · 1 side line · In progress · Level 5/,
+    expect(screen.getByTestId("played-games-title-a")).toHaveTextContent(
+      "Human - Stockfish level 5",
     );
+    expect(screen.getByTestId("played-games-title-b")).toHaveTextContent(
+      "Stockfish level 5 - Human",
+    );
+  });
+
+  it("gives the length, the side lines and the result as PGN writes it", () => {
+    store("a", "1. e4 (1. d4) 1... e5 *");
+    store("m", "1. f3 e5 2. g4 Qh4# 0-1");
+    mount();
+    expect(screen.getByTestId("played-games-caption-a")).toHaveTextContent(
+      /^1 move · 1 side line · \* · /,
+    );
+    expect(screen.getByTestId("played-games-caption-m")).toHaveTextContent(/ · 0-1 · /);
   });
 
   it("continues a game on Play with Engine, and hands it to the Analysis Board", () => {
@@ -82,10 +94,5 @@ describe("Saved games (v2) — the list", () => {
     fireEvent.click(screen.getByTestId("played-games-delete-confirm"));
     expect(playedGamesSnapshot()).toHaveLength(0);
     expect(screen.getByTestId("played-games-empty")).toBeInTheDocument();
-  });
-
-  it("points at the old list, whose games are not here", () => {
-    mount();
-    expect(screen.getByTestId("played-games-old-link")).toHaveAttribute("href", "/engine/saved");
   });
 });

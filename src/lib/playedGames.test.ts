@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import { DEFAULT_ENGINE_SETTINGS } from "./engineSettings";
 import { resolveGameReference } from "./gameReference";
-import { parsePgnGame, parsePgnTree } from "./pgn";
+import { parsePgnTree } from "./pgn";
 import {
   findPlayedGame,
   MAX_PLAYED_GAMES,
@@ -14,12 +14,10 @@ import {
 import {
   playedGameFen,
   playedGameFrom,
-  playedGameFromSavedGame,
   playedGameOf,
   playedGameSummary,
   playedGameToTree,
 } from "./playedGames";
-import { savedGameOf } from "./savedGames";
 
 const AFTER_E4 = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1";
 
@@ -61,6 +59,25 @@ describe("a played game, written down and read back", () => {
     expect(playedGameSummary(mate, playedGameToTree(mate)).result).toBe("0-1");
   });
 
+  it("writes a resignation as the result, the side that resigned losing", () => {
+    const game = playedGameOf(
+      "r",
+      parsePgnTree("1. e4 e5 *"),
+      [],
+      DEFAULT_ENGINE_SETTINGS,
+      undefined,
+      new Date(),
+      undefined,
+      "white",
+    );
+    expect(game.pgn).toContain('[Result "0-1"]');
+    expect(game.pgn).toContain('[Termination "White resigns"]');
+    expect(game.pgn.trim().endsWith("0-1")).toBe(true);
+    expect(game.resigned).toBe("white");
+    expect(playedGameFrom(JSON.parse(JSON.stringify(game)))?.resigned).toBe("white");
+    expect(playedGameSummary(game, playedGameToTree(game)).result).toBe("0-1");
+  });
+
   it("keeps an eval per position the tree reaches, and none it does not", () => {
     const evals = new Map([
       [AFTER_E4, { kind: "cp" as const, value: 30 }],
@@ -92,15 +109,7 @@ describe("a played game, written down and read back", () => {
       variations: 2,
       playAs: "white",
     });
-    expect(playedGameSummary(game, playedGameToTree(game)).result).toBeUndefined();
-  });
-
-  it("reads a game of the old store under a new id, at its end", () => {
-    const old = savedGameOf("old", parsePgnGame("1. e4 e5 *"), DEFAULT_ENGINE_SETTINGS);
-    const game = playedGameFromSavedGame(old, "new")!;
-    expect(game.id).toBe("new");
-    expect(game.path).toEqual(["e4", "e5"]);
-    expect(game.savedAt).toBe(old.savedAt);
+    expect(playedGameSummary(game, playedGameToTree(game)).result).toBe("*");
   });
 });
 

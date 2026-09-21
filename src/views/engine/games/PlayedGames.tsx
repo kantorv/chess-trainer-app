@@ -29,25 +29,16 @@ import { usePlayedGames } from "./usePlayedGames";
 /**
  * **Saved games** (`/engine/games`, CTA-74) — the games of Play with Engine
  * v2, as the store keeps them: **flat and newest first** (the game last
- * played on at the top), no folders. Each row says which side the reader
- * had, the engine's level, the mainline's length, its side lines, how it
- * stands and when it was begun, and offers **Continue** (`?saved=<id>` on
+ * played on at the top), no folders. Each row is titled by its pairing,
+ * White first ("Human - Stockfish level 10"), and says the mainline's length,
+ * its side lines, the result as PGN writes it (`1-0`, `0-1`, `1/2-1/2`, `*`)
+ * and when it was begun, and offers **Continue** (`?saved=<id>` on
  * `/engine/play` — at the node and on the side it was left), **Analysis**
  * (`?game=play/games/<id>` on the Analysis Board, side lines and all) and a
  * delete that asks first.
  *
- * The old list (`/engine/saved`, "Saved games (old)") keeps the games played
- * before CTA-74; they are not migrated. Colour and opening filters are for a
- * later issue.
+ * Colour and opening filters are for a later issue.
  */
-
-/** How a game stands, as a locale key under `playedGames.result`. */
-const resultKey = (result: string | undefined): string => {
-  if (result === "1-0") return "white";
-  if (result === "0-1") return "black";
-  if (result === "1/2-1/2") return "draw";
-  return "inProgress";
-};
 
 function PlayedGameRow({
   saved,
@@ -67,11 +58,14 @@ function PlayedGameRow({
     ? savedListLine([
         t("playedGames.moves", { count: summary.moves }),
         summary.variations > 0 ? t("playedGames.variations", { count: summary.variations }) : "",
-        t(`playedGames.result.${resultKey(summary.result)}`),
-        t("playedGames.level", { level: summary.skillLevel }),
+        // PGN's own notation — 1-0, 0-1, 1/2-1/2, * while it is on.
+        summary.result,
         savedListDate(saved.savedAt, i18n.language),
       ])
     : t("playedGames.unreadable");
+  // The row's title is the game's pairing, White first.
+  const human = t("playedGames.human");
+  const engine = t("playedGames.engine", { level: summary.skillLevel });
 
   return (
     <ListItem
@@ -88,8 +82,15 @@ function PlayedGameRow({
       }}
     >
       <Box sx={{ minWidth: 0, flex: "1 1 12rem" }}>
-        <Typography variant="subtitle2" sx={{ fontWeight: 600, lineHeight: 1.3 }}>
-          {t(`playedGames.playingAs.${summary.playAs}`)}
+        <Typography
+          variant="subtitle2"
+          data-testid={`played-games-title-${saved.id}`}
+          sx={{ fontWeight: 600, lineHeight: 1.3 }}
+        >
+          {t("playedGames.players", {
+            white: summary.playAs === "white" ? human : engine,
+            black: summary.playAs === "white" ? engine : human,
+          })}
         </Typography>
         <Typography
           variant="caption"
@@ -208,11 +209,6 @@ function PlayedGames() {
           <Typography variant="body2">{t("playedGames.hint")}</Typography>
           <Typography variant="body2" data-testid="played-games-storage-note">
             {t("playedGames.storage")}
-          </Typography>
-          <Typography variant="body2">
-            <RouterLink to="/engine/saved" data-testid="played-games-old-link">
-              {t("playedGames.old")}
-            </RouterLink>
           </Typography>
         </Box>
       </RightPanel>

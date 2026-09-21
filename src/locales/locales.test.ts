@@ -33,6 +33,8 @@ describe("translation catalogs", () => {
       "gamePanel.info.eco",
       "editor.tabs.fen",
       "editor.tabs.pgn",
+      // A pairing, "White - Black": only the two names inside it translate.
+      "playedGames.players",
     ]);
 
     const untranslated = leafKeys(en).filter(

@@ -6,7 +6,11 @@ import {
   type EngineSettings,
 } from "../../../lib/engineSettings";
 import { emptyTree, sanPathTo } from "../../../lib/gameTree";
-import { savePlayedGame, type PlayedGameProblem } from "../../../lib/playedGameStore";
+import {
+  removePlayedGame,
+  savePlayedGame,
+  type PlayedGameProblem,
+} from "../../../lib/playedGameStore";
 import {
   newPlayedGameId,
   playedGameEvalsMap,
@@ -46,15 +50,20 @@ import { usePlayToggle } from "../../dev/core/usePlayToggle";
  *    there. The shipped screen could not branch; this one is the Analysis
  *    Board's rule.
  * 3. **It saves itself.** No Save button — a game played is a game kept
- *    (`useAutosave`). The id is stable for the life of a game and New game
- *    mints a new one, so the game just left stays in the list. The record is
+ *    (`useAutosave`). The id is stable for the life of a game. **Replay**
+ *    starts over and **discards** the game's saved progress — its record is
+ *    removed, and the new game is written under a new id. The record is
  *    the tree, the settings (their `playAs` the reader's side, which is the
  *    orientation), where the reader stands and the evals; the store is
  *    idempotent, so a mount or the settings clamp re-orders nothing.
  *
- * The reader's side *is* the orientation, so the Engine tab's *Play as* turns
+ * The reader's side *is* the orientation, so the header's side toggle turns
  * the board, and the board's flip changes the side — one state, not two to
  * keep in step.
+ *
+ * **Resigning** ends the game: the reader's side loses (`resigned` on the
+ * record, its PGN `Result` and `Termination`), Play stays off and the board
+ * takes no more moves — it can still be stepped through and analysed.
  */
 
 export type PlayGameStart = {
@@ -62,15 +71,9 @@ export type PlayGameStart = {
   fen?: string;
   /** A played game to go on with — the `?saved=` hand-off. Beats `fen`. */
   resume?: PlayedGame;
-  /**
-   * Whether `resume` is already a record of this store. A game read out of the
-   * old one is not: nothing is written until the reader moves, and then under
-   * its own new id.
-   */
-  resumeStored?: boolean;
 };
 
-export const usePlayGame = ({ fen, resume, resumeStored = true }: PlayGameStart = {}) => {
+export const usePlayGame = ({ fen, resume }: PlayGameStart = {}) => {
   /*
     What the board opens on, built once: a resumed game (parsed, at its place
     in the tree, facing its side), else a position, else the standard start.
@@ -88,7 +91,8 @@ export const usePlayGame = ({ fen, resume, resumeStored = true }: PlayGameStart 
         evals: playedGameEvalsMap(resume.evals),
         id: resume.id,
         startedAt: resume.savedAt,
-        stored: resumeStored,
+        resigned: resume.resigned,
+        stored: true,
       };
     }
     // A position turns the board, and the reader plays the side to move.
@@ -102,6 +106,7 @@ export const usePlayGame = ({ fen, resume, resumeStored = true }: PlayGameStart 
       evals: new Map(),
       id: newPlayedGameId(),
       startedAt: new Date().toISOString(),
+      resigned: undefined,
       stored: false,
     };
   });
@@ -137,7 +142,14 @@ export const usePlayGame = ({ fen, resume, resumeStored = true }: PlayGameStart 
     [],
   );
 
-  const play = usePlayToggle({ core, engineOn, initial: true });
+  /** The side that resigned — the reader's; `undefined` while the game is on. */
+  const [resigned, setResigned] = useState<"white" | "black" | undefined>(start.resigned);
+  const play = usePlayToggle({
+    core,
+    engineOn,
+    initial: start.resigned === undefined,
+    finished: resigned !== undefined,
+  });
 
   const engine = useEngineModule({
     enabled: engineOn,
@@ -182,9 +194,7 @@ export const usePlayGame = ({ fen, resume, resumeStored = true }: PlayGameStart 
 
   /*
     The game as a record, or `undefined` while there is nothing worth writing:
-    no moves, or a game the reader has not touched (a resumed game re-saves
-    nothing until something happens; the old store's games are written only
-    once played on).
+    no moves, or a game the reader has not touched.
   */
   const record = useMemo(() => {
     if (core.tree.moves.length === 0 || !(core.dirty || stored)) return undefined;
@@ -196,8 +206,20 @@ export const usePlayGame = ({ fen, resume, resumeStored = true }: PlayGameStart 
       evalsByFen,
       new Date(),
       startedAt,
+      resigned,
     );
-  }, [core.tree, core.nodeId, core.dirty, stored, gameId, startedAt, settings, playAs, evalsByFen]);
+  }, [
+    core.tree,
+    core.nodeId,
+    core.dirty,
+    stored,
+    gameId,
+    startedAt,
+    resigned,
+    settings,
+    playAs,
+    evalsByFen,
+  ]);
 
   const save = useCallback((game: PlayedGame) => {
     const failed = savePlayedGame(game);
@@ -211,18 +233,30 @@ export const usePlayGame = ({ fen, resume, resumeStored = true }: PlayGameStart 
   const { clearAnalysis } = engine;
 
   /**
-   * A new game from the position this one started from, on the same side,
-   * under a new id — the game just left stays in the list as it was. Play is
-   * on again.
+   * **Replay**: the game starts over from the position it started from, on the
+   * same side, Play on — and its saved progress is **discarded**: the record
+   * is removed from the list, and the new game is written under a new id.
    */
-  const newGame = () => {
+  const replay = () => {
+    if (stored) removePlayedGame(gameId);
     reset();
     clearAnalysis();
     setGameId(newPlayedGameId());
     setStartedAt(new Date().toISOString());
     setStored(false);
+    setResigned(undefined);
     setProblem(null);
     play.restart();
+  };
+
+  /** Whether there is a game to resign: a move played, and not resigned yet. */
+  const canResign = resigned === undefined && core.tree.moves.length > 0;
+
+  /** **Resign**: the reader's side loses; Play stops and the board takes no more moves. */
+  const resign = () => {
+    if (!canResign) return;
+    core.markDirty();
+    setResigned(playAs);
   };
 
   /** The Engine tab's changes; *Play as* is the orientation. */
@@ -248,7 +282,10 @@ export const usePlayGame = ({ fen, resume, resumeStored = true }: PlayGameStart 
     playing: play.playing,
     thinking: play.thinking,
     togglePlaying: () => play.toggle(engine.analysis, evalsByFen),
-    newGame,
+    replay,
+    resigned,
+    canResign,
+    resign,
     /** The id the game is written under, once it has been — what `?saved=` names. */
     savedId: stored ? gameId : null,
     problem,

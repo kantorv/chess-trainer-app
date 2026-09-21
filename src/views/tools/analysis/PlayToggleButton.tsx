@@ -19,12 +19,15 @@ function PlayToggleButton({
   playing,
   thinking,
   onToggle,
+  disabled = false,
 }: {
   testId: string;
   engineOn: boolean;
   playing: boolean;
   thinking: boolean;
   onToggle: () => void;
+  /** Off for a reason of the screen's own (a resigned game), beyond the engine being off. */
+  disabled?: boolean;
 }) {
   const { t } = useTranslation();
   return (
@@ -36,7 +39,7 @@ function PlayToggleButton({
       <span>
         <IconButton
           size="small"
-          disabled={!engineOn}
+          disabled={!engineOn || disabled}
           color={playing ? "primary" : "default"}
           onClick={onToggle}
           aria-label={t(playing ? "analysis.play.pause" : "analysis.play.start")}
