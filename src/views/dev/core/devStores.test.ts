@@ -10,6 +10,7 @@ import { savedGameOf } from "../../../lib/savedGames";
 import { savedOpeningOf } from "../../../lib/savedOpenings";
 import {
   saveAnalysis,
+  loadSavedAnalyses,
   savedAnalysesSnapshot,
   SAVED_ANALYSES_STORAGE_KEY,
 } from "../../../lib/savedAnalysisStore";
@@ -88,7 +89,7 @@ describe("the dev record stores", () => {
     expect(DEV_SAVED_OPENINGS_STORAGE_KEY).not.toBe(SAVED_OPENINGS_STORAGE_KEY);
   });
 
-  it("writes a dev record where no shipped screen can see it", () => {
+  it("writes a dev record where no shipped screen can see it", async () => {
     saveDevGame(savedGameOf("dev-game", playedGame(), DEFAULT_ENGINE_SETTINGS));
     saveDevOpening(
       savedOpeningOf("dev-opening", aTree(), "white", "King's Pawn", null),
@@ -100,14 +101,14 @@ describe("the dev record stores", () => {
 
     // The shipped side has none of them — this is the whole point.
     expect(savedGamesSnapshot()).toEqual([]);
-    expect(savedAnalysesSnapshot()).toEqual([]);
+    expect(await loadSavedAnalyses()).toEqual([]);
     expect(savedOpeningsSnapshot()).toEqual([]);
   });
 
-  it("leaves the shipped records untouched when the dev keys are wiped", () => {
+  it("leaves the shipped records untouched when the dev keys are wiped", async () => {
     // A reader's real work, written by the shipped stores.
     saveGame(savedGameOf("real-game", playedGame(), DEFAULT_ENGINE_SETTINGS));
-    saveAnalysis(
+    await saveAnalysis(
       savedAnalysisOf(
         "real-analysis",
         aTree(),
@@ -127,7 +128,7 @@ describe("the dev record stores", () => {
 
     expect(devSavedGamesSnapshot()).toEqual([]);
     expect(savedGamesSnapshot().map((row) => row.id)).toEqual(["real-game"]);
-    expect(savedAnalysesSnapshot().map((row) => row.id)).toEqual([
+    expect(savedAnalysesSnapshot()?.map((row) => row.id)).toEqual([
       "real-analysis",
     ]);
     expect(savedOpeningsSnapshot().map((row) => row.id)).toEqual([

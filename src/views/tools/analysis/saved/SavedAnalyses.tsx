@@ -7,6 +7,7 @@ import Checkbox from "@mui/material/Checkbox";
 import IconButton from "@mui/material/IconButton";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
+import Pagination from "@mui/material/Pagination";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
@@ -107,7 +108,36 @@ import { useSavedAnalyses } from "./useSavedAnalyses";
  *   the whole picked set.
  * - **A record the store has and cannot parse is still listed**, says so and
  *   can still be picked — to delete it, or to export its stored PGN intact.
+ * - **Paged, and parsed a page at a time** (CTA-77). The store is IndexedDB
+ *   and holds thousands of analyses (a Library batch is a folder of them), so
+ *   a folder's analyses show {@link SAVED_ANALYSES_PAGE} at a time, and only
+ *   the page on screen is parsed (each record once, kept while it is the
+ *   stored one) — the rows, the counts and the picks read the records
+ *   without parsing them. Until the store's first read lands the screen says
+ *   it is reading.
  */
+
+/**
+ * How many analyses a page shows, in every view — a folder of a Library
+ * batch holds thousands, and each row parses its tree (and each card draws a
+ * board). 48 fills whole rows of two, three, four or six cards.
+ */
+export const SAVED_ANALYSES_PAGE = 48;
+
+/*
+  Each record's tree, parsed once and kept while the record is the stored one
+  (a write replaces a record, never mutates it) — `null` for one that will not
+  parse.
+*/
+const parsedTrees = new WeakMap<SavedAnalysis, GameTree | null>();
+const treeOf = (saved: SavedAnalysis): GameTree | undefined => {
+  let tree = parsedTrees.get(saved);
+  if (tree === undefined) {
+    tree = savedAnalysisToTree(saved) ?? null;
+    parsedTrees.set(saved, tree);
+  }
+  return tree ?? undefined;
+};
 
 /**
  * A card's preview board. Read-only, and showing the position the reader was
@@ -357,13 +387,31 @@ type NameDialogState =
 const folderStem = (folder: AnalysisFolder): string =>
   slugify(folder.name) || "saved-analyses";
 
+/** The route: the list, once the store's first read has landed. */
 function SavedAnalyses() {
+  const { t } = useTranslation();
+  const analyses = useSavedAnalyses();
+  const folders = useAnalysisFolders();
+  if (analyses === undefined || folders === undefined) {
+    return (
+      <Typography data-testid="saved-analyses-loading" sx={{ color: "text.secondary", p: 2 }}>
+        {t("savedAnalyses.loading")}
+      </Typography>
+    );
+  }
+  return <SavedAnalysesList analyses={analyses} folders={folders} />;
+}
+
+function SavedAnalysesList({
+  analyses,
+  folders,
+}: {
+  analyses: readonly SavedAnalysis[];
+  folders: readonly AnalysisFolder[];
+}) {
   const { t } = useTranslation();
 
   const [view, setView] = useState<SavedListView>(SAVED_LIST_DEFAULT_VIEW);
-
-  const analyses = useSavedAnalyses();
-  const folders = useAnalysisFolders();
 
   /*
     Where the browser stands: `?folder=<id>`, so a split on the Analysis Board
@@ -382,21 +430,22 @@ function SavedAnalyses() {
   const foldersHere = analysisFolderChildren(folders, browseId);
   const crumbs =
     currentFolder === undefined ? [] : analysisFolderPath(folders, currentFolder.id);
-  const rowsHere = analysesHere(analyses, folders, browseId);
+  const rowsHere = useMemo(
+    () => analysesHere(analyses, folders, browseId),
+    [analyses, folders, browseId],
+  );
 
-  /*
-    The trees, parsed once per snapshot (the store's, which is newest first):
-    the side lines are counted and the node the reader was standing on found
-    in them, and a record that will not parse has none.
-  */
-  const treeById = useMemo(() => {
-    const found = new Map<string, GameTree>();
-    for (const saved of analyses) {
-      const tree = savedAnalysisToTree(saved);
-      if (tree !== undefined) found.set(saved.id, tree);
-    }
-    return found;
-  }, [analyses]);
+  /* The page on screen — back to the first whenever the reader changes folder. */
+  const [paging, setPaging] = useState<{ folder: string | null; page: number }>({
+    folder: browseId,
+    page: 0,
+  });
+  const pageCount = Math.max(1, Math.ceil(rowsHere.length / SAVED_ANALYSES_PAGE));
+  const page = paging.folder === browseId ? Math.min(paging.page, pageCount - 1) : 0;
+  const pageRows = useMemo(
+    () => rowsHere.slice(page * SAVED_ANALYSES_PAGE, (page + 1) * SAVED_ANALYSES_PAGE),
+    [rowsHere, page],
+  );
 
   const [nameDialog, setNameDialog] = useState<NameDialogState>(null);
   const [moving, setMoving] = useState<AnalysisFolder | null>(null);
@@ -406,10 +455,14 @@ function SavedAnalyses() {
   // transition does not read "Delete 0".
   const [askedCount, setAskedCount] = useState(0);
 
-  const entriesHere = rowsHere.map((saved) => ({
-    saved,
-    tree: treeById.get(saved.id),
-  }));
+  /*
+    The page's trees: the side lines are counted and the node the reader was
+    standing on found in them, and a record that will not parse has none.
+  */
+  const entriesHere = useMemo(
+    () => pageRows.map((saved) => ({ saved, tree: treeOf(saved) })),
+    [pageRows],
+  );
 
   /*
     Which analyses are picked for export. Held as a set of ids rather than a
@@ -461,7 +514,7 @@ function SavedAnalyses() {
     if (browseId !== null && analysisFolderSubtree(folders, folder.id).has(browseId)) {
       openFolder(folder.parentId);
     }
-    removeAnalysisFolder(folder.id);
+    void removeAnalysisFolder(folder.id);
   };
 
   const startDelete = (folder: AnalysisFolder) => {
@@ -475,24 +528,25 @@ function SavedAnalyses() {
   const book = useOpeningBook();
 
   /*
-    One walk per analysis, memoised on the trees and the book — both stable
-    between changes. The **mainline** is what is named: it is what the analysis
-    is of, where a side line is one thing tried inside it.
+    One walk per analysis on the page, memoised on the page and the book. The
+    **mainline** is what is named: it is what the analysis is of, where a side
+    line is one thing tried inside it.
   */
   const openings = useMemo(() => {
     const found = new Map<string, OpeningEntry>();
     if (book === null) return found;
 
-    for (const [id, tree] of treeById) {
+    for (const { saved, tree } of entriesHere) {
+      if (tree === undefined) continue;
       const opening = openingOfLine(
         book.book,
         book.positions,
         mainlineGame(tree).moves.map((move) => move.fen),
       );
-      if (opening !== undefined) found.set(id, opening);
+      if (opening !== undefined) found.set(saved.id, opening);
     }
     return found;
-  }, [treeById, book]);
+  }, [entriesHere, book]);
 
   const folderProps = (folder: AnalysisFolder) => ({
     folder,
@@ -665,6 +719,17 @@ function SavedAnalyses() {
             ))}
           </Box>
         )}
+
+        {pageCount > 1 && (
+          <Pagination
+            count={pageCount}
+            page={page + 1}
+            onChange={(_event, next) => setPaging({ folder: browseId, page: next - 1 })}
+            size="small"
+            data-testid="saved-analyses-pagination"
+            sx={{ flexShrink: 0, display: "flex", justifyContent: "center", pt: 1 }}
+          />
+        )}
       </Box>
 
       <RightPanel>
@@ -694,8 +759,8 @@ function SavedAnalyses() {
         }
         onSave={(name) => {
           if (nameDialog === null) return;
-          if (nameDialog.mode === "create") createAnalysisFolder(name, nameDialog.parentId);
-          else renameAnalysisFolder(nameDialog.folder.id, name);
+          if (nameDialog.mode === "create") void createAnalysisFolder(name, nameDialog.parentId);
+          else void renameAnalysisFolder(nameDialog.folder.id, name);
         }}
         onClose={() => setNameDialog(null)}
       />
@@ -707,7 +772,7 @@ function SavedAnalyses() {
         folder={moving}
         currentParentName={t("savedAnalyses.folder.topLevel")}
         onMove={(newParentId) => {
-          if (moving !== null) moveAnalysisFolder(moving.id, newParentId);
+          if (moving !== null) void moveAnalysisFolder(moving.id, newParentId);
           setMoving(null);
         }}
         onClose={() => setMoving(null)}
@@ -719,7 +784,7 @@ function SavedAnalyses() {
         count={askedCount}
         onConfirm={() => {
           // One write for the lot; the picks go with them.
-          removeSavedAnalyses(selected.map((saved) => saved.id));
+          void removeSavedAnalyses(selected.map((saved) => saved.id));
           setPicked(new Set());
         }}
         onClose={() => setDeletingPicked(false)}

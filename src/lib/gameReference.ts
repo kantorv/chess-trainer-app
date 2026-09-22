@@ -1,6 +1,6 @@
-import { findCatalogGame, type CatalogGame, type GameCatalog } from "./gameCatalog";
+import { findCatalogGame, type CatalogGame } from "./gameCatalog";
 import { playedGamesCatalog } from "./playedGameStore";
-import { savedAnalysesCatalog } from "./savedAnalysisStore";
+import { findSavedAnalysisGame } from "./savedAnalysisStore";
 
 /**
  * How a **whole game** crosses to the Analysis Board: `?game=<key>/<path>/<id>`.
@@ -37,15 +37,30 @@ export const ANALYSIS_REFERENCE_KEY = "analysis";
 export const PLAY_REFERENCE_KEY = "play";
 
 /**
- * Which catalog a reference's first segment names. *Called* rather than held,
- * because the stores change while the app runs and a game saved a moment ago
- * has to be as referenceable as an old one; each store memoises its catalog on
- * its own snapshot.
+ * Which store a reference's first segment names, as the resolver of the rest
+ * of it (`<path>/<id>`). *Called* rather than held, because the stores change
+ * while the app runs and a game saved a moment ago has to be as referenceable
+ * as an old one. The played games memoise their whole catalog on their
+ * snapshot; the saved analyses — thousands of records since CTA-77, in
+ * IndexedDB — parse only the one named, out of what has been read (so the
+ * Analysis Board waits for that read before it resolves one).
  */
-const catalogsByKey: Record<string, () => GameCatalog> = {
-  [ANALYSIS_REFERENCE_KEY]: savedAnalysesCatalog,
-  [PLAY_REFERENCE_KEY]: playedGamesCatalog,
+const catalogsByKey: Record<string, (segments: readonly string[]) => CatalogGame | undefined> = {
+  [ANALYSIS_REFERENCE_KEY]: findSavedAnalysisGame,
+  [PLAY_REFERENCE_KEY]: (segments) => findCatalogGame(segments, playedGamesCatalog()),
 };
+
+const referenceSegments = (reference: string): string[] =>
+  reference.split("/").filter(Boolean);
+
+/**
+ * Whether a reference names the saved analyses — the one store read
+ * asynchronously, which a screen resolving it has to wait for.
+ */
+export const isAnalysisReference = (reference: string | null | undefined): boolean =>
+  reference !== null &&
+  reference !== undefined &&
+  referenceSegments(reference)[0] === ANALYSIS_REFERENCE_KEY;
 
 /**
  * The game a reference names, or `undefined` for anything that does not
@@ -56,9 +71,9 @@ export const resolveGameReference = (
 ): CatalogGame | undefined => {
   if (reference === null || reference === undefined) return undefined;
 
-  const [sectionKey, ...rest] = reference.split("/").filter(Boolean);
+  const [sectionKey, ...rest] = referenceSegments(reference);
   if (sectionKey === undefined || rest.length === 0) return undefined;
 
-  const catalogOf = catalogsByKey[sectionKey];
-  return catalogOf === undefined ? undefined : findCatalogGame(rest, catalogOf());
+  const resolve = catalogsByKey[sectionKey];
+  return resolve === undefined ? undefined : resolve(rest);
 };

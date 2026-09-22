@@ -1,10 +1,15 @@
 import "@testing-library/jest-dom/vitest";
 // jsdom has no IndexedDB, and the Library keeps its uploads there
-// (`lib/libraryCollectionStore.ts`). An in-memory implementation of the real
+// (`lib/libraryCollectionStore.ts`), as the saved analyses keep theirs
+// (`lib/savedAnalysisStore.ts`). An in-memory implementation of the real
 // API, so the store's own code is what the tests run.
 import "fake-indexeddb/auto";
 import { afterEach, vi } from "vitest";
 import { cleanup } from "@testing-library/react";
+
+import { deleteAnalysisDb } from "../lib/savedAnalysisDb";
+import { resetAnalysisFolderStore } from "../lib/savedAnalysisFolderStore";
+import { resetSavedAnalysisStore } from "../lib/savedAnalysisStore";
 
 // MUI's color-scheme provider reads `prefers-color-scheme`, which jsdom does not
 // implement. Without this every render throws before a single assertion runs.
@@ -32,7 +37,12 @@ if (!globalThis.ResizeObserver) {
   } as unknown as typeof globalThis.ResizeObserver;
 }
 
-afterEach(() => {
+afterEach(async () => {
   cleanup();
   localStorage.clear();
+  // The saved analyses and their folders are IndexedDB's since CTA-77: what
+  // each store kept, and the database itself, go as `localStorage` does.
+  resetSavedAnalysisStore();
+  resetAnalysisFolderStore();
+  await deleteAnalysisDb();
 });

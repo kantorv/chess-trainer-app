@@ -181,9 +181,9 @@ export const useAnalysisBoard = ({
   };
 
   /** The session is the record now: its tree the baseline. */
-  const settle = (saved: SavedAnalysis) => {
+  const settle = (saved: SavedAnalysis, tree: GameTree) => {
     setRecord(saved);
-    rebase(core.tree);
+    rebase(tree);
     setLoadedUnsaved(false);
     setProblem(null);
   };
@@ -196,16 +196,22 @@ export const useAnalysisBoard = ({
     name: string,
     folderId: string | null,
     showArrows: boolean,
-  ): SavedAnalysis | undefined =>
+  ): Promise<SavedAnalysis | undefined> =>
     write({ ...recordOf(newSavedAnalysisId()), name: name.trim(), folderId, showArrows });
 
-  const write = (saved: SavedAnalysis): SavedAnalysis | undefined => {
-    const failed = saveAnalysis(saved);
+  /**
+   * The write, and the session settled on it once it has landed — against the
+   * tree that was written, not whatever the board holds by the time the
+   * store answers.
+   */
+  const write = async (saved: SavedAnalysis): Promise<SavedAnalysis | undefined> => {
+    const written = core.tree;
+    const failed = await saveAnalysis(saved);
     if (failed !== undefined) {
       setProblem(failed);
       return undefined;
     }
-    settle(saved);
+    settle(saved, written);
     return saved;
   };
 
@@ -214,7 +220,7 @@ export const useAnalysisBoard = ({
    * settings. Its own settings are the stored ones — edited on its settings
    * screen or filed on the saved list since it was opened, that stands.
    */
-  const update = (): SavedAnalysis | undefined => {
+  const update = async (): Promise<SavedAnalysis | undefined> => {
     const stored = storedSettings();
     if (record === null || stored === null) return undefined;
     const savedAt = (findSavedAnalysis(record.id) ?? record).savedAt;
@@ -225,7 +231,7 @@ export const useAnalysisBoard = ({
    * **Save as copy**: a new record with the original's settings and folder;
    * the session goes on in it.
    */
-  const saveCopy = (name: string): SavedAnalysis | undefined => {
+  const saveCopy = async (name: string): Promise<SavedAnalysis | undefined> => {
     const stored = storedSettings();
     if (stored === null) return undefined;
     return write({ ...recordOf(newSavedAnalysisId()), ...stored, name: name.trim() });

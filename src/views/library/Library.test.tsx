@@ -649,7 +649,8 @@ describe("a game on its analysis board", () => {
     expect(screen.queryByTestId("library-game-changes-update")).toBeNull();
     fireEvent.click(screen.getByTestId("library-game-changes-copy"));
 
-    const [copy] = savedAnalysesSnapshot();
+    await waitFor(() => expect(where()).toContain("/tools/analysis?analysis="));
+    const [copy] = savedAnalysesSnapshot() ?? [];
     expect(copy.name).toBe("Morphy, Paul – Morphy, Alonzo (copy)");
     expect(findSavedAnalysis(copy.id)?.pgn).toContain("1... c5");
     expect(where()).toBe(`/tools/analysis?analysis=${copy.id}`);

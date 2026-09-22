@@ -66,12 +66,11 @@ export const analysesHere = (
   analyses: readonly SavedAnalysis[],
   folders: readonly AnalysisFolder[],
   folderId: string | null,
-): SavedAnalysis[] =>
-  analyses.filter((analysis) => {
+): SavedAnalysis[] => {
+  const known = new Set(folders.map((folder) => folder.id));
+  return analyses.filter((analysis) => {
     const parent =
-      analysis.folderId !== null &&
-      folders.some((folder) => folder.id === analysis.folderId)
-        ? analysis.folderId
-        : null;
+      analysis.folderId !== null && known.has(analysis.folderId) ? analysis.folderId : null;
     return parent === folderId;
   });
+};

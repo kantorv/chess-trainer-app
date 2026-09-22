@@ -384,6 +384,7 @@ const en = {
   savedAnalyses: {
     title: "Saved analyses",
     count: "Analyses: {{count}}",
+    loading: "Reading your saved analyses…",
     empty:
       "No saved analyses yet. Work on a board at the Analysis Board and save it, and it appears here.",
     hint: "Every analysis you save on the Analysis Board is kept here — side lines, comments and all — filed into your folders. Open one to pick it up where you left it.",

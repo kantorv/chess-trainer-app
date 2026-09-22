@@ -172,7 +172,7 @@ function LibraryGameBoard({ collection, number, tree }: LibraryGameBoardProps) {
         name: t("library.shippedChanges.copyName", { name: title }),
         showArrows,
       };
-      const failed = saveAnalysis(record);
+      const failed = await saveAnalysis(record);
       if (failed !== undefined) {
         setProblem(failed);
         return;

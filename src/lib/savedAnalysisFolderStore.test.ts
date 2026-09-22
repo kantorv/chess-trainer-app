@@ -13,22 +13,24 @@ import {
   analysisFoldersSnapshot,
   ANALYSIS_FOLDERS_STORAGE_KEY,
   createAnalysisFolder,
+  loadAnalysisFolders,
+  MAX_ANALYSIS_FOLDERS,
   moveAnalysisFolder,
   removeAnalysisFolder,
   renameAnalysisFolder,
+  resetAnalysisFolderStore,
 } from "./savedAnalysisFolderStore";
-/** The key the old saved games' folders were kept under (removed with that list, CTA-74). */
-const GAME_FOLDERS_STORAGE_KEY = "chessapp.savedGameFolders.v1";
 import {
   addAnalyses,
   findSavedAnalysis,
+  loadSavedAnalyses,
   savedAnalysesSnapshot,
 } from "./savedAnalysisStore";
 
 /*
   The analyses' nested folders (CTA-73) — the saved games' model over its own
-  key: create hands the folder back, a move refuses the folder's own subtree,
-  and a delete keeps the contents.
+  store (IndexedDB since CTA-77): create hands the folder back, a move refuses
+  the folder's own subtree, and a delete keeps the contents.
 */
 
 const analysis = (id: string, folderId: string | null) => ({
@@ -36,69 +38,110 @@ const analysis = (id: string, folderId: string | null) => ({
   folderId,
 });
 
+const folders = () => analysisFoldersSnapshot() ?? [];
+
 describe("the saved-analysis folders", () => {
-  it("live under their own key, apart from the games' folders", () => {
-    expect(ANALYSIS_FOLDERS_STORAGE_KEY).not.toBe(GAME_FOLDERS_STORAGE_KEY);
-    createAnalysisFolder("Openings", null);
-    expect(localStorage.getItem(GAME_FOLDERS_STORAGE_KEY)).toBeNull();
-    expect(analysisFoldersSnapshot()).toHaveLength(1);
+  it("are read once, and kept: undefined until then", async () => {
+    expect(analysisFoldersSnapshot()).toBeUndefined();
+    expect(await loadAnalysisFolders()).toEqual([]);
+    expect(analysisFoldersSnapshot()).toEqual([]);
   });
 
-  it("creates, nests and renames — refusing an empty name and an unknown parent", () => {
-    const top = createAnalysisFolder("  Openings ", null)!;
-    const child = createAnalysisFolder("Sicilian", top.id)!;
+  it("creates, nests and renames — refusing an empty name and an unknown parent", async () => {
+    const top = (await createAnalysisFolder("  Openings ", null))!;
+    const child = (await createAnalysisFolder("Sicilian", top.id))!;
     expect(top.name).toBe("Openings");
-    expect(createAnalysisFolder("   ", null)).toBeUndefined();
-    expect(createAnalysisFolder("Lost", "nowhere")).toBeUndefined();
+    expect(await createAnalysisFolder("   ", null)).toBeUndefined();
+    expect(await createAnalysisFolder("Lost", "nowhere")).toBeUndefined();
 
-    renameAnalysisFolder(child.id, "Najdorf");
-    const folders = analysisFoldersSnapshot();
-    expect(analysisFolderChildren(folders, top.id).map((folder) => folder.name)).toEqual([
+    await renameAnalysisFolder(child.id, "Najdorf");
+    expect(analysisFolderChildren(folders(), top.id).map((folder) => folder.name)).toEqual([
       "Najdorf",
     ]);
-    expect(analysisFolderPath(folders, child.id).map((folder) => folder.name)).toEqual([
+    expect(analysisFolderPath(folders(), child.id).map((folder) => folder.name)).toEqual([
       "Openings",
       "Najdorf",
     ]);
   });
 
-  it("refuses to move a folder into its own subtree", () => {
-    const a = createAnalysisFolder("A", null)!;
-    const b = createAnalysisFolder("B", a.id)!;
-    moveAnalysisFolder(a.id, b.id);
-    expect(analysisFoldersSnapshot().find((folder) => folder.id === a.id)?.parentId).toBeNull();
+  it("keeps them in creation order, across a fresh read", async () => {
+    await createAnalysisFolder("First", null);
+    await createAnalysisFolder("Second", null);
+    await createAnalysisFolder("Third", null);
+    await renameAnalysisFolder(folders()[0].id, "First, renamed");
 
-    const c = createAnalysisFolder("C", null)!;
-    moveAnalysisFolder(c.id, b.id);
-    expect(analysisFoldersSnapshot().find((folder) => folder.id === c.id)?.parentId).toBe(b.id);
+    resetAnalysisFolderStore();
+    expect((await loadAnalysisFolders()).map((folder) => folder.name)).toEqual([
+      "First, renamed",
+      "Second",
+      "Third",
+    ]);
   });
 
-  it("keeps a deleted folder's contents: sub-folders up a level, analyses Unfiled", () => {
-    const a = createAnalysisFolder("A", null)!;
-    const b = createAnalysisFolder("B", a.id)!;
-    const c = createAnalysisFolder("C", b.id)!;
-    addAnalyses([analysis("in-b", b.id), analysis("in-c", c.id)]);
+  it("refuses a folder past the cap", async () => {
+    for (let index = 0; index < MAX_ANALYSIS_FOLDERS; index += 1) {
+      await createAnalysisFolder(`F${index}`, null);
+    }
+    expect(await createAnalysisFolder("One too many", null)).toBeUndefined();
+    expect(folders()).toHaveLength(MAX_ANALYSIS_FOLDERS);
+  });
+
+  it("refuses to move a folder into its own subtree", async () => {
+    const a = (await createAnalysisFolder("A", null))!;
+    const b = (await createAnalysisFolder("B", a.id))!;
+    await moveAnalysisFolder(a.id, b.id);
+    expect(folders().find((folder) => folder.id === a.id)?.parentId).toBeNull();
+
+    const c = (await createAnalysisFolder("C", null))!;
+    await moveAnalysisFolder(c.id, b.id);
+    expect(folders().find((folder) => folder.id === c.id)?.parentId).toBe(b.id);
+  });
+
+  it("keeps a deleted folder's contents: sub-folders up a level, analyses Unfiled", async () => {
+    const a = (await createAnalysisFolder("A", null))!;
+    const b = (await createAnalysisFolder("B", a.id))!;
+    const c = (await createAnalysisFolder("C", b.id))!;
+    await addAnalyses([analysis("in-b", b.id), analysis("in-c", c.id)]);
 
     // The subtree's count before the delete: both, directly and not.
     expect(
-      analysesInFolder(savedAnalysesSnapshot(), analysisFoldersSnapshot(), b.id).map(
-        (row) => row.id,
-      ),
+      analysesInFolder(savedAnalysesSnapshot() ?? [], folders(), b.id).map((row) => row.id),
     ).toEqual(["in-b", "in-c"]);
 
-    removeAnalysisFolder(b.id);
+    await removeAnalysisFolder(b.id);
 
-    expect(analysisFoldersSnapshot().find((folder) => folder.id === c.id)?.parentId).toBe(a.id);
+    expect(folders().find((folder) => folder.id === c.id)?.parentId).toBe(a.id);
     expect(findSavedAnalysis("in-b")?.folderId).toBeNull();
     expect(findSavedAnalysis("in-c")?.folderId).toBe(c.id);
   });
 
-  it("lists an analysis naming a folder that is gone at the top level", () => {
-    addAnalyses([analysis("stray", "gone"), analysis("top", null)]);
+  it("lists an analysis naming a folder that is gone at the top level", async () => {
+    await addAnalyses([analysis("stray", "gone"), analysis("top", null)]);
+    await loadAnalysisFolders();
     expect(
-      analysesHere(savedAnalysesSnapshot(), analysisFoldersSnapshot(), null).map(
-        (row) => row.id,
-      ),
+      analysesHere(await loadSavedAnalyses(), folders(), null).map((row) => row.id),
     ).toEqual(["stray", "top"]);
+  });
+
+  it("moves the folders out of localStorage on the first read, then drops the key", async () => {
+    const stored = [
+      { id: "f1", name: "Old", parentId: null, savedAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z" },
+      { id: "f2", name: "Older child", parentId: "f1", savedAt: "2026-01-02T00:00:00.000Z", updatedAt: "2026-01-02T00:00:00.000Z" },
+    ];
+    localStorage.setItem(ANALYSIS_FOLDERS_STORAGE_KEY, JSON.stringify(stored));
+    localStorage.setItem(`${ANALYSIS_FOLDERS_STORAGE_KEY}.rev`, "1");
+
+    expect((await loadAnalysisFolders()).map((folder) => folder.id)).toEqual(["f1", "f2"]);
+    expect(localStorage.getItem(ANALYSIS_FOLDERS_STORAGE_KEY)).toBeNull();
+    expect(localStorage.getItem(`${ANALYSIS_FOLDERS_STORAGE_KEY}.rev`)).toBeNull();
+
+    // A new folder goes after them, and a fresh read finds all three in IndexedDB.
+    await createAnalysisFolder("New", null);
+    resetAnalysisFolderStore();
+    expect((await loadAnalysisFolders()).map((folder) => folder.name)).toEqual([
+      "Old",
+      "Older child",
+      "New",
+    ]);
   });
 });

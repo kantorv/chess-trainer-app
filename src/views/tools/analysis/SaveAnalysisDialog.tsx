@@ -8,8 +8,11 @@ import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { useTranslation } from "react-i18next";
 
+import type { AnalysisFolder } from "../../../lib/savedAnalysisFolders";
 import FolderPicker from "../../shared/folders/FolderPicker";
 import { useAnalysisFolders } from "./saved/useAnalysisFolders";
+
+const NO_FOLDERS: readonly AnalysisFolder[] = [];
 
 /**
  * **Saving a board that is not a record yet** (CTA-73) — a name and a folder,
@@ -30,7 +33,8 @@ function SaveAnalysisDialog({
   onClose: () => void;
 }) {
   const { t } = useTranslation();
-  const folders = useAnalysisFolders();
+  // The folders as read so far — none while the store's first read is out.
+  const folders = useAnalysisFolders() ?? NO_FOLDERS;
   const [name, setName] = useState(initialName);
   const [folderId, setFolderId] = useState<string | null>(null);
 

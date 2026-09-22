@@ -20,13 +20,17 @@ import type { ChessboardOptions } from "react-chessboard";
 
 import { parseFen } from "../../../lib/fen";
 import { initialPlyOf, parseMoveParam } from "../../../lib/gameNavigation";
-import { resolveGameReference } from "../../../lib/gameReference";
+import { isAnalysisReference, resolveGameReference } from "../../../lib/gameReference";
 import type { GameTree } from "../../../lib/gameTree";
 import { parsePgnTree } from "../../../lib/pgn";
 import { slugify } from "../../../lib/pgnText";
 import { atParamOf, REPERTOIRE_AT_PARAM } from "../../../lib/repertoireLink";
 import { savedAnalysisDerivedName } from "../../../lib/savedAnalyses";
-import { findSavedAnalysis } from "../../../lib/savedAnalysisStore";
+import {
+  findSavedAnalysis,
+  loadSavedAnalyses,
+  savedAnalysesSnapshot,
+} from "../../../lib/savedAnalysisStore";
 import BoardShell from "../../dev/core/BoardShell";
 import { useVariationsExplorer } from "../../explorer/useVariationsExplorer";
 import RepertoireChangesBar from "../../repertoires/RepertoireChangesBar";
@@ -213,8 +217,8 @@ function AnalysisBoard() {
     else setChangesOpen((open) => !open);
   };
 
-  const saveCopy = () => {
-    const copy = state.saveCopy(
+  const saveCopy = async () => {
+    const copy = await state.saveCopy(
       t("analysis.changes.copyName", { name: record?.name || name }),
     );
     if (copy !== undefined) pointUrlAt(copy.id);
@@ -427,7 +431,7 @@ function AnalysisBoard() {
                   }
                   problem={state.problem}
                   onUpdate={() => void state.update()}
-                  onCopy={saveCopy}
+                  onCopy={() => void saveCopy()}
                   onDiscard={state.discard}
                 />
               )}
@@ -456,8 +460,8 @@ function AnalysisBoard() {
       <SaveAnalysisDialog
         open={saveOpen}
         initialName={savedAnalysisDerivedName(core.tree.headers)}
-        onSave={(typed, folderId) => {
-          const saved = state.saveNew(typed, folderId, showArrows);
+        onSave={async (typed, folderId) => {
+          const saved = await state.saveNew(typed, folderId, showArrows);
           if (saved !== undefined) pointUrlAt(saved.id);
         }}
         onClose={() => setSaveOpen(false)}
@@ -466,4 +470,38 @@ function AnalysisBoard() {
   );
 }
 
-export default AnalysisBoard;
+/**
+ * The route: the board, once what its URL names can be read. The saved
+ * analyses are IndexedDB's (CTA-77) and a read is a promise, so an arrival
+ * that names one — `?analysis=<id>`, or `?game=analysis/…` — waits for the
+ * store's first read rather than opening a blank board and calling the
+ * record missing; every other arrival mounts at once.
+ */
+function AnalysisBoardRoute() {
+  const { t } = useTranslation();
+  const [searchParams] = useSearchParams();
+  const waits =
+    searchParams.get("analysis") !== null || isAnalysisReference(searchParams.get("game"));
+  const [ready, setReady] = useState(() => !waits || savedAnalysesSnapshot() !== undefined);
+  useEffect(() => {
+    if (ready) return;
+    let live = true;
+    void loadSavedAnalyses().then(() => {
+      if (live) setReady(true);
+    });
+    return () => {
+      live = false;
+    };
+  }, [ready]);
+
+  if (!ready) {
+    return (
+      <Typography data-testid="analysis-loading" sx={{ color: "text.secondary", p: 2 }}>
+        {t("savedAnalyses.loading")}
+      </Typography>
+    );
+  }
+  return <AnalysisBoard />;
+}
+
+export default AnalysisBoardRoute;

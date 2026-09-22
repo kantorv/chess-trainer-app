@@ -123,18 +123,18 @@ function AnalysisLoad({
     The folder is made first, because the records name it; if the records then
     cannot be written, it is taken back out rather than left empty.
   */
-  const split = () => {
+  const split = async () => {
     if (choice === null) return;
-    const folder = createAnalysisFolder(choice.name ?? t("analysis.load.splitFolder"), null);
+    const folder = await createAnalysisFolder(choice.name ?? t("analysis.load.splitFolder"), null);
     if (folder === undefined) {
       setChoiceProblem(t("analysis.load.problem.folder", { max: MAX_ANALYSIS_FOLDERS }));
       return;
     }
-    const failed = addAnalyses(
+    const failed = await addAnalyses(
       splitAnalysesOf(newSavedAnalysisId, choice.games, folder.id, settings),
     );
     if (failed !== undefined) {
-      removeAnalysisFolder(folder.id);
+      await removeAnalysisFolder(folder.id);
       setChoiceProblem(
         failed === "too-many"
           ? t("analysis.load.problem.tooMany", { max: MAX_SAVED_ANALYSES })
@@ -235,7 +235,7 @@ function AnalysisLoad({
           skipped={choice.skipped}
           mergeable={choice.mergeable}
           onMerge={merge}
-          onSplit={split}
+          onSplit={() => void split()}
           problem={choiceProblem}
         />
       )}
