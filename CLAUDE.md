@@ -1,8 +1,8 @@
 # chessapp-analyze-v1
 
 A Vite + React 19 + TypeScript chess trainer. Its board screens — Play with
-Engine, Masked Pieces, the Analysis Board, the Board Editor, the Openings
-explorer, the repertoire player and the Library's game board — sit inside one
+Engine, Masked Pieces, the Analysis Board, the Openings explorer, the
+repertoire player and the Library's game board — sit inside one
 app shell, reached from a plain landing page at `/`. The boards themselves
 are `react-chessboard` v5 driven by `chess.js` and a Stockfish WASM worker.
 
@@ -24,8 +24,10 @@ with Engine** since CTA-74 (see *Playing against the engine* below), the
 the **Openings explorer** since CTA-78 (see *Exploring an opening* below), the
 repertoire player (CTA-61/63) and, since CTA-79, **Masked Pieces** — the last
 pre-v2 screen, rebuilt as Play with Engine's screen in a costume (see *A mask
-is a costume, never a rule* below). The Board Editor, which holds a position
-rather than a game, is the one board that is not.
+is a costume, never a rule* below). The **position editor**, which holds a
+position rather than a game, is the one board that is not — a shared
+component the Lobby hosts (CTA-83, which removed the old Board Editor screen;
+[`.claude/rules/position-editor.md`](.claude/rules/position-editor.md)).
 
 The **Library** of game collections (`/library`) has its own path-scoped
 reference, [`.claude/rules/game-collections.md`](.claude/rules/game-collections.md),
@@ -95,10 +97,10 @@ change by whether it *adds* to that count, not by the exit code.
 | `src/views/home/` | The landing page at `/` — no board, just a card per screen built from `navTree()`. |
 | `src/views/shared/` | The panel pieces the game screens share: `MoveList.tsx`, `BoardControls.tsx`, `GameInfo.tsx` (a game's PGN tag pairs), `useGameNavigation.ts`, `EvalBar.tsx`, `BestVariations.tsx`, `PromotionPicker.tsx`, `OptionSlider.tsx`, `CopyableValue.tsx`, `CurrentOpening.tsx` (the live opening line every game screen's panel carries — the eco.json lookup at the position on screen, its ECO chip linking to `/openings?fen=`; it replaced the per-screen "Open in Openings" buttons), `EngineBoardSquare.tsx` (the eval bar + board + promotion picker the two engine-play screens both render), and `CapturedPieces.tsx` (one captured-pieces strip — the pieces a side has taken and the material diff beside the side that is ahead; the screens compose two around their board, and the height constants the square-ness arithmetic needs live beside it). Beside them, the **saved-list view machinery** the saved screens (Saved analyses, Repertoires) consume: `savedList.ts` (the pure half — the `SavedListView` type, the board-view grid styles and the caption date/join helpers), `SavedListViewToggle.tsx` / `SavedListExportBar.tsx` / `SavedListRemoveButton.tsx` and `useOpeningBook.ts`. These take each screen's own catalog block (`labelKey`) and test-id prefix rather than keys of their own, because the screens' tests are the contract on the rendered words and ids — a deliberate difference from the pieces above, whose keys are top-level (`moveList.*`, `variations.*`, `promotion.*`, `engineOption.*`, `board.*`, `copyable.*`, `masking.*`). All of them take props and know nothing about which screen is rendering them. |
 | `src/views/engine/play/` | **Play with Engine** — since CTA-74 a v2 screen: the core, the engine module, the shared Play toggle and the variations explorer, composed (see *Playing against the engine* below). **`PlayScreen.tsx` is the screen** — the slots, the header, the tabs, the URL (`?saved=<id>` once written) — shared since CTA-79 with Masked Pieces through its optional `masking` prop; `PlayWithEngine.tsx` is the route (the arrival, and a masked game's `?saved=` sent on to `/engine/masked`). **No nav entry since CTA-82** — it is reached from the Lobby's Start button, Continue, and the `?fen=` hand-offs; the route stays. **The session is `usePlayGame.ts`** — core + engine + `usePlayToggle` (Play on from the start) + the autosave to `lib/playedGameStore.ts` — with `arrivalOf` (`?fen=` / `?saved=` and, since CTA-82, a new game's options — `side`, `skill`, `depth`, `movetime`, `lines`, `threads`, `hash`, `evalbar`, read by `lib/newGameLink.ts`). `EngineSettings.tsx` is the Engine tab (strength, limits, lines, the eval bar; the side and a new game are the header's side toggle and Replay; the header also carries Resign) — and the body of the Lobby's new-game form. |
-| `src/views/engine/games/` | **The Lobby** (`/engine/games`; Saved games in CTA-74, a lobby since CTA-82) — the board square holds Play with Engine's games, **flat and newest first**, no folders: `PlayedGames.tsx` (a row per game, titled by its pairing — "Human - Stockfish level 10", White first — with its length, side lines, PGN result and date; Continue `?saved=<id>`, Analysis `?game=play/games/<id>`, a delete that asks first; a **colour** filter — the side the reader played — and an **opening** filter — the deepest eco.json match along each mainline, `openingOfLine`, the book loaded lazily — combined, in the URL as `?color=` / `?opening=`) and `usePlayedGames.ts`, the `useSyncExternalStore` binding. The right-hand panel is `NewGameForm.tsx`: the side (White / Black / Random) over `EngineSettings` itself (fed by a `useEngineModule` that handshakes and never searches), from the defaults on every visit, and a full-width **Start** — `/engine/play?` + `newGameParams` (`lib/newGameLink.ts`). |
+| `src/views/engine/games/` | **The Lobby** (`/engine/games`; Saved games in CTA-74, a lobby since CTA-82) — the board square holds Play with Engine's games, **flat and newest first**, no folders: `PlayedGames.tsx` (a row per game, titled by its pairing — "Human - Stockfish level 10", White first — with its length, side lines, PGN result and date; Continue `?saved=<id>`, Analysis `?game=play/games/<id>`, a delete that asks first; a **colour** filter — the side the reader played — and an **opening** filter — the deepest eco.json match along each mainline, `openingOfLine`, the book loaded lazily — combined, in the URL as `?color=` / `?opening=`) and `usePlayedGames.ts`, the `useSyncExternalStore` binding. The right-hand panel is `NewGameForm.tsx`: the side (White / Black / Random) over `EngineSettings` itself (fed by a `useEngineModule` that handshakes and never searches), from the defaults on every visit, and a full-width **Start** — `/engine/play?` + `newGameParams` (`lib/newGameLink.ts`). Since CTA-83 the form is two tabs — **Game** (the side and `EngineSettings`) and **Board editor** (the shared `PositionEditor`, its state the form's) — with Start and the storage note below both: a position other than the standard start rides on Start as `?fen=` (the Game tab says so and resets it), and Start is off, saying why, while that position cannot be played from. |
 | `src/views/shared/folders/` | **The saved lists' folder components** — `SavedFolderViews.tsx` (a folder row and card), `SavedFolderBreadcrumb.tsx`, `FolderNameDialog.tsx` / `FolderMoveDialog.tsx` / `FolderDeleteDialog.tsx` and `FolderPicker.tsx`, over `lib/savedGameFolders.ts`'s `GameFolder`. Moved here from the deleted Saved games (old) screen (CTA-74); the Saved analyses screen, its settings screen and its save dialog use them, each passing its own `labelKey` and test-id prefix. |
 | `src/views/engine/masked/` | **Masked Pieces** (`/engine/masked`, v2 since CTA-79; full reference [`.claude/rules/masked-pieces.md`](.claude/rules/masked-pieces.md)) — Play with Engine with the piece graphics in disguise. `MaskedPlay.tsx` is the route and the costume's state (the mask, the notation switch, the engine-lines switch, off) and renders **`PlayScreen` with a `masking` prop** — no hook of its own, no fork; `MaskEditor.tsx` is the Masking tab's editor. Its games are the played games, with the costume on the record. |
-| `src/views/tools/editor/` | The Board Editor. `BoardEditor.tsx` is layout (the two palettes and the board, inside a `ChessboardProvider`), board options, the `?fen=` arrival and the PGN/FEN ingestion state; **the behaviour is in `useBoardEditor.ts`**; `EditorPanel.tsx` is the Position / FEN / PGN tab strip over the reset controls and the hand-off, with `PositionFields.tsx`, `FenSetup.tsx`, `PgnSetup.tsx` and `PiecePalette.tsx` under it. |
+| `src/views/shared/positionEditor/` | **The position editor** (CTA-83; full reference [`.claude/rules/position-editor.md`](.claude/rules/position-editor.md)) — a board a position is set up on, as one screen-agnostic component: `PositionEditor.tsx` (the legality report, the two spare-piece palettes and the board inside a `ChessboardProvider`, pinned LTR, the resets, and the Position / FEN / PGN forms) over the state in **`usePositionEditor.ts`**, which the **host** owns (so it survives a tab switch, and the host reads `fen` / `problems`); `PositionFields.tsx`, `FenSetup.tsx`, `PgnSetup.tsx` and `PiecePalette.tsx` under it, each taking the host's test-id prefix; keys `positionEditor.*`. No router, no hand-off. Hosted by the Lobby's Board editor tab; the Analysis Board is the next host. It replaced the old Board Editor screen, deleted in CTA-83. |
 | `src/views/tools/analysis/` | **The Analysis Board** — since CTA-73 a v2 screen: the core, the engine module and the shared variations explorer, composed (see *Saving an analysis board* below). `AnalysisBoard.tsx` is the screen — the arrivals (`?fen=`, `?game=` + `?move=`, `?analysis=`, and the `?at=` permanent link it writes back), the slots, the URL; **the session is `useAnalysisBoard.ts`** — the core and the engine (which plays the opponent's best move only while the header's Play toggle is on — a step back pauses it), and the saved record with its baseline: Save / Update / Save as copy / Discard, the Load tab's new boards; `AnalysisLoad.tsx` (the Load tab: a PGN by file or paste — one game, or several merged or split — or a FEN), `AnalysisExport.tsx` (the Export tab: FEN, PGN with or without comments / NAGs / side lines, download), `SaveAnalysisDialog.tsx` (a new board's name and folder), `AnalysisSettings.tsx` (the Engine tab, also the repertoire player's). The folder also keeps what other screens import: `useTreeNavigation.ts` (the core's navigation), `NextMovesBar.tsx` / `nextMoveArrows.ts` (the explorer's). Since CTA-75 `useAnalysisSession.ts` is the session's shareable half — core, engine, Play and the baseline — which `useAnalysisBoard`, the Library's game board and the Openings explorer compose. Since CTA-78 the board also takes a **whole tree handed over** in the router's location state (`lib/analysisHandOff.ts`; [`openings-explorer.md`](.claude/rules/openings-explorer.md) §5). |
 | `src/views/tools/analysis/saved/` | The Saved analyses screen — the analyses saved on the board above, newest first, filed into a nested tree of folders (CTA-73; `?folder=<id>` is where the reader stands, and a split on the board lands there), as a list **or** as preview boards at the saved lists' two card sizes (`views/shared/cardSize.ts`). `SavedAnalyses.tsx` is both views — laid out as the Repertoires list without its Games menu: an **Open** button (the card's board), the settings gear and a checkbox on every row and card, deleting in bulk from the export bar in every view; no Play with Engine button — and the folder browsing and CRUD, over the shared folder rows, cards, breadcrumb and dialogs (`views/shared/folders/`, which take a `labelKey` and a test-id prefix); `useSavedAnalyses.ts` / `useAnalysisFolders.ts` the `useSyncExternalStore` bindings. |
 | `src/views/openings/` | **The Openings explorer** (`/openings`; full reference [`.claude/rules/openings-explorer.md`](.claude/rules/openings-explorer.md)) — since CTA-78 a v2 screen composed like the Library's game board, with no behaviour hook of its own: `OpeningsBoard.tsx` composes `useAnalysisSession` (core, engine, Play), `useOpeningBookModule` (eco.json's continuations from the position on screen) and the variations explorer; `OpeningBookList.tsx` is the Book tab (a click plays a move, from any node); `openingArrows.ts` joins the tree's next-move arrows and the book's into the board's one arrow set. Nothing is saved; the header hands the whole tree to the Analysis Board. See *Exploring an opening*. |
@@ -219,70 +221,66 @@ The rules the whole thing rests on:
 
 ## An editor owns a position, not a game
 
-The Board Editor is the one board screen with no `Game` and no `GameTree` behind
-it. It has no moves to hold: pieces are **put and removed**, never moved by a
-rule, so its `chess.js` instance is built with `{ skipValidation: true }` and is
-a container rather than a rules authority. Three things follow, and they are the
-whole design:
+The **position editor** (`src/views/shared/positionEditor/`, CTA-83) is the one
+board with no `Game` and no `GameTree` behind it — a screen-agnostic component
+the Lobby's new-game form hosts in its **Board editor** tab, and the Analysis
+Board is meant to host next. Its whole reference — contract, invariants,
+embedding, tests, recipes — is
+[`.claude/rules/position-editor.md`](.claude/rules/position-editor.md), which
+loads when you work on its files. It has no moves to hold: pieces are **put and
+removed**, never moved by a rule, so its `chess.js` instance is built with
+`{ skipValidation: true }` and is a container rather than a rules authority.
+Four things follow, and they are the whole design:
 
 - **Illegal is a state, not an error.** You have to be able to take a king off in
   order to put a different one down, so `positionProblems` (`lib/positionEditor.ts`)
   *reports* — no king, two kings, a pawn on the back rank, the side not to move
-  already in check — and only the three controls that take the position
-  *elsewhere* (the FEN copy button and the two hand-offs) are switched off while
-  it does.
-  `parseFen` still guards the way **in**: a pasted FEN is a claim about a
-  finished position, not a board mid-edit.
+  already in check — and nothing is refused. The editor switches off only its FEN
+  copy button; what takes the position *elsewhere* is the host's and is gated by
+  the host (the Lobby's Start). `parseFen` still guards the way **in**: a pasted
+  FEN is a claim about a finished position, not a board mid-edit.
 - **The FEN is split apart.** Field 1 comes off the board; fields 2–4 are panel
   controls held as `PositionFields`; fields 5–6 are carried so a pasted FEN
   round-trips. Reading *only* field 1 off the `chess.js` instance is what lets
   the side-to-move, castling and en passant controls mean anything — the
   instance keeps its own idea of those, and that idea is what the reader is
   overriding.
-- **Spare pieces need `ChessboardProvider`.** It is the one screen that cannot
+- **Spare pieces need `ChessboardProvider`.** It is the one board that cannot
   use a plain `<Chessboard>`: every option goes to the provider instead, because
-  a `SparePiece` can only reach the board's drag context from inside it. The
-  provider renders no element of its own, so it costs the layout nothing.
+  a `SparePiece` can only reach the board's drag context from inside it. It
+  pins its own board and palettes LTR (`ForceLTR`) — it lives in a panel, not
+  under `Layout.tsx`'s board area.
+- **It knows no screen.** The host owns the state (`usePositionEditor`) and
+  passes it with a test-id prefix; the component imports no router, no
+  hand-off and no store. An **initial FEN** (already validated by the host)
+  seeds it, turns the board to the side to move, and adds a third reset,
+  **"Reset"**, back to it — beside "New board" (the standard start) and "Clear
+  board".
 
-The editor hands a position on to **both** of the other real screens, and by
-exactly the same route: a **query parameter** — `/tools/analysis?fen=…` and
-`/engine/play?fen=…` — so the position survives being bookmarked, shared and
-reloaded, where router state would not. Each screen validates it with `parseFen`
-and ignores what will not pass, then takes it as *initial* state rather than
-syncing it in an effect: arriving at the URL mounts the screen, so there is no
-later change to follow.
-
-**And it takes one the same way.** `/tools/editor?fen=…` is the other direction
-of that one mechanism, read with the same `useSearchParams` → `parseFen` →
-`useMemo` block the other two screens use and handed to `useBoardEditor` as its
-optional `initialFen`. So the three board screens now have one arrival between
-them, and no screen holding a FEN needs a transport of its own to reach any of
-them.
-
-An arrival gives the editor one control it otherwise has no use for: a second
-reset, **"Reset"**, that returns to the position the screen was opened with. It
-is **conditional** — rendered only when a readable `?fen=` arrived, because
-otherwise it would offer a position that does not exist — and it does not
-displace **"New board"** (`editor.controls.startingPosition`), which goes on
-meaning the standard chess start. Unlike the other two resets it *does* turn the
-board: it is handing the reader that position a second time rather than
-rearranging the pieces, which is the case the rule below is about.
+A position crosses to the other screens as a **query parameter** —
+`/engine/play?fen=…` (the Lobby's Start, `lib/newGameLink.ts`),
+`/tools/analysis?fen=…`, `/openings?fen=…` — so it survives being bookmarked,
+shared and reloaded, where router state would not. Each screen validates it
+with `parseFen` and ignores what will not pass, then takes it as *initial*
+state rather than syncing it in an effect: arriving at the URL mounts the
+screen, so there is no later change to follow.
 
 Play with Engine reads a little more out of it than the Analysis Board does. A
-position set up with Black to move is one the reader means to play as Black, so
-the incoming FEN also decides `playAs` and which way the board faces — otherwise
-the engine would move the instant the screen opened, from a position they had
-just finished arranging. It is also what "New game" returns to; resetting to the
-standard start would throw the handed-over position away with no way back.
+position with Black to move is one the reader means to play as Black, so with
+no `side` on the link the incoming FEN also decides `playAs` and which way the
+board faces — otherwise the engine would move the instant the screen opened. A
+`side` on the link (the Lobby always writes one) is the reader's choice and
+beats it. The position is also what Replay returns to.
 
-**A position turns the board; a game does not.** All three screens face the side
+**A position turns the board; a game does not.** Every screen faces the side
 to move when a *position* arrives — a pasted FEN, a handed-over one, the final
 position of a game loaded into the editor — because a position is something you
 are about to answer, so the side that has to move is the side you look from.
 Loading a **game** deliberately does not: a PGN opens at ply 0, where the side to
 move says nothing about which side is being studied. Neither do the editor's
-resets or its side-to-move field, for the same reason in reverse — arranging a
-position is not being handed one, and a viewpoint the reader chose is theirs.
+"New board" and "Clear board" resets or its side-to-move field, for the same
+reason in reverse — arranging a position is not being handed one, and a
+viewpoint the reader chose is theirs.
 
 ## The Library: game collections
 
@@ -377,7 +375,10 @@ is different from the Analysis Board is the whole of it:
   as query parameters (`lib/newGameLink.ts`): `side` (`white` / `black` /
   `random`, drawn on arrival), `skill` (0–20), `depth` (1–24), `movetime`
   (ms, 0–10000), `lines` (1–10), `threads` (1–4), `hash` (1–256) and
-  `evalbar` (`1` / `0`). The `?fen=` pattern: bookmarkable, read once by
+  `evalbar` (`1` / `0`) — and, when the form's **Board editor** tab (CTA-83,
+  the shared position editor) holds a position other than the standard
+  start, `fen`; Start is off while that position cannot be played from. The
+  `?fen=` pattern: bookmarkable, read once by
   `arrivalOf`, **each field on its own** — an absent or unreadable one is its
   default, one out of range is clamped (and the engine module re-clamps the
   UCI options to what the build declares). **Precedence**: `?saved=` beats
@@ -561,7 +562,7 @@ which loads when you work on its files. What matters from outside it:
 - **The Analysis button hands the whole tree on** as router location state
   (`lib/analysisHandOff.ts`), arriving on the Analysis Board as a new unsaved
   board. `?fen=` / `?game=` are unchanged.
-- **Takes `?fen=`** (the Board Editor's *Open in Openings*, `CurrentOpening`'s
+- **Takes `?fen=`** (`CurrentOpening`'s
   ECO chip; it turns the board) and **writes `?at=` back**. `/tools/openings`
   redirects here.
 

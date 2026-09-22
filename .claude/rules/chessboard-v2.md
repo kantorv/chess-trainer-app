@@ -10,7 +10,8 @@ repertoire viewer), the **Openings explorer** was rebuilt on it (CTA-78, which
 retired Openings v2 and the old screen), and **Masked Pieces**, the last, is
 Play with Engine's screen in a costume (CTA-79, which retired Play v2, Masked
 v2 and with them the Development section). Every game board is on it now; the
-Board Editor, which edits a position, is the one board that is not.
+position editor ([`position-editor.md`](./position-editor.md)), which edits a
+position, is the one board that is not.
 
 Read [`chessboard.md`](./chessboard.md) first — it is still the authority on
 what a board *is* (the library, the rules engine, the engine protocol, the
