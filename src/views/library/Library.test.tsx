@@ -202,6 +202,44 @@ describe("the Library's collections", () => {
     }
   });
 
+  it("filters the collections by name, from the URL, saying when none matches", async () => {
+    const mine = await upload();
+    mount("/library");
+    await screen.findByTestId(`library-collection-${mine.id}`);
+
+    fireEvent.change(screen.getByTestId("library-filter"), { target: { value: "  CUP " } });
+    expect(where()).toContain("q=");
+    expect(screen.getByTestId("library-collection-worldcup2023")).toBeInTheDocument();
+    expect(screen.queryByTestId("library-collection-morphy")).toBeNull();
+    expect(screen.queryByTestId(`library-collection-${mine.id}`)).toBeNull();
+    expect(screen.getByTestId("library-count")).toHaveTextContent("1 of 4 collections");
+
+    fireEvent.change(screen.getByTestId("library-filter"), { target: { value: "club" } });
+    expect(screen.getByTestId(`library-collection-${mine.id}`)).toBeInTheDocument();
+    expect(screen.queryByTestId("library-collection-worldcup2023")).toBeNull();
+
+    fireEvent.change(screen.getByTestId("library-filter"), { target: { value: "nothing like it" } });
+    expect(screen.getByTestId("library-no-matches")).toBeInTheDocument();
+
+    cleanupAndMount("/library?q=morphy");
+    expect(screen.getByTestId("library-filter")).toHaveValue("morphy");
+    expect(screen.getByTestId("library-collection-morphy")).toBeInTheDocument();
+    expect(screen.queryByTestId("library-collection-bucharest2023")).toBeNull();
+  });
+
+  it("keeps each row's download and delete in a column beside its link, not inside it", async () => {
+    const mine = await upload();
+    mount("/library");
+    for (const id of ["morphy", mine.id]) {
+      const actions = await screen.findByTestId(`library-collection-actions-${id}`);
+      expect(screen.getByTestId(`library-collection-${id}`)).not.toContainElement(actions);
+      expect(actions).toContainElement(screen.getByTestId(`library-collection-download-${id}`));
+    }
+    expect(screen.getByTestId(`library-collection-actions-${mine.id}`)).toContainElement(
+      screen.getByTestId(`library-collection-delete-${mine.id}`),
+    );
+  });
+
   it("deletes an uploaded collection from its row, asking first — a shipped one has no delete", async () => {
     const mine = await upload();
     mount("/library");

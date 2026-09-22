@@ -879,6 +879,10 @@ const en = {
     games_other: "{{count}} games",
     shipped: "Shipped",
     uploaded: "Uploaded",
+    /** The words box over the list — a collection's name, or part of it. */
+    filter: "Filter collections by name",
+    shown: "{{shown}} of {{count}} collections",
+    noMatches: "No collection's name matches.",
     add: "Add collection",
     /** A collection row's download — the whole collection, as one PGN. */
     download: "Download the whole collection as PGN",
