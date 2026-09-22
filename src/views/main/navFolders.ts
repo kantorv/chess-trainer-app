@@ -101,9 +101,8 @@ export const navFolders = (): readonly NavFolder[] => [
     id: "openings",
     labelKey: "nav.folders.openings",
     icon: TravelExploreRoundedIcon,
-    // One destination (CTA-42): the saved list is the screen worth reaching
-    // for, so the folder renders as one clickable row to it and the board
-    // view leaves the sidebar entirely — it is the saved list's New button.
+    // One destination: the folder renders as one clickable row to the
+    // Openings explorer (CTA-78; the saved list it pointed at before is gone).
     singleEntry: true,
   },
   /*

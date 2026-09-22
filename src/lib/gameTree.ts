@@ -265,8 +265,7 @@ export const nodeAtSanPath = (
  * node's `children` is everywhere else) — so the total is the sum over every
  * point in the tree of `max(0, alternatives.length - 1)`.
  *
- * The shared home for a count `savedAnalyses.ts` and `savedOpenings.ts` both
- * need for their "N variations" caption: a single 18-move side line is one
+ * The shared home for the count a saved list's "N variations" caption needs: a single 18-move side line is one
  * variation, not eighteen.
  */
 export const countVariations = (tree: GameTree): number => {

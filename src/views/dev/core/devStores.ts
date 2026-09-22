@@ -5,10 +5,6 @@ import {
   savedGameFrom,
   type SavedGame,
 } from "../../../lib/savedGames";
-import {
-  savedOpeningFrom,
-  type SavedOpening,
-} from "../../../lib/savedOpenings";
 
 /**
  * **Where a dev board writes** — §2.4 of
@@ -16,14 +12,15 @@ import {
  *
  * The Development screens persist to **separate dev-prefixed `localStorage`
  * keys**, through the shipped [`lib/recordStore.ts`](../../../lib/recordStore.ts)
- * factory and the shipped normalisers (`savedGameFrom`, `savedOpeningFrom`).
- * Same record shape, same code path, different key. (The dev analyses key went
- * with Analysis v2, which shipped as the Analysis Board in CTA-73 and writes
- * the real store — explicitly, on the reader's say-so.)
+ * factory and the shipped normaliser (`savedGameFrom`). Same record shape,
+ * same code path, different key. (The dev analyses key went with Analysis v2,
+ * which shipped as the Analysis Board in CTA-73 and writes the real store —
+ * explicitly, on the reader's say-so; the dev openings key went with Openings
+ * v2 in CTA-78, when the shipped Openings explorer stopped saving at all.)
  *
  * That is the whole point of the arrangement: autosave, resume and reopen are
  * genuinely exercised — not stubbed, not mocked — while a v2 bug can never
- * damage a real saved game or opening. Wiping the dev keys leaves the
+ * damage a real saved game. Wiping the dev keys leaves the
  * shipped records untouched, which `devStores.test.ts` asserts in both
  * directions.
  *
@@ -39,13 +36,9 @@ import {
 
 /** The dev keys. `dev` sits between the namespace and the record name. */
 export const DEV_SAVED_GAMES_STORAGE_KEY = "chessapp.dev.savedGames.v1";
-export const DEV_SAVED_OPENINGS_STORAGE_KEY = "chessapp.dev.savedOpenings.v1";
 
 /** Every dev key, so a test — or a wipe — can name the whole set at once. */
-export const DEV_STORAGE_KEYS = [
-  DEV_SAVED_GAMES_STORAGE_KEY,
-  DEV_SAVED_OPENINGS_STORAGE_KEY,
-] as const;
+export const DEV_STORAGE_KEYS = [DEV_SAVED_GAMES_STORAGE_KEY] as const;
 
 /** The same budgets the shipped stores keep; a dev row is the same size. */
 const MAX_DEV_ROWS = 30;
@@ -101,57 +94,7 @@ export const findDevSavedGame = (
 export const clearDevSavedGames = (): DevStoreProblem | undefined =>
   devGames.write([]);
 
-/* ── dev saved openings ───────────────────────────────────────────────────── */
-
-const devOpenings = recordStore<SavedOpening>(
-  DEV_SAVED_OPENINGS_STORAGE_KEY,
-  savedOpeningFrom,
-);
-
-export const devSavedOpeningsSnapshot = devOpenings.snapshot;
-export const subscribeDevSavedOpenings = devOpenings.subscribe;
-
-/**
- * `saveOpening`'s rules, over the dev key. Button-triggered, so there is no
- * record growing in place — but a re-save that would be identical is still a
- * no-op, so a double click does not stack a duplicate.
- */
-export const saveDevOpening = (
-  opening: SavedOpening,
-): DevStoreProblem | undefined => {
-  const current = devSavedOpeningsSnapshot();
-  const existing = current.find((row) => row.id === opening.id);
-
-  if (
-    existing !== undefined &&
-    existing.pgn === opening.pgn &&
-    existing.orientation === opening.orientation &&
-    existing.note === opening.note &&
-    existing.folderId === opening.folderId
-  ) {
-    return undefined;
-  }
-
-  return devOpenings.write(
-    [
-      { ...opening, savedAt: existing?.savedAt ?? opening.savedAt },
-      ...current.filter((row) => row.id !== opening.id),
-    ].slice(0, MAX_DEV_ROWS),
-  );
-};
-
-export const findDevSavedOpening = (
-  id: string | null | undefined,
-): SavedOpening | undefined =>
-  id === null || id === undefined
-    ? undefined
-    : devSavedOpeningsSnapshot().find((row) => row.id === id);
-
-export const clearDevSavedOpenings = (): DevStoreProblem | undefined =>
-  devOpenings.write([]);
-
 /** Wipe every dev key at once — what a Development screen's reset offers. */
 export const clearDevStores = (): void => {
   clearDevSavedGames();
-  clearDevSavedOpenings();
 };

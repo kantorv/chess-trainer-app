@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { emptyTree } from "./gameTree";
 import { savedAnalysisOf } from "./savedAnalyses";
 import { saveAnalysis, savedAnalysesSnapshot } from "./savedAnalysisStore";
 import { saveGame, savedGamesSnapshot } from "./savedGameStore";
@@ -8,8 +7,6 @@ import { savedGameOf } from "./savedGames";
 import { DEFAULT_ENGINE_SETTINGS } from "./engineSettings";
 import { DEFAULT_ANALYSIS_SETTINGS } from "./analysisSettings";
 import { treeFromGame } from "./gameTree";
-import { savedOpeningOf } from "./savedOpenings";
-import { saveOpening, savedOpeningsSnapshot } from "./savedOpeningStore";
 import {
   readRepertoireText,
   savedRepertoireOf,
@@ -111,25 +108,22 @@ describe("the saved-repertoires store", () => {
     expect(savedRepertoiresSnapshot().map((row) => row.id)).toEqual(["a"]);
   });
 
-  it("lives under its own key: a wipe leaves games, analyses and openings untouched", async () => {
+  it("lives under its own key: a wipe leaves games and analyses untouched", async () => {
     const game = parsePgnGame("1. e4 e5 *");
     saveGame(savedGameOf("g1", game, DEFAULT_ENGINE_SETTINGS));
     await saveAnalysis(
       savedAnalysisOf("a1", treeFromGame(game), [], DEFAULT_ANALYSIS_SETTINGS, "white"),
     );
-    saveOpening(savedOpeningOf("o1", emptyTree(), "white", "", null));
     saveRepertoire(record("r1"));
 
     const games = savedGamesSnapshot();
     const analyses = savedAnalysesSnapshot() ?? [];
-    const openings = savedOpeningsSnapshot();
-    expect([games.length, analyses.length, openings.length]).toEqual([1, 1, 1]);
+    expect([games.length, analyses.length]).toEqual([1, 1]);
 
     expect(clearSavedRepertoires()).toBeUndefined();
     expect(savedRepertoiresSnapshot()).toEqual([]);
     expect(savedGamesSnapshot()).toEqual(games);
     expect(savedAnalysesSnapshot()).toEqual(analyses);
-    expect(savedOpeningsSnapshot()).toEqual(openings);
   });
 
   it("edits a title and settings in place, keeping the list order", () => {

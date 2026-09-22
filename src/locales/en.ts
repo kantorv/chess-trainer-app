@@ -24,7 +24,8 @@ const en = {
     analysisBoard: "Analysis Board",
     savedAnalyses: "Saved analyses",
     boardEditor: "Board Editor",
-    savedOpenings: "Saved openings",
+    /** The Openings explorer (CTA-78) — shown under the folder's own name, a single entry. */
+    openings: "Openings explorer",
     /** The reader's own repertoires (CTA-61), and the screen they come in on. */
     repertoires: "My repertoires",
     addRepertoire: "Add repertoire",
@@ -464,126 +465,6 @@ const en = {
       empty: "This folder is empty.",
     },
   },
-  /**
-   * The **Saved openings** screen — the positions the reader has saved on the
-   * Openings screen (`views/tools/openings/saved/`). The savedAnalyses block
-   * above, minus the export machinery an opening has no use for, and plus the
-   * one thing an opening has that an analysis does not: a note, named by it
-   * and editable in place. Since CTA-40 the list is filed into a tree of
-   * folders — the save dialog's picker and the screen's folder browser share
-   * the `folder` block below.
-   */
-  savedOpenings: {
-    title: "Saved openings",
-    count: "Openings: {{count}}",
-    /**
-     * The top-bar button to the Openings board — the screen the sidebar's
-     * single Openings entry hides (CTA-42), so the board is reached from here.
-     */
-    new: "New",
-    empty:
-      "No saved openings yet. Play through an opening on the Openings screen and save it to keep it here.",
-    hint: "Every position you save on the Openings screen is kept here with its whole tree of moves. Give it a note, and edit the note any time.",
-    /** Said plainly: this is a browser, not a backup — as the Uploads screen does. */
-    storage:
-      "Saved openings are kept in this browser only. Clearing site data removes them, and they do not follow you to another device.",
-    /**
-     * A saved opening with no note yet. The note is what a row is named by, so
-     * a nameless one falls back to the translated generic.
-     */
-    untitled: "Saved opening",
-    /** Plural forms, because a one-move opening is a real row here. */
-    moves_one: "{{count}} move",
-    moves_other: "{{count}} moves",
-    /** Every move past the mainline — the side lines the reader tried and kept. */
-    variations_one: "{{count}} variation",
-    variations_other: "{{count}} variations",
-    /** A stored record whose PGN no longer parses: it can only be deleted. */
-    unreadable: "This opening could not be read.",
-    /**
-     * The three-way view toggle in the top bar: the list the screen shipped
-     * with, and the library list screen's own two board sizes.
-     */
-    view: {
-      label: "View",
-      list: "List",
-      compact: "Small boards",
-      comfortable: "Big boards",
-    },
-    /** The two destinations — see `SavedOpenings.tsx` for why these two. */
-    continue: "Continue",
-    play: "Play from here",
-    remove: "Delete this opening",
-    /**
-     * The export controls (CTA-41), mirroring the Saved analyses block's naming —
-     * see `SavedOpenings.tsx` for why they are list-view only and how the
-     * picks persist across folder navigation.
-     */
-    select: "Select this opening",
-    selectAll: "Select all openings",
-    selected: "{{count}} selected",
-    download: "Download selected as PGN",
-    /** The note dialog — shared with the Openings screen's save prompt. */
-    note: {
-      label: "Note",
-      save: "Save",
-      cancel: "Cancel",
-      /** The Openings screen asks for the note when saving a brand-new record. */
-      saveTitle: "Save this opening",
-      /** The Saved openings screen asks for it again when editing one. */
-      editTitle: "Edit note",
-      edit: "Edit note",
-    },
-    /**
-     * The folder system (CTA-40): a folder picker in the save dialog, a folder
-     * browser on the Saved openings screen, and the CRUD wording for both.
-     * Chrome only — a folder's name is the reader's own words, never a key.
-     */
-    folder: {
-      /** The breadcrumb's first crumb — standing at the top of the tree. */
-      root: "All openings",
-      /** The top bar's create button, and the save dialog's inline create. */
-      newFolder: "New folder",
-      renameFolder: "Rename folder",
-      moveFolder: "Move folder",
-      deleteFolder: "Delete folder",
-      /** The folder's own download — one .pgn of everything under it (CTA-41). */
-      download: "Download this folder as PGN",
-      /** The save dialog's "no folder" choice — filing at the top level. */
-      unfiled: "Unfiled",
-      /** The move dialog's "none" row — the move's other destination. */
-      topLevel: "Top level",
-      /** The save dialog's section heading. */
-      label: "Folder",
-      /**
-       * Said under the save dialog's picker: leaving it unchosen files the
-       * opening by the default rule, which `useOpenings.saveOpening` owns.
-       */
-      defaultHint:
-        "Leave it unchosen and the opening is filed by its opening name — an off-book position goes to Unfiled.",
-      /** Both the create and the rename dialog's field. */
-      name: "Folder name",
-      save: "Save",
-      cancel: "Cancel",
-      /**
-       * The delete confirmation for a non-empty folder: the contents stay —
-       * openings become Unfiled, sub-folders re-parent up a level.
-       */
-      deleteConfirm:
-        "Deleting this folder keeps its contents: openings filed in it become Unfiled, and its sub-folders move up one level.",
-      deleteCounts:
-        "This folder holds {{openings}} openings and {{subFolders}} sub-folders.",
-      /** A folder card's caption, counting everything under it. */
-      count_one: "{{count}} opening",
-      count_other: "{{count}} openings",
-      /** An empty folder's body, once the reader has drilled in. */
-      empty: "This folder is empty.",
-    },
-  },
-  /**
-   * The Analysis Board. Chrome only: SAN, the FEN and the scores are notation
-   * and stay language-independent.
-   */
   analysis: {
     /** The Analysis Board's tabs (CTA-73). */
     tabs: {
@@ -831,13 +712,20 @@ const en = {
     },
   },
   /**
-   * The Openings screen. Chrome only: an opening's name and ECO code come
-   * from the bundled eco.json data (`lib/openings.ts`), not from here.
+   * The Openings explorer (`/openings`, CTA-78) — a v2 board with the opening
+   * book beside it. Chrome only: an opening's name and ECO code come from the
+   * bundled eco.json data (`lib/openings.ts`), not from here. What it shares
+   * with the Analysis Board (the Load tab's errors, the engine settings, the
+   * export) is read from `analysis.*`.
    */
   openings: {
     tabs: {
-      nextMoves: "Next moves",
+      book: "Book",
       moves: "Moves",
+      map: "Map",
+      load: "Load",
+      export: "Export",
+      engine: "Engine",
     },
     current: {
       /** The book has loaded, but this position is not in it. */
@@ -847,21 +735,33 @@ const en = {
       /** The ECO chip's accessible name — it is the link into the explorer. */
       open: "Explore {{eco}} in the Openings explorer",
     },
-    nextMoves: {
+    book: {
       /** The explorer lists only moves the book names — this when it has none. */
       empty: "No known continuations from here.",
+      /** Above the list — what a click on a row does. */
+      help: "Click a move to play it here. A move from an earlier position starts a side line.",
     },
-    moves: {
-      /** The variation tree before anything has been played. */
-      empty: "No moves yet — play one on the board, or pick a book move from the Next moves tab.",
-    },
+    engineSwitch: "Engine",
     controls: {
-      newGame: "New game",
-      reset: "Reset",
       /** Hand this position off to Play with Engine — the Board Editor's wording. */
       playFromHere: "Play from here",
-      /** Keep the position on screen — opens the note prompt before it is saved. */
-      save: "Save",
+      /** Hand the whole explored tree to the Analysis Board, as a new board. */
+      analysis: "Open on the Analysis Board — everything explored here, as a new unsaved board",
+    },
+    /** The Load tab's merge choice — no split: nothing on this screen is saved. */
+    load: {
+      choice: {
+        title_one: "This PGN holds {{count}} game",
+        title_other: "This PGN holds {{count}} games",
+        explain: "Merge them into one tree on the board.",
+        skipped_one: "{{count}} game has no moves or could not be read, and is left out.",
+        skipped_other: "{{count}} games have no moves or could not be read, and are left out.",
+        merge: "Merge onto the board",
+        mergeHelp:
+          "One tree: the first game's line is the mainline, and wherever another game leaves it becomes a side line. Comments and move marks are kept.",
+        mergeUnavailable:
+          "These games start from different positions, so they cannot share one tree.",
+      },
     },
   },
   /**
@@ -1378,7 +1278,7 @@ const en = {
    * It is a block of its own and a thin one on purpose. Everything a v2 board
    * says that a shipped board already says is read from that screen's block —
    * `analysis.*` for the engine settings and the position tab, `masking.*` for
-   * the mask editor, `openings.*` for the explorer, and the shared
+   * the mask editor, and the shared
    * `moveList.*` / `variations.*` / `promotion.*` / `board.*` for the pieces
    * every board renders. A derived board that needed a locale block of its own
    * would not be derived.
@@ -1389,7 +1289,6 @@ const en = {
     screens: {
       play: "Play with Engine v2",
       masked: "Masked Pieces v2",
-      openings: "Openings v2",
     },
     /**
      * The panel's tab strip. Named here rather than read from five screens'
@@ -1401,19 +1300,11 @@ const en = {
       engine: "Engine",
       position: "Position",
       mask: "Mask",
-      tree: "Tree",
     },
     /** The header slot's controls, where a v2 board's differ from a shipped one's. */
     controls: {
       newGame: "New game",
       newBoard: "New board",
-      save: "Save",
-      saved: "Saved",
-    },
-    /** Openings v2's explorer footer — the book's continuations from here. */
-    book: {
-      title: "Book continuations",
-      empty: "No known continuations from here.",
     },
   },
 };

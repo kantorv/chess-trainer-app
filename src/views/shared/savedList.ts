@@ -4,8 +4,7 @@ import { cardSizeTrack, type CardSize } from "./cardSize";
 /**
  * **The saved-list view machinery** — the pure half of what the saved
  * screens share: [`views/tools/analysis/saved/SavedAnalyses.tsx`](../tools/analysis/saved/SavedAnalyses.tsx)
- * and [`views/tools/openings/saved/SavedOpenings.tsx`](../tools/openings/saved/SavedOpenings.tsx)
- * all render the same two views (the list and the two board sizes) over the
+ * and the Repertoires list render the same two views (the list and the two board sizes) over the
  * same caption shape, and the parts of that that are *values* rather than
  * components live here — for the reason [`cardSize.ts`](./cardSize.ts)
  * gives: a component file that also exports values loses fast refresh.

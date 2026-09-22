@@ -335,10 +335,10 @@ describe("foldSingleEntryFolders folds a folder marked as one destination", () =
       children: [
         {
           kind: "screen",
-          id: "/openings/saved",
-          labelKey: "nav.savedOpenings",
+          id: "/openings",
+          labelKey: "nav.openings",
           icon,
-          to: "/openings/saved",
+          to: "/openings",
         },
       ],
     };
@@ -350,10 +350,10 @@ describe("foldSingleEntryFolders folds a folder marked as one destination", () =
     // folder ancestors, so it lights up with nothing opened.
     expect(folded).toEqual({
       kind: "screen",
-      id: "/openings/saved",
+      id: "/openings",
       labelKey: "nav.folders.openings",
       icon,
-      to: "/openings/saved",
+      to: "/openings",
     });
   });
 

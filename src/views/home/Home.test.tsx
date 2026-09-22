@@ -20,18 +20,19 @@ beforeEach(async () => {
 });
 
 describe("the landing page", () => {
-  it("shows one Openings card linking to the saved list, and none to the board", () => {
+  it("shows one Openings card, linking to the explorer itself", () => {
     renderHome();
 
     // The single entry — the same one the sidebar shows, under the same name.
+    // Nothing on the explorer is saved, so the folder's destination is the
+    // board, not a saved list (CTA-78).
     const openings = screen.getAllByRole("link", { name: "Openings" });
     expect(openings).toHaveLength(1);
-    expect(openings[0]).toHaveAttribute("href", "/openings/saved");
+    expect(openings[0]).toHaveAttribute("href", "/openings");
 
-    // The board view has no card: it is the saved list's New button (CTA-42).
     const cards = screen.getAllByRole("link");
     expect(cards.map((link) => link.getAttribute("href"))).not.toContain(
-      "/openings",
+      "/openings/saved",
     );
   });
 

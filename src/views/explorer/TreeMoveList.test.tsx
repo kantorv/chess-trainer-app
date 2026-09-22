@@ -5,7 +5,6 @@ import AppThemeWithLang from "../../theme/AppThemeWithLang";
 import type { Score } from "../../lib/engineAnalysis";
 import { parsePgnTree } from "../../lib/pgn";
 import { mainline, nodeAtSanPath, type GameTree } from "../../lib/gameTree";
-import VariationTree from "../tools/analysis/VariationTree";
 import TreeMoveList from "./TreeMoveList";
 
 /*
@@ -56,15 +55,6 @@ describe("the variations explorer marks commented moves", () => {
     expect(screen.getByTestId(`tree-comment-icon-${nc3}`)).toBeInTheDocument();
     expect(screen.getByTestId(`tree-move-${nc3}`)).toHaveAttribute("data-has-comment", "true");
     expect(screen.queryByTestId(`tree-comment-icon-${f4}`)).toBeNull();
-  });
-
-  it("is opt-in: the flowing tree's screens mark nothing", () => {
-    render(
-      <AppThemeWithLang>
-        <VariationTree tree={tree} currentId={null} onSelectNode={vi.fn()} />
-      </AppThemeWithLang>,
-    );
-    expect(screen.queryAllByTestId(/comment-icon/)).toHaveLength(0);
   });
 });
 

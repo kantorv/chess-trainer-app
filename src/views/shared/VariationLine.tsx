@@ -14,13 +14,11 @@ import { menuAnchorOf, type ContextMenuNodeHandler } from "./moveContextMenu";
  * The pieces a side line is drawn with: one clickable move token, and the
  * indented block a side line sits in under the move it answers.
  *
- * Two screens render these, and that is why the file exists (CTA-53): the
- * flowing variation tree (`VariationTree.tsx` — the Openings explorer) and the
- * shared move list (`MoveList.tsx`), which
- * prints each side line as an indented run directly under the row holding the
- * move it branches from — the variations explorer, behind `TreeMoveList`.
- * Same tokens, same clicks, same numbering, one
- * implementation — so the two cannot drift apart the way a copy of this would.
+ * The shared move list (`MoveList.tsx`) renders these (CTA-53): it prints
+ * each side line as an indented run directly under the row holding the move
+ * it branches from — the variations explorer, behind `TreeMoveList`. (A
+ * flowing `VariationTree` was the other renderer until the old Openings
+ * screen went, CTA-78.)
  *
  * Presentational, like everything around it: the selected node comes in as a
  * prop and goes out through `onSelectNode`, and the numbering is read off the

@@ -7,7 +7,6 @@ import { gameFromChess } from "../../../lib/gameModel";
 import { emptyTree, addMove } from "../../../lib/gameTree";
 import { savedAnalysisOf } from "../../../lib/savedAnalyses";
 import { savedGameOf } from "../../../lib/savedGames";
-import { savedOpeningOf } from "../../../lib/savedOpenings";
 import {
   saveAnalysis,
   loadSavedAnalyses,
@@ -20,19 +19,11 @@ import {
   SAVED_GAMES_STORAGE_KEY,
 } from "../../../lib/savedGameStore";
 import {
-  saveOpening,
-  savedOpeningsSnapshot,
-  SAVED_OPENINGS_STORAGE_KEY,
-} from "../../../lib/savedOpeningStore";
-import {
   clearDevStores,
   devSavedGamesSnapshot,
-  devSavedOpeningsSnapshot,
   findDevSavedGame,
   saveDevGame,
-  saveDevOpening,
   DEV_SAVED_GAMES_STORAGE_KEY,
-  DEV_SAVED_OPENINGS_STORAGE_KEY,
   DEV_STORAGE_KEYS,
 } from "./devStores";
 
@@ -40,8 +31,7 @@ import {
   The Development section's whole persistence promise (CTA-60, acceptance
   criterion 7): a dev board writes to dev-prefixed keys through the *shipped*
   record-store factory and normalisers, so autosave and resume are genuinely
-  exercised while a v2 bug can never damage a real saved game, analysis or
-  opening.
+  exercised while a v2 bug can never damage a real saved game or analysis.
 
   Which means the assertion that matters is an assertion about **isolation**,
   in both directions, and it is worth making explicitly rather than trusting
@@ -76,33 +66,23 @@ describe("the dev record stores", () => {
       expect(key.startsWith("chessapp.dev.")).toBe(true);
     }
 
-    const shipped = [
-      SAVED_GAMES_STORAGE_KEY,
-      SAVED_ANALYSES_STORAGE_KEY,
-      SAVED_OPENINGS_STORAGE_KEY,
-    ];
+    const shipped = [SAVED_GAMES_STORAGE_KEY, SAVED_ANALYSES_STORAGE_KEY];
     for (const key of shipped) {
       expect(DEV_STORAGE_KEYS).not.toContain(key);
     }
     // And the pairing is deliberate, not accidentally overlapping.
     expect(DEV_SAVED_GAMES_STORAGE_KEY).not.toBe(SAVED_GAMES_STORAGE_KEY);
-    expect(DEV_SAVED_OPENINGS_STORAGE_KEY).not.toBe(SAVED_OPENINGS_STORAGE_KEY);
   });
 
   it("writes a dev record where no shipped screen can see it", async () => {
     saveDevGame(savedGameOf("dev-game", playedGame(), DEFAULT_ENGINE_SETTINGS));
-    saveDevOpening(
-      savedOpeningOf("dev-opening", aTree(), "white", "King's Pawn", null),
-    );
 
-    // The dev side has both.
+    // The dev side has it.
     expect(devSavedGamesSnapshot()).toHaveLength(1);
-    expect(devSavedOpeningsSnapshot()).toHaveLength(1);
 
     // The shipped side has none of them — this is the whole point.
     expect(savedGamesSnapshot()).toEqual([]);
     expect(await loadSavedAnalyses()).toEqual([]);
-    expect(savedOpeningsSnapshot()).toEqual([]);
   });
 
   it("leaves the shipped records untouched when the dev keys are wiped", async () => {
@@ -117,9 +97,6 @@ describe("the dev record stores", () => {
         "white",
       ),
     );
-    saveOpening(
-      savedOpeningOf("real-opening", aTree(), "white", "Mine", null),
-    );
 
     // And a dev board's, beside it.
     saveDevGame(savedGameOf("dev-game", playedGame(), DEFAULT_ENGINE_SETTINGS));
@@ -130,9 +107,6 @@ describe("the dev record stores", () => {
     expect(savedGamesSnapshot().map((row) => row.id)).toEqual(["real-game"]);
     expect(savedAnalysesSnapshot()?.map((row) => row.id)).toEqual([
       "real-analysis",
-    ]);
-    expect(savedOpeningsSnapshot().map((row) => row.id)).toEqual([
-      "real-opening",
     ]);
   });
 

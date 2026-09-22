@@ -19,7 +19,7 @@ const he: typeof en = {
     analysisBoard: "לוח ניתוח",
     savedAnalyses: "ניתוחים שמורים",
     boardEditor: "עורך העמדות",
-    savedOpenings: "פתיחות שמורות",
+    openings: "סייר הפתיחות",
     repertoires: "הרפרטוארים שלי",
     addRepertoire: "הוספת רפרטואר",
     libraryCollections: "אוספים",
@@ -346,66 +346,6 @@ const he: typeof en = {
       empty: "התיקייה הזו ריקה.",
     },
   },
-  savedOpenings: {
-    title: "פתיחות שמורות",
-    count: "פתיחות: {{count}}",
-    new: "חדש",
-    empty:
-      "אין עדיין פתיחות שמורות. שחקו מהלך במסך הפתיחות ושמרו אותו כדי לשמור אותה כאן.",
-    hint: "כל עמדה שאתם שומרים במסך הפתיחות נשמרת כאן עם כל עץ המהלכים שלה. תנו לה הערה, ותוכלו לערוך את ההערה בכל עת.",
-    storage:
-      "הפתיחות השמורות נשמרות בדפדפן הזה בלבד. מחיקת נתוני האתר תמחק אותן, והן אינן עוברות למכשיר אחר.",
-    untitled: "פתיחה שמורה",
-    moves_one: "מהלך אחד",
-    moves_other: "{{count}} מהלכים",
-    variations_one: "וריאציה אחת",
-    variations_other: "{{count}} וריאציות",
-    unreadable: "לא ניתן לקרוא את הפתיחה הזו.",
-    view: {
-      label: "תצוגה",
-      list: "רשימה",
-      compact: "לוחות קטנים",
-      comfortable: "לוחות גדולים",
-    },
-    continue: "המשך",
-    play: "שחקו מכאן",
-    remove: "מחיקת הפתיחה",
-    select: "בחירת הפתיחה",
-    selectAll: "בחירת כל הפתיחות",
-    selected: "{{count}} נבחרו",
-    download: "הורדת הנבחרים כקובץ PGN",
-    note: {
-      label: "הערה",
-      save: "שמירה",
-      cancel: "ביטול",
-      saveTitle: "שמירת הפתיחה",
-      editTitle: "עריכת ההערה",
-      edit: "עריכת ההערה",
-    },
-    folder: {
-      root: "כל הפתיחות",
-      newFolder: "תיקייה חדשה",
-      renameFolder: "שינוי שם תיקייה",
-      moveFolder: "העברת תיקייה",
-      deleteFolder: "מחיקת תיקייה",
-      download: "הורדת התיקייה כקובץ PGN",
-      unfiled: "ללא תיקייה",
-      topLevel: "ברמה העליונה",
-      label: "תיקייה",
-      defaultHint:
-        "אם לא נבחרת תיקייה, הפתיחה נשמרת לפי שם הפתיחה שלה — עמדה מחוץ לספר נשמרת ללא תיקייה.",
-      name: "שם התיקייה",
-      save: "שמירה",
-      cancel: "ביטול",
-      deleteConfirm:
-        "מחיקת התיקייה הזו שומרת על התוכן שבה: פתיחות שנשמרו בה יהפכו לללא תיקייה, ותתי־התיקיות שלה יעלו רמה אחת.",
-      deleteCounts:
-        "התיקייה הזו מחזיקה {{openings}} פתיחות ו־{{subFolders}} תתי־תיקיות.",
-      count_one: "פתיחה אחת",
-      count_other: "{{count}} פתיחות",
-      empty: "התיקייה הזו ריקה.",
-    },
-  },
   analysis: {
     tabs: {
       moves: "מהלכים",
@@ -611,15 +551,41 @@ const he: typeof en = {
     },
   },
   openings: {
-    tabs: { nextMoves: "מהלכים אפשריים", moves: "מהלכים" },
+    tabs: {
+      book: "ספר",
+      moves: "מהלכים",
+      map: "מפה",
+      load: "טעינה",
+      export: "ייצוא",
+      engine: "מנוע",
+    },
     current: {
       unknown: "אין פתיחה מוכרת עדיין.",
       loading: "טוען את ספר הפתיחות…",
       open: "לפתוח את {{eco}} במסך הפתיחות",
     },
-    nextMoves: { empty: "אין המשכים מוכרים מכאן." },
-    moves: { empty: "עדיין אין מהלכים — שחקו על הלוח, או בחרו מהלך מוכר מלשונית המהלכים האפשריים." },
-    controls: { newGame: "משחק חדש", playFromHere: "שחקו מכאן", reset:"איפוס", save: "שמירה" },
+    book: {
+      empty: "אין המשכים מוכרים מכאן.",
+      help: "לחצו על מהלך כדי לשחק אותו כאן. מהלך מעמדה מוקדמת יותר פותח וריאציה.",
+    },
+    engineSwitch: "מנוע",
+    controls: {
+      playFromHere: "שחקו מכאן",
+      analysis: "פתיחה בלוח הניתוח — כל מה שנחקר כאן, כלוח חדש שלא נשמר",
+    },
+    load: {
+      choice: {
+        title_one: "ה-PGN הזה מכיל משחק אחד",
+        title_other: "ה-PGN הזה מכיל {{count}} משחקים",
+        explain: "מזגו אותם לעץ אחד על הלוח.",
+        skipped_one: "משחק אחד ללא מהלכים או שלא ניתן לקרוא אותו, והוא לא נכלל.",
+        skipped_other: "{{count}} משחקים ללא מהלכים או שלא ניתן לקרוא אותם, והם לא נכללים.",
+        merge: "מיזוג על הלוח",
+        mergeHelp:
+          "עץ אחד: השורה של המשחק הראשון היא השורה הראשית, וכל מקום שבו משחק אחר סוטה ממנה הופך לווריאציה. ההערות וסימוני המהלכים נשמרים.",
+        mergeUnavailable: "המשחקים האלה מתחילים מעמדות שונות, ולכן אינם יכולים לחלוק עץ אחד.",
+      },
+    },
   },
   library: {
     title: "ספרייה",
@@ -1025,24 +991,16 @@ const he: typeof en = {
     screens: {
       play: "משחק מול המנוע v2",
       masked: "כלים מוסווים v2",
-      openings: "פתיחות v2",
     },
     tabs: {
       moves: "מסעים",
       engine: "מנוע",
       position: "עמדה",
       mask: "הסוואה",
-      tree: "עץ",
     },
     controls: {
       newGame: "משחק חדש",
       newBoard: "לוח חדש",
-      save: "שמירה",
-      saved: "נשמר",
-    },
-    book: {
-      title: "המשכים מהספר",
-      empty: "אין המשכים מוכרים מכאן.",
     },
   },
 };
