@@ -3,7 +3,7 @@ import { act, fireEvent, screen, within } from "@testing-library/react";
 import { Chess } from "chess.js";
 
 import i18n from "../../i18n";
-import { boardOptions, FakeEngine } from "../dev/devTestHarness";
+import { boardOptions, FakeEngine } from "../board/boardTestHarness";
 import { REQUIRED_MOVE_ARROW_COLOR } from "../tools/analysis/nextMoveArrows";
 import { BACKTRACK_DELAY_MS } from "./RepertoirePlayer";
 import {
@@ -22,14 +22,14 @@ import {
   is the first move it may choose.
 */
 vi.mock("react-chessboard", async () => {
-  const { reactChessboardMock } = await import("../dev/devTestHarness");
+  const { reactChessboardMock } = await import("../board/boardTestHarness");
   return reactChessboardMock();
 });
 vi.mock("../../lib/engine", async () => ({
-  default: (await import("../dev/devTestHarness")).FakeEngine,
+  default: (await import("../board/boardTestHarness")).FakeEngine,
 }));
 vi.mock("../../lib/openings", async (importOriginal) => {
-  const { openingsMock } = await import("../dev/devTestHarness");
+  const { openingsMock } = await import("../board/boardTestHarness");
   return openingsMock(
     importOriginal as () => Promise<typeof import("../../lib/openings")>,
   );

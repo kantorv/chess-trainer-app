@@ -6,7 +6,7 @@ import i18n from "../../i18n";
 import { isMultiGameRepertoire, repertoireTreeOf } from "../../lib/savedRepertoires";
 import { findSavedRepertoire, savedRepertoiresSnapshot } from "../../lib/savedRepertoireStore";
 import { repertoireFoldersSnapshot } from "../../lib/savedRepertoireFolderStore";
-import { boardOptions, FakeEngine } from "../dev/devTestHarness";
+import { boardOptions, FakeEngine } from "../board/boardTestHarness";
 import {
   CARO,
   CARO_TWO_GAMES,
@@ -18,18 +18,18 @@ import {
 /*
   The board screen, with the **real** panel — `RepertoirePropagation.test.tsx`
   is the other half, with the panel replaced by a sentinel. The stand-ins are
-  the Development section's own (`views/dev/devTestHarness.tsx`): the section's
+  the Development section's own (`views/board/boardTestHarness.tsx`): the section's
   board is composed from the same core, so it is stubbed the same way.
 */
 vi.mock("react-chessboard", async () => {
-  const { reactChessboardMock } = await import("../dev/devTestHarness");
+  const { reactChessboardMock } = await import("../board/boardTestHarness");
   return reactChessboardMock();
 });
 vi.mock("../../lib/engine", async () => ({
-  default: (await import("../dev/devTestHarness")).FakeEngine,
+  default: (await import("../board/boardTestHarness")).FakeEngine,
 }));
 vi.mock("../../lib/openings", async (importOriginal) => {
-  const { openingsMock } = await import("../dev/devTestHarness");
+  const { openingsMock } = await import("../board/boardTestHarness");
   return openingsMock(
     importOriginal as () => Promise<typeof import("../../lib/openings")>,
   );

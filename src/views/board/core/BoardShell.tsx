@@ -51,7 +51,7 @@ import type { BoardCore } from "./useBoardCore";
  * board is and another is not.
  */
 
-export type BoardShellProps = {
+type BoardShellProps = {
   /**
    * `options.id`, and the root of the board square's test ids. Unique on the
    * page: two boards sharing an id conflict (`chessboard.md` §2).

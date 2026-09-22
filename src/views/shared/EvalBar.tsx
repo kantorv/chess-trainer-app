@@ -28,7 +28,7 @@ import {
  */
 
 /** Width of the strip, and the gap between it and the board, in pixels. */
-export const EVAL_BAR_WIDTH_PX = 18;
+const EVAL_BAR_WIDTH_PX = 18;
 export const EVAL_BAR_GAP_PX = 8;
 /** What the strip and the gap take out of the board's side, together. */
 export const EVAL_BAR_TOTAL_PX = EVAL_BAR_WIDTH_PX + EVAL_BAR_GAP_PX;

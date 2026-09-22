@@ -48,10 +48,10 @@ import {
   saveRepertoire,
   type SavedRepertoireProblem,
 } from "../../lib/savedRepertoireStore";
-import BoardShell from "../dev/core/BoardShell";
-import { useBoardCore } from "../dev/core/useBoardCore";
-import { useEngineModule } from "../dev/core/useEngineModule";
-import { useTrainerModule, type TrainerStatus } from "../dev/core/useTrainerModule";
+import BoardShell from "../board/core/BoardShell";
+import { useBoardCore } from "../board/core/useBoardCore";
+import { useEngineModule } from "../board/core/useEngineModule";
+import { useTrainerModule, type TrainerStatus } from "../board/core/useTrainerModule";
 import CurrentOpening from "../shared/CurrentOpening";
 import AnalysisSettingsPanel from "../tools/analysis/AnalysisSettings";
 import { useVariationsExplorer } from "../explorer/useVariationsExplorer";

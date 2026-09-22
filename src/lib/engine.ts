@@ -436,11 +436,6 @@ export default class Engine {
     this.flush();
   }
 
-  /** Depth-only convenience wrapper around {@link search}. No current caller. */
-  evaluatePosition(fen: string, depth = 12) {
-    this.search(fen, { depth });
-  }
-
   stop() {
     this.stockfish.postMessage('stop'); // Run when searching takes too long time and stockfish will return you the bestmove of the deep it has reached
   }

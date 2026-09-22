@@ -118,7 +118,7 @@ export const hasComments = (node: VariationNode): boolean =>
  * file wrapped at different places in different chapters — the Alapin
  * course carries ~145 such pairs — and reads identically once reflowed.
  */
-export const commentKey = (text: string): string => text.split(/\s+/).join(" ").trim();
+const commentKey = (text: string): string => text.split(/\s+/).join(" ").trim();
 
 /** Whether `list` already holds `text`, whitespace aside. */
 export const holdsComment = (list: readonly string[], text: string): boolean => {
@@ -699,8 +699,8 @@ export const treeFromGame = (game: Game): GameTree => {
 /**
  * Flatten the tree's mainline back into a linear {@link Game}.
  *
- * The bridge the rest of the app reads a tree through: `MoveList`,
- * `useGameNavigation` and `gameNavigation.ts` all speak `Game`, and this is the
+ * The bridge the rest of the app reads a tree through: `MoveList` and
+ * `gameNavigation.ts` speak `Game`, and this is the
  * walk that lets them do it without knowing a tree exists.
  */
 export const mainlineGame = (tree: GameTree): Game => ({
@@ -830,7 +830,7 @@ export type PgnExportOptions = {
  * every comment, every NAG, or every side line (`children[0]` kept at every
  * level). Pure and id-preserving; the same tree back when nothing is dropped.
  */
-export const exportedTree = (tree: GameTree, options: PgnExportOptions): GameTree => {
+const exportedTree = (tree: GameTree, options: PgnExportOptions): GameTree => {
   const comments = options.comments !== false;
   const nags = options.nags !== false;
   const variations = options.variations !== false;

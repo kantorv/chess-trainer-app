@@ -16,14 +16,14 @@ import { CARO, CARO_TWO_GAMES, renderSection } from "./repertoireTestKit";
   stand-ins are needed too: the chessboard, the engine and the opening book.
 */
 vi.mock("react-chessboard", async () => {
-  const { reactChessboardMock } = await import("../dev/devTestHarness");
+  const { reactChessboardMock } = await import("../board/boardTestHarness");
   return reactChessboardMock();
 });
 vi.mock("../../lib/engine", async () => ({
-  default: (await import("../dev/devTestHarness")).FakeEngine,
+  default: (await import("../board/boardTestHarness")).FakeEngine,
 }));
 vi.mock("../../lib/openings", async (importOriginal) => {
-  const { openingsMock } = await import("../dev/devTestHarness");
+  const { openingsMock } = await import("../board/boardTestHarness");
   return openingsMock(
     importOriginal as () => Promise<typeof import("../../lib/openings")>,
   );

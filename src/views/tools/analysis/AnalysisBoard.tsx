@@ -37,7 +37,7 @@ import {
   loadSavedAnalyses,
   savedAnalysesSnapshot,
 } from "../../../lib/savedAnalysisStore";
-import BoardShell from "../../dev/core/BoardShell";
+import BoardShell from "../../board/core/BoardShell";
 import { useVariationsExplorer } from "../../explorer/useVariationsExplorer";
 import RepertoireChangesBar from "../../repertoires/RepertoireChangesBar";
 import CurrentOpening from "../../shared/CurrentOpening";

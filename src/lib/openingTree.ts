@@ -25,7 +25,7 @@ import type { CollectionRow } from "./libraryCollections";
  */
 
 /** What the games through a node ended in — PGN's three decisive-or-drawn results; `*` counts in none. */
-export type OpeningResults = { white: number; draw: number; black: number };
+type OpeningResults = { white: number; draw: number; black: number };
 
 export type OpeningTreeNode = {
   /** The move that reached this node; `""` at the root. */

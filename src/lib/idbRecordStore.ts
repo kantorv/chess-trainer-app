@@ -38,7 +38,7 @@ import { committed, done } from "./idb";
  */
 
 /** What went wrong with a write. */
-export type IdbRecordStoreProblem = "storage";
+type IdbRecordStoreProblem = "storage";
 
 /** One stored row: the row itself, and its place in the list. */
 type Stored = { id: string; seq: number; value: unknown };

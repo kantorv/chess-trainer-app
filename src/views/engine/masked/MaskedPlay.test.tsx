@@ -10,20 +10,20 @@ import { MASK_PRESETS } from "../../../lib/pieceMask";
 import { findPlayedGame, playedGamesSnapshot, savePlayedGame } from "../../../lib/playedGameStore";
 import { playedGameOf, type PlayedGameMask } from "../../../lib/playedGames";
 import AppThemeWithLang from "../../../theme/AppThemeWithLang";
-import { boardOptions, FakeEngine } from "../../dev/devTestHarness";
+import { boardOptions, FakeEngine } from "../../board/boardTestHarness";
 import { RightPanelOutlet, RightPanelProvider } from "../../main/rightPanel";
 
 vi.mock("../../../lib/engine", async () => ({
-  default: (await import("../../dev/devTestHarness")).FakeEngine,
+  default: (await import("../../board/boardTestHarness")).FakeEngine,
 }));
 
 vi.mock("react-chessboard", async () => {
-  const { reactChessboardMock } = await import("../../dev/devTestHarness");
+  const { reactChessboardMock } = await import("../../board/boardTestHarness");
   return reactChessboardMock();
 });
 
 vi.mock("../../../lib/openings", async (importOriginal) => {
-  const { openingsMock } = await import("../../dev/devTestHarness");
+  const { openingsMock } = await import("../../board/boardTestHarness");
   return openingsMock(
     importOriginal as () => Promise<typeof import("../../../lib/openings")>,
   );
@@ -37,8 +37,8 @@ import PlayWithEngine from "../play/PlayWithEngine";
   asserted here is the costume and only the costume — where it is drawn,
   where it is written, where it is stored — because everything underneath is
   Play with Engine's own, tested in `PlayWithEngine.test.tsx`, and the shared
-  square and panel with the other v2 boards (`devBoards.test.tsx`,
-  `devPanelPropagation.test.tsx`). The rules: `.claude/rules/masked-pieces.md`.
+  square and panel with the other v2 boards (`boards.test.tsx`,
+  `panelPropagation.test.tsx`). The rules: `.claude/rules/masked-pieces.md`.
 */
 
 const AFTER_E4 = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1";

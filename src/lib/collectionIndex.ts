@@ -71,7 +71,11 @@ export const LINE_PLIES = 30;
 /** The opening a mainline (its positions, in order) ended in, or `undefined`. */
 export type OpeningLookup = (fens: readonly string[]) => { eco: string; name: string } | undefined;
 
-/** A lookup over a book — `openingOfLine` with the position fallback built once. */
+/**
+ * A lookup over a book — `openingOfLine` with the position fallback built once.
+ * Exported for `scripts/wirepgn.js`, which imports it dynamically (so knip
+ * reports it as unused).
+ */
 export const openingLookupOf = (book: OpeningBook): OpeningLookup => {
   const positions = getPositionBook(book);
   return (fens) => openingOfLine(book, positions, fens);
@@ -204,8 +208,8 @@ export const textHash = (text: string): string => {
  * file from before it reads as games with no line.
  * ------------------------------------------------------------------ */
 
-export const COLLECTION_INDEX_FORMAT = "chessapp.collectionIndex";
-export const COLLECTION_INDEX_VERSION = 1;
+const COLLECTION_INDEX_FORMAT = "chessapp.collectionIndex";
+const COLLECTION_INDEX_VERSION = 1;
 
 const TEXT_FIELDS = ["white", "black", "result", "date", "round", "event", "eco", "opening"] as const;
 const NUMBER_FIELDS = ["whiteElo", "blackElo", "moves"] as const;

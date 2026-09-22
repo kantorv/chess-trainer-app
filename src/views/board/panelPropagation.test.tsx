@@ -23,7 +23,7 @@ import { RightPanelOutlet, RightPanelProvider } from "../main/rightPanel";
   cannot catch by reading: a screen that renders `<MyOwnPanel>` looks perfectly
   reasonable in isolation.
 
-  `devBoards.test.tsx` is the other half — it renders the real panel and asserts
+  `boards.test.tsx` is the other half — it renders the real panel and asserts
   what is inside it.
 */
 
@@ -46,16 +46,16 @@ vi.mock("./core/BoardPanel", () => ({
 }));
 
 vi.mock("../../lib/engine", async () => ({
-  default: (await import("./devTestHarness")).FakeEngine,
+  default: (await import("./boardTestHarness")).FakeEngine,
 }));
 
 vi.mock("react-chessboard", async () => {
-  const { reactChessboardMock } = await import("./devTestHarness");
+  const { reactChessboardMock } = await import("./boardTestHarness");
   return reactChessboardMock();
 });
 
 vi.mock("../../lib/openings", async (importOriginal) => {
-  const { openingsMock } = await import("./devTestHarness");
+  const { openingsMock } = await import("./boardTestHarness");
   return openingsMock(
     importOriginal as () => Promise<typeof import("../../lib/openings")>,
   );

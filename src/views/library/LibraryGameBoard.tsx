@@ -32,7 +32,7 @@ import { slugify } from "../../lib/pgnText";
 import { atParamOf, nodeAtParam, REPERTOIRE_AT_PARAM } from "../../lib/repertoireLink";
 import { newSavedAnalysisId, savedAnalysisOf } from "../../lib/savedAnalyses";
 import { saveAnalysis } from "../../lib/savedAnalysisStore";
-import BoardShell from "../dev/core/BoardShell";
+import BoardShell from "../board/core/BoardShell";
 import { useVariationsExplorer } from "../explorer/useVariationsExplorer";
 import RepertoireChangesBar from "../repertoires/RepertoireChangesBar";
 import CurrentOpening from "../shared/CurrentOpening";
@@ -79,7 +79,7 @@ import { useAnalysisSession } from "../tools/analysis/useAnalysisSession";
 
 const KEEP_MOUNTED = ["moves", "map"] as const;
 
-export type LibraryGameBoardProps = {
+type LibraryGameBoardProps = {
   collection: LibraryCollection;
   /** 1-based: the game's place in the collection. */
   number: number;

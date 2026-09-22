@@ -1,5 +1,5 @@
 //import * as Sentry from "@sentry/react";
-import { createBrowserRouter, Navigate, RouterProvider, useLocation } from "react-router";
+import { createBrowserRouter, RouterProvider } from "react-router";
 
 import { DefaultLayout } from './views/main/Layout';
 import { default as HomeScreen  } from './views/home/Main'
@@ -21,28 +21,6 @@ import { default as RepertoireSettingsScreen  } from './views/repertoires/Repert
 import { default as RepertoireGameScreen  } from './views/repertoires/RepertoireGameMain'
 
 
-/**
- * Back-compat for the pre-CTA-38 `/pgn/*` URLs. The Library that lived there
- * was replaced in CTA-75 and none of its paths mean anything to the new one,
- * so an old link lands on the Library's root. `replace` so it does not leave
- * the dead URL in history. (A pre-CTA-75 `/library/<folder>/<id>` link reaches
- * the new routes and gets their miss, which links back to the root.)
- */
-export function LegacyPgnRedirect() {
-  return <Navigate to="/library" replace />;
-}
-
-/**
- * Back-compat for the pre-CTA-39 `/tools/openings` URL. The Openings screen now
- * lives at `/openings` (a top-level folder of its own), so a bookmarked or
- * shared `/tools/openings` link (with its query string, e.g. `?fen=`) redirects
- * there. `replace` so it does not leave the dead URL in history.
- */
-export function ToolsOpeningsRedirect() {
-  const location = useLocation();
-  return <Navigate to={`/openings${location.search}${location.hash}`} replace />;
-}
-
 const routes = createBrowserRouter(
 
   [
@@ -61,15 +39,14 @@ const routes = createBrowserRouter(
           path: "/engine/play",
           element: <PlayWithEngineScreen />
         },
-        // Play with Engine v2's games (CTA-74, `lib/playedGameStore.ts`): the
-        // flat, newest-first list.
+        // The Lobby: the games against the engine (`lib/playedGameStore.ts`),
+        // flat and newest first, and the new-game form.
         {
           path: "/engine/games",
           element: <PlayedGamesScreen />
         },
-        // Masked Pieces (CTA-79): Play with Engine's screen in a costume; its
-        // games are kept with the engine games above. The pre-CTA-79
-        // `/masked/play` route is gone, with no redirect.
+        // Masked Pieces: Play with Engine's screen in a costume; its games are
+        // kept with the engine games above.
         {
           path: "/engine/masked",
           element: <MaskedPlayScreen />
@@ -78,10 +55,8 @@ const routes = createBrowserRouter(
           path: "/tools/analysis",
           element: <AnalysisBoardScreen />
         },
-        // The reader's own analysis boards, kept in IndexedDB since CTA-77
-        // (`lib/savedAnalysisStore.ts`). The Saved games screen's counterpart,
-        // and a screen of its own for the same reason: these
-        // are this app's own output, so there is no catalog to nest.
+        // The reader's own analysis boards, kept in IndexedDB
+        // (`lib/savedAnalysisStore.ts`), filed into nested folders.
         {
           path: "/tools/analysis/saved",
           element: <SavedAnalysesScreen />
@@ -125,11 +100,6 @@ const routes = createBrowserRouter(
           path: "/repertoires/:id/games/:game",
           element: <RepertoireGameScreen />
         },
-        // Pre-CTA-39 the Openings screen lived under `/tools`. Old links redirect.
-        {
-          path: "/tools/openings",
-          element: <ToolsOpeningsRedirect />
-        },
         // The Library (CTA-75): the collections, the screen one is added on, a
         // collection's table and a game's analysis board. A `.pgn` dropped into
         // `src/data/library/` is a collection with no edit here. `new` is a
@@ -149,11 +119,6 @@ const routes = createBrowserRouter(
         {
           path: "/library/:collectionId/:game",
           element: <LibraryGameScreen />
-        },
-        // Before CTA-38 the old Library lived at `/pgn/*`. Old links go to the Library.
-        {
-          path: "/pgn/*",
-          element: <LegacyPgnRedirect />
         },
 
       ]

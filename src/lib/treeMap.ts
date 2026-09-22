@@ -219,7 +219,7 @@ export type MapView = { x: number; y: number; k: number };
 export const MAP_INITIAL_K = 2.5;
 
 /** How far a map viewport zooms, out and in. */
-export const MAP_VIEW_MIN_K = 0.05;
+const MAP_VIEW_MIN_K = 0.05;
 export const MAP_VIEW_MAX_K = 8;
 
 const clampK = (k: number) => Math.min(MAP_VIEW_MAX_K, Math.max(MAP_VIEW_MIN_K, k));
@@ -261,7 +261,7 @@ export const centerView = (px: number, py: number, k: number, vw: number, vh: nu
 export const MAP_LABEL_FONT = 4.5;
 export const MAP_LABEL_MIN_K = 1.5;
 /** The most labels drawn at once — a guard for a wide view of a huge tree. */
-export const MAP_LABEL_LIMIT = 2000;
+const MAP_LABEL_LIMIT = 2000;
 
 export type MapLabel = { id: string; san: string; px: number; py: number };
 

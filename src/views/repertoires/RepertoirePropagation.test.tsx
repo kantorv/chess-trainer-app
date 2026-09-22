@@ -7,15 +7,15 @@ import { FAKE_TIMERS, renderSection, storeRepertoire } from "./repertoireTestKit
 /*
   **The propagation assertion, for the first shipped screen on the v2 core** —
   CTA-61's acceptance criterion 4, asserted the way CTA-60's
-  `views/dev/devPanelPropagation.test.tsx` asserts it for the five dev boards.
+  `views/board/panelPropagation.test.tsx` asserts it for the five dev boards.
 
   The two shared components are **replaced by sentinels**: the panel skeleton
-  (`views/dev/core/BoardPanel`) and the board square (`views/shared/EngineBoardSquare`).
+  (`views/board/core/BoardPanel`) and the board square (`views/shared/EngineBoardSquare`).
   If this screen grew a panel or a square of its own — a copy that looks
   perfectly reasonable in review — its sentinel would be missing here. What
   `RepertoireBoard.test.tsx` asserts about their insides is the other half.
 */
-vi.mock("../dev/core/BoardPanel", () => ({
+vi.mock("../board/core/BoardPanel", () => ({
   default: ({ testId, tabs }: { testId: string; tabs: readonly { id: string }[] }) => (
     <div data-testid="the-one-board-panel" data-panel-id={testId}>
       <span data-testid="panel-tab-ids">{tabs.map((tab) => tab.id).join(",")}</span>
@@ -30,10 +30,10 @@ vi.mock("../shared/EngineBoardSquare", () => ({
 }));
 
 vi.mock("../../lib/engine", async () => ({
-  default: (await import("../dev/devTestHarness")).FakeEngine,
+  default: (await import("../board/boardTestHarness")).FakeEngine,
 }));
 vi.mock("../../lib/openings", async (importOriginal) => {
-  const { openingsMock } = await import("../dev/devTestHarness");
+  const { openingsMock } = await import("../board/boardTestHarness");
   return openingsMock(
     importOriginal as () => Promise<typeof import("../../lib/openings")>,
   );

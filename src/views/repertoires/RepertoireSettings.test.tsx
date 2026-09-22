@@ -9,7 +9,7 @@ import {
   findSavedRepertoire,
   savedRepertoiresSnapshot,
 } from "../../lib/savedRepertoireStore";
-import { boardOptions } from "../dev/devTestHarness";
+import { boardOptions } from "../board/boardTestHarness";
 import { renderSection, storeRepertoire } from "./repertoireTestKit";
 
 /*
@@ -18,14 +18,14 @@ import { renderSection, storeRepertoire } from "./repertoireTestKit";
   what it saves: the list's title and description, the board's orientation.
 */
 vi.mock("react-chessboard", async () => {
-  const { reactChessboardMock } = await import("../dev/devTestHarness");
+  const { reactChessboardMock } = await import("../board/boardTestHarness");
   return reactChessboardMock();
 });
 vi.mock("../../lib/engine", async () => ({
-  default: (await import("../dev/devTestHarness")).FakeEngine,
+  default: (await import("../board/boardTestHarness")).FakeEngine,
 }));
 vi.mock("../../lib/openings", async (importOriginal) => {
-  const { openingsMock } = await import("../dev/devTestHarness");
+  const { openingsMock } = await import("../board/boardTestHarness");
   return openingsMock(
     importOriginal as () => Promise<typeof import("../../lib/openings")>,
   );

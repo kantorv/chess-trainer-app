@@ -41,7 +41,7 @@ import OpeningFilterBoard from "./OpeningFilterBoard";
  * day it could have been played is (`dateBounds`).
  */
 
-export type CollectionFiltersProps = {
+type CollectionFiltersProps = {
   facets: CollectionFacets;
   values: CollectionFilterValues;
   onChange: (patch: Partial<CollectionFilterValues>) => void;

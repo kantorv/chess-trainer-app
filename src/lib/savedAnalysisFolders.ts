@@ -1,11 +1,9 @@
 import type { SavedAnalysis } from "./savedAnalyses";
 import {
-  flattenGameFolders,
   gameFolderChildren,
   gameFolderFrom,
   gameFolderPath,
   gameFolderSubtree,
-  type FlattenedGameFolder,
   type GameFolder,
 } from "./savedGameFolders";
 
@@ -26,13 +24,11 @@ import {
 
 /** One folder in the reader's saved-analysis tree. Plain JSON. */
 export type AnalysisFolder = GameFolder;
-export type FlattenedAnalysisFolder = FlattenedGameFolder;
 
 export const analysisFolderFrom = gameFolderFrom;
 export const analysisFolderChildren = gameFolderChildren;
 export const analysisFolderPath = gameFolderPath;
 export const analysisFolderSubtree = gameFolderSubtree;
-export const flattenAnalysisFolders = flattenGameFolders;
 
 /**
  * The analyses behind a click — everything under the folder, directly and

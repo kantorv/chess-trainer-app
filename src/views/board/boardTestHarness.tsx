@@ -72,10 +72,6 @@ export class FakeEngine {
     this.searches.push(fen);
   }
 
-  evaluatePosition(fen: string) {
-    this.search(fen);
-  }
-
   stop() {
     this.stops += 1;
   }

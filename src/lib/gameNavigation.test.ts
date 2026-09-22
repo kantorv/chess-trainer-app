@@ -1,16 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_POSITION } from "chess.js";
 import { parsePgnGames } from "./pgn";
 import type { Game } from "./gameModel";
 import {
   LAST_MOVE_HIGHLIGHT,
-  clampPly,
-  fenAtPly,
   initialPlyOf,
-  lastPlyOf,
+  lastMoveSquareStyles,
   moveRowsOf,
   parseMoveParam,
-  squareStylesAtPly,
 } from "./gameNavigation";
 
 /** `1. e4 e5 2. Nf3 Nc6 3. Bb5` — five plies, so the last pair is half empty. */
@@ -38,65 +34,18 @@ const blackToMove: Game = {
 
 const emptyGame: Game = { headers: {}, moves: [] };
 
-describe("clampPly", () => {
-  it("pins a ply into the range the game actually has", () => {
-    expect(lastPlyOf(game)).toBe(5);
-    expect(clampPly(game, -4)).toBe(0);
-    expect(clampPly(game, 0)).toBe(0);
-    expect(clampPly(game, 3)).toBe(3);
-    expect(clampPly(game, 5)).toBe(5);
-    expect(clampPly(game, 99)).toBe(5);
-  });
-
-  it("leaves a moveless game with ply 0 as its only selection", () => {
-    expect(clampPly(emptyGame, 7)).toBe(0);
-    expect(clampPly(emptyGame, -7)).toBe(0);
-  });
-});
-
-describe("fenAtPly", () => {
-  it("shows the starting position at ply 0", () => {
-    expect(fenAtPly(game, 0)).toBe(DEFAULT_POSITION);
-    // A FEN-seeded game starts from its own tag, not from the opening position.
-    expect(fenAtPly(blackToMove, 0)).toBe(blackToMove.headers.FEN);
-  });
-
-  it("shows the position each move already recorded", () => {
-    expect(fenAtPly(game, 1)).toBe(game.moves[0].fen);
-    expect(fenAtPly(game, 5)).toBe(game.moves[4].fen);
-  });
-
-  it("clamps rather than reading off the end", () => {
-    expect(fenAtPly(game, 99)).toBe(game.moves[4].fen);
-    expect(fenAtPly(game, -1)).toBe(DEFAULT_POSITION);
-  });
-});
-
-describe("squareStylesAtPly", () => {
-  it("marks nothing at the starting position", () => {
-    expect(squareStylesAtPly(game, 0)).toEqual({});
-  });
-
-  it("marks exactly the squares of the move that produced the current position", () => {
-    expect(squareStylesAtPly(game, 1)).toEqual({
+describe("lastMoveSquareStyles", () => {
+  it("marks exactly the move's origin and destination squares", () => {
+    expect(lastMoveSquareStyles("e2", "e4")).toEqual({
       e2: { background: LAST_MOVE_HIGHLIGHT },
       e4: { background: LAST_MOVE_HIGHLIGHT },
     });
-    expect(squareStylesAtPly(game, 3)).toEqual({
-      g1: { background: LAST_MOVE_HIGHLIGHT },
-      f3: { background: LAST_MOVE_HIGHLIGHT },
-    });
   });
 
-  it("returns the whole set for the ply, never an accumulation", () => {
-    // Walking the game must never grow the map: the board does not clear
-    // external square styles itself, so each ply hands it a complete
-    // replacement.
-    for (let ply = 1; ply <= lastPlyOf(game); ply += 1) {
-      expect(Object.keys(squareStylesAtPly(game, ply))).toHaveLength(2);
-    }
-    // And a fresh map each call, so a caller cannot mutate the next one.
-    expect(squareStylesAtPly(game, 2)).not.toBe(squareStylesAtPly(game, 2));
+  it("returns a fresh map each call, so a caller cannot mutate the next one", () => {
+    // The board does not clear external square styles itself, so each position
+    // hands it a complete replacement.
+    expect(lastMoveSquareStyles("g1", "f3")).not.toBe(lastMoveSquareStyles("g1", "f3"));
   });
 });
 
@@ -148,7 +97,7 @@ describe("parseMoveParam", () => {
     expect(parseMoveParam("e4")).toBeUndefined();
   });
 
-  it("does not bound the value — too large is clampPly's call, not this one's", () => {
+  it("does not bound the value — too large is the caller's to clamp", () => {
     expect(parseMoveParam("99999")).toBe(99999);
   });
 });

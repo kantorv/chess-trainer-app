@@ -22,7 +22,7 @@
  */
 
 /** One PGN file out of several single-game records, in the order given. */
-export const pgnFileOf = (pgns: readonly string[]): string =>
+const pgnFileOf = (pgns: readonly string[]): string =>
   pgns
     .map((pgn) => pgn.trim())
     .filter((pgn) => pgn !== "")
@@ -46,7 +46,7 @@ const isoDate = (when: Date): string =>
  * a second download on the same day lands as `… (1).pgn` — and a date is the
  * one thing that makes a folder of these sortable.
  */
-export const pgnFileName = (stem: string, now: Date = new Date()): string =>
+const pgnFileName = (stem: string, now: Date = new Date()): string =>
   `${stem}-${isoDate(now)}.pgn`;
 
 /**
@@ -62,7 +62,7 @@ export const pgnFileName = (stem: string, now: Date = new Date()): string =>
  * Non-throwing, like everything else that touches the platform here: a browser
  * that refuses the download reports it rather than taking the screen down.
  */
-export const downloadTextFile = (
+const downloadTextFile = (
   fileName: string,
   text: string,
   type = "application/x-chess-pgn",

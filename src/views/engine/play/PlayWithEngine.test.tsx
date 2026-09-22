@@ -13,20 +13,20 @@ import {
 } from "../../../lib/playedGameStore";
 import { playedGameOf } from "../../../lib/playedGames";
 import AppThemeWithLang from "../../../theme/AppThemeWithLang";
-import { boardOptions, FakeEngine } from "../../dev/devTestHarness";
+import { boardOptions, FakeEngine } from "../../board/boardTestHarness";
 import { RightPanelOutlet, RightPanelProvider } from "../../main/rightPanel";
 
 vi.mock("../../../lib/engine", async () => ({
-  default: (await import("../../dev/devTestHarness")).FakeEngine,
+  default: (await import("../../board/boardTestHarness")).FakeEngine,
 }));
 
 vi.mock("react-chessboard", async () => {
-  const { reactChessboardMock } = await import("../../dev/devTestHarness");
+  const { reactChessboardMock } = await import("../../board/boardTestHarness");
   return reactChessboardMock();
 });
 
 vi.mock("../../../lib/openings", async (importOriginal) => {
-  const { openingsMock } = await import("../../dev/devTestHarness");
+  const { openingsMock } = await import("../../board/boardTestHarness");
   return openingsMock(
     importOriginal as () => Promise<typeof import("../../../lib/openings")>,
   );
@@ -40,8 +40,8 @@ import { arrivalOf } from "./usePlayGame";
   the side not at the bottom, pausing on a step back or a change of side, side
   lines from an earlier position, the autosave to the played-games store, and
   the `?fen=` / `?saved=` arrivals (the old store's ids too). The shared panel
-  and square are asserted with the other v2 boards (`devBoards.test.tsx`,
-  `devPanelPropagation.test.tsx`).
+  and square are asserted with the other v2 boards (`boards.test.tsx`,
+  `panelPropagation.test.tsx`).
 */
 
 const START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";

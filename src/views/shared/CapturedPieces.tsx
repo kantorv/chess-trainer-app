@@ -30,10 +30,10 @@ import type { CapturedPieceLetter } from "../../lib/capturedPieces";
  */
 
 /** Height of one strip, and the gap between it and the board, in pixels. */
-export const CAPTURED_STRIP_HEIGHT_PX = 20;
+const CAPTURED_STRIP_HEIGHT_PX = 20;
 export const CAPTURED_STRIP_GAP_PX = 2;
 /** What one strip and its gap take out of the board's side, together. */
-export const CAPTURED_STRIP_TOTAL_PX =
+const CAPTURED_STRIP_TOTAL_PX =
   CAPTURED_STRIP_HEIGHT_PX + CAPTURED_STRIP_GAP_PX;
 /** What the two strips take out of the board's side, together. */
 export const CAPTURED_STRIPS_TOTAL_PX = 2 * CAPTURED_STRIP_TOTAL_PX;

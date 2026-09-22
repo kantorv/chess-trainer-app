@@ -8,16 +8,16 @@ import { analysisHandOffOf } from "../../lib/analysisHandOff";
 import { mainline, treeToPgn } from "../../lib/gameTree";
 import { HOVERED_MOVE_ARROW_COLOR, KNOWN_MOVE_ARROW_COLOR } from "../../lib/openings";
 import AppThemeWithLang from "../../theme/AppThemeWithLang";
-import { boardOptions, FakeEngine } from "../dev/devTestHarness";
+import { boardOptions, FakeEngine } from "../board/boardTestHarness";
 import { RightPanelOutlet, RightPanelProvider } from "../main/rightPanel";
 import { NEXT_MOVE_ARROW_COLOR } from "../tools/analysis/nextMoveArrows";
 
 vi.mock("../../lib/engine", async () => ({
-  default: (await import("../dev/devTestHarness")).FakeEngine,
+  default: (await import("../board/boardTestHarness")).FakeEngine,
 }));
 
 vi.mock("react-chessboard", async () => {
-  const { reactChessboardMock } = await import("../dev/devTestHarness");
+  const { reactChessboardMock } = await import("../board/boardTestHarness");
   return reactChessboardMock();
 });
 
@@ -57,8 +57,8 @@ import OpeningsBoard from "./OpeningsBoard";
 
 /*
   The Openings explorer (CTA-78): a v2 board — its shared square and panel
-  are asserted with the other v2 boards (`devBoards.test.tsx`,
-  `devPanelPropagation.test.tsx`) — with the book beside it, nothing saved,
+  are asserted with the other v2 boards (`boards.test.tsx`,
+  `panelPropagation.test.tsx`) — with the book beside it, nothing saved,
   and the whole tree handed on to the Analysis Board.
 */
 

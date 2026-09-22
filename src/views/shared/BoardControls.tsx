@@ -13,7 +13,7 @@ import { useTranslation } from "react-i18next";
  * the end, and flip the board.
  *
  * Presentational — every button is a call back out, so the ply state stays in
- * `useGameNavigation` and this renders against a fixture in tests. It sits at
+ * the board core (`useTreeNavigation`) and this renders against a fixture in tests. It sits at
  * the foot of the panel rather than under the board so that nothing but the
  * board itself competes for the square (see `Layout.tsx`).
  *

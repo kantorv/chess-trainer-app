@@ -15,20 +15,20 @@ import {
   savedAnalysesSnapshot,
 } from "../../../lib/savedAnalysisStore";
 import AppThemeWithLang from "../../../theme/AppThemeWithLang";
-import { boardOptions, FakeEngine } from "../../dev/devTestHarness";
+import { boardOptions, FakeEngine } from "../../board/boardTestHarness";
 import { RightPanelOutlet, RightPanelProvider } from "../../main/rightPanel";
 
 vi.mock("../../../lib/engine", async () => ({
-  default: (await import("../../dev/devTestHarness")).FakeEngine,
+  default: (await import("../../board/boardTestHarness")).FakeEngine,
 }));
 
 vi.mock("react-chessboard", async () => {
-  const { reactChessboardMock } = await import("../../dev/devTestHarness");
+  const { reactChessboardMock } = await import("../../board/boardTestHarness");
   return reactChessboardMock();
 });
 
 vi.mock("../../../lib/openings", async (importOriginal) => {
-  const { openingsMock } = await import("../../dev/devTestHarness");
+  const { openingsMock } = await import("../../board/boardTestHarness");
   return openingsMock(
     importOriginal as () => Promise<typeof import("../../../lib/openings")>,
   );
@@ -41,7 +41,7 @@ import AnalysisBoard from "./AnalysisBoard";
   board's dialog, and Update / Save as copy / Discard over a record), the Load
   tab's one game, merge and split, the Export tab's options and the `?at=`
   link. The shared panel and square are asserted with the dev boards'
-  (`devBoards.test.tsx`, `devPanelPropagation.test.tsx`), which include this
+  (`boards.test.tsx`, `panelPropagation.test.tsx`), which include this
   screen.
 */
 

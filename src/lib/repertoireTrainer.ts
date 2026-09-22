@@ -6,7 +6,7 @@ import { pickByChance, playChances } from "./playChance";
  * **Playing a repertoire against a trainer** (CTA-63) — the trainer's policy
  * and the session model, as pure functions over {@link GameTree}s. No React,
  * no `chess.js`: the board core plays the move a policy picks
- * (`views/dev/core/useTrainerModule.ts`), and nothing here moves anything.
+ * (`views/board/core/useTrainerModule.ts`), and nothing here moves anything.
  *
  * ## The trainer answers from the repertoire, and only from it
  *

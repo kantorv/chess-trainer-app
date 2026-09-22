@@ -77,7 +77,7 @@ import type { PositionEditorState } from "./usePositionEditor";
 const FORM_TAB_IDS = ["position", "fen", "pgn"] as const;
 type FormTabId = (typeof FORM_TAB_IDS)[number];
 
-export type PositionEditorProps = {
+type PositionEditorProps = {
   /** The state, from `usePositionEditor` — the host's. */
   editor: PositionEditorState;
   /**

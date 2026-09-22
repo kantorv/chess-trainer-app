@@ -15,34 +15,38 @@ import {
   type GameTree,
   type VariationNode,
 } from "../../../lib/gameTree";
-import { isTextEntry } from "../../shared/useGameNavigation";
+
+/**
+ * True for anything the reader is typing into. Arrow keys belong to the caret
+ * there, not to the move list, so the handler stays out of the way — the Load
+ * tab's paste box is the case that matters.
+ */
+const isTextEntry = (target: EventTarget | null): boolean => {
+  if (!(target instanceof HTMLElement)) return false;
+  if (target.isContentEditable) return true;
+  return ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName);
+};
 
 /**
  * Where the analysis board is standing in a {@link GameTree}: which node is
  * selected, the position and highlight that follow from it, the line it sits
  * on, and the keyboard stepping that walks it.
  *
- * ## Why this is not `useGameNavigation`
+ * ## Why the state is a node, not a ply
  *
- * That hook's state is a **ply** — an index into one move array — which is the
- * right answer for a game that cannot branch. Here the state has to be a **node
- * id**, because clicking a move inside a side line does not move along the
- * current line, it *changes which line is current*. A ply number cannot express
- * that: ply 3 of which line?
- *
- * So the id is the state and the ply is derived from it — the reverse of the
- * linear hook. What that buys, and what the shared board controls need, is that
- * everything ply-shaped still comes out: {@link TreeNavigation.ply} and
- * `lastPly` index into {@link TreeNavigation.line}, and `goToPly` walks it. The
- * controls and the arrow keys therefore behave exactly as they do on the other
- * two screens, while "the line" quietly follows the reader into a variation.
+ * Clicking a move inside a side line does not move along the current line, it
+ * *changes which line is current*. A ply number cannot express that: ply 3 of
+ * which line? So the id is the state and the ply is derived from it. What the
+ * shared board controls need still comes out: {@link TreeNavigation.ply} and
+ * `lastPly` index into {@link TreeNavigation.line}, and `goToPly` walks it,
+ * while "the line" quietly follows the reader into a variation.
  *
  * ## The keys
  *
  * ← / → step along the line; **Home / End** jump to its start and end; and
  * **↑ / ↓ cycle through the sibling moves** of the move on screen — the other
  * continuations from the same position, in `children` order, wrapping around
- * (CTA-69; they used to be a second Home / End). Nothing happens at the start
+ * (CTA-69). Nothing happens at the start
  * position or on a move with no alternatives. What it is for: with the
  * repertoire player's Autoplay on, the reader swaps the trainer's reply for
  * another of the file's, and moving from there sets the trainer going again
@@ -112,8 +116,7 @@ export const useTreeNavigation = (
   });
 
   /*
-    Resolved against the tree on read, the way `useGameNavigation` clamps its ply
-    on read and for the same reason: a load replaces the tree and the selection
+    Resolved against the tree on read: a load replaces the tree and the selection
     in one batch, and a selection checked against the tree still on screen would
     be judged against the wrong one. A node the current tree does not hold —
     anything left over from a tree that has been replaced — reads as the start
@@ -138,9 +141,9 @@ export const useTreeNavigation = (
 
   useEffect(() => {
     /*
-      Bound on `document` but tied to this hook's mount, exactly as the linear
-      hook's is — this screen is a route, so only one navigation hook is ever
-      mounted and there is no second listener to collide with.
+      Bound on `document` but tied to this hook's mount — every board is a
+      route, so only one navigation hook is ever mounted and there is no second
+      listener to collide with.
     */
     const onKeyDown = (event: KeyboardEvent) => {
       // Leave the browser's own shortcuts (Ctrl+Home, Alt+Left, …) alone.

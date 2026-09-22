@@ -91,7 +91,7 @@ const Token = styled("button")(({ theme }) => ({
   '&[data-extension="true"]': {
     color: (theme.vars ?? theme).palette.success.main,
   },
-  // `selectedTokenSx`.
+  // The selection's highlight.
   '&[aria-current="true"]': {
     backgroundColor: (theme.vars ?? theme).palette.primary.main,
     color: (theme.vars ?? theme).palette.primary.contrastText,
@@ -279,7 +279,7 @@ export const VariationBlock = memo(function VariationBlock({
  * nested component per move: a 300-move line is one flat run of tokens, not a
  * component 300 deep (which is also what kept React's own recursion shallow).
  */
-export const VariationLine = memo(function VariationLine({
+const VariationLine = memo(function VariationLine({
   nodes,
   startFen,
   forceNumber,

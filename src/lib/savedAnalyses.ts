@@ -112,7 +112,7 @@ export type SavedAnalysis = {
 export const SAVED_ANALYSES_PATH = "saved";
 
 /** The `Event` tag a saved analysis carries when it is not a game's. */
-export const SAVED_ANALYSIS_EVENT = "Analysis Board";
+const SAVED_ANALYSIS_EVENT = "Analysis Board";
 
 /**
  * The `White` / `Black` tag a saved analysis carries when it is not a game's.
@@ -152,7 +152,7 @@ const pgnDate = (when: Date): string =>
  * nothing renders it. The tree's *own* headers win over these, so an analysis
  * begun from a library game keeps that game's players and event.
  */
-export const savedAnalysisHeaders = (now: Date = new Date()): GameHeaders => ({
+const savedAnalysisHeaders = (now: Date = new Date()): GameHeaders => ({
   Event: SAVED_ANALYSIS_EVENT,
   Site: "Chess Trainer",
   Date: pgnDate(now),

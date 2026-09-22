@@ -2,10 +2,9 @@ import type { CSSProperties } from "react";
 import { gameTag, initialFenOf, type Game, type GameMove } from "./gameModel";
 
 /**
- * Walking a game: which position a ply shows, which squares mark it, and how its
- * moves pair up into lichess-style numbered rows. A game parsed out of a PGN
- * and one growing under the engine screen are the same shape here, so both
- * screens navigate through this one module.
+ * Reading a game's plies: the `?move=` / `StartPly` opening ply, the
+ * last-move highlight, and how its moves pair up into lichess-style numbered
+ * rows (the move list's cells, over a tree's mainline).
  *
  * Pure functions over the {@link Game} model — no React, no `chess.js`
  * instance. A ply is a *half*-move index: `0` is the starting position and `n`
@@ -24,13 +23,6 @@ export type MoveRow = {
   black: GameMove | null;
 };
 
-/** The last selectable ply — the position after the final move. */
-export const lastPlyOf = (game: Game): number => game.moves.length;
-
-/** A ply pinned into `[0, lastPly]`. Out-of-range input is a clamp, not a throw. */
-export const clampPly = (game: Game, ply: number): number =>
-  Math.min(Math.max(Math.trunc(ply), 0), lastPlyOf(game));
-
 /**
  * The `?move=` query parameter, read. It carries a ply — the same unit this
  * module speaks — so a study page's URL can name the move the reader is on and
@@ -39,8 +31,8 @@ export const clampPly = (game: Game, ply: number): number =>
  * The same "validate and ignore what does not pass" rule as `parseFen` and
  * `resolveGameReference`: an absent, non-numeric or negative value is
  * `undefined` (ply 0, as if the parameter had not been there), never a throw.
- * Too *large* a value is not rejected here — that depends on the game, so it is
- * `clampPly`'s job on read, exactly like a ply from any other source.
+ * Too *large* a value is not rejected here — that depends on the game, so the
+ * board clamps it on read (`useTreeNavigation`), like a ply from any other source.
  */
 export const parseMoveParam = (value: string | null): number | undefined => {
   if (value === null || !/^\d+$/.test(value)) return undefined;
@@ -64,23 +56,18 @@ export const parseMoveParam = (value: string | null): number | undefined => {
  */
 export const initialPlyOf = (game: Game): number => {
   const declared = parseMoveParam(gameTag(game.headers, "StartPly") ?? null);
-  return declared !== undefined && declared <= lastPlyOf(game) ? declared : 0;
-};
-
-/**
- * The position at a ply: the starting position at ply 0, otherwise the FEN the
- * move at that ply already recorded.
- */
-export const fenAtPly = (game: Game, ply: number): string => {
-  const at = clampPly(game, ply);
-  return at === 0 ? initialFenOf(game) : game.moves[at - 1].fen;
+  return declared !== undefined && declared <= game.moves.length ? declared : 0;
 };
 
 /**
  * The `squareStyles` over one move's origin and destination squares — the
- * lichess-style last-move highlight, a translucent fill on both. One place for
- * the shape: the linear hook and the tree hook each read a move's `from`/`to`
- * out of a different record, and two copies of the map would drift.
+ * lichess-style last-move highlight, a translucent fill on both.
+ *
+ * A fresh map every call, on purpose. Styles passed through
+ * `options.squareStyles` are external and the board never clears them itself
+ * (`.claude/rules/chessboard.md` §3.3) — the caller has to hand it the whole
+ * set for the position on screen, so this returns exactly that set rather
+ * than something to append to.
  */
 export const lastMoveSquareStyles = (
   from: string,
@@ -89,27 +76,6 @@ export const lastMoveSquareStyles = (
   [from]: { background: LAST_MOVE_HIGHLIGHT },
   [to]: { background: LAST_MOVE_HIGHLIGHT },
 });
-
-/**
- * The board square styles for a ply: the highlight over the origin and
- * destination squares of the move that led here, and nothing at ply 0.
- *
- * A fresh map every call, on purpose. Styles passed through
- * `options.squareStyles` are external and the board never clears them itself
- * (`.claude/rules/chessboard.md` §3.3) — the caller has to hand it the whole
- * set for the current ply, so this returns exactly that set rather than
- * something to append to.
- */
-export const squareStylesAtPly = (
-  game: Game,
-  ply: number,
-): Record<string, CSSProperties> => {
-  const at = clampPly(game, ply);
-  if (at === 0) return {};
-
-  const move = game.moves[at - 1];
-  return lastMoveSquareStyles(move.from, move.to);
-};
 
 /**
  * Where move numbering starts, read off a starting FEN. Almost always "White,
