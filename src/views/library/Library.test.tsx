@@ -202,6 +202,18 @@ describe("the Library's collections", () => {
     }
   });
 
+  it("deletes an uploaded collection from its row, asking first — a shipped one has no delete", async () => {
+    const mine = await upload();
+    mount("/library");
+    expect(screen.queryByTestId("library-collection-delete-morphy")).toBeNull();
+    fireEvent.click(await screen.findByTestId(`library-collection-delete-${mine.id}`));
+    expect(screen.getByTestId("library-delete-dialog")).toHaveTextContent("Delete Club games?");
+    fireEvent.click(screen.getByTestId("library-delete-confirm"));
+    await waitFor(() => expect(uploadedCollectionsSnapshot()).toEqual([]));
+    expect(where()).toBe("/library");
+    expect(screen.queryByTestId(`library-collection-${mine.id}`)).toBeNull();
+  });
+
   it("downloads a whole collection from its row, reading its games only then", async () => {
     vi.mocked(downloadPgn).mockClear();
     const mine = await upload();
@@ -229,7 +241,8 @@ describe("a collection's table", () => {
     expect(screen.getByTestId("library-table-note")).toHaveTextContent(
       i18n.t("library.table.shippedNote"),
     );
-    expect(screen.queryByTestId("library-table-delete")).toBeNull();
+    // A shipped collection's games are not deleted; a collection is deleted from /library.
+    expect(screen.queryByTestId("library-picks-delete")).toBeNull();
     // The whole collection downloads from its row on /library; here only the picks do.
     expect(screen.queryByTestId("library-table-download")).toBeNull();
     expect(screen.getByTestId("library-picks-download")).toBeInTheDocument();
@@ -280,13 +293,22 @@ describe("a collection's table", () => {
     expect(screen.queryByTestId("library-table-unreadable-1")).toBeNull();
   });
 
-  it("deletes an uploaded collection, asking first", async () => {
+  it("deletes the picked games of an uploaded collection, asking first", async () => {
     const mine = await upload();
     await mountTable(`/library/${mine.id}`);
-    fireEvent.click(screen.getByTestId("library-table-delete"));
-    fireEvent.click(screen.getByTestId("library-delete-confirm"));
-    await waitFor(() => expect(where()).toBe("/library"));
-    expect(uploadedCollectionsSnapshot()).toEqual([]);
+    expect(screen.getByTestId("library-picks-delete")).toBeDisabled();
+    for (const number of [1, 3]) {
+      fireEvent.click(within(screen.getByTestId(`library-picks-row-${number}`)).getByRole("checkbox"));
+    }
+    fireEvent.click(screen.getByTestId("library-picks-delete"));
+    expect(screen.getByTestId("library-picks-delete-dialog")).toHaveTextContent("Delete 2 games?");
+    fireEvent.click(screen.getByTestId("library-picks-delete-confirm"));
+
+    await waitFor(() => expect(rowNumbers()).toEqual(["1"]));
+    expect(peekUploadedGames(mine.id)).toEqual([GAMES[1]]);
+    expect(screen.getByTestId("library-table-count")).toHaveTextContent("1 game");
+    expect(screen.queryByTestId("library-picks-selected-count")).toBeNull();
+    expect(where()).toBe(`/library/${mine.id}`);
   });
 
   it("says so for a collection that is not there", async () => {
@@ -455,6 +477,20 @@ describe("the opening-moves filter", () => {
     expect(dropOn("b8", null as unknown as string)).toBe(false);
     expect(dropOn("b8", "c6")).toBe(false);
     expect(where()).toContain("line=e4%2Ce5%2CNf3");
+  });
+
+  it("sits under the player and side, with the other filters under it", async () => {
+    const rich = await keep("Rich", RICH);
+    await mountTable(`/library/${rich.id}`);
+    const board = screen.getByTestId("library-filter-moves");
+    const before = (testId: string) =>
+      screen.getByTestId(testId).compareDocumentPosition(board) & Node.DOCUMENT_POSITION_FOLLOWING;
+    const after = (testId: string) =>
+      screen.getByTestId(testId).compareDocumentPosition(board) & Node.DOCUMENT_POSITION_PRECEDING;
+    expect(before("library-filter-player")).toBeTruthy();
+    expect(before("library-filter-color")).toBeTruthy();
+    expect(after("library-filter-event")).toBeTruthy();
+    expect(after("library-table-result")).toBeTruthy();
   });
 
   it("draws the tree of the games the other filters leave, and Clear takes the line off with them", async () => {
@@ -708,6 +744,29 @@ describe("adding a collection", () => {
 });
 
 describe("a game on its analysis board", () => {
+  it("hands the game to the Analysis Board from its Export tab, at the position on screen", async () => {
+    const mine = await upload();
+    await mountGame(`/library/${mine.id}/1?at=e4`);
+    expect(screen.getByTestId("library-game-arrows")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("library-game-panel-tab-export"));
+    expect(screen.getByTestId("library-game-open-analysis")).toHaveAttribute(
+      "href",
+      `/tools/analysis?game=library%2F${mine.id}%2F1&at=e4`,
+    );
+  });
+
+  it("switches the next-move arrows from its Moves tab", async () => {
+    const mine = await upload();
+    await mountGame(`/library/${mine.id}/1`);
+    expect(boardOptions().arrows).toHaveLength(1);
+    fireEvent.click(screen.getByTestId("library-game-arrows"));
+    expect(boardOptions().arrows).toEqual([]);
+    fireEvent.click(screen.getByTestId("library-game-panel-tab-engine"));
+    // The Moves tab stays mounted, hidden; the Engine tab has no switch of its own.
+    expect(screen.getAllByTestId("library-game-arrows")).toHaveLength(1);
+    expect(screen.getByTestId("library-game-arrows")).not.toBeVisible();
+  });
+
   it("is the v2 board, with the explorer's tabs and the engine", async () => {
     const mine = await upload();
     await mountGame(`/library/${mine.id}/1`);

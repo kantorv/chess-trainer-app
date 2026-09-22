@@ -882,6 +882,8 @@ const en = {
     add: "Add collection",
     /** A collection row's download — the whole collection, as one PGN. */
     download: "Download the whole collection as PGN",
+    /** An uploaded collection's row — delete it, asked first. */
+    delete: "Delete collection",
     hint: "A collection is one PGN file of many games — a tournament, a player's games. Open one to sort and filter its games, and open a game to analyse it: side lines, the engine, Play against it, the map and comments.",
     /** The table screen — `/library/<collection>`. */
     table: {
@@ -892,7 +894,6 @@ const en = {
       shown: "{{shown}} of {{count}} games",
       noMatches: "No games match the filter.",
       rowsPerPage: "Rows per page",
-      delete: "Delete collection",
       loading: "Reading the collection…",
       /**
        * The picks — a checkbox per row and the export bar in the top bar,
@@ -902,6 +903,8 @@ const en = {
         selectAll: "Select all games shown by the filters",
         selected: "{{count}} selected",
         download: "Download selected as one PGN",
+        /** An uploaded collection's picked games, deleted from it. */
+        deleteSelected: "Delete selected games from the collection",
         pick: "Select {{title}}",
         /**
          * The Analyse hand-off (CTA-77): the picked games saved to Saved
@@ -944,7 +947,13 @@ const en = {
         opening: "Opening",
         moves: "Moves",
       },
-      hint: "Click a column to sort by it, type in the box or use the filters above to narrow the games, and click a game to open it on an analysis board.",
+      /** Deleting an uploaded collection's picked games — asked first. */
+      confirmDeleteGames: {
+        title_one: "Delete {{count}} game?",
+        title_other: "Delete {{count}} games?",
+        body: "They are removed from “{{name}}” in this browser, and the games after them move up. This cannot be undone.",
+        problem: "They could not be deleted — this browser's storage is unavailable, or the games have changed.",
+      },
       shippedNote: "This collection ships with the app. Its games are read-only: changes you make on a game are saved as a copy in Saved analyses.",
       uploadedNote: "You added this collection; it is kept in this browser only. Changes to a game can update it in place or be saved as a copy next to it.",
     },
@@ -1030,6 +1039,10 @@ const en = {
       engineSwitch: "Engine",
       arrows: "Next-move arrows",
       unreadable: "This game could not be read.",
+      /** The Export tab's hand-off to the Analysis Board. */
+      openAnalysis: "Open in Analysis Board",
+      openAnalysisHelp: "Opens this game on the Analysis Board, at the position on screen.",
+      openAnalysisChanged: "Opens the game as the collection holds it, at the position on screen — your unsaved changes stay here.",
     },
     /**
      * The changes strip over a game of an **uploaded** collection — Update

@@ -30,9 +30,11 @@ import OpeningFilterBoard from "./OpeningFilterBoard";
  * opening (labelled with its ECO code first, in ECO order) — and the player
  * and opening boxes also take any text: part of a name, or an ECO code's start.
  *
- * **The opening moves** close the panel (CTA-76): a small board over the
- * opening tree of the games the other filters leave (`OpeningFilterBoard.tsx`), shown once some game
- * has a `line` in the index — an index from before the column has none.
+ * **The order**: the player and their side at the top, then **the opening
+ * moves** (CTA-76) — a small board over the opening tree of the games the
+ * other filters leave (`OpeningFilterBoard.tsx`), shown once some game has a
+ * `line` in the index (an index from before the column has none) — and under
+ * the board the rest: opening, event, dates, result.
  *
  * The dates are the browser's own date inputs (`type="date"`). A PGN date is
  * often partial — `1848`, `1858.10` — so a game counts as in range when any
@@ -113,6 +115,10 @@ function CollectionFilters({
             </ToggleButton>
           </ToggleButtonGroup>
         </Box>
+      )}
+
+      {openingTree.count > 0 && (
+        <OpeningFilterBoard node={openingNode} line={line} onLine={onLine} />
       )}
 
       {facets.openings.length > 0 && (
@@ -201,9 +207,6 @@ function CollectionFilters({
         </TextField>
       )}
 
-      {openingTree.count > 0 && (
-        <OpeningFilterBoard node={openingNode} line={line} onLine={onLine} />
-      )}
     </Box>
   );
 }

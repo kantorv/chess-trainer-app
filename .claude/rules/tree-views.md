@@ -213,8 +213,9 @@ status line and `nextMoves` (on the Moves tab) in its footer.
 
 `views/library/LibraryGameBoard.tsx` passes exactly the Analysis Board's
 options — `onEditTree: core.replaceTree`, `playChances: false`,
-`annotations: true`, `arrows: { show }` (a switch in its Engine tab, on) and
-`map: { addedIds, linked: true }`, with `extensionIds` the same set: the moves
+`annotations: true`, `arrows: { show }` (a switch at the top of its Moves
+tab, on — CTA-77) and `map: { addedIds, linked: true }`, with `extensionIds`
+the same set: the moves
 added since the game arrived (or was last kept), which is what its changes
 strip offers to keep. Its session is the Analysis Board's own
 (`useAnalysisSession`). It places `moves` and `map` in its Moves and Map tabs

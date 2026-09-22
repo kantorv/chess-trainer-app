@@ -1,6 +1,12 @@
+import { useState } from "react";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogContentText from "@mui/material/DialogContentText";
+import DialogTitle from "@mui/material/DialogTitle";
 import IconButton from "@mui/material/IconButton";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
@@ -9,12 +15,14 @@ import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
+import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
 import FolderRoundedIcon from "@mui/icons-material/FolderRounded";
 import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
 import { Link as RouterLink } from "react-router";
 import { useTranslation } from "react-i18next";
 
+import { removeCollection } from "../../lib/libraryCollectionStore";
 import type { CollectionSummary } from "../../lib/libraryCollections";
 import { downloadPgn } from "../../lib/pgnExport";
 import { slugify } from "../../lib/pgnText";
@@ -27,14 +35,22 @@ import { loadCollectionGames, useUploadedCollections } from "./useLibraryCollect
  * shipped ones (wired by `scripts/wirepgn.js`, by name) and then the reader's
  * uploads (newest first). Each row opens the collection's table, and its
  * download icon saves **the whole collection** as one `.pgn` (a table's own
- * download is its picked games).
+ * download is its picked games); an upload's row also **deletes** it, asked
+ * first (a table deletes only its picked games).
  *
  * **Listing fetches nothing.** A shipped collection's name and game count are
  * its manifest entry (`src/data/library/manifest.json`); an upload's are its
  * small IndexedDB summary — no index and no game is read to draw this page.
  * The games are read only when a download asks for them.
  */
-function CollectionRow({ summary }: { summary: CollectionSummary }) {
+function CollectionRow({
+  summary,
+  onDelete,
+}: {
+  summary: CollectionSummary;
+  /** An upload's delete — asked first by the list. */
+  onDelete?: () => void;
+}) {
   const { t } = useTranslation();
   const { id, name, source, count } = summary;
   const download = async () => {
@@ -47,24 +63,40 @@ function CollectionRow({ summary }: { summary: CollectionSummary }) {
       sx={{ borderBottom: "1px solid", borderColor: "divider" }}
       // Beside the row's link, not inside it: a button in a link is not valid HTML.
       secondaryAction={
-        <Tooltip title={t("library.download")}>
-          <IconButton
-            edge="end"
-            size="small"
-            aria-label={t("library.download")}
-            data-testid={`library-collection-download-${id}`}
-            onClick={() => void download()}
-          >
-            <DownloadRoundedIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
+        <Box sx={{ display: "flex", gap: 0.5 }}>
+          <Tooltip title={t("library.download")}>
+            <IconButton
+              edge={onDelete === undefined ? "end" : false}
+              size="small"
+              aria-label={t("library.download")}
+              data-testid={`library-collection-download-${id}`}
+              onClick={() => void download()}
+            >
+              <DownloadRoundedIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          {onDelete !== undefined && (
+            <Tooltip title={t("library.delete")}>
+              <IconButton
+                edge="end"
+                size="small"
+                aria-label={t("library.delete")}
+                data-testid={`library-collection-delete-${id}`}
+                onClick={onDelete}
+              >
+                <DeleteOutlineRoundedIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+        </Box>
       }
     >
       <ListItemButton
         component={RouterLink}
+        // Room for the second icon an upload's row carries.
+        sx={{ gap: 1, ...(onDelete === undefined ? {} : { paddingInlineEnd: 11 }) }}
         to={`/library/${encodeURIComponent(id)}`}
         data-testid={`library-collection-${id}`}
-        sx={{ gap: 1 }}
       >
         <ListItemIcon sx={{ minWidth: 36 }}>
           <FolderRoundedIcon color={source === "shipped" ? "primary" : "success"} />
@@ -88,6 +120,7 @@ function LibraryHome() {
   const { t } = useTranslation();
   const uploaded = useUploadedCollections() ?? [];
   const total = shippedCollections.length + uploaded.length;
+  const [deleting, setDeleting] = useState<CollectionSummary | null>(null);
 
   return (
     <>
@@ -137,7 +170,11 @@ function LibraryHome() {
               <CollectionRow key={entry.id} summary={entry} />
             ))}
             {uploaded.map((collection) => (
-              <CollectionRow key={collection.id} summary={collection} />
+              <CollectionRow
+                key={collection.id}
+                summary={collection}
+                onDelete={() => setDeleting(collection)}
+              />
             ))}
           </List>
         </Box>
@@ -147,6 +184,35 @@ function LibraryHome() {
           {t("library.hint")}
         </Typography>
       </RightPanel>
+      <Dialog
+        open={deleting !== null}
+        onClose={() => setDeleting(null)}
+        data-testid="library-delete-dialog"
+      >
+        {deleting !== null && (
+          <>
+            <DialogTitle>{t("library.confirmDelete.title", { name: deleting.name })}</DialogTitle>
+            <DialogContent>
+              <DialogContentText>
+                {t("library.confirmDelete.body", { count: deleting.count })}
+              </DialogContentText>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setDeleting(null)}>{t("library.confirmDelete.cancel")}</Button>
+              <Button
+                color="error"
+                data-testid="library-delete-confirm"
+                onClick={async () => {
+                  await removeCollection(deleting.id);
+                  setDeleting(null);
+                }}
+              >
+                {t("library.confirmDelete.confirm")}
+              </Button>
+            </DialogActions>
+          </>
+        )}
+      </Dialog>
     </>
   );
 }

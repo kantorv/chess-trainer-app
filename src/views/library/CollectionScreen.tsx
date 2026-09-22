@@ -23,7 +23,6 @@ import TextField from "@mui/material/TextField";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
-import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import ShareRoundedIcon from "@mui/icons-material/ShareRounded";
 import WarningAmberRoundedIcon from "@mui/icons-material/WarningAmberRounded";
 import {
@@ -36,7 +35,7 @@ import {
 import { useTranslation } from "react-i18next";
 
 import { DEFAULT_ANALYSIS_SETTINGS } from "../../lib/analysisSettings";
-import { removeCollection } from "../../lib/libraryCollectionStore";
+import { removeCollectionGames } from "../../lib/libraryCollectionStore";
 import {
   batchFolderNameOf,
   COLLECTION_COLUMNS,
@@ -84,7 +83,7 @@ import { loadCollectionGames, useCollectionRows } from "./useLibraryCollections"
  * **filtered** by words (matched against every text column, the box over the
  * table) and by the right-hand panel's filters — player and side, opening,
  * event, dates, result (`CollectionFilters.tsx`; each shown only where the
- * collection has its field) — and, at its foot, the **opening moves** played
+ * collection has its field) — and, under the player and side, the **opening moves** played
  * on a small board (`OpeningFilterBoard.tsx`, CTA-76): the opening tree
  * (`lib/openingTree.ts`, merged from the index's `line` column) of **the
  * games the other filters leave** — filter by a player and side, and the
@@ -99,7 +98,10 @@ import { loadCollectionGames, useCollectionRows } from "./useLibraryCollections"
  * leave, on every page** — so filter, select all, download, and the file is
  * the filtered batch — and adds them to the picks (unticking removes just
  * those), while its chip counts every pick, whatever the filter now shows.
- * The download is one `.pgn` of the picked games, in collection order. Picks
+ * The download is one `.pgn` of the picked games, in collection order. In an
+ * **uploaded** collection the bar also **deletes** the picked games (asked
+ * first; `removeCollectionGames`, the games after them moving up) — the
+ * whole collection is deleted from its row on `/library`. Picks
  * are the screen's, not the URL's: a link carries the filter, not a hand-made
  * selection.
  *
@@ -147,6 +149,7 @@ function CollectionTable({
   const location = useLocation();
   const [params, setParams] = useSearchParams();
   const [deleting, setDeleting] = useState(false);
+  const [deleteProblem, setDeleteProblem] = useState(false);
   /** The picked games, by number. */
   const [picked, setPicked] = useState<ReadonlySet<number>>(() => new Set());
 
@@ -380,6 +383,14 @@ function CollectionTable({
             selectedCount={picked.size}
             onClearSelected={() => setPicked(new Set())}
             onDownload={() => void downloadPicked()}
+            onDelete={
+              collection.source === "uploaded"
+                ? () => {
+                    setDeleteProblem(false);
+                    setDeleting(true);
+                  }
+                : undefined
+            }
           />
           <Tooltip title={t(analysing ? "library.table.picks.analysing" : "library.table.picks.analyseHint")}>
             <span>
@@ -399,18 +410,6 @@ function CollectionTable({
               </Button>
             </span>
           </Tooltip>
-          {collection.source === "uploaded" && (
-            <Tooltip title={t("library.table.delete")}>
-              <IconButton
-                size="small"
-                aria-label={t("library.table.delete")}
-                data-testid="library-table-delete"
-                onClick={() => setDeleting(true)}
-              >
-                <DeleteOutlineRoundedIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
-          )}
         </Box>
 
         <Box sx={{ flexShrink: 0, display: "flex", gap: 1, py: 1 }}>
@@ -559,16 +558,13 @@ function CollectionTable({
               setState(Object.fromEntries(COLLECTION_FILTER_PARAMS.map((key) => [key, null])))
             }
           />
-          <Box sx={{ color: "text.secondary", display: "grid", gap: 1 }}>
-            <Typography variant="body2">{t("library.table.hint")}</Typography>
-            <Typography variant="body2" data-testid="library-table-note">
-              {t(
-                collection.source === "shipped"
-                  ? "library.table.shippedNote"
-                  : "library.table.uploadedNote",
-              )}
-            </Typography>
-          </Box>
+          <Typography variant="body2" data-testid="library-table-note" sx={{ color: "text.secondary" }}>
+            {t(
+              collection.source === "shipped"
+                ? "library.table.shippedNote"
+                : "library.table.uploadedNote",
+            )}
+          </Typography>
         </Box>
       </RightPanel>
       {notice !== null && (
@@ -607,22 +603,33 @@ function CollectionTable({
       <Dialog
         open={deleting}
         onClose={() => setDeleting(false)}
-        data-testid="library-delete-dialog"
+        data-testid="library-picks-delete-dialog"
       >
-        <DialogTitle>{t("library.confirmDelete.title", { name: collection.name })}</DialogTitle>
+        <DialogTitle>{t("library.table.confirmDeleteGames.title", { count: picked.size })}</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            {t("library.confirmDelete.body", { count: collection.count })}
+            {t("library.table.confirmDeleteGames.body", { name: collection.name })}
           </DialogContentText>
+          {deleteProblem && (
+            <Alert severity="error" sx={{ mt: 2 }} data-testid="library-picks-delete-problem">
+              {t("library.table.confirmDeleteGames.problem")}
+            </Alert>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleting(false)}>{t("library.confirmDelete.cancel")}</Button>
           <Button
             color="error"
-            data-testid="library-delete-confirm"
+            data-testid="library-picks-delete-confirm"
             onClick={async () => {
-              await removeCollection(collection.id);
-              navigate("/library");
+              const failed = await removeCollectionGames(collection.id, [...picked]);
+              if (failed !== undefined) {
+                setDeleteProblem(true);
+                return;
+              }
+              // The numbers after the deleted games have moved up: a pick would name another game.
+              setPicked(new Set());
+              setDeleting(false);
             }}
           >
             {t("library.confirmDelete.confirm")}

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import IconButton from "@mui/material/IconButton";
 import Switch from "@mui/material/Switch";
@@ -8,6 +9,7 @@ import Typography from "@mui/material/Typography";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import NavigateBeforeRoundedIcon from "@mui/icons-material/NavigateBeforeRounded";
 import NavigateNextRoundedIcon from "@mui/icons-material/NavigateNextRounded";
+import OpenInNewRoundedIcon from "@mui/icons-material/OpenInNewRounded";
 import SaveRoundedIcon from "@mui/icons-material/SaveRounded";
 import { Link as RouterLink, useLocation, useNavigate, useSearchParams } from "react-router";
 import { useTranslation } from "react-i18next";
@@ -15,6 +17,7 @@ import type { ChessboardOptions } from "react-chessboard";
 
 import { indexGame } from "../../lib/collectionIndex";
 import { initialPlyOf } from "../../lib/gameNavigation";
+import { libraryGameReference } from "../../lib/gameReference";
 import { mainlineGame, sanPathTo, treeToPgn, type GameTree } from "../../lib/gameTree";
 import {
   insertCollectionGame,
@@ -50,7 +53,11 @@ import { useAnalysisSession } from "../tools/analysis/useAnalysisSession";
  * | --- | --- |
  * | Base + engine + Play + baseline | `useAnalysisSession` — the Analysis Board's own session: `useBoardCore`, `useEngineModule` (on), `usePlayToggle` (off at the start) |
  * | Tree view | `useVariationsExplorer` — Moves, Map, the comment block, the next-moves bar, the arrows, the move menu; editing on, *Play chances…* off |
- * | Shell | `BoardShell` / `BoardPanel` — tabs Moves · Map · Info · Export · Engine |
+ * | Shell | `BoardShell` / `BoardPanel` — tabs Moves (with the next-move arrows' switch) · Map · Info · Export · Engine |
+ *
+ * The Export tab also hands the game to the **Analysis Board**
+ * (`?game=library/<collection>/<n>`, CTA-77) at the position on screen
+ * (`?at=`) — the game as the collection holds it, not this session's changes.
  *
  * **Nothing is written unless the reader asks**, and what may be written
  * depends on where the collection came from — the changes strip, opened by
@@ -319,29 +326,11 @@ function LibraryGameBoard({ collection, number, tree }: LibraryGameBoardProps) {
         onTabChange: setTab,
         keepMounted: KEEP_MOUNTED,
         tabs: [
-          { id: "moves", label: t("library.game.tabs.moves"), content: explorer.moves },
-          { id: "map", label: t("library.game.tabs.map"), content: explorer.map },
           {
-            id: "info",
-            label: t("library.game.tabs.info"),
-            content: <GameInfo game={mainlineGame(core.tree)} />,
-          },
-          {
-            id: "export",
-            label: t("library.game.tabs.export"),
+            id: "moves",
+            label: t("library.game.tabs.moves"),
             content: (
-              <AnalysisExport
-                fen={core.fen}
-                tree={core.tree}
-                fileStem={slugify(title) || "game"}
-              />
-            ),
-          },
-          {
-            id: "engine",
-            label: t("library.game.tabs.engine"),
-            content: (
-              <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+              <>
                 <FormControlLabel
                   sx={{ m: 0, px: 1 }}
                   control={
@@ -354,15 +343,59 @@ function LibraryGameBoard({ collection, number, tree }: LibraryGameBoardProps) {
                   }
                   label={t("library.game.arrows")}
                 />
-                <AnalysisSettingsPanel
-                  settings={session.settings}
-                  onChange={session.updateSettings}
-                  engineOptions={engine.engineOptions}
-                  engineOn={session.engineOn}
-                  showEvalBar={session.showEvalBar}
-                  onShowEvalBarChange={session.setShowEvalBar}
+                {explorer.moves}
+              </>
+            ),
+          },
+          { id: "map", label: t("library.game.tabs.map"), content: explorer.map },
+          {
+            id: "info",
+            label: t("library.game.tabs.info"),
+            content: <GameInfo game={mainlineGame(core.tree)} />,
+          },
+          {
+            id: "export",
+            label: t("library.game.tabs.export"),
+            content: (
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                <Box sx={{ display: "grid", gap: 0.5, justifyItems: "start" }}>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    startIcon={<OpenInNewRoundedIcon fontSize="small" />}
+                    component={RouterLink}
+                    to={`/tools/analysis?${new URLSearchParams({
+                      game: libraryGameReference(collection.id, number),
+                      ...(linkedAt === "" ? {} : { [REPERTOIRE_AT_PARAM]: linkedAt }),
+                    }).toString()}`}
+                    data-testid="library-game-open-analysis"
+                  >
+                    {t("library.game.openAnalysis")}
+                  </Button>
+                  <Typography variant="caption" sx={{ color: "text.secondary" }}>
+                    {t(session.changed ? "library.game.openAnalysisChanged" : "library.game.openAnalysisHelp")}
+                  </Typography>
+                </Box>
+                <AnalysisExport
+                  fen={core.fen}
+                  tree={core.tree}
+                  fileStem={slugify(title) || "game"}
                 />
               </Box>
+            ),
+          },
+          {
+            id: "engine",
+            label: t("library.game.tabs.engine"),
+            content: (
+              <AnalysisSettingsPanel
+                settings={session.settings}
+                onChange={session.updateSettings}
+                engineOptions={engine.engineOptions}
+                engineOn={session.engineOn}
+                showEvalBar={session.showEvalBar}
+                onShowEvalBarChange={session.setShowEvalBar}
+              />
             ),
           },
         ],

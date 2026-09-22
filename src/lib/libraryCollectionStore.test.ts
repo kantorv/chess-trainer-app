@@ -11,6 +11,7 @@ import {
   peekUploadedGames,
   peekUploadedRows,
   removeCollection,
+  removeCollectionGames,
   replaceCollectionGame,
   resetLibraryCollectionStore,
   uploadedCollectionsSnapshot,
@@ -126,6 +127,18 @@ describe("editing a game", () => {
       [3, "C", 1],
     ]);
     expect(uploadedCollectionsSnapshot()?.[0].count).toBe(3);
+  });
+
+  it("deletes games, the rows after them moving up — or none, for a number not there", async () => {
+    const mine = await added();
+    expect(await insertCollectionGame(mine.id, 3, COPY, indexedRowOf(COPY))).toBeUndefined();
+    expect(await removeCollectionGames(mine.id, [1, 9])).toBe("missing");
+    expect(await loadUploadedGames(mine.id)).toEqual([ONE, TWO, COPY]);
+
+    expect(await removeCollectionGames(mine.id, [1, 3])).toBeUndefined();
+    expect(await loadUploadedGames(mine.id)).toEqual([TWO]);
+    expect((await loadUploadedRows(mine.id))?.map((row) => [row.number, row.white])).toEqual([[1, "C"]]);
+    expect(uploadedCollectionsSnapshot()?.[0].count).toBe(1);
   });
 
   it("says so for a game or a collection that is not there", async () => {

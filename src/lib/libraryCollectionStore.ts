@@ -371,6 +371,27 @@ export const insertCollectionGame = (
   });
 
 /**
+ * **Delete games** (the table's picks): games `numbers` (1-based) and their
+ * rows go, the games after them moving up. A number that is not there
+ * refuses the whole delete (`"missing"`), so nothing goes half-way.
+ */
+export const removeCollectionGames = (
+  id: string,
+  numbers: readonly number[],
+): Promise<LibraryCollectionProblem | undefined> =>
+  editGames(id, (games, rows) => {
+    const gone = new Set(numbers);
+    if ([...gone].some((number) => !Number.isInteger(number) || number < 1 || number > games.length)) {
+      return false;
+    }
+    const keptGames = games.filter((_game, index) => !gone.has(index + 1));
+    const keptRows = rows.filter((_row, index) => !gone.has(index + 1));
+    games.splice(0, games.length, ...keptGames);
+    rows.splice(0, rows.length, ...keptRows);
+    return true;
+  });
+
+/**
  * **For tests**: close the connection, forget everything read, and delete the
  * database — the IndexedDB counterpart of `localStorage.clear()`.
  */
