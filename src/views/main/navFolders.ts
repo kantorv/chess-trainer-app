@@ -103,5 +103,10 @@ export const navFolders = (): readonly NavFolder[] => [
     id: "repertoires",
     labelKey: "nav.folders.repertoires",
     icon: MenuBookRoundedIcon,
+    // One destination (CTA-84, mirroring CTA-58/CTA-78): the folder renders
+    // as one clickable row to the Repertoires list — its own "Add
+    // repertoire" link already reaches `/repertoires/new`, so a second row
+    // for it here was redundant.
+    singleEntry: true,
   },
 ];

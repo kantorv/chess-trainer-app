@@ -24,9 +24,8 @@ const en = {
     savedAnalyses: "Saved analyses",
     /** The Openings explorer (CTA-78) — shown under the folder's own name, a single entry. */
     openings: "Openings explorer",
-    /** The reader's own repertoires (CTA-61), and the screen they come in on. */
+    /** The reader's own repertoires (CTA-61) — shown under the folder's own name, a single entry (CTA-84). */
     repertoires: "My repertoires",
-    addRepertoire: "Add repertoire",
     /** The Library's two screens (CTA-75): the collections, and adding one. */
     libraryCollections: "Collections",
     addCollection: "Add collection",
