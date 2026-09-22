@@ -9,7 +9,7 @@ import { BACKTRACK_DELAY_MS } from "./RepertoirePlayer";
 import {
   CARO_TWO_GAMES,
   renderSection,
-  storeLegacyRepertoire,
+  storeMultiGameRepertoire,
   storeRepertoire,
   FAKE_TIMERS,
 } from "./repertoireTestKit";
@@ -150,7 +150,7 @@ describe("reaching a game", () => {
   });
 
   it("offers a record from before the one-game rule its merge-or-split choice", async () => {
-    await mount(`/repertoires/${await storeLegacyRepertoire("old", CARO_TWO_GAMES, "Old")}/games/end`);
+    await mount(`/repertoires/${await storeMultiGameRepertoire("old", CARO_TWO_GAMES, "Old")}/games/end`);
     expect(screen.getByTestId("repertoire-board-multi")).toBeInTheDocument();
   });
 });

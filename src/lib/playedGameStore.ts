@@ -16,8 +16,7 @@ import { idbRecordStore } from "./idbRecordStore";
  * one record per {@link PlayedGame}, listed newest first — over the shared
  * [`idbRecordStore.ts`](./idbRecordStore.ts), which owns the kept snapshot,
  * the queued writes answered once committed, the other tabs'
- * `BroadcastChannel`, and the one-time move out of `localStorage`
- * (`chessapp.playedGames.v1`, where the games lived until they moved). Flat:
+ * `BroadcastChannel`. Flat:
  * no folders. The app's storage as a whole is `.claude/rules/database.md`.
  *
  * Every read of the list is the kept snapshot — `undefined` until the first
@@ -49,9 +48,6 @@ const engineDb = idbDatabase(ENGINE_DB_NAME, DB_VERSION, [GAMES_STORE]);
 /** **For tests**: close the connection and delete the database. */
 export const deleteEngineDb = engineDb.remove;
 
-/** Where the games lived before IndexedDB — moved in on the first read. */
-export const PLAYED_GAMES_STORAGE_KEY = "chessapp.playedGames.v1";
-
 /**
  * How many games are kept — a bound on a flat, unpaged list rather than on
  * the storage (it was the quota's while the games lived in `localStorage`).
@@ -68,7 +64,6 @@ const games = idbRecordStore<PlayedGame>({
   normalise: playedGameFrom,
   order: "newest-first",
   channel: ENGINE_DB_NAME,
-  legacyKey: PLAYED_GAMES_STORAGE_KEY,
 });
 
 /** The played games, newest first — `undefined` until the first read lands. Stable between changes. */

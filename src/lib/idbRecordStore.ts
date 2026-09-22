@@ -1,12 +1,11 @@
 import { committed, done } from "./idb";
 
 /**
- * **The IndexedDB record-store factory** (CTA-77) — the counterpart of
- * [`recordStore.ts`](./recordStore.ts) for a store too big for `localStorage`:
- * the reader's saved analyses and their folders, which a Library collection
- * can fill with thousands of records at once.
+ * **The IndexedDB record-store factory** (CTA-77) — every store of the
+ * reader's data but the Library's: the played games, the saved analyses and
+ * their folders, the repertoires and theirs.
  *
- * A store is a **list** of rows, as a `recordStore` is — the screens read it in
+ * A store is a **list** of rows — the screens read it in
  * order, newest first or oldest first — kept as **one IndexedDB record per
  * row**, so a write puts only the rows it changed rather than the whole list.
  * What the list's order is, is a `seq` number kept beside each row: the
@@ -36,15 +35,6 @@ import { committed, done } from "./idb";
  *
  * Each write is announced on a `BroadcastChannel`, and a tab that hears one
  * reads the store again (queued behind its own writes).
- *
- * ### Moving out of `localStorage`
- *
- * A store that used to be a `recordStore` names its old key as `legacyKey`.
- * The first read moves what is under it into IndexedDB — the rows IndexedDB
- * does not already have, in their order, below the ones it does — and removes
- * the key (and its `.rev` stamp) **only after that write committed**. A
- * refused write leaves the key where it was, and the rows are still read from
- * it, so nothing is lost and the move is tried again next time.
  */
 
 /** What went wrong with a write. */
@@ -76,14 +66,12 @@ export type IdbRecordStoreOptions<Row> = {
   db: () => Promise<IDBDatabase>;
   /** The object store (`keyPath: "id"`). */
   store: string;
-  /** A stored value back to a row, or `undefined` for one to drop — the `recordStore` normaliser. */
+  /** A stored value back to a row, or `undefined` for one to drop — the record's normaliser. */
   normalise: (value: unknown) => Row | undefined;
   /** Which end of the list new rows usually go: the top (`newest-first`) or the bottom. */
   order: "newest-first" | "oldest-first";
   /** The `BroadcastChannel` other tabs hear this store's writes on. */
   channel: string;
-  /** The `localStorage` key the store used to live under, moved on the first read. */
-  legacyKey?: string;
 };
 
 const isStored = (value: unknown): value is Stored => {
@@ -92,35 +80,12 @@ const isStored = (value: unknown): value is Stored => {
   return typeof row.id === "string" && typeof row.seq === "number" && Number.isFinite(row.seq);
 };
 
-/** The rows of a `localStorage` JSON array, normalised — `undefined` when the key is absent or unreadable. */
-const readLegacy = <Row>(key: string, normalise: (value: unknown) => Row | undefined): Row[] | undefined => {
-  try {
-    const raw = localStorage.getItem(key);
-    if (raw === null) return undefined;
-    const value: unknown = JSON.parse(raw);
-    if (!Array.isArray(value)) return [];
-    return value.map(normalise).filter((row): row is Row => row !== undefined);
-  } catch {
-    return undefined;
-  }
-};
-
-const removeLegacy = (key: string) => {
-  try {
-    localStorage.removeItem(key);
-    localStorage.removeItem(`${key}.rev`);
-  } catch {
-    // Storage disabled: the next read tries again, and finds its rows already moved.
-  }
-};
-
 export const idbRecordStore = <Row extends { id: string }>({
   db: openDb,
   store,
   normalise,
   order,
   channel: channelName,
-  legacyKey,
 }: IdbRecordStoreOptions<Row>): IdbRecordStore<Row> => {
   let rows: readonly Row[] | undefined;
   /** Each row's `seq`, by id — what a write keeps where it can. */
@@ -138,17 +103,15 @@ export const idbRecordStore = <Row extends { id: string }>({
   const inOrder = (stored: Stored[]): Stored[] =>
     stored.sort((a, b) => (order === "newest-first" ? b.seq - a.seq : a.seq - b.seq));
 
-  /** Every row, read from IndexedDB — and, the first time, the legacy key moved in. */
-  const readAll = async (migrate: boolean): Promise<readonly Row[]> => {
-    const legacy = migrate && legacyKey !== undefined ? readLegacy(legacyKey, normalise) : undefined;
+  /** Every row, read from IndexedDB — none when it cannot be opened. */
+  const readAll = async (): Promise<readonly Row[]> => {
     let stored: Stored[];
     try {
       const db = await openDb();
       stored = inOrder((await done(db.transaction(store).objectStore(store).getAll())).filter(isStored));
     } catch {
-      // No IndexedDB: what the old key holds is still the reader's, read-only.
       seqs = new Map();
-      return legacy ?? [];
+      return [];
     }
 
     const nextSeqs = new Map<string, number>();
@@ -159,36 +122,6 @@ export const idbRecordStore = <Row extends { id: string }>({
       nextSeqs.set(row.id, record.seq);
       read.push(row);
     }
-
-    if (legacy !== undefined && legacyKey !== undefined) {
-      // Below everything IndexedDB already holds, in the old list's order.
-      const seen = new Set(nextSeqs.keys());
-      const moving = legacy.filter((row) => !seen.has(row.id) && seen.add(row.id) !== undefined);
-      const low = Math.min(0, ...nextSeqs.values());
-      const moved = new Map<string, number>();
-      moving.forEach((row, index) => {
-        moved.set(row.id, order === "newest-first" ? low - 1 - index : low - moving.length + index);
-      });
-      try {
-        if (moving.length > 0) {
-          const db = await openDb();
-          const tx = db.transaction(store, "readwrite");
-          const objects = tx.objectStore(store);
-          for (const row of moving) objects.put({ id: row.id, seq: moved.get(row.id) ?? 0, value: row } satisfies Stored);
-          await committed(tx);
-        }
-        removeLegacy(legacyKey);
-      } catch {
-        // Not moved: the key stays, and its rows are shown from it this time.
-      }
-      for (const [id, seq] of moved) nextSeqs.set(id, seq);
-      read.push(...moving);
-      if (order === "oldest-first") {
-        // The moved rows sort below the kept ones.
-        read.sort((a, b) => (nextSeqs.get(a.id) ?? 0) - (nextSeqs.get(b.id) ?? 0));
-      }
-    }
-
     seqs = nextSeqs;
     return read;
   };
@@ -201,7 +134,7 @@ export const idbRecordStore = <Row extends { id: string }>({
 
   const load = (): Promise<readonly Row[]> => {
     if (rows !== undefined) return Promise.resolve(rows);
-    reading ??= readAll(true)
+    reading ??= readAll()
       .then(settleRead)
       .finally(() => {
         reading = undefined;
@@ -265,7 +198,7 @@ export const idbRecordStore = <Row extends { id: string }>({
 
   const onChannelMessage = (event: MessageEvent<{ store?: string }>) => {
     if (event.data?.store !== store || rows === undefined) return;
-    queue = queue.then(async () => settleRead(await readAll(false))).catch(() => undefined);
+    queue = queue.then(async () => settleRead(await readAll())).catch(() => undefined);
   };
 
   const subscribe = (listener: () => void): (() => void) => {

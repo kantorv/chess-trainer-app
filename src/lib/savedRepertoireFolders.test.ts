@@ -11,7 +11,6 @@ import {
   MAX_REPERTOIRE_FOLDERS,
   removeRepertoireFolder,
   renameRepertoireFolder,
-  REPERTOIRE_FOLDERS_STORAGE_KEY,
   repertoireFoldersSnapshot,
   loadRepertoireFolders,
   resetRepertoireFolderStore,
@@ -66,12 +65,6 @@ describe("repertoire folders — the pure half", () => {
 });
 
 describe("repertoire folders — the store", () => {
-  it("moves the folders out of the old localStorage key on the first read", async () => {
-    localStorage.setItem(REPERTOIRE_FOLDERS_STORAGE_KEY, JSON.stringify([folder("f", "Caro")]));
-    expect((await loadRepertoireFolders()).map((row) => row.id)).toEqual(["f"]);
-    expect(localStorage.getItem(REPERTOIRE_FOLDERS_STORAGE_KEY)).toBeNull();
-  });
-
   it("creates a folder and hands it back, and refuses an empty name", async () => {
     const made = await createRepertoireFolder("  Caro  ");
     expect(made?.name).toBe("Caro");

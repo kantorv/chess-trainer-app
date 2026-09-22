@@ -68,14 +68,14 @@ wrapper's main features would go unused. §10 says when that changes.
 
 ## 1. The map — four modules, four databases
 
-| Module | Database | Object store | Store module | Row | Order | Cap | Old `localStorage` key (moved in on first read) |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| **Engine** (Play with Engine, Masked Pieces) | `chessapp.engine` | `games` | `playedGameStore.ts` | `PlayedGame` | newest first | 100 (oldest dropped) | `chessapp.playedGames.v1` |
-| **Analyses** | `chessapp.analyses` | `analyses` | `savedAnalysisStore.ts` | `SavedAnalysis` | newest first | 20,000 (a batch past it refused) | `chessapp.savedAnalyses.v1` |
-| | | `folders` | `savedAnalysisFolderStore.ts` | `AnalysisFolder` | oldest first | 100 | `chessapp.savedAnalysisFolders.v1` |
-| **Repertoires** | `chessapp.repertoires` | `repertoires` | `savedRepertoireStore.ts` | `SavedRepertoire` | newest first | 500 (a split past it refused) | `chessapp.savedRepertoires.v1` |
-| | | `folders` | `savedRepertoireFolderStore.ts` | `RepertoireFolder` | oldest first | 100 | `chessapp.savedRepertoireFolders.v1` |
-| **Library** | `chessapp.library` | `collections`, `indexes`, `games` | `libraryCollectionStore.ts` | a summary / index rows / PGN chunks per collection | newest first | 30M characters a collection | — (never shipped on `localStorage`) |
+| Module | Database | Object store | Store module | Row | Order | Cap |
+| --- | --- | --- | --- | --- | --- | --- |
+| **Engine** (Play with Engine, Masked Pieces) | `chessapp.engine` | `games` | `playedGameStore.ts` | `PlayedGame` | newest first | 100 (oldest dropped) |
+| **Analyses** | `chessapp.analyses` | `analyses` | `savedAnalysisStore.ts` | `SavedAnalysis` | newest first | 20,000 (a batch past it refused) |
+| | | `folders` | `savedAnalysisFolderStore.ts` | `AnalysisFolder` | oldest first | 100 |
+| **Repertoires** | `chessapp.repertoires` | `repertoires` | `savedRepertoireStore.ts` | `SavedRepertoire` | newest first | 500 (a split past it refused) |
+| | | `folders` | `savedRepertoireFolderStore.ts` | `RepertoireFolder` | oldest first | 100 |
+| **Library** | `chessapp.library` | `collections`, `indexes`, `games` | `libraryCollectionStore.ts` | a summary / index rows / PGN chunks per collection | newest first | 30M characters a collection |
 
 Every database is at **version 1**, every object store is keyed by
 `keyPath: "id"`, and **none has an index**. Each database is also the name of
@@ -133,12 +133,11 @@ Only preferences, written by libraries rather than by us:
 | `mui-mode` (and MUI's other colour-scheme keys) | MUI's `ThemeProvider` with `colorSchemes` (`theme/AppThemeWithLang.tsx`) | light / dark / system |
 | `i18nextLng` | `i18next-browser-languagedetector` (`i18n.ts`) | the language picked |
 
-And the one-time migration (§3.6) **reads** the five old keys and removes
-them. Nothing else in `src/` touches `localStorage`: `lib/recordStore.ts`,
-the `localStorage` store factory, was deleted when the last store moved.
+Nothing else in `src/` touches `localStorage`. The data stores that once
+lived there moved to IndexedDB, and the one-time move of their old keys has
+been removed too: data under an old `chessapp.*.v1` key is no longer read.
 `grep -rn localStorage src --include=*.ts --include=*.tsx | grep -v test`
-should show only comments, `idbRecordStore.ts`'s migration and the theme's
-comment.
+should show only comments.
 
 ---
 
@@ -192,16 +191,6 @@ one re-reads the store (queued behind its own writes) and re-renders.
 way to wait for a screen's write. `reset()` forgets what was read (a
 "reload"); it does not touch the database.
 
-### 3.6 Moving out of `localStorage` (`legacyKey`)
-
-A store that used to live under a `localStorage` key names it as
-`legacyKey`. The first read moves the rows IndexedDB does not already have
-into it — **below** the ones it does, in their old order — and removes the
-key (and its `.rev` stamp) **only after that write committed**. A refused
-write leaves the key; its rows are still shown from it, and the move is tried
-again next time. So an existing reader loses nothing on upgrade, and a
-half-finished move is never a lost list.
-
 ---
 
 ## 4. Screens wait for the first read
@@ -246,7 +235,6 @@ ignore an answer that is no longer about the record on screen
 7. **The kept list changes only after the commit.**
 8. **A route naming a record waits for the read** (§4) rather than calling it
    missing.
-9. **The legacy key is removed only after its rows committed.**
 
 ---
 
@@ -289,8 +277,11 @@ course can be most of a megabyte each) are far below that.
   mounts before it, to assert the reading line.
 - **A reload** is `reset…()` then a mount (or `load…()`): the rows must come
   back from IndexedDB itself.
-- **The migration** is seeded by writing the old key's JSON into
-  `localStorage` and reading (`storeLegacyRepertoire` does exactly that).
+- **A raw stored row** (a malformed one, or a record from before a rule, such as
+  a multi-game repertoire) is seeded by `put`ting `{ id, seq, value }` into
+  the object store (`savedRepertoireStore.test.ts`'s malformed-row test), or
+  by passing it through the normaliser and saving it (`storeMultiGameRepertoire`
+  in `views/repertoires/repertoireTestKit.tsx`).
 - **A refused write**: `vi.spyOn(IDBObjectStore.prototype, "put")` throwing a
   `QuotaExceededError` → the operation answers `"storage"` and the list is
   unchanged; `vi.spyOn(indexedDB, "open")` for IndexedDB missing altogether.
@@ -305,7 +296,7 @@ course can be most of a megabyte each) are far below that.
 | --- | --- |
 | A reload of `?saved=` / a repertoire link shows "missing" or a new game | The route is not waiting for the read (§4) — `useStoreRead` / the hook's `undefined` branch. |
 | A screen shows "Reading…" forever | The first read never resolved: IndexedDB blocked (another tab holding an old version open — `onversionchange` should close it), or, in a test, fake timers faking `setImmediate`. |
-| Saved data gone after an upgrade | The legacy key was not named (`legacyKey`), or the normaliser refuses the old rows (every row dropped). Check DevTools → Application → IndexedDB → the module's database. |
+| Saved data gone after an upgrade | The normaliser refuses the stored rows (every row dropped). Check DevTools → Application → IndexedDB → the module's database. |
 | The list re-orders on a mere view | The idempotency comparison misses a field: the store's `unchanged` / `same…` must return the same array. |
 | Two tabs disagree | The `BroadcastChannel` name (§1) — both stores of a module share their database's name. |
 | A test passes alone and fails in the suite | A write from the previous test landing late — the teardown's `settled…` must cover the store. |
@@ -400,8 +391,8 @@ modules, and only `lib/idb.ts`, `lib/idbRecordStore.ts` and
    declare a version that upgrades rather than downgrades).
 3. **Rewrite `idbRecordStore`'s read and write** over the Dexie table
    (`toArray`, `bulkPut`, `bulkDelete` in a `transaction("rw", …)`), keeping
-   the queue, the kept snapshot, the idempotent no-op, the `seq`, the
-   channel and the legacy move. Add an index (`"id, seq"`) only when a query
+   the queue, the kept snapshot, the idempotent no-op, the `seq` and the
+   channel. Add an index (`"id, seq"`) only when a query
    needs it.
 4. **The Library's store** moves to a Dexie transaction over its three
    tables.

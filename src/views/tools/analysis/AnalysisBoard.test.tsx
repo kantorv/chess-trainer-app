@@ -11,7 +11,6 @@ import { analysisFoldersSnapshot, createAnalysisFolder } from "../../../lib/save
 import {
   findSavedAnalysis,
   resetSavedAnalysisStore,
-  SAVED_ANALYSES_STORAGE_KEY,
   saveAnalysis,
   savedAnalysesSnapshot,
 } from "../../../lib/savedAnalysisStore";
@@ -165,15 +164,6 @@ describe("the Analysis Board's arrivals", () => {
     expect(screen.getByTestId("analysis-loading")).toBeInTheDocument();
     expect(await screen.findByTestId("analysis-name")).toHaveTextContent("Mine");
     expect(boardOptions().position).toBe(AFTER_E4);
-  });
-
-  it("reopens an analysis still in localStorage from before CTA-77, moving it over", async () => {
-    const old = savedAnalysisOf("old", parsePgnTree("1. e4 e5 *"), ["e4", "e5"], DEFAULT_ANALYSIS_SETTINGS, "white");
-    localStorage.setItem(SAVED_ANALYSES_STORAGE_KEY, JSON.stringify([{ ...old, name: "From before" }]));
-    mount("/tools/analysis?analysis=old");
-    expect(await screen.findByTestId("analysis-name")).toHaveTextContent("From before");
-    expect(boardOptions().position).toBe(AFTER_E4_E5);
-    expect(localStorage.getItem(SAVED_ANALYSES_STORAGE_KEY)).toBeNull();
   });
 
   it("lets ?at= beat the record's own place — a permanent link", async () => {
