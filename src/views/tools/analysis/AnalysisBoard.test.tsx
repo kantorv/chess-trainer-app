@@ -136,6 +136,15 @@ describe("the Analysis Board's arrivals", () => {
     expect(where()).not.toContain("move=");
   });
 
+  it("opens a Library game (?game=library/…) once its collection's games are read, at ?at=", async () => {
+    mount("/tools/analysis?game=library/morphy/1&at=e4");
+    // The shipped PGN chunk is fetched first; the board waits rather than open blank.
+    expect(screen.getByTestId("analysis-loading")).toBeInTheDocument();
+    await waitFor(() => expect(boardOptions().position).toBe(AFTER_E4));
+    expect(boardOptions().boardOrientation).toBe("white");
+    expect(screen.getByTestId("analysis-save")).not.toBeDisabled();
+  });
+
   it("reopens a saved analysis where it was left, facing the way it faced", async () => {
     await stored("a1", "1. e4 e5 *", ["e4"], { orientation: "black", name: "Mine" });
     mount("/tools/analysis?analysis=a1");

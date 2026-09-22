@@ -20,7 +20,12 @@ import type { ChessboardOptions } from "react-chessboard";
 
 import { parseFen } from "../../../lib/fen";
 import { initialPlyOf, parseMoveParam } from "../../../lib/gameNavigation";
-import { isAnalysisReference, resolveGameReference } from "../../../lib/gameReference";
+import {
+  isAnalysisReference,
+  isReferenceRead,
+  loadReferencedGames,
+  resolveGameReference,
+} from "../../../lib/gameReference";
 import type { GameTree } from "../../../lib/gameTree";
 import { parsePgnTree } from "../../../lib/pgn";
 import { slugify } from "../../../lib/pgnText";
@@ -475,24 +480,30 @@ function AnalysisBoard() {
  * analyses are IndexedDB's (CTA-77) and a read is a promise, so an arrival
  * that names one — `?analysis=<id>`, or `?game=analysis/…` — waits for the
  * store's first read rather than opening a blank board and calling the
- * record missing; every other arrival mounts at once.
+ * record missing; so does a Library game (`?game=library/<collection>/<n>`),
+ * whose collection's games are read lazily. Every other arrival mounts at once.
  */
 function AnalysisBoardRoute() {
   const { t } = useTranslation();
   const [searchParams] = useSearchParams();
-  const waits =
-    searchParams.get("analysis") !== null || isAnalysisReference(searchParams.get("game"));
-  const [ready, setReady] = useState(() => !waits || savedAnalysesSnapshot() !== undefined);
+  const game = searchParams.get("game");
+  const waitsForAnalyses = searchParams.get("analysis") !== null || isAnalysisReference(game);
+  const [ready, setReady] = useState(
+    () => (!waitsForAnalyses || savedAnalysesSnapshot() !== undefined) && isReferenceRead(game),
+  );
   useEffect(() => {
     if (ready) return;
     let live = true;
-    void loadSavedAnalyses().then(() => {
+    void Promise.all([
+      waitsForAnalyses ? loadSavedAnalyses() : undefined,
+      loadReferencedGames(game),
+    ]).then(() => {
       if (live) setReady(true);
     });
     return () => {
       live = false;
     };
-  }, [ready]);
+  }, [ready, waitsForAnalyses, game]);
 
   if (!ready) {
     return (
