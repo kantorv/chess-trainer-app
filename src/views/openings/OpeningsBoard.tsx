@@ -33,7 +33,7 @@ import { openingArrowsOf } from "./openingArrows";
  * **The Openings explorer** (`/openings`, CTA-78) — an opening played through
  * on a full analysis board, with the book's continuations from the position
  * on screen beside it. Composed as the Library's game board is
- * ([`chessboard-v2.md`](../../../.claude/rules/chessboard-v2.md) §4 — no
+ * ([`chessboard.md`](../../../.claude/rules/chessboard.md) §9.4 — no
  * behaviour hook of its own):
  *
  * | Capability | Taken |

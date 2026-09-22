@@ -10,8 +10,8 @@ import BoardPanel, { type BoardPanelProps } from "./BoardPanel";
 import type { BoardCore } from "./useBoardCore";
 
 /**
- * **The shell every v2 board is laid out by** — §3.1 of
- * [`.claude/rules/chessboard-v2.md`](../../../../.claude/rules/chessboard-v2.md).
+ * **The shell every v2 board is laid out by** — §9.3.1 of
+ * [`.claude/rules/chessboard.md`](../../../../.claude/rules/chessboard.md).
  *
  * Two of the app shell's regions, and no columns of its own:
  *

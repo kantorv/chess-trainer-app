@@ -11,8 +11,8 @@ import {
 import { turnOf, type BoardCore } from "./useBoardCore";
 
 /**
- * **The trainer** — a capability module (§2 of
- * [`.claude/rules/chessboard-v2.md`](../../../../.claude/rules/chessboard-v2.md)),
+ * **The trainer** — a capability module (§9.2 of
+ * [`.claude/rules/chessboard.md`](../../../../.claude/rules/chessboard.md)),
  * the sibling of `useEngineModule` and `useOpeningBookModule` (CTA-63).
  *
  * A scripted opponent that answers **only from a repertoire**: when the reader

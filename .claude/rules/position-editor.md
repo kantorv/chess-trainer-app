@@ -9,15 +9,19 @@ paths:
 # The position editor — `views/shared/positionEditor/`
 
 A board a **position** is set up on, piece by piece, as one screen-agnostic
-component (CTA-83). The Lobby's new-game form hosts it in its **Board editor**
+component. The Lobby's new-game form hosts it in its **Board editor**
 tab; the Analysis Board is the next host. This file is the whole reference:
 the contract, the invariants, how a screen embeds it, how to test it and how
 to extend it. It loads when you work on the files in its `paths:` list.
 
-[`chessboard.md`](./chessboard.md) is still the authority on what a board
-*is* (spare pieces and `ChessboardProvider` §2 and §5, testing a board §8);
-the root `CLAUDE.md` section *An editor owns a position, not a game* is the
-short version of this file.
+[`chessboard.md`](./chessboard.md) is the authority on what a board *is*
+(spare pieces and `ChessboardProvider` §2 and §5, testing a board §8).
+
+**An editor owns a position, not a game.** It is the one board with no
+`Game` and no `GameTree` behind it: pieces are put and removed, never moved by
+a rule, so its `chess.js` is built with `{ skipValidation: true }` and is a
+container rather than a rules authority. A position crosses to other screens
+as `?fen=`, which each validates with `parseFen` and takes as initial state.
 
 ---
 
@@ -182,19 +186,4 @@ larger, `boardMaxWidth` is the knob.
   component's `resets`; a form is a tab id in `FORM_TAB_IDS`, a
   presentational component taking `testId`, and `positionEditor.tabs.<id>`.
 - **A new option on the component**: optional, its absence today's
-  behaviour (`chessboard-v2.md` §6's rule for shared pieces).
-
----
-
-## 7. History
-
-CTA-83 replaced the **Board Editor screen** (`/tools/editor`, its Tools nav
-folder and `src/views/tools/editor/`: `BoardEditor.tsx`, `useBoardEditor.ts`,
-`EditorPanel.tsx`, `Main.tsx` and their test) with this component. The screen
-took a `?fen=` arrival and handed its position to the Analysis Board, Play
-with Engine and the Openings explorer; the component does neither — a host
-does. `useBoardEditor` became `usePositionEditor` (its `arrivalFen` /
-`setArrivalPosition` now `initialFen` / `setInitialPosition`), `EditorPanel`
-became `PositionEditor`, the palettes lost their fixed height (they share the
-width they are given), and the `editor.*` keys became `positionEditor.*`,
-without the three hand-off labels. The route was removed with no redirect.
+  behaviour (`chessboard.md` §9.6's rule for shared pieces).

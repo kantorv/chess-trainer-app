@@ -11,8 +11,8 @@ import {
 import { isTerminal, turnOf } from "./useBoardCore";
 
 /**
- * **The engine capability** — §2.1 of
- * [`.claude/rules/chessboard-v2.md`](../../../../.claude/rules/chessboard-v2.md),
+ * **The engine capability** — §9.2.1 of
+ * [`.claude/rules/chessboard.md`](../../../../.claude/rules/chessboard.md),
  * and the whole of §4 of `.claude/rules/chessboard.md` in one file.
  *
  * A board composes this beside {@link useBoardCore} when it wants an engine.

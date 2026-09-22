@@ -67,7 +67,7 @@ import { useRepertoireGame } from "./useRepertoireGame";
  * hand it here with or without a `game`.
  *
  * Composed from the v2 core
- * ([`.claude/rules/chessboard-v2.md`](../../../.claude/rules/chessboard-v2.md)):
+ * ([`.claude/rules/chessboard.md`](../../../.claude/rules/chessboard.md) §9):
  *
  * | Capability | Taken | Because |
  * | --- | --- | --- |

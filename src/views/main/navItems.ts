@@ -28,14 +28,14 @@ export type NavItem = {
  * the route in `App.tsx` and a string in both catalogs.
  *
  * A **function**, for the reason `navFolders` is one: a dev-only entry is a
- * spread gated on `import.meta.env.DEV` (none today — `chessboard-v2.md` §5).
+ * spread gated on `import.meta.env.DEV` (none today — `chessboard.md` §9.5).
  */
 export const navItems = (): readonly NavItem[] => [
   /*
-    The engine's Lobby (CTA-82): the games played against the engine, and the
-    new-game form whose Start button is how Play with Engine is reached. Play
-    with Engine has no nav entry of its own; its route `/engine/play` stays —
-    Start, Continue, the `?fen=` hand-offs and old bookmarks all land there.
+    The engine's Lobby: the games played against the engine, and the new-game
+    form whose Start button is how Play with Engine is reached. Play with
+    Engine has no nav entry of its own; Start, Continue and the `?fen=`
+    hand-offs land on its route, `/engine/play`.
   */
   {
     to: "/engine/games",
@@ -43,7 +43,7 @@ export const navItems = (): readonly NavItem[] => [
     icon: SportsEsportsRoundedIcon,
     folder: "engine",
   },
-  // Masked Pieces (CTA-79) — Play with Engine in a costume, beside the Lobby.
+  // Masked Pieces — Play with Engine in a costume, beside the Lobby.
   {
     to: "/engine/masked",
     labelKey: "nav.maskedPlay",
@@ -68,11 +68,10 @@ export const navItems = (): readonly NavItem[] => [
     folder: "library",
   },
   /*
-    The Analysis Board has no nav entry (CTA-58, mirroring CTA-42's Openings
-    folder): the top-level Analysis folder is a single entry (`navFolders.ts`)
-    that renders as the screen below, and the board is reached from the saved
-    list's New button. The `/tools/analysis` route stays — every `?fen=`,
-    `?game=` and `?analysis=` hand-off still lands there.
+    The Analysis Board has no nav entry: the top-level Analysis folder is a
+    single entry (`navFolders.ts`) that renders as the screen below, and the
+    board is reached from the saved list's New button. Every `?fen=`,
+    `?game=` and `?analysis=` hand-off lands on its route, `/tools/analysis`.
   */
   {
     to: "/tools/analysis/saved",
@@ -81,7 +80,7 @@ export const navItems = (): readonly NavItem[] => [
     folder: "analysis",
   },
   /*
-    The Openings explorer (CTA-78) — the board itself, since nothing on it is
+    The Openings explorer — the board itself, since nothing on it is
     saved: the top-level Openings folder is a single entry (`navFolders.ts`)
     that renders as this screen.
   */

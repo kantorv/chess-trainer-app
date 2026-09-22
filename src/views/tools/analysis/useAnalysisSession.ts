@@ -28,7 +28,7 @@ import { usePlayToggle } from "../../board/core/usePlayToggle";
  *
  * What is **kept**, and where, is the screen's: a saved analysis
  * (`useAnalysisBoard`), or a Library collection's game. Composed from the
- * core's modules ([`chessboard-v2.md`](../../../../.claude/rules/chessboard-v2.md))
+ * core's modules ([`chessboard.md`](../../../../.claude/rules/chessboard.md) §9)
  * — nothing here that a module owns.
  */
 

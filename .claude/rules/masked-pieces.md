@@ -24,14 +24,11 @@ URL, the rules that keep it correct, how to test it, how to debug it and how
 to extend it. It is written for people and for LLM sessions alike, and loads
 automatically when you work on the files in its `paths:` list.
 
-The root `CLAUDE.md` keeps a short summary (*A mask is a costume, never a
-rule*). When the two disagree, **this file is the authority** for Masked
-Pieces and for `lib/pieceMask.ts`. The board rules are the authority for
-everything the screen shares with the other boards:
-[`chessboard.md`](./chessboard.md) (what a board is, the engine protocol,
-testing a board), [`chessboard-v2.md`](./chessboard-v2.md) (the core, the
-modules, the shell and panel) and [`tree-views.md`](./tree-views.md) (the
-variations explorer).
+This file is the authority for Masked Pieces and for `lib/pieceMask.ts`.
+Everything the screen shares is elsewhere: Play with Engine's screen, session
+and record in [`play-with-engine.md`](./play-with-engine.md), the board and
+its core in [`chessboard.md`](./chessboard.md), the variations explorer in
+[`tree-views.md`](./tree-views.md).
 
 > **A mask is a costume, never a rule.** Nothing in `chess.js`,
 > `lib/engine.ts`, `lib/gameTree.ts`, the PGN path, the engine module or the
@@ -53,22 +50,20 @@ variations explorer).
 | `src/views/engine/play/PlayWithEngine.tsx` | Play with Engine's route — `PlayScreen` without a costume, and the redirect of a **masked** `?saved=` here. |
 | `src/lib/pieceMask.ts` | **The mask**, pure (§3): `PieceMask`, `MASK_PRESETS`, `isMasked` / `isAnyMasked`, `maskedPieces` (the board's renderers), `maskSan` / `maskSanLine` / `maskNodeSan` (the notation), `pieceMaskFrom` / `samePieceMask` (storage). |
 | `src/lib/playedGames.ts` + `playedGameStore.ts` | **The record** (§5): `PlayedGame.mask` (`PlayedGameMask`), read back non-throwing; the store's idempotency compares it (`samePlayedGameMask`). |
-| `src/views/engine/games/PlayedGames.tsx` | **The Lobby** (Saved games until CTA-82) — the *Masked* chip, and Continue to `/engine/masked` for a masked game. |
+| `src/views/engine/games/PlayedGames.tsx` | **The Lobby** — the *Masked* chip, and Continue to `/engine/masked` for a masked game. |
 | `src/views/explorer/useVariationsExplorer.tsx` and its parts | The notation surfaces (§4): the option `mask`, threaded to `TreeMoveList` → `MoveList` → `VariationLine`, `TreeMap`, `NextMovesBar`, `MoveContextMenu`, the comment block's label. |
-| `src/views/dev/core/BoardPanel.tsx` | The pinned engine lines: `mask` (masked notation) and `showVariations` (off on Masked Pieces until the switch). |
-| `src/views/dev/core/BoardShell.tsx` | `capturedPieces` (the strips' icons in costume) and `hideMaterialDiff`. |
-| Tests | `src/views/engine/masked/MaskedPlay.test.tsx` (the screen), `src/lib/pieceMask.test.ts`, the costume in `src/lib/playedGames.test.ts`, the marker in `src/views/engine/games/PlayedGames.test.tsx`, the notation in `src/views/explorer/useVariationsExplorer.test.tsx`, and the two propagation tests (`src/views/dev/devBoards.test.tsx`, `devPanelPropagation.test.tsx`), where Masked Pieces is one of the boards. |
+| `src/views/board/core/BoardPanel.tsx` | The pinned engine lines: `mask` (masked notation) and `showVariations` (off on Masked Pieces until the switch). |
+| `src/views/board/core/BoardShell.tsx` | `capturedPieces` (the strips' icons in costume) and `hideMaterialDiff`. |
+| Tests | `src/views/engine/masked/MaskedPlay.test.tsx` (the screen), `src/lib/pieceMask.test.ts`, the costume in `src/lib/playedGames.test.ts`, the marker in `src/views/engine/games/PlayedGames.test.tsx`, the notation in `src/views/explorer/useVariationsExplorer.test.tsx`, and the two propagation tests (`src/views/board/boards.test.tsx`, `panelPropagation.test.tsx`), where Masked Pieces is one of the boards. |
 
 Routes and nav: `App.tsx` routes `/engine/masked` to
 `views/engine/masked/Main`. The sidebar entry is in the **Engine** folder,
 after the Lobby (`navItems.ts`, `nav.maskedPlay` —
-"Masked Pieces"). The pre-CTA-79 route `/masked/play` and its root
-*Masked Pieces* folder are gone, with **no redirect**: the old URL no longer
-exists.
+"Masked Pieces").
 
 Locale keys: `masking.*` in `src/locales/en.ts` / `he.ts` (the tab, the
 presets, the piece names, the notation switch, the lines switch — `lines`,
-`linesHint` — and the Saved games `marker`). Everything else the screen says
+`linesHint` — and the Lobby's `marker`). Everything else the screen says
 is Play with Engine's `playEngine.*` / `playedGames.*`. `he` is typed
 `typeof en`, so a missing key is a compile error.
 
@@ -76,7 +71,7 @@ is Play with Engine's `playEngine.*` / `playedGames.*`. `he` is typed
 
 ## 1. What the screen is
 
-- **Play with Engine, every feature of it** (`/engine/play`, CTA-74): a new
+- **Play with Engine, every feature of it** (`/engine/play`): a new
   board with **Play on**, the engine playing the side not at the bottom;
   the header's side toggle, Play, Replay, Resign, the games list and the
   engine switch; the tabs **Moves · Map · Engine**; side lines from an
@@ -97,7 +92,7 @@ is Play with Engine's `playEngine.*` / `playedGames.*`. `he` is typed
   e5…" gives shapes away. The **eval bar and the score chip stay**: a
   number says nothing about identity.
 - **Its games are the engine games.** Saved to `lib/playedGameStore.ts`
-  with Play with Engine's, listed in Saved games with a *Masked* chip, and
+  with Play with Engine's, listed in the Lobby with a *Masked* chip, and
   resumed here in the same disguise.
 
 ---
@@ -173,7 +168,7 @@ MaskedPlay.tsx (route)                      PlayWithEngine.tsx (route)
 - **`maskSanLine(mask, fen, sans)`** — a whole line (the mainline, an engine
   PV), replayed from `fen` for the squares; stops rewriting at a move that
   will not play.
-- **`maskNodeSan(mask | undefined, node)`** (CTA-79) — a tree's move, which
+- **`maskNodeSan(mask | undefined, node)`** — a tree's move, which
   carries its squares and the FEN after it (the side that moved is the one
   not to move there), so nothing is replayed. `undefined` prints the SAN:
   this is the one call every optional-mask surface makes.
@@ -214,13 +209,13 @@ whatever the switch says — the switch is about the notation.
   happen.
 - **The evaluation.** The eval bar, the score chip, the evals on the move
   list's cells: numbers, not identities.
-- **The opening line** (`CurrentOpening`) names the true opening, as the
-  pre-v2 screen did — a known, accepted leak of the *game*, not of a
-  piece. A reader who wants it gone is a recipe (§11.4).
+- **The opening line** (`CurrentOpening`) names the true opening — a known,
+  accepted leak of the *game*, not of a piece. A reader who wants it gone
+  is a recipe (§10.4).
 - **The reader's own comments** — prose the reader wrote; a `[%cal]`
   arrow or an eval chip in them is theirs.
 - **Leaving the costume on purpose**: *Copy variation PGN* in the move menu,
-  and Saved games' **Analysis** (`?game=play/games/<id>`), give the **true
+  and the Lobby's **Analysis** (`?game=play/games/<id>`), give the **true
   PGN** — the record *is* the true game — and the Analysis Board opens it
   unmasked. That is the reveal, not a leak.
 - **The DOM.** `data-san` attributes carry true SAN for tests; they are not
@@ -244,8 +239,7 @@ whatever the switch says — the switch is about the notation.
 - **Read back non-throwing** (`playedGameFrom` → `playedGameMaskFrom`): a
   `pieces` that `pieceMaskFrom` refuses drops the whole costume (the game
   reads as unmasked); a missing `notation` reads as on (the screen's
-  default). **A record from before CTA-79 has no `mask`** and reads as an
-  unmasked game — no version bump, no migration.
+  default). **A record with no `mask`** reads as an unmasked game.
 - **The PGN is the true game.** Nothing about the mask is in it (no tag):
   an export, the Analysis Board and any other PGN reader get ordinary chess.
 - **Resuming** — `/engine/masked?saved=<id>` seeds the mask and the switch
@@ -258,7 +252,7 @@ whatever the switch says — the switch is about the notation.
   `/engine/play?saved=<id>`. Without the first, Play with Engine would write
   the game back without its costume; without the second, an ordinary game
   would silently acquire one.
-- **Saved games** (`/engine/games`): a masked row carries the *Masked* chip
+- **The Lobby** (`/engine/games`): a masked row carries the *Masked* chip
   (`played-games-masked-<id>`, `masking.marker`), its **Continue** goes to
   `/engine/masked?saved=`, its **Analysis** to the Analysis Board unmasked.
   `playedGameSummary(…).masked` is the flag.
@@ -278,36 +272,7 @@ whatever the switch says — the switch is about the notation.
 
 ---
 
-## 7. History — what CTA-79 removed
-
-Masked Pieces was the last board screen on pre-v2 code. CTA-79 rebuilt it on
-Play with Engine's v2 screen and removed:
-
-- `src/views/masked/` — `MaskedPlay.tsx`, `MaskedPanel.tsx` (its own panel:
-  Game · Engine · Lines · Masking) and their test; `MaskEditor.tsx` moved to
-  `views/engine/masked/` unchanged.
-- `views/engine/play/usePlayWithEngine.ts` — the 670-line pre-v2 hook it
-  ran verbatim (a linear `Game`, no side lines, `persist` off).
-- `lib/savedGames.ts` / `savedGameStore.ts` — the pre-CTA-74 linear saved
-  game its hook imported. The helpers others borrowed moved:
-  `newSavedGameId` → `lib/recordId.ts` `newRecordId`; `resultOfFen` and the
-  tag writer (now `playedGameHeaders`) → `lib/playedGames.ts`.
-  `lib/savedGameFolders.ts` stays — the analyses' folders are that model —
-  its reads now generic over `FiledRecord`.
-- `EngineSettings.tsx`'s `showPlayAs` / `onNewGame` (the side and a new
-  game are the headers' — the side toggle and Replay).
-- The Development section's last two boards, `/dev/play` and `/dev/masked`
-  (`views/dev/play/`, `views/dev/masked/`), with `devNav.ts`, `devStores.ts`,
-  the dev routes in `App.tsx` and the `dev.*` locale keys. `views/dev/core/`
-  (which ships) and the shared test harness stay.
-- The route `/masked/play` and the root *Masked Pieces* nav folder — no
-  redirect.
-
-It was not migrated: a game played on the old screen was never saved.
-
----
-
-## 8. Invariants — never break these
+## 7. Invariants — never break these
 
 1. **The mask never reaches the rules.** No `chess.js`, engine, core, tree
    or PGN code takes a mask. The board reports true squares; the record's
@@ -330,14 +295,14 @@ It was not migrated: a game played on the old screen was never saved.
    "unmasked", never a crash, never a cross-colour mask.
 10. **One screen.** Masked Pieces renders `PlayScreen`; it does not grow a
     panel, a hook or a copy of Play with Engine's header. The propagation
-    tests (`devPanelPropagation.test.tsx`) include it.
+    tests (`panelPropagation.test.tsx`) include it.
 
 ---
 
-## 9. Testing
+## 8. Testing
 
 - **The screen** — `MaskedPlay.test.tsx`, over the shared harness
-  (`views/dev/devTestHarness.tsx`: `FakeEngine`, `reactChessboardMock`,
+  (`views/board/boardTestHarness.tsx`: `FakeEngine`, `reactChessboardMock`,
   `openingsMock`). The board stub keeps the `options` it was handed, so
   `boardOptions().pieces.wQ === defaultPieces.wP` *is* "a queen is drawn as a
   pawn" (import `defaultPieces` from the mocked `react-chessboard`). It covers
@@ -352,19 +317,19 @@ It was not migrated: a game played on the old screen was never saved.
 - **The explorer** — `useVariationsExplorer.test.tsx` asserts the side
   lines, the next-moves bar and the map's labels in coordinates with a
   `mask`, and SAN without.
-- **Saved games** — `PlayedGames.test.tsx`: the chip, Continue's target,
+- **The Lobby** — `PlayedGames.test.tsx`: the chip, Continue's target,
   Analysis unmasked.
-- **The shared skeleton** — `devBoards.test.tsx` renders Masked Pieces with
-  the other v2 boards (its lines are behind the switch, so it is excluded
+- **The shared skeleton** — `boards.test.tsx` renders Masked Pieces with
+  the other boards (its lines are behind the switch, so it is excluded
   from "pins the engine's lines" and has its own test), and
-  `devPanelPropagation.test.tsx` counts its sentinel.
+  `panelPropagation.test.tsx` counts its sentinel.
 - jsdom renders the map's labels at the initial zoom, so a label assertion
   works without a browser; the board's actual drawing does not — check the
   pixels in a browser.
 
 ---
 
-## 10. Debugging — symptoms and where they come from
+## 9. Debugging — symptoms and where they come from
 
 | Symptom | Look at |
 | --- | --- |
@@ -374,15 +339,15 @@ It was not migrated: a game played on the old screen was never saved.
 | "+N" beside a masked board | `hideMaterialDiff` — `isAnyMasked(costume.pieces)`. |
 | Engine lines visible on arrival | `showVariations` should be `masking.showLines` (false) — `BoardPanel` defaults it to `true`. |
 | A resumed game comes back unmasked | The record has no `mask` (written by `/engine/play`?), or `pieceMaskFrom` refused it (a cross-colour or missing entry). |
-| Opening a masked game from Saved games lands on Play with Engine | `playedGameSummary(…).masked` / the Continue link; the redirect in `PlayWithEngine.tsx` should then bounce it back. |
+| Opening a masked game from the Lobby lands on Play with Engine | `playedGameSummary(…).masked` / the Continue link; the redirect in `PlayWithEngine.tsx` should then bounce it back. |
 | The list re-orders when the mask changes | `samePlayedGameMask` must be in `savePlayedGame`'s unchanged test (it is written in place). |
 | A white piece drawn as a black one | An editor or preset change broke the same-colour rule; `pieceMaskFrom` would refuse it on read. |
 
 ---
 
-## 11. Extending — recipes
+## 10. Extending — recipes
 
-### 11.1 A new preset
+### 10.1 A new preset
 
 Add it to `MASK_PRESETS` (same-colour entries, built with `maskOf`), its id
 to `MASK_PRESET_IDS` in the order the editor lists them, and
@@ -390,7 +355,7 @@ to `MASK_PRESET_IDS` in the order the editor lists them, and
 editor renders it, `pieceMaskFrom` stores and reads it with no change. Add
 its row to the doc's §15.6.
 
-### 11.2 A new surface that prints a move
+### 10.2 A new surface that prints a move
 
 Give the component an optional `mask?: PieceMask`, print
 `maskNodeSan(mask, node)` (a tree's node) or `maskSanLine(mask, fen, sans)`
@@ -399,20 +364,20 @@ Give the component an optional `mask?: PieceMask`, print
 print exactly what it printed before. Add a row to §4.1 and a test beside
 the component's.
 
-### 11.3 A new piece of costume state (e.g. persisting the lines switch)
+### 10.3 A new piece of costume state (e.g. persisting the lines switch)
 
 Add the field to `PlayedGameMask`, read it back field by field in
 `playedGameMaskFrom` (a missing field reads as the screen's default), compare
 it in `samePlayedGameMask`, seed it in `MaskedPlay.tsx` from
 `arrival.resume?.mask`. No version bump.
 
-### 11.4 Hiding the opening line
+### 10.4 Hiding the opening line
 
 `PlayScreen`'s header renders `CurrentOpening` unconditionally. Hide it
 while `masking !== undefined && isAnyMasked(costume.pieces)` — a costume
 decision, made in `PlayScreen`, not in `CurrentOpening`.
 
-### 11.5 Masking on another board
+### 10.5 Masking on another board
 
 The shared pieces take the mask already (the explorer, `BoardPanel`,
 `BoardShell`), so a board that wants a costume passes `boardOptions.pieces`,
@@ -421,9 +386,9 @@ exactly as `PlayScreen` does. Decide first whether the board *plays* a game
 (the doc's §15.7 keeps masking to play: the study boards read a game rather
 than play one).
 
-### 11.6 An adaptive policy (progressive, temporary, random — doc §8, §10) or a reveal mode (§9)
+### 10.6 An adaptive policy (progressive, temporary, random — doc §8, §10) or a reveal mode (§9)
 
 Build it on `PieceMask`: the policy computes the mask the screen holds
 (`setMask`), so every surface follows it with no change. A reveal is a
 temporary `notationMask` of `undefined` (or the identity mask for the
-board). Neither touches the session or the record's shape beyond §11.3.
+board). Neither touches the session or the record's shape beyond §10.3.

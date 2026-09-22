@@ -46,7 +46,7 @@ import { useAnalysisSession } from "../tools/analysis/useAnalysisSession";
 /**
  * **A Library game** (`/library/<collection>/<game>`, CTA-75) — a game of a
  * collection on a **full analysis board**, composed exactly as the Analysis
- * Board is ([`chessboard-v2.md`](../../../.claude/rules/chessboard-v2.md) §5 —
+ * Board is ([`chessboard.md`](../../../.claude/rules/chessboard.md) §9.4 —
  * no behaviour hook of its own):
  *
  * | Capability | Taken |

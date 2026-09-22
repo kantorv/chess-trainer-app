@@ -38,7 +38,7 @@ import { usePlayGame, type PlayGameStart } from "./usePlayGame";
  * (`/engine/masked`), which is this screen with a costume. Built like the
  * Analysis Board: the v2 core, the engine module and the shared variations
  * explorer, composed by `usePlayGame`, placed in `BoardShell` / `BoardPanel`
- * ([`.claude/rules/chessboard-v2.md`](../../../../.claude/rules/chessboard-v2.md),
+ * ([`.claude/rules/chessboard.md`](../../../../.claude/rules/chessboard.md) §9,
  * [`.claude/rules/tree-views.md`](../../../../.claude/rules/tree-views.md)).
  *
  * | Capability | Taken | Because |

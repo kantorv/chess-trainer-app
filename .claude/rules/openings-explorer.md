@@ -3,7 +3,7 @@ paths:
   - "src/views/openings/**"
   - "src/lib/openings*"
   - "src/lib/analysisHandOff*"
-  - "src/views/dev/core/useOpeningBookModule.ts"
+  - "src/views/board/core/useOpeningBookModule.ts"
   - "src/views/shared/CurrentOpening*"
   - "src/views/shared/useOpeningBook.ts"
   - "src/data/openings/**"
@@ -21,18 +21,16 @@ rules that keep it correct, how to test it, how to debug it and how to
 extend it. It is written for people and for LLM sessions alike. It loads
 automatically when you work on the files in its `paths:` list.
 
-The root `CLAUDE.md` keeps a short summary (*Exploring an opening*). When
-the two disagree, **this file is the authority** for the Openings explorer
-and the opening book. The board rules are the authority for everything the
-screen shares with the other boards: [`chessboard.md`](./chessboard.md) (what
-a board is, the engine protocol, testing a board),
-[`chessboard-v2.md`](./chessboard-v2.md) (the core, the modules, the shell and
-panel) and [`tree-views.md`](./tree-views.md) (the variations explorer).
+This file is the authority for the Openings explorer and the opening book.
+Everything the screen shares with the other boards is elsewhere:
+[`chessboard.md`](./chessboard.md) (the board, the engine protocol, testing,
+the core) and [`tree-views.md`](./tree-views.md) (the variations explorer);
+the receiving end of the hand-off is [`analysis-board.md`](./analysis-board.md).
 
-> **An explorer keeps nothing.** Since CTA-78 the screen has no Save, no
+> **An explorer keeps nothing.** The screen has no Save, no
 > folders and no store. Whatever the reader wants to keep goes to the
 > Analysis Board (§5), which saves explicitly. **Do not add persistence here**
-> (§10.5 says what to do instead).
+> (§9.5 says what to do instead).
 
 ---
 
@@ -46,7 +44,7 @@ panel) and [`tree-views.md`](./tree-views.md) (the variations explorer).
 | `src/views/openings/Main.tsx` | Layout-only wrapper that `App.tsx` routes to (`openings-wrapper`). |
 | `src/lib/analysisHandOff.ts` | **The hand-off to the Analysis Board** (§5): `analysisHandOffState` / `analysisHandOffOf`, and `lineTreeOf` (one SAN line played from a start, used by this screen's `?at=` arrival). Pure, non-throwing. |
 | `src/lib/openings.ts` | **The opening book**, pure (§2): `loadOpeningBook`, `getPositionBook`, `findOpening`, `nextMoveOpenings` / `knownMoveOpenings`, `openingOfLine`, `stickyOpening`, and the two arrow colours. |
-| `src/views/dev/core/useOpeningBookModule.ts` | **The book as a v2 capability module** (`chessboard-v2.md` §2.2): the loaded book, the continuations from a FEN, their arrows, the hovered move. This screen is its one consumer. |
+| `src/views/board/core/useOpeningBookModule.ts` | **The book as a capability module** (`chessboard.md` §9.2.2): the loaded book, the continuations from a FEN, their arrows, the hovered move. This screen is its one consumer. |
 | `src/views/shared/CurrentOpening.tsx` | The live "current opening" line every game screen's panel carries (sticky), whose ECO chip links **into** this screen (`/openings?fen=`). |
 | `src/views/shared/useOpeningBook.ts` | The book for the saved lists' cards (`openingOfLine` under each card). Not used here. |
 | `src/data/openings/eco{A..E}.json` | The vendored book, ~3.2 MB, five lazy chunks. |
@@ -54,11 +52,10 @@ panel) and [`tree-views.md`](./tree-views.md) (the variations explorer).
 | `src/views/tools/analysis/AnalysisBoard.tsx`, `useAnalysisBoard.ts` | The **receiving** end of the hand-off: `arrivalOf(params, location.state)` and the `handOff` start option (§5.3). |
 | `src/views/tools/analysis/useAnalysisSession.ts` | The session this screen composes (core + engine + Play + a baseline), shared with the Analysis Board and the Library's game board. |
 | `src/views/tools/analysis/AnalysisLoad.tsx`, `AnalysisExport.tsx`, `AnalysisSettings.tsx`, `PlayToggleButton.tsx`, `EngineThinking.tsx` | The Analysis Board's tabs and header pieces, reused as they are. `AnalysisLoad` takes an optional `onSplit` and a `choiceLabelKey` for this screen (§3.4). |
-| Tests | `src/views/openings/OpeningsBoard.test.tsx` (the screen), `openingArrows.test.ts`, `src/lib/analysisHandOff.test.ts`, `src/lib/openings.test.ts`, `src/views/shared/CurrentOpening.test.tsx`, the hand-off arrivals in `src/views/tools/analysis/AnalysisBoard.test.tsx`, and the two propagation tests (`src/views/dev/devBoards.test.tsx`, `devPanelPropagation.test.tsx`). |
+| Tests | `src/views/openings/OpeningsBoard.test.tsx` (the screen), `openingArrows.test.ts`, `src/lib/analysisHandOff.test.ts`, `src/lib/openings.test.ts`, `src/views/shared/CurrentOpening.test.tsx`, the hand-off arrivals in `src/views/tools/analysis/AnalysisBoard.test.tsx`, and the two propagation tests (`src/views/board/boards.test.tsx`, `panelPropagation.test.tsx`). |
 
-Routes and nav: `App.tsx` routes `/openings` to `views/openings/Main` and
-keeps `/tools/openings` → `/openings` (`ToolsOpeningsRedirect`, query string
-kept). The sidebar's **Openings** folder is `singleEntry` (`navFolders.ts`)
+Routes and nav: `App.tsx` routes `/openings` to `views/openings/Main`. The
+sidebar's **Openings** folder is `singleEntry` (`navFolders.ts`)
 over one screen, `/openings` (`navItems.ts`, `nav.openings`), so it renders
 as one row under the folder's name.
 
@@ -93,7 +90,7 @@ compile error.
                      Play from here ─▶ /engine/play?fen=<position on screen>
 ```
 
-- **A v2 board with no behaviour hook of its own** (`chessboard-v2.md` §4,
+- **A board with no behaviour hook of its own** (`chessboard.md` §9.4,
   the Library's game board's recipe): the session is the Analysis Board's
   (`useAnalysisSession`), the book is one capability module
   (`useOpeningBookModule`), and the tree view is the shared explorer
@@ -125,7 +122,7 @@ compile error.
   full FEN, each trimmed to `{ eco, name, moves }`. `eco_interpolated.json`
   is merged in, so the positions *along* a named line are there too, not
   only the final one.
-- **Why vendored**: the app must work offline and on GitHub Pages (CTA-30),
+- **Why vendored**: the app must work offline and on GitHub Pages,
   and the npm package fetches its data from GitHub at runtime. To refresh
   it, run `node scripts/vendorOpenings.mjs /path/to/eco.json/checkout` and
   commit the five files. It is not part of the build.
@@ -230,7 +227,7 @@ still drawn: the book is the screen's point, and the switch is the tree's.
   that link does nothing visible**: the route does not remount, the arrival
   was read once, and the write-back (§4.2) replaces the pushed `?fen=` with
   the board's own URL (leaving one extra history entry). This is a known
-  limitation, not a feature; see §10.8.
+  limitation, not a feature; see §9.8.
 - **Analysis** (`openings-open-analysis`): §5.
 - **Play from here** (`openings-play-from-here`):
   `navigate("/engine/play?fen=<core.fen>")`. Play with Engine takes the
@@ -262,8 +259,8 @@ Arrivals are read once, into state (`useState(() => arrivalOf(…))`):
 arriving at a URL is what mounts the screen, and the screen rewrites its own
 URL as the reader moves.
 
-**Who links here**: `CurrentOpening`'s ECO chip on every game screen (`?fen=`), old
-`/tools/openings?…` links (redirected), and this screen's own address bar.
+**Who links here**: `CurrentOpening`'s ECO chip on every game screen
+(`?fen=`), and this screen's own address bar.
 
 ### 4.2 Out: the write-back
 
@@ -285,7 +282,7 @@ are not in it; the Analysis hand-off (§5) is how a tree travels.
 ### 5.1 Why location state
 
 `?fen=` carries a position, and `?game=` carries a reference into a store
-(root `CLAUDE.md`, *Handing a game on*). An explored tree is neither: it is
+([`analysis-board.md`](./analysis-board.md) §3). An explored tree is neither: it is
 too big for a URL and lives in no store. So it travels in the **router's
 location state**, with the position on screen as the usual `?at=`:
 
@@ -349,32 +346,13 @@ the old one: a reload may still be holding it.
 
 ---
 
-## 6. History — what CTA-78 removed
-
-Before CTA-78, `/openings` was a pre-v2 screen (`views/tools/openings/`:
-`OpeningsBoard`, `OpeningsPanel`, `useOpenings`, a flowing `VariationTree`,
-no engine) that **saved openings**: a note, nested folders, and
-`/openings/saved` over `lib/savedOpenings.ts`, `savedOpeningStore.ts`,
-`savedOpeningFolders.ts` and `savedOpeningFolderStore.ts`. The dev
-Development section also had **Openings v2** (`/dev/openings`, with a
-`chessapp.dev.savedOpenings.v1` dev store). All of it was deleted, along with
-`VariationTree.tsx` and two naming helpers of `lib/openings.ts` that only the
-save used (`topLevelOpeningName`, `openingVariationName`).
-
-**Saved openings were dropped with no migration.** Their `localStorage` keys,
-`chessapp.savedOpenings.v1` and `chessapp.savedOpeningFolders.v1`, are no
-longer read or written. Stale values may still sit in a reader's browser;
-nothing touches them. Do not reuse those key names.
-
----
-
-## 7. Invariants — never break these
+## 6. Invariants — never break these
 
 1. **No behaviour hook.** The screen composes `useAnalysisSession` +
    `useOpeningBookModule` + `useVariationsExplorer`. New behaviour goes into a
    module or a pure function, not an `useOpenings` again.
 2. **One panel, one square.** `BoardShell` / `BoardPanel`, under both
-   propagation tests (`devBoards.test.tsx`, `devPanelPropagation.test.tsx`).
+   propagation tests (`boards.test.tsx`, `panelPropagation.test.tsx`).
 3. **Nothing is kept.** No store, no autosave, no Load split. Keeping means
    handing off to the Analysis Board.
 4. **One arrow set, built in one place**: `openingArrowsOf`. Never pass
@@ -393,7 +371,7 @@ nothing touches them. Do not reuse those key names.
 
 ---
 
-## 8. Testing
+## 7. Testing
 
 - **Screen**: `src/views/openings/OpeningsBoard.test.tsx`. It mounts
   `OpeningsBoard` at `/openings` in a `MemoryRouter` with
@@ -401,7 +379,7 @@ nothing touches them. Do not reuse those key names.
   the path and (in an effect) the location state, which is how the hand-off
   is asserted.
 - **Stubs**: `lib/engine` → `FakeEngine`, `react-chessboard` →
-  `reactChessboardMock()` (both from `views/dev/devTestHarness.tsx`;
+  `reactChessboardMock()` (both from `views/board/boardTestHarness.tsx`;
   `boardOptions()` reads what the board was last given, which is how drops,
   positions, orientation and arrows are asserted). `lib/openings` is mocked
   with a **tiny book**: `knownMoveOpenings` answers from a FEN-keyed record.
@@ -422,14 +400,14 @@ nothing touches them. Do not reuse those key names.
   lines, the engine switch and the search of the position on screen.
 - Commands:
   `npx vitest run src/views/openings src/lib/analysisHandOff.test.ts src/lib/openings.test.ts`,
-  `npx vitest run src/views/tools/analysis/AnalysisBoard.test.tsx src/views/dev`,
+  `npx vitest run src/views/tools/analysis/AnalysisBoard.test.tsx src/views/board`,
   then `yarn test:run`.
 - Anything that needs real layout (arrow placement, the board's size) is a
   browser check, not jsdom (`chessboard.md` §8).
 
 ---
 
-## 9. Debugging — symptoms and where they come from
+## 8. Debugging — symptoms and where they come from
 
 | Symptom | Likely cause | Look at |
 | --- | --- | --- |
@@ -442,22 +420,22 @@ nothing touches them. Do not reuse those key names.
 | A reload of the Analysis Board loses the handed-over tree | a URL write went out without `state: urlState` | `AnalysisBoard.tsx` write-back effect |
 | `/openings?at=…` opens at the start | the `?at=` SANs are not legal from the `?fen=` start (or `?fen=` is missing for a non-standard start): `lineTreeOf` stops at the first bad SAN | the link's `fen` and `at` |
 | Clear goes to a position that is not the standard start | by design: Clear returns to the tree's own start (`?fen=` or a loaded game's) | §3.1 |
-| Clicking the ECO chip on `/openings` does nothing | known: same route, no remount, arrival read once (§3.3) | §10.8 |
+| Clicking the ECO chip on `/openings` does nothing | known: same route, no remount, arrival read once (§3.3) | §9.8 |
 | Hebrew UI shows SAN reversed | a token lost its `dir="ltr"` | `OpeningBookList.tsx` |
 
 ---
 
-## 10. Extending — recipes
+## 9. Extending — recipes
 
-### 10.1 A new tab
+### 9.1 A new tab
 
 Add `{ id, label: t("openings.tabs.<id>"), content }` to `tabs` in
 `OpeningsBoard.tsx` and the key to both catalogs. Add it to `KEEP_MOUNTED`
-only if its mount is costly (`chessboard-v2.md` §3.2). Assert it in
+only if its mount is costly (`chessboard.md` §9.3.2). Assert it in
 `OpeningsBoard.test.tsx`. Keep the Moves and Engine ids: both propagation
 tests expect them.
 
-### 10.2 Richer book rows (statistics, a second source)
+### 9.2 Richer book rows (statistics, a second source)
 
 The Book tab shows what `useOpeningBookModule` returns. For more per move
 (games played, results, a masters database):
@@ -465,26 +443,26 @@ The Book tab shows what `useOpeningBookModule` returns. For more per move
 1. Put the data and its pure lookup in `src/lib/` (a new module beside
    `openings.ts`, lazy-loaded like it).
 2. Extend the module's return, or add a **second capability module** under
-   `views/dev/core/`. Do not fold a network or database concern into the
+   `views/board/core/`. Do not fold a network or database concern into the
    screen.
 3. Render it in `OpeningBookList` (still presentational). If it changes
    which moves get arrows, change `openingArrowsOf` and its test.
 
-### 10.3 Different arrow colours or rules
+### 9.3 Different arrow colours or rules
 
 Colours are constants: `KNOWN_MOVE_ARROW_COLOR` / `HOVERED_MOVE_ARROW_COLOR`
 (`lib/openings.ts`) for the book, and `nextMoveArrows.ts` for the tree (shared
-by every v2 board: changing those changes all of them). Rules (which set
+by every board: changing those changes all of them). Rules (which set
 wins, what hover does) live only in `openingArrowsOf`. Update
 `openingArrows.test.ts`.
 
-### 10.4 Re-vendoring the book
+### 9.4 Re-vendoring the book
 
 `node scripts/vendorOpenings.mjs /path/to/eco.json` → commit
 `src/data/openings/*.json` → `npx vitest run src/lib/openings.test.ts` →
 `yarn build` (check the five shards are still separate chunks).
 
-### 10.5 "Can we save openings again?"
+### 9.5 "Can we save openings again?"
 
 Do not bring back a saved-openings store. Keeping a tree is the Analysis
 Board's job: the Analysis button hands it over, and the reader saves it
@@ -493,21 +471,22 @@ wanted, add a button that hands off and opens the save dialog on arrival (a
 flag in the hand-off state, read by `useAnalysisBoard`), rather than a
 second store.
 
-### 10.6 Handing a tree from another screen
+### 9.6 Handing a tree from another screen
 
 See §5.4. If the Analysis Board should also accept a tree from elsewhere
 with different semantics (for example, not "unsaved"), add a field to the
 state and handle it in `useAnalysisBoard`'s start, keeping old states
 readable.
 
-### 10.7 A link that carries the whole tree
+### 9.7 A link that carries the whole tree
 
 `?at=` carries one line, and that is deliberate: a tree does not fit in a
 URL. If shareable trees are ever needed, they belong in a store with a
-`?game=` key (`lib/gameReference.ts`, one registry line: root `CLAUDE.md`),
+`?game=` key (`lib/gameReference.ts`, one registry line:
+[`analysis-board.md`](./analysis-board.md) §3.1),
 not in a longer query string.
 
-### 10.8 Following a `?fen=` that changes while mounted
+### 9.8 Following a `?fen=` that changes while mounted
 
 The screen reads its URL once. To make an in-app link to `/openings?fen=…`
 (the ECO chip on this very screen) start a fresh board, either hide the

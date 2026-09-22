@@ -14,8 +14,8 @@ import type { Turn } from "../../../lib/engineAnalysis";
 import { useTreeNavigation } from "../../tools/analysis/useTreeNavigation";
 
 /**
- * **The base of every v2 board** — §1 of
- * [`.claude/rules/chessboard-v2.md`](../../../../.claude/rules/chessboard-v2.md).
+ * **The base of every v2 board** — §9.1 of
+ * [`.claude/rules/chessboard.md`](../../../../.claude/rules/chessboard.md).
  *
  * Everything every board has, and nothing any single board has: the game as a
  * {@link GameTree}, node-based navigation over it, the `chess.js` rules oracle,

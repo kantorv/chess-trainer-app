@@ -22,7 +22,7 @@ import { useAnalysisSession } from "./useAnalysisSession";
 
 /**
  * **The Analysis Board's session** (CTA-73) — the v2 core
- * ([`.claude/rules/chessboard-v2.md`](../../../../.claude/rules/chessboard-v2.md))
+ * ([`.claude/rules/chessboard.md`](../../../../.claude/rules/chessboard.md) §9)
  * composed for analysis, plus the one thing that is this screen's own: the
  * **saved record** the session is attached to, and what the reader does with
  * its changes.

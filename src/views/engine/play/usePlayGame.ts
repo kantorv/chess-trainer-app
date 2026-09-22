@@ -31,7 +31,7 @@ import { usePlayToggle } from "../../board/core/usePlayToggle";
 
 /**
  * **Play with Engine's session** (CTA-74) — the v2 core
- * ([`.claude/rules/chessboard-v2.md`](../../../../.claude/rules/chessboard-v2.md))
+ * ([`.claude/rules/chessboard.md`](../../../../.claude/rules/chessboard.md) §9)
  * composed for a game against the engine: the Analysis Board's composition
  * (`useAnalysisBoard`), with three differences.
  *
