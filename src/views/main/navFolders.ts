@@ -2,6 +2,7 @@ import type { SvgIconComponent } from "@mui/icons-material";
 import AccountTreeRoundedIcon from "@mui/icons-material/AccountTreeRounded";
 import MenuBookRoundedIcon from "@mui/icons-material/MenuBookRounded";
 import MemoryRoundedIcon from "@mui/icons-material/MemoryRounded";
+import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
 import SnippetFolderRoundedIcon from "@mui/icons-material/SnippetFolderRounded";
 import TravelExploreRoundedIcon from "@mui/icons-material/TravelExploreRounded";
 
@@ -105,5 +106,15 @@ export const navFolders = (): readonly NavFolder[] => [
     // Repertoires list, whose own "Add repertoire" link reaches
     // `/repertoires/new`.
     singleEntry: true,
+  },
+  /*
+    The app's own settings (CTA-86), one screen per tab of `/settings/<tab>`
+    — Export today. A folder rather than a single entry, so a tab added later
+    is one more `navItems()` entry here.
+  */
+  {
+    id: "settings",
+    labelKey: "nav.folders.settings",
+    icon: SettingsRoundedIcon,
   },
 ];

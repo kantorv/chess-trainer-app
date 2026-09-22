@@ -1,4 +1,5 @@
 import type { SvgIconComponent } from "@mui/icons-material";
+import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
 import HistoryRoundedIcon from "@mui/icons-material/HistoryRounded";
 import MenuBookRoundedIcon from "@mui/icons-material/MenuBookRounded";
 import SportsEsportsRoundedIcon from "@mui/icons-material/SportsEsportsRounded";
@@ -95,6 +96,13 @@ export const navItems = (): readonly NavItem[] => [
     labelKey: "nav.repertoires",
     icon: MenuBookRoundedIcon,
     folder: "repertoires",
+  },
+  // Settings (CTA-86): each tab of `/settings/<tab>` is an entry here.
+  {
+    to: "/settings/export",
+    labelKey: "nav.settingsExport",
+    icon: DownloadRoundedIcon,
+    folder: "settings",
   },
 ];
 

@@ -90,6 +90,16 @@ describe("the shipped nav tree", () => {
     expect(folderPath("/masked/play")).toEqual([]);
   });
 
+  it("files Export in a Settings folder, a folder rather than a single entry (CTA-86)", () => {
+    const settings = navFolders().find((folder) => folder.id === "settings");
+    expect(settings).toMatchObject({ labelKey: "nav.folders.settings" });
+    expect(settings?.singleEntry).toBeFalsy();
+    expect(navItemsInFolder("settings").map((item) => [item.to, item.labelKey])).toEqual([
+      ["/settings/export", "nav.settingsExport"],
+    ]);
+    expect(folderPath("/settings/export")).toEqual(["settings"]);
+  });
+
   it("returns an empty breadcrumb for a path that is not a screen", () => {
     expect(folderPath("/nope")).toEqual([]);
     expect(folderPath("")).toEqual([]);

@@ -19,6 +19,7 @@ import { default as RepertoireUploadScreen  } from './views/repertoires/Repertoi
 import { default as RepertoireBoardScreen  } from './views/repertoires/RepertoireBoardMain'
 import { default as RepertoireSettingsScreen  } from './views/repertoires/RepertoireSettingsScreenMain'
 import { default as RepertoireGameScreen  } from './views/repertoires/RepertoireGameMain'
+import { default as SettingsScreen  } from './views/settings/SettingsMain'
 
 
 const routes = createBrowserRouter(
@@ -119,6 +120,16 @@ const routes = createBrowserRouter(
         {
           path: "/library/:collectionId/:game",
           element: <LibraryGameScreen />
+        },
+        // Settings (CTA-86): one tab per segment — Export today. `/settings`
+        // and an unknown tab land on the first.
+        {
+          path: "/settings",
+          element: <SettingsScreen />
+        },
+        {
+          path: "/settings/:tab",
+          element: <SettingsScreen />
         },
 
       ]

@@ -21,12 +21,14 @@ const he: typeof en = {
     repertoires: "הרפרטוארים שלי",
     libraryCollections: "אוספים",
     addCollection: "הוספת אוסף",
+    settingsExport: "ייצוא",
     folders: {
       engine: "מנוע",
       library: "ספרייה",
       analysisBoard: "לוח ניתוח",
       openings: "פתיחות",
       repertoires: "רפרטוארים",
+      settings: "הגדרות",
     },
   },
   home: {
@@ -997,6 +999,31 @@ const he: typeof en = {
         tree: "עץ",
         engine: "מנוע",
       },
+    },
+  },
+  settings: {
+    title: "הגדרות",
+    tabs: {
+      export: "ייצוא",
+    },
+    export: {
+      intro:
+        "הורידו את הנתונים שלכם כקובץ ‎.zip אחד: קובצי PGN שכל תוכנת שחמט קוראת, וקובץ manifest.json שמתאר איך הם מתחברים בחזרה.",
+      categories: {
+        collections: "אוספים",
+        games: "משחקים",
+        analyses: "ניתוחים",
+        repertoires: "רפרטוארים",
+      },
+      includeShipped_one: "כולל האוסף המובנה",
+      includeShipped_other: "כולל {{count}} האוספים המובנים",
+      run: "ייצוא",
+      working: "מייצא…",
+      done: "{{fileName}} הורד.",
+      failed: "לא ניתן היה לשמור את הייצוא. לא הורד דבר.",
+      unreadable: "לא ניתן היה לקרוא את המשחקים של „{{name}}”. לא הורד דבר.",
+      panel:
+        "משחקים וניתוחים הם קובץ PGN אחד כל אחד; כל אוסף הוא קובץ משלו; רפרטוארים הם קובץ לכל תיקייה, ועוד אחד לאלה שאינם בתיקייה. האוספים שהעליתם תמיד נכללים עם „אוספים” — אלה שמגיעים עם האפליקציה רק אם תבקשו. דבר אינו משתנה או נמחק.",
     },
   },
   footer: {
