@@ -11,7 +11,7 @@ import {
   CARO,
   CARO_TWO_GAMES,
   renderSection,
-  storeLegacyRepertoire,
+  storeMultiGameRepertoire,
   storeRepertoire,
 } from "./repertoireTestKit";
 
@@ -162,7 +162,7 @@ describe("a repertoire's own view — the player, on the v2 board", () => {
 
 describe("a record from before the one-game rule", () => {
   it("opens on the merge-or-split choice, not on a board", async () => {
-    await renderSection(`/repertoires/${await storeLegacyRepertoire("old", CARO_TWO_GAMES, "Old Caro")}`);
+    await renderSection(`/repertoires/${await storeMultiGameRepertoire("old", CARO_TWO_GAMES, "Old Caro")}`);
 
     expect(screen.getByTestId("repertoire-board-multi")).toHaveTextContent("Old Caro");
     expect(await screen.findByTestId("repertoire-choice")).toHaveTextContent(
@@ -172,8 +172,8 @@ describe("a record from before the one-game rule", () => {
   });
 
   it("merges in place: the same id, now one game, and opens on the board", async () => {
+    await storeMultiGameRepertoire("old", CARO_TWO_GAMES, "Old Caro");
     await storeRepertoire("newer");
-    await storeLegacyRepertoire("old", CARO_TWO_GAMES, "Old Caro");
     await renderSection("/repertoires/old");
     await userEvent.click(await screen.findByTestId("repertoire-choice-merge"));
 
@@ -190,8 +190,8 @@ describe("a record from before the one-game rule", () => {
   });
 
   it("splits in place: one repertoire per game where the old one stood", async () => {
+    await storeMultiGameRepertoire("old", CARO_TWO_GAMES, "Old Caro");
     await storeRepertoire("newer");
-    await storeLegacyRepertoire("old", CARO_TWO_GAMES, "Old Caro");
     await renderSection("/repertoires/old");
     await userEvent.click(await screen.findByTestId("repertoire-choice-split"));
 

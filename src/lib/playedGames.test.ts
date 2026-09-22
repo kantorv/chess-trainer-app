@@ -8,7 +8,6 @@ import {
   findPlayedGame,
   loadPlayedGames,
   MAX_PLAYED_GAMES,
-  PLAYED_GAMES_STORAGE_KEY,
   playedGamesSnapshot,
   removePlayedGame,
   resetPlayedGameStore,
@@ -128,17 +127,6 @@ describe("the played games' store", () => {
     resetPlayedGameStore();
     expect(playedGamesSnapshot()).toBeUndefined();
     expect((await loadPlayedGames()).map((game) => game.id)).toEqual(["a"]);
-  });
-
-  it("moves the games out of the old localStorage key on the first read", async () => {
-    localStorage.setItem(
-      PLAYED_GAMES_STORAGE_KEY,
-      JSON.stringify([record("b", "1. d4 *"), record("a", "1. e4 *")]),
-    );
-    expect((await loadPlayedGames()).map((game) => game.id)).toEqual(["b", "a"]);
-    expect(localStorage.getItem(PLAYED_GAMES_STORAGE_KEY)).toBeNull();
-    resetPlayedGameStore();
-    expect((await loadPlayedGames()).map((game) => game.id)).toEqual(["b", "a"]);
   });
 
   it("puts a new game and a game with a new move at the top", async () => {

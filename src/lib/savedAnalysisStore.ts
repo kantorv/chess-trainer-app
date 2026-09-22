@@ -19,9 +19,7 @@ import { ANALYSES_STORE, ANALYSIS_CHANNEL, openAnalysisDb } from "./savedAnalysi
  * The store half of [`savedAnalyses.ts`](./savedAnalyses.ts), built over the
  * shared [`idbRecordStore.ts`](./idbRecordStore.ts) — which owns the kept
  * snapshot, the queued writes that answer once committed, the other tabs'
- * `BroadcastChannel`, and the one-time move out of `localStorage`
- * (`chessapp.savedAnalyses.v1`, where the analyses lived until CTA-77), and
- * carries the reasoning for all of it. What is this file's own: the cap, the
+ * `BroadcastChannel`, and carries the reasoning for all of it. What is this file's own: the cap, the
  * idempotency comparison, and the operations.
  *
  * Every read of the list is the kept snapshot — `undefined` until the first
@@ -29,9 +27,6 @@ import { ANALYSES_STORE, ANALYSIS_CHANNEL, openAnalysisDb } from "./savedAnalysi
  * write a promise of `undefined` or a {@link SavedAnalysisProblem}. Nothing
  * here throws.
  */
-
-/** Where the analyses lived until CTA-77 — moved into IndexedDB on the first read. */
-export const SAVED_ANALYSES_STORAGE_KEY = "chessapp.savedAnalyses.v1";
 
 /**
  * How many analyses are kept.
@@ -62,7 +57,6 @@ const analyses = idbRecordStore<SavedAnalysis>({
   normalise: savedAnalysisFrom,
   order: "newest-first",
   channel: ANALYSIS_CHANNEL,
-  legacyKey: SAVED_ANALYSES_STORAGE_KEY,
 });
 
 /** The saved analyses, newest first — `undefined` until the first read lands. Stable between changes. */

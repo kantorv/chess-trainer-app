@@ -14,12 +14,11 @@ import type { vi } from "vitest";
 
 import { DEFAULT_POSITION } from "chess.js";
 
-import { readRepertoireText, savedRepertoireOf } from "../../lib/savedRepertoires";
+import { readRepertoireText, savedRepertoireFrom, savedRepertoireOf } from "../../lib/savedRepertoires";
 import { loadRepertoireFolders } from "../../lib/savedRepertoireFolderStore";
 import {
   loadSavedRepertoires,
   resetSavedRepertoireStore,
-  SAVED_REPERTOIRES_STORAGE_KEY,
   saveRepertoire,
 } from "../../lib/savedRepertoireStore";
 import AppThemeWithLang from "../../theme/AppThemeWithLang";
@@ -78,21 +77,19 @@ export const storeRepertoire = async (id: string, text: string = CARO, name = ""
 
 /**
  * Store a record the way one was written **before** the one-game rule — the
- * whole multi-game text in one row — to exercise the choice it opens on. Such
- * a record predates IndexedDB too, so it arrives as one did: under the old
- * `localStorage` key, moved in (below what IndexedDB holds) on a fresh read.
+ * whole multi-game text in one row — to exercise the choice it opens on. It
+ * goes through the normaliser, as a stored row is read back, and the store is
+ * then read afresh.
  */
-export const storeLegacyRepertoire = async (id: string, text: string, name = "") => {
+export const storeMultiGameRepertoire = async (id: string, text: string, name = "") => {
   const now = new Date().toISOString();
-  localStorage.setItem(
-    SAVED_REPERTOIRES_STORAGE_KEY,
-    JSON.stringify([
-      { id, name, pgn: text, previewFen: DEFAULT_POSITION, savedAt: now, updatedAt: now },
-    ]),
-  );
+  const record = savedRepertoireFrom({ id, name, pgn: text, previewFen: DEFAULT_POSITION, savedAt: now, updatedAt: now });
+  if (record === undefined) throw new Error("multi-game fixture is not a readable record");
+  const problem = await saveRepertoire(record);
+  if (problem !== undefined) throw new Error(`multi-game fixture did not save: ${problem}`);
   resetSavedRepertoireStore();
   const rows = await loadSavedRepertoires();
-  if (!rows.some((row) => row.id === id)) throw new Error("legacy fixture did not read back");
+  if (!rows.some((row) => row.id === id)) throw new Error("multi-game fixture did not read back");
   return id;
 };
 

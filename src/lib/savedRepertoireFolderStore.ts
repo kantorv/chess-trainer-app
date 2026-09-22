@@ -15,8 +15,7 @@ import { unfileRepertoiresIn } from "./savedRepertoireStore";
  * Where the reader's repertoire folders are kept: **IndexedDB** — the
  * `folders` object store beside the repertoires in `chessapp.repertoires`
  * (`lib/savedRepertoireDb.ts`), over the shared
- * [`idbRecordStore.ts`](./idbRecordStore.ts), which moves the folders out of
- * `localStorage` (`chessapp.savedRepertoireFolders.v1`) on the first read.
+ * [`idbRecordStore.ts`](./idbRecordStore.ts).
  *
  * The analyses' folder store again, minus everything a tree needs and a flat
  * list does not — no parent to check, no subtree to refuse, no sub-folders to
@@ -26,9 +25,6 @@ import { unfileRepertoiresIn } from "./savedRepertoireStore";
  * keeps its contents** — its repertoires go back to Unfiled in the same
  * operation. Every write is a promise; nothing throws.
  */
-
-/** Where the folders lived before IndexedDB — moved in on the first read. */
-export const REPERTOIRE_FOLDERS_STORAGE_KEY = "chessapp.savedRepertoireFolders.v1";
 
 /** How many folders are kept — generous, but a bound. */
 export const MAX_REPERTOIRE_FOLDERS = 100;
@@ -45,7 +41,6 @@ const folders = idbRecordStore<RepertoireFolder>({
   normalise: repertoireFolderFrom,
   order: "oldest-first",
   channel: REPERTOIRE_CHANNEL,
-  legacyKey: REPERTOIRE_FOLDERS_STORAGE_KEY,
 });
 
 /** The folders, oldest first — `undefined` until the first read lands. Stable between changes. */

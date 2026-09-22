@@ -11,7 +11,6 @@ import {
 } from "./savedAnalysisFolders";
 import {
   analysisFoldersSnapshot,
-  ANALYSIS_FOLDERS_STORAGE_KEY,
   createAnalysisFolder,
   loadAnalysisFolders,
   MAX_ANALYSIS_FOLDERS,
@@ -121,27 +120,5 @@ describe("the saved-analysis folders", () => {
     expect(
       analysesHere(await loadSavedAnalyses(), folders(), null).map((row) => row.id),
     ).toEqual(["stray", "top"]);
-  });
-
-  it("moves the folders out of localStorage on the first read, then drops the key", async () => {
-    const stored = [
-      { id: "f1", name: "Old", parentId: null, savedAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z" },
-      { id: "f2", name: "Older child", parentId: "f1", savedAt: "2026-01-02T00:00:00.000Z", updatedAt: "2026-01-02T00:00:00.000Z" },
-    ];
-    localStorage.setItem(ANALYSIS_FOLDERS_STORAGE_KEY, JSON.stringify(stored));
-    localStorage.setItem(`${ANALYSIS_FOLDERS_STORAGE_KEY}.rev`, "1");
-
-    expect((await loadAnalysisFolders()).map((folder) => folder.id)).toEqual(["f1", "f2"]);
-    expect(localStorage.getItem(ANALYSIS_FOLDERS_STORAGE_KEY)).toBeNull();
-    expect(localStorage.getItem(`${ANALYSIS_FOLDERS_STORAGE_KEY}.rev`)).toBeNull();
-
-    // A new folder goes after them, and a fresh read finds all three in IndexedDB.
-    await createAnalysisFolder("New", null);
-    resetAnalysisFolderStore();
-    expect((await loadAnalysisFolders()).map((folder) => folder.name)).toEqual([
-      "Old",
-      "Older child",
-      "New",
-    ]);
   });
 });

@@ -12,8 +12,7 @@ import { unfileAnalysesIn } from "./savedAnalysisStore";
  * Where the reader's saved-analysis folders are kept (CTA-73): **IndexedDB**
  * since CTA-77, the `folders` object store beside the analyses
  * (`lib/savedAnalysisDb.ts`), over the shared
- * [`idbRecordStore.ts`](./idbRecordStore.ts) — which moves the folders out of
- * `localStorage` (`chessapp.savedAnalysisFolders.v1`) on the first read.
+ * [`idbRecordStore.ts`](./idbRecordStore.ts).
  *
  * The CRUD lives in the store so every caller means the same thing:
  * {@link createAnalysisFolder} hands back what it made (a split, and the
@@ -22,9 +21,6 @@ import { unfileAnalysesIn } from "./savedAnalysisStore";
  * contents — sub-folders re-parent up a level and the analyses become
  * Unfiled. Every write is a promise; nothing throws.
  */
-
-/** Where the folders lived until CTA-77 — moved into IndexedDB on the first read. */
-export const ANALYSIS_FOLDERS_STORAGE_KEY = "chessapp.savedAnalysisFolders.v1";
 
 /** How many folders are kept — generous, but a bound. */
 export const MAX_ANALYSIS_FOLDERS = 100;
@@ -41,7 +37,6 @@ const folders = idbRecordStore<AnalysisFolder>({
   normalise: analysisFolderFrom,
   order: "oldest-first",
   channel: ANALYSIS_CHANNEL,
-  legacyKey: ANALYSIS_FOLDERS_STORAGE_KEY,
 });
 
 /** The folders, oldest first — `undefined` until the first read lands. Stable between changes. */

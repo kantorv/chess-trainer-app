@@ -21,9 +21,7 @@ import {
  * The store half of [`savedRepertoires.ts`](./savedRepertoires.ts), built over
  * the shared [`idbRecordStore.ts`](./idbRecordStore.ts) — which owns the kept
  * snapshot, the queued writes answered once committed, the other tabs'
- * `BroadcastChannel`, and the one-time move out of `localStorage`
- * (`chessapp.savedRepertoires.v1`, where the repertoires lived until they
- * moved). The app's storage as a whole is `.claude/rules/database.md`.
+ * `BroadcastChannel`. The app's storage as a whole is `.claude/rules/database.md`.
  *
  * Every read of the list is the kept snapshot — `undefined` until the first
  * read lands ({@link loadSavedRepertoires}, or the first subscriber) — and
@@ -36,9 +34,6 @@ import {
  * {@link fileRepertoire}, {@link unfileRepertoiresIn} — are here, because
  * these are the records they change.
  */
-
-/** Where the repertoires lived before IndexedDB — moved in on the first read. */
-export const SAVED_REPERTOIRES_STORAGE_KEY = "chessapp.savedRepertoires.v1";
 
 /**
  * How many repertoires are kept. Generous, because a split makes one record
@@ -60,7 +55,6 @@ const repertoires = idbRecordStore<SavedRepertoire>({
   normalise: savedRepertoireFrom,
   order: "newest-first",
   channel: REPERTOIRE_CHANNEL,
-  legacyKey: SAVED_REPERTOIRES_STORAGE_KEY,
 });
 
 /** The saved repertoires, newest first — `undefined` until the first read lands. Stable between changes. */

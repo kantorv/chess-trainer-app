@@ -18,7 +18,6 @@ import {
   MAX_SAVED_REPERTOIRES,
   removeSavedRepertoire,
   removeSavedRepertoires,
-  SAVED_REPERTOIRES_STORAGE_KEY,
   saveRepertoire,
   savedRepertoiresSnapshot,
   subscribeSavedRepertoires,
@@ -28,6 +27,8 @@ import {
   updateRepertoireSettings,
 } from "./savedRepertoireStore";
 import { parsePgnGame } from "./pgn";
+import { committed } from "./idb";
+import { openRepertoireDb, REPERTOIRES_STORE } from "./savedRepertoireDb";
 
 /* `src/test/setup.ts` deletes the databases between tests, and forgets what each store read. */
 
@@ -50,19 +51,6 @@ describe("the saved-repertoires store", () => {
     resetSavedRepertoireStore();
     expect(savedRepertoiresSnapshot()).toBeUndefined();
     expect(await loadSavedRepertoires()).toEqual([record("a", "Caro")]);
-  });
-
-  it("moves the repertoires out of the old localStorage key on the first read", async () => {
-    localStorage.setItem(
-      SAVED_REPERTOIRES_STORAGE_KEY,
-      JSON.stringify([record("b"), record("a")]),
-    );
-    localStorage.setItem(`${SAVED_REPERTOIRES_STORAGE_KEY}.rev`, "1");
-    expect((await loadSavedRepertoires()).map((row) => row.id)).toEqual(["b", "a"]);
-    expect(localStorage.getItem(SAVED_REPERTOIRES_STORAGE_KEY)).toBeNull();
-    expect(localStorage.getItem(`${SAVED_REPERTOIRES_STORAGE_KEY}.rev`)).toBeNull();
-    resetSavedRepertoireStore();
-    expect((await loadSavedRepertoires()).map((row) => row.id)).toEqual(["b", "a"]);
   });
 
   it("lists newest first and keeps an identical re-save a no-op", async () => {
@@ -109,10 +97,12 @@ describe("the saved-repertoires store", () => {
   });
 
   it("drops a malformed row rather than rendering it", async () => {
-    localStorage.setItem(
-      SAVED_REPERTOIRES_STORAGE_KEY,
-      JSON.stringify([record("good"), { id: "bad" }, "junk"]),
-    );
+    const db = await openRepertoireDb();
+    const tx = db.transaction(REPERTOIRES_STORE, "readwrite");
+    tx.objectStore(REPERTOIRES_STORE).put({ id: "good", seq: 2, value: record("good") });
+    tx.objectStore(REPERTOIRES_STORE).put({ id: "bad", seq: 1, value: { id: "bad" } });
+    tx.objectStore(REPERTOIRES_STORE).put({ id: "junk", seq: 0, value: "junk" });
+    await committed(tx);
     expect((await loadSavedRepertoires()).map((row) => row.id)).toEqual(["good"]);
   });
 

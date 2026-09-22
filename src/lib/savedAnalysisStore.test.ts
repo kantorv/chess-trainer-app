@@ -23,7 +23,6 @@ import {
   findSavedAnalysisGame,
   MAX_SAVED_ANALYSES,
   removeSavedAnalysis,
-  SAVED_ANALYSES_STORAGE_KEY,
   saveAnalysis,
   loadSavedAnalyses,
   resetSavedAnalysisStore,
@@ -97,8 +96,8 @@ describe("the saved-analyses store", () => {
     expect(await ids()).toEqual(["a2", "a1"]);
     expect(findSavedAnalysis("a1")?.pgn).toContain("1. e4");
     expect(findSavedAnalysis("a1")?.folderId).toBe("f");
-    // Nothing is written to localStorage any more.
-    expect(localStorage.getItem(SAVED_ANALYSES_STORAGE_KEY)).toBeNull();
+    // Nothing is written to localStorage.
+    expect(localStorage.length).toBe(0);
   });
 
   it("replaces an analysis in place, so saving on every move is one row", async () => {
@@ -230,50 +229,6 @@ describe("the saved-analyses store", () => {
     expect(await Promise.all(writes)).toEqual([undefined, undefined, undefined, undefined]);
     expect(await ids()).toEqual(["a1"]);
     expect(findSavedAnalysis("a1")?.folderId).toBe("f");
-  });
-});
-
-describe("the saved-analyses store — moving out of localStorage (CTA-77)", () => {
-  it("moves the analyses into IndexedDB on the first read, then drops the key", async () => {
-    localStorage.setItem(
-      SAVED_ANALYSES_STORAGE_KEY,
-      JSON.stringify([save("newer", ["d4"]), { nonsense: true }, save("older", ["e4"])]),
-    );
-    localStorage.setItem(`${SAVED_ANALYSES_STORAGE_KEY}.rev`, "1");
-
-    expect(await ids()).toEqual(["newer", "older"]);
-    expect(localStorage.getItem(SAVED_ANALYSES_STORAGE_KEY)).toBeNull();
-    expect(localStorage.getItem(`${SAVED_ANALYSES_STORAGE_KEY}.rev`)).toBeNull();
-
-    // In IndexedDB now: a reload reads them from there, and a new one goes on top.
-    await saveAnalysis(save("new", ["c4"]));
-    resetSavedAnalysisStore();
-    expect(await ids()).toEqual(["new", "newer", "older"]);
-  });
-
-  it("keeps the key, and still shows its analyses, when IndexedDB refuses the move", async () => {
-    localStorage.setItem(SAVED_ANALYSES_STORAGE_KEY, JSON.stringify([save("a1", ["e4"])]));
-    vi.spyOn(IDBObjectStore.prototype, "put").mockImplementation(() => {
-      throw new DOMException("full", "QuotaExceededError");
-    });
-
-    expect(await ids()).toEqual(["a1"]);
-    expect(localStorage.getItem(SAVED_ANALYSES_STORAGE_KEY)).not.toBeNull();
-
-    // Tried again on the next read, once IndexedDB takes it.
-    vi.restoreAllMocks();
-    resetSavedAnalysisStore();
-    expect(await ids()).toEqual(["a1"]);
-    expect(localStorage.getItem(SAVED_ANALYSES_STORAGE_KEY)).toBeNull();
-  });
-
-  it("reads an empty list rather than throwing on a corrupt key", async () => {
-    localStorage.setItem(SAVED_ANALYSES_STORAGE_KEY, "{ not json");
-    expect(await listed()).toEqual([]);
-  });
-
-  it("is a separate store from the saved games, sharing no key", () => {
-    expect(SAVED_ANALYSES_STORAGE_KEY).not.toBe("chessapp.savedGames.v1");
   });
 });
 

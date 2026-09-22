@@ -5,16 +5,14 @@ import userEvent from "@testing-library/user-event";
 import i18n from "../../i18n";
 import { resetRepertoireFolderStore } from "../../lib/savedRepertoireFolderStore";
 import {
-  clearSavedRepertoires,
   resetSavedRepertoireStore,
-  SAVED_REPERTOIRES_STORAGE_KEY,
   savedRepertoiresSnapshot,
 } from "../../lib/savedRepertoireStore";
 import {
   CARO_TWO_GAMES,
   renderSection,
   renderSectionNow,
-  storeLegacyRepertoire,
+  storeMultiGameRepertoire,
   storeRepertoire,
 } from "./repertoireTestKit";
 
@@ -83,18 +81,6 @@ describe("the Repertoires list", () => {
     renderSectionNow("/repertoires");
     expect(screen.getByTestId("repertoires-loading")).toHaveTextContent("Reading your repertoires");
     expect(await screen.findByTestId("repertoires-item-a")).toBeInTheDocument();
-  });
-
-  it("moves repertoires saved before IndexedDB out of localStorage on the first visit", async () => {
-    await store("a", "Caro");
-    const kept = savedRepertoiresSnapshot()!;
-    await clearSavedRepertoires();
-    resetSavedRepertoireStore();
-    localStorage.setItem(SAVED_REPERTOIRES_STORAGE_KEY, JSON.stringify(kept));
-
-    renderSectionNow("/repertoires");
-    expect(await screen.findByTestId("repertoires-item-a")).toBeInTheDocument();
-    expect(localStorage.getItem(SAVED_REPERTOIRES_STORAGE_KEY)).toBeNull();
   });
 
   it("carries no per-record delete or move, on a row or a card", async () => {
@@ -222,7 +208,7 @@ describe("the Repertoires list", () => {
   });
 
   it("marks a record from before the one-game rule as needing a choice", async () => {
-    await storeLegacyRepertoire("old", CARO_TWO_GAMES, "Old Caro");
+    await storeMultiGameRepertoire("old", CARO_TWO_GAMES, "Old Caro");
     await renderSection("/repertoires");
     expect(screen.getByTestId("repertoires-item-old")).toHaveTextContent(
       "Several games — open to merge or split",
