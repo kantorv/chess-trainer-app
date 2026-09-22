@@ -269,8 +269,8 @@ whatever the switch says — the switch is about the notation.
 
 - **In** (`arrivalOf`, `usePlayGame.ts`, read once by the route):
   `?fen=` — a position, validated by `parseFen`; Black to move sets the
-  reader to Black and turns the board (the Board Editor's hand-off works
-  here as on Play with Engine) — and `?saved=<id>`, which beats it.
+  reader to Black and turns the board, as on Play with Engine — and
+  `?saved=<id>`, which beats it.
 - **Out**: once the game is written, `?saved=<id>` (history replace), so a
   reload goes on with it, costume and all; Replay clears it (back to the
   start position's `?fen=`, or nothing). The mask is **not** in the URL — it

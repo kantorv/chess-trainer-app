@@ -265,8 +265,8 @@ remember. The piece it produces is drawn masked from the next render on.
 
 ## **15.5 Decision 4 — the tab is called "Masking"**
 
-`/tools/editor` is already the Board Editor and it edits *positions*; this tab
-edits *appearance*. It is the fourth tab after Play with Engine's Moves · Map ·
+"Editor" is already taken by the position editor (the Lobby's Board editor
+tab), which edits *positions*; this tab edits *appearance*. It is the fourth tab after Play with Engine's Moves · Map ·
 Engine.
 
 ## **15.6 The presets that ship**
@@ -287,5 +287,5 @@ edit away.
 The reveal and feedback modes (§9), and progressive / temporary / random masking
 and the difficulty ladder (§8, §10). All of them build on this same `PieceMask`
 rather than replacing it (`.claude/rules/masked-pieces.md` §11 has the recipes). Masking on the Analysis Board, the Library's game board
-and the Board Editor is also out of scope: those screens study a game rather than
-play one.
+and the position editor is also out of scope: those study a game or set up a
+position rather than play one.

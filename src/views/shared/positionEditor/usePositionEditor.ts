@@ -19,25 +19,26 @@ import {
 } from "../../../lib/positionEditor";
 
 /**
- * Everything the Board Editor knows, in one hook — the shape the two other real
- * screens use, with `BoardEditor.tsx` left as layout and board options.
+ * **A position being edited** — the state behind the shared `PositionEditor`
+ * (CTA-83; `.claude/rules/position-editor.md`). The host screen owns it, so
+ * the position survives the editor being unmounted (a tab switched away) and
+ * the host can read it (`fen`, `problems`) or reset it from its own controls.
+ * It knows no route, no URL and no screen.
  *
  * ## The board is not a game
  *
- * `useAnalysisBoard` and `usePlayGame` both own a *game*: legal moves,
- * played in order, and a `chess.js` instance that is the rules authority. An
- * editor owns neither. Its board is built with `{ skipValidation: true }` and is
- * only ever `put` to and `remove`d from, so it will hold a board with no kings,
- * three queens, or a pawn on the eighth rank — which is the point: you have to
- * be able to take a king off in order to put a different one down. Nothing here
- * asks whether a *move* is legal, because nothing here makes a move.
+ * Every game board owns a *game*: legal moves, played in order, and a
+ * `chess.js` instance that is the rules authority. An editor owns neither. Its
+ * board is built with `{ skipValidation: true }` and is only ever `put` to and
+ * `remove`d from, so it will hold a board with no kings, three queens, or a
+ * pawn on the eighth rank — which is the point: you have to be able to take a
+ * king off in order to put a different one down. Nothing here asks whether a
+ * *move* is legal, because nothing here makes a move.
  *
  * What legality there is gets **reported**, never enforced: `positionProblems`
- * (`lib/positionEditor.ts`) names what is wrong, and the only things switched
- * off while it is are the three controls that take the position *elsewhere* —
- * the FEN copy button and the two hand-offs. Everything that edits stays live,
- * including the FEN field itself: you have to be able to see what you are
- * fixing.
+ * (`lib/positionEditor.ts`) names what is wrong, `isValid` says whether the
+ * list is empty, and it is the *host* that switches off whatever takes the
+ * position elsewhere (the Lobby's Start). Everything that edits stays live.
  *
  * ## The FEN is split, and only field 1 comes off the board
  *
@@ -48,20 +49,34 @@ import {
  * around, and that idea is exactly what the reader is overriding. Reading only
  * field 1 off it is what makes those controls round-trip.
  *
- * ## A position can arrive from outside
+ * ## An initial position
  *
- * `/tools/editor?fen=<position>` opens on that position — the same arrival the
- * other two board screens have, and the other direction of the hand-off this
- * screen already makes. It is `initialFen`, read **once**: arriving at the URL
- * mounts the screen, so there is no later change to follow and nothing is
- * written from an effect. It seeds both the board and the fields, so all six
- * fields round-trip, and it turns the board to the side to move — a position is
- * something you are about to answer, which is the rule the two loads below
- * already follow (root `CLAUDE.md`, "A position turns the board; a game does
- * not"). Validating it is the caller's job; whatever arrives here is used as-is.
+ * `initialFen` is read **once** (the first render's value), already validated
+ * by the caller. It seeds the board and the fields, turns the board to the
+ * side to move (a position is something you are about to answer — root
+ * `CLAUDE.md`, "A position turns the board; a game does not"), and is what the
+ * third reset, "Reset", returns to. Absent, the standard start, and no third
+ * reset.
+ *
+ * ## A host may pin the orientation
+ *
+ * `options.orientation` is the host's say over which way the board faces —
+ * the Lobby passes the side the reader chose to play (CTA-83). While it is
+ * set the board faces it on every render: a load, Reset and Flip no longer
+ * turn it (the component hides Flip), because the host's choice is the one
+ * the reader made. Unset (the Lobby's Random), the editor's own orientation
+ * rules again, as it last stood.
  */
 
-export const useBoardEditor = (initialFen?: string) => {
+export type PositionEditorOptions = {
+  /** The side the board is pinned to face; absent, the editor turns it itself. */
+  orientation?: "white" | "black";
+};
+
+export const usePositionEditor = (
+  initialFen?: string,
+  { orientation: pinnedOrientation }: PositionEditorOptions = {},
+) => {
   // Both seeds come off one string: the handed-over position when there is one,
   // the standard start otherwise.
   const initial = initialFen ?? START_POSITION;
@@ -77,8 +92,8 @@ export const useBoardEditor = (initialFen?: string) => {
     fenFields(initial),
   );
   // Seeded from the fields above rather than from the FEN again — only the first
-  // render's value is kept, and `START_POSITION` is White to move, so a screen
-  // opened with no parameter still starts out facing White.
+  // render's value is kept, and `START_POSITION` is White to move, so an editor
+  // given no initial position still starts out facing White.
   const [orientation, setOrientation] = useState<"white" | "black">(
     fields.turn === "b" ? "black" : "white",
   );
@@ -235,16 +250,16 @@ export const useBoardEditor = (initialFen?: string) => {
   const clearBoard = useCallback(() => applyFen(EMPTY_POSITION), [applyFen]);
 
   /**
-   * Back to the position the screen was opened with — the third reset, and the
-   * only one that is not always there: with no handed-over position it would
-   * have nothing to return to, so the panel renders it only when `arrivalFen`
-   * is set (a no-op here is the safety net, not the interface).
+   * Back to the initial position — the third reset, and the only one that is
+   * not always there: with no initial position it would have nothing to return
+   * to, so the editor renders it only when `initialFen` is set (a no-op here is
+   * the safety net, not the interface).
    *
    * Unlike the two resets above it *does* turn the board, because it is not
    * rearranging the pieces — it is handing the reader the same position a
    * second time, and that is the case the rule is about.
    */
-  const setArrivalPosition = useCallback(() => {
+  const setInitialPosition = useCallback(() => {
     if (initialFen !== undefined) {
       applyFen(initialFen, { faceSideToMove: true });
     }
@@ -275,11 +290,14 @@ export const useBoardEditor = (initialFen?: string) => {
     fen,
     fields,
     problems,
-    /** Whether the position could be played from — the two hand-offs' gate. */
+    /** Whether the position could be played from — the host's gate for taking it elsewhere. */
     isValid: problems.length === 0,
-    orientation,
-    /** The position this screen was opened on, or `undefined` if it was not. */
-    arrivalFen: initialFen,
+    /** The side at the bottom — the host's pin when it set one. */
+    orientation: pinnedOrientation ?? orientation,
+    /** Whether the host pinned it — the component then offers no Flip. */
+    orientationPinned: pinnedOrientation !== undefined,
+    /** The position the editor was opened on, or `undefined` if none was given. */
+    initialFen,
     flipBoard,
     onPieceDrop,
     clearColor,
@@ -288,10 +306,10 @@ export const useBoardEditor = (initialFen?: string) => {
     setEnPassant,
     setStartingPosition,
     clearBoard,
-    setArrivalPosition,
+    setInitialPosition,
     loadFen,
     loadPosition,
   };
 };
 
-export type BoardEditorState = ReturnType<typeof useBoardEditor>;
+export type PositionEditorState = ReturnType<typeof usePositionEditor>;

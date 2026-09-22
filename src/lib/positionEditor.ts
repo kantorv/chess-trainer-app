@@ -17,8 +17,8 @@ import { Chess, DEFAULT_POSITION } from "chess.js";
  *   `positionProblems` names what is wrong and never throws.
  *
  * Pure, and it holds no `chess.js` instance of its own: the one built for the
- * check test is thrown away with the call. The screen's board instance lives in
- * `views/tools/editor/useBoardEditor.ts`.
+ * check test is thrown away with the call. The editor's board instance lives in
+ * `views/shared/positionEditor/usePositionEditor.ts`.
  */
 
 /** The two positions the editor's reset controls jump to. */

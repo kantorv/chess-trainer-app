@@ -19,12 +19,16 @@ import {
  * | `threads` | `threads` | 1–4 |
  * | `hash` | `hashMb` | 1–256 |
  * | `evalbar` | the eval bar | `1` / `0` |
+ * | `fen` | the starting position | a FEN — written only for a position other than the standard start (CTA-83: the Lobby's Board editor tab) |
  *
  * **Each field on its own**, as `engineSettingsFrom` reads a stored record: an
  * absent or unreadable one is left out (the game takes its default), a number
  * out of range is clamped into `ENGINE_SETTING_BOUNDS` and a fraction rounded.
  * The engine module then re-clamps the UCI options to whatever the running
  * build declared — these bounds are the offer, not the authority.
+ *
+ * `fen` is not read here: it is the ordinary `?fen=` arrival, which
+ * `arrivalOf` validates with `parseFen` as it always has.
  *
  * Precedence on `/engine/play` (`usePlayGame`): `?saved=` beats all of it; a
  * `side` beats the side to move of a `?fen=`; with no `side`, a `?fen=` with
@@ -56,15 +60,21 @@ export const NEW_GAME_PARAM = {
 
 const SETTING_KEYS = Object.keys(NEW_GAME_PARAM) as (keyof NewGameSettings)[];
 
-/** The query string the Lobby's Start button carries — every field, so the link says it all. */
+/**
+ * The query string the Lobby's Start button carries — every field, so the link
+ * says it all — and the starting position, when the caller passes one (the
+ * caller leaves the standard start out, so an ordinary game's link is unchanged).
+ */
 export const newGameParams = (
   settings: NewGameSettings,
   side: NewGameSide,
   evalBar: boolean,
+  fen?: string,
 ): URLSearchParams => {
   const params = new URLSearchParams({ side });
   for (const key of SETTING_KEYS) params.set(NEW_GAME_PARAM[key], String(settings[key]));
   params.set("evalbar", evalBar ? "1" : "0");
+  if (fen !== undefined) params.set("fen", fen);
   return params;
 };
 

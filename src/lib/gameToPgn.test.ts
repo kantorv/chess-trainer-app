@@ -38,7 +38,7 @@ describe("gameToPgn — the linear game's PGN", () => {
   });
 
   it("keeps a game that started from a position, and its move numbering", () => {
-    // Black to move at move 20 — a game the Board Editor handed over.
+    // Black to move at move 20 — a game started from an edited position.
     const setUp = "6k1/5ppp/8/8/8/8/5PPP/R5K1 b - - 0 20";
     const game = playedGame(["Kh8", "Ra8#"], setUp);
 

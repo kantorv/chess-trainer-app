@@ -17,14 +17,12 @@ import type { GameTree } from "../../../lib/gameTree";
  * The PGN tab: paste a game, pick a file, or drop one on the screen, and the
  * **final position** of the game you choose lands on the board.
  *
- * The Analysis Board's Position tab loads a game to *play through*; this one
+ * The Analysis Board's Load tab loads a game to *play through*; this one
  * loads it to carry on editing from, which is the only difference between the
- * two forms and the reason this screen says so under the input. The picker for
- * a multi-game file is the same idea as the sibling screen's, over the same
- * `parsePgnTrees` output.
+ * two forms and the reason the editor says so under the input.
  *
  * Presentational: the ingestion state and the parsing live in
- * `BoardEditor.tsx` and `lib/pgn.ts`.
+ * `PositionEditor.tsx` and `lib/pgn.ts`.
  */
 
 /** An input that stays clickable — and so uploadable in tests — while unseen. */
@@ -41,6 +39,8 @@ const hiddenInputSx = {
 } as const;
 
 type PgnSetupProps = {
+  /** The editor's test-id prefix. */
+  testId: string;
   /** Games from the last multi-game file, for the picker. Empty for a single game. */
   games: readonly GameTree[];
   selected: number;
@@ -53,6 +53,7 @@ type PgnSetupProps = {
 };
 
 function PgnSetup({
+  testId,
   games,
   selected,
   onSelectGame,
@@ -69,8 +70,8 @@ function PgnSetup({
     const white = gameTag(game.headers, "White");
     const black = gameTag(game.headers, "Black");
     return white || black
-      ? `${white ?? "?"} ${t("editor.pgn.versus")} ${black ?? "?"}`
-      : t("editor.pgn.gameFallback", { number: index + 1 });
+      ? `${white ?? "?"} ${t("positionEditor.pgn.versus")} ${black ?? "?"}`
+      : t("positionEditor.pgn.gameFallback", { number: index + 1 });
   };
 
   const subtitleOf = (game: GameTree) =>
@@ -81,12 +82,12 @@ function PgnSetup({
 
   return (
     <Box
-      data-testid="editor-pgn-setup"
+      data-testid={`${testId}-pgn-setup`}
       sx={{ display: "flex", flexDirection: "column", gap: 2 }}
     >
       <Box>
         <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
-          {t("editor.pgn.title")}
+          {t("positionEditor.pgn.title")}
         </Typography>
 
         <Stack
@@ -100,19 +101,19 @@ function PgnSetup({
             size="small"
             startIcon={<UploadFileRoundedIcon />}
           >
-            {t("editor.pgn.chooseFile")}
+            {t("positionEditor.pgn.chooseFile")}
             <Box
               component="input"
               type="file"
               accept=".pgn"
-              data-testid="editor-pgn-file-input"
-              aria-label={t("editor.pgn.chooseFile")}
+              data-testid={`${testId}-pgn-file-input`}
+              aria-label={t("positionEditor.pgn.chooseFile")}
               onChange={onFileChosen}
               sx={hiddenInputSx}
             />
           </Button>
           <Typography variant="body2" sx={{ color: "text.secondary" }}>
-            {t("editor.pgn.dropHint")}
+            {t("positionEditor.pgn.dropHint")}
           </Typography>
         </Stack>
 
@@ -125,25 +126,25 @@ function PgnSetup({
             // pushes everything below it out of the tab.
             maxRows={10}
             size="small"
-            label={t("editor.pgn.pasteLabel")}
+            label={t("positionEditor.pgn.pasteLabel")}
             value={pgnText}
             onChange={(event) => onPgnTextChange(event.target.value)}
-            slotProps={{ htmlInput: { "data-testid": "editor-pgn-input" } }}
+            slotProps={{ htmlInput: { "data-testid": `${testId}-pgn-input` } }}
           />
           <Button type="submit" size="small" variant="outlined" sx={{ mt: 1 }}>
-            {t("editor.pgn.load")}
+            {t("positionEditor.pgn.load")}
           </Button>
           <Typography
             variant="caption"
             sx={{ display: "block", mt: 0.5, color: "text.secondary" }}
           >
-            {t("editor.pgn.hint")}
+            {t("positionEditor.pgn.hint")}
           </Typography>
         </Box>
       </Box>
 
       {error !== null && (
-        <Alert severity="error" data-testid="editor-pgn-error">
+        <Alert severity="error" data-testid={`${testId}-pgn-error`}>
           {error}
         </Alert>
       )}
@@ -151,9 +152,9 @@ function PgnSetup({
       {games.length > 1 && (
         <Box>
           <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-            {t("editor.pgn.gamesTitle")}
+            {t("positionEditor.pgn.gamesTitle")}
           </Typography>
-          <List dense disablePadding data-testid="editor-game-picker">
+          <List dense disablePadding data-testid={`${testId}-game-picker`}>
             {games.map((game, index) => (
               <ListItemButton
                 // Games in a file have no id of their own, and the list is

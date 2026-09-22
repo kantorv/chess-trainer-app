@@ -6,7 +6,6 @@ import SportsEsportsRoundedIcon from "@mui/icons-material/SportsEsportsRounded";
 import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
 import ViewListRoundedIcon from "@mui/icons-material/ViewListRounded";
 import TravelExploreRoundedIcon from "@mui/icons-material/TravelExploreRounded";
-import DashboardCustomizeRoundedIcon from "@mui/icons-material/DashboardCustomizeRounded";
 import VisibilityOffRoundedIcon from "@mui/icons-material/VisibilityOffRounded";
 
 import type { LocalizedText } from "../../lib/localizedText";
@@ -68,12 +67,6 @@ export const navItems = (): readonly NavItem[] => [
     labelKey: "nav.addCollection",
     icon: UploadFileRoundedIcon,
     folder: "library",
-  },
-  {
-    to: "/tools/editor",
-    labelKey: "nav.boardEditor",
-    icon: DashboardCustomizeRoundedIcon,
-    folder: "tools",
   },
   /*
     The Analysis Board has no nav entry (CTA-58, mirroring CTA-42's Openings

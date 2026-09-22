@@ -34,6 +34,22 @@ describe("newGameParams — the Lobby's Start link (CTA-82)", () => {
   });
 });
 
+describe("newGameParams — a starting position (CTA-83)", () => {
+  const FEN = "4k3/8/8/8/8/8/8/4K2R b K - 0 1";
+
+  it("carries a position when given one, beside the other fields", () => {
+    const written = newGameParams(DEFAULT_ENGINE_SETTINGS, "white", true, FEN);
+    expect(written.get("fen")).toBe(FEN);
+    expect(written.get("side")).toBe("white");
+    // And it survives the URL: spaces and slashes intact.
+    expect(new URLSearchParams(written.toString()).get("fen")).toBe(FEN);
+  });
+
+  it("carries none when given none", () => {
+    expect(newGameParams(DEFAULT_ENGINE_SETTINGS, "white", true).has("fen")).toBe(false);
+  });
+});
+
 describe("newGameRequestOf — reading a link", () => {
   it("asks for nothing when the link carries nothing", () => {
     expect(newGameRequestOf(params(""))).toEqual({ settings: {} });

@@ -9,7 +9,6 @@ import { default as MaskedPlayScreen  } from './views/engine/masked/Main'
 import { default as AnalysisBoardScreen  } from './views/tools/analysis/Main'
 import { default as SavedAnalysesScreen  } from './views/tools/analysis/saved/Main'
 import { default as AnalysisSettingsScreen  } from './views/tools/analysis/saved/AnalysisSettingsScreenMain'
-import { default as BoardEditorScreen  } from './views/tools/editor/Main'
 import { default as OpeningsScreen  } from './views/openings/Main'
 import { default as LibraryScreen  } from './views/library/LibraryHomeMain'
 import { default as LibraryUploadScreen  } from './views/library/LibraryUploadMain'
@@ -91,10 +90,6 @@ const routes = createBrowserRouter(
         {
           path: "/tools/analysis/saved/:id/settings",
           element: <AnalysisSettingsScreen />
-        },
-        {
-          path: "/tools/editor",
-          element: <BoardEditorScreen />
         },
         // The Openings explorer (CTA-78): a v2 board with the opening book.
         // It keeps nothing — its Analysis button hands the tree on.

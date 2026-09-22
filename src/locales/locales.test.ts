@@ -36,8 +36,8 @@ describe("translation catalogs", () => {
       "library.table.columns.whiteElo",
       "library.table.columns.blackElo",
       "library.table.columns.eco",
-      "editor.tabs.fen",
-      "editor.tabs.pgn",
+      "positionEditor.tabs.fen",
+      "positionEditor.tabs.pgn",
       // A pairing, "White - Black": only the two names inside it translate.
       "playedGames.players",
     ]);

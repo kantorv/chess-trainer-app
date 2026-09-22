@@ -262,8 +262,7 @@ Arrivals are read once, into state (`useState(() => arrivalOf(…))`):
 arriving at a URL is what mounts the screen, and the screen rewrites its own
 URL as the reader moves.
 
-**Who links here**: the Board Editor's *Open in Openings* (`?fen=`),
-`CurrentOpening`'s ECO chip on every game screen (`?fen=`), old
+**Who links here**: `CurrentOpening`'s ECO chip on every game screen (`?fen=`), old
 `/tools/openings?…` links (redirected), and this screen's own address bar.
 
 ### 4.2 Out: the write-back
