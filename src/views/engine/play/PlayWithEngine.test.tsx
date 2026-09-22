@@ -1,11 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router";
 
 import i18n from "../../../i18n";
 import { DEFAULT_ENGINE_SETTINGS } from "../../../lib/engineSettings";
 import { parsePgnTree } from "../../../lib/pgn";
-import { findPlayedGame, playedGamesSnapshot, savePlayedGame } from "../../../lib/playedGameStore";
+import {
+  findPlayedGame,
+  playedGamesSnapshot,
+  resetPlayedGameStore,
+  savePlayedGame,
+} from "../../../lib/playedGameStore";
 import { playedGameOf } from "../../../lib/playedGames";
 import AppThemeWithLang from "../../../theme/AppThemeWithLang";
 import { boardOptions, FakeEngine } from "../../dev/devTestHarness";
@@ -86,12 +91,14 @@ const engineSearches = (pv: string) => {
   });
 };
 
+/** The stored games — the store's writes are IndexedDB's, so tests wait on them. */
+const games = () => playedGamesSnapshot() ?? [];
+
 const playButton = () => screen.getByTestId("play-with-engine-play");
 const isPlaying = () => playButton().getAttribute("aria-pressed") === "true";
 const click = (testId: string) => fireEvent.click(screen.getByTestId(testId));
 
 beforeEach(async () => {
-  localStorage.clear();
   FakeEngine.reset();
   await i18n.changeLanguage("en");
 });
@@ -209,61 +216,74 @@ describe("Play with Engine — the engine plays the other side", () => {
 describe("Play with Engine — the game saves itself", () => {
   it("writes nothing for an untouched board", () => {
     mount();
-    expect(playedGamesSnapshot()).toHaveLength(0);
+    expect(games()).toHaveLength(0);
     expect(where()).toBe("/engine/play");
   });
 
-  it("writes the game on every move, and the URL names it", () => {
+  it("writes the game on every move, and the URL names it", async () => {
     mount();
     drag("e2", "e4");
-    expect(playedGamesSnapshot()).toHaveLength(1);
-    const [game] = playedGamesSnapshot();
+    await waitFor(() => expect(games()).toHaveLength(1));
+    const [game] = games();
     expect(game.path).toEqual(["e4"]);
     expect(game.settings.playAs).toBe("white");
-    expect(where()).toBe(`/engine/play?saved=${game.id}`);
+    await waitFor(() => expect(where()).toBe(`/engine/play?saved=${game.id}`));
 
     engineSearches("e7e5");
-    expect(playedGamesSnapshot()).toHaveLength(1);
-    expect(playedGamesSnapshot()[0].path).toEqual(["e4", "e5"]);
-    expect(playedGamesSnapshot()[0].pgn).toContain("1. e4 e5");
+    await waitFor(() => expect(games()[0].path).toEqual(["e4", "e5"]));
+    expect(games()).toHaveLength(1);
+    expect(games()[0].pgn).toContain("1. e4 e5");
     // The finished scores ride along, keyed by position.
-    expect(playedGamesSnapshot()[0].evals?.some((entry) => entry.fen === AFTER_E4)).toBe(true);
+    await waitFor(() =>
+      expect(games()[0].evals?.some((entry) => entry.fen === AFTER_E4)).toBe(true),
+    );
   });
 
-  it("keeps side lines in the record", () => {
+  it("keeps side lines in the record", async () => {
     mount();
     drag("e2", "e4");
     click("board-control-first");
     drag("d2", "d4");
-    expect(playedGamesSnapshot()[0].pgn).toMatch(/1\. e4 \(1\. d4\)/);
+    await waitFor(() => expect(games()[0]?.pgn).toMatch(/1\. e4 \(1\. d4\)/));
   });
 
-  it("discards the game's saved progress on Replay, once asked, and starts over", () => {
+  it("discards the game's saved progress on Replay, once asked, and starts over", async () => {
     mount();
     drag("e2", "e4");
-    const first = playedGamesSnapshot()[0];
+    await waitFor(() => expect(games()).toHaveLength(1));
+    const first = games()[0];
 
     click("play-with-engine-replay");
     // Asked first: cancelling keeps everything.
     fireEvent.click(screen.getByText("Cancel"));
-    expect(playedGamesSnapshot()).toHaveLength(1);
+    expect(games()).toHaveLength(1);
 
     click("play-with-engine-replay");
     click("play-with-engine-confirm-ok");
     expect(boardOptions().position).toBe(START);
     expect(isPlaying()).toBe(true);
     expect(where()).toBe("/engine/play");
-    expect(findPlayedGame(first.id)).toBeUndefined();
-    expect(playedGamesSnapshot()).toHaveLength(0);
+    await waitFor(() => expect(findPlayedGame(first.id)).toBeUndefined());
+    expect(games()).toHaveLength(0);
 
     drag("d2", "d4");
-    expect(playedGamesSnapshot()).toHaveLength(1);
-    expect(playedGamesSnapshot()[0].id).not.toBe(first.id);
+    await waitFor(() => expect(games()).toHaveLength(1));
+    expect(games()[0].id).not.toBe(first.id);
+  });
+
+  it("discards a game whose first write is still out when Replay is pressed", async () => {
+    mount();
+    drag("e2", "e4");
+    // Replay before the write has landed: the queued removal runs after it.
+    click("play-with-engine-replay");
+    click("play-with-engine-confirm-ok");
+    await waitFor(() => expect(games()).toHaveLength(0));
+    expect(where()).toBe("/engine/play");
   });
 });
 
 describe("Play with Engine — resuming", () => {
-  const stored = (pgn: string, path: string[], playAs: "white" | "black") => {
+  const stored = async (pgn: string, path: string[], playAs: "white" | "black") => {
     const record = playedGameOf(
       "p1",
       parsePgnTree(pgn),
@@ -272,12 +292,12 @@ describe("Play with Engine — resuming", () => {
       undefined,
       new Date("2026-01-01T00:00:00Z"),
     );
-    savePlayedGame(record);
+    await savePlayedGame(record);
     return record;
   };
 
-  it("goes on at the node and on the side it was left, at its strength", () => {
-    stored("1. e4 e5 2. Nf3 *", ["e4"], "black");
+  it("goes on at the node and on the side it was left, at its strength", async () => {
+    await stored("1. e4 e5 2. Nf3 *", ["e4"], "black");
     mount("/engine/play?saved=p1");
     expect(boardOptions().position).toBe(AFTER_E4);
     expect(boardOptions().boardOrientation).toBe("black");
@@ -285,8 +305,19 @@ describe("Play with Engine — resuming", () => {
     expect(screen.getByText(/Level 7/)).toBeInTheDocument();
   });
 
-  it("re-orders nothing by being opened", () => {
-    const record = stored("1. e4 e5 *", ["e4", "e5"], "white");
+  it("waits for the store's first read on a reload, rather than starting a new game", async () => {
+    await stored("1. e4 e5 2. Nf3 *", ["e4"], "black");
+    // A reload: nothing has been read yet.
+    resetPlayedGameStore();
+    mount("/engine/play?saved=p1");
+    expect(screen.getByTestId("play-with-engine-loading")).toBeInTheDocument();
+    await screen.findByTestId("board");
+    expect(boardOptions().position).toBe(AFTER_E4);
+    expect(boardOptions().boardOrientation).toBe("black");
+  });
+
+  it("re-orders nothing by being opened", async () => {
+    const record = await stored("1. e4 e5 *", ["e4", "e5"], "white");
     mount("/engine/play?saved=p1");
     const after = findPlayedGame("p1");
     expect(after?.pgn).toBe(record.pgn);
@@ -294,16 +325,16 @@ describe("Play with Engine — resuming", () => {
     expect(where()).toBe("/engine/play?saved=p1");
   });
 
-  it("plays on into the same row", () => {
-    stored("1. e4 e5 *", ["e4", "e5"], "white");
+  it("plays on into the same row", async () => {
+    await stored("1. e4 e5 *", ["e4", "e5"], "white");
     mount("/engine/play?saved=p1");
     drag("g1", "f3");
-    expect(playedGamesSnapshot()).toHaveLength(1);
-    expect(findPlayedGame("p1")?.path).toEqual(["e4", "e5", "Nf3"]);
+    await waitFor(() => expect(findPlayedGame("p1")?.path).toEqual(["e4", "e5", "Nf3"]));
+    expect(games()).toHaveLength(1);
   });
 
-  it("opens a resigned game still resigned", () => {
-    savePlayedGame(
+  it("opens a resigned game still resigned", async () => {
+    await savePlayedGame(
       playedGameOf(
         "r1",
         parsePgnTree("1. e4 e5 *"),
@@ -328,7 +359,7 @@ describe("Play with Engine — resigning", () => {
     expect(screen.getByTestId("play-with-engine-resign")).toBeDisabled();
   });
 
-  it("ends the game once asked: the reader's side loses, Play stops, the board takes no moves", () => {
+  it("ends the game once asked: the reader's side loses, Play stops, the board takes no moves", async () => {
     mount();
     drag("e2", "e4");
     engineSearches("e7e5");
@@ -344,9 +375,8 @@ describe("Play with Engine — resigning", () => {
     expect(boardOptions().allowDragging).toBe(false);
     expect(screen.getByTestId("play-with-engine-resign")).toBeDisabled();
 
-    const [game] = playedGamesSnapshot();
-    expect(game.resigned).toBe("white");
-    expect(game.pgn).toContain('[Result "0-1"]');
+    await waitFor(() => expect(games()[0]?.resigned).toBe("white"));
+    expect(games()[0].pgn).toContain('[Result "0-1"]');
   });
 
   it("is undone by Replay, which starts a new game", () => {

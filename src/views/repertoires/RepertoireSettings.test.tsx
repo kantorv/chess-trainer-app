@@ -39,9 +39,9 @@ beforeEach(async () => {
 
 describe("a repertoire's settings screen", () => {
   it("edits the title, description and main color, and the list shows them", async () => {
-    store("a");
-    store("b");
-    renderSection("/repertoires");
+    await store("a");
+    await store("b");
+    await renderSection("/repertoires");
 
     await userEvent.click(screen.getByTestId("repertoires-settings-a"));
     expect(screen.getByTestId("repertoire-settings-name")).toHaveValue("My Caro");
@@ -61,7 +61,7 @@ describe("a repertoire's settings screen", () => {
 
     // Back where it came from — the list — with the record edited in place.
     expect(await screen.findByTestId("repertoires-screen")).toBeInTheDocument();
-    expect(savedRepertoiresSnapshot().map((row) => row.id)).toEqual(["b", "a"]);
+    expect(savedRepertoiresSnapshot()!.map((row) => row.id)).toEqual(["b", "a"]);
     expect(findSavedRepertoire("a")).toMatchObject({
       name: "Caro-Kann for Black",
       settings: { description: "Advance and Exchange.", color: "black" },
@@ -73,8 +73,8 @@ describe("a repertoire's settings screen", () => {
   });
 
   it("keeps whether the board draws the next-move arrows, on by default", async () => {
-    store("a");
-    renderSection("/repertoires/a/settings");
+    await store("a");
+    await renderSection("/repertoires/a/settings");
     const toggle = screen.getByTestId("repertoire-settings-show-arrows");
     expect(toggle).toBeChecked();
 
@@ -83,14 +83,14 @@ describe("a repertoire's settings screen", () => {
     expect(findSavedRepertoire("a")?.settings.showArrows).toBe(false);
 
     // The board, opened afresh, draws none.
-    renderSection("/repertoires/a");
+    await renderSection("/repertoires/a");
     await waitFor(() => expect(boardOptions().id).toBe("repertoire-board"), { timeout: 10_000 });
     await waitFor(() => expect(boardOptions().arrows).toEqual([]));
   });
 
   it("keeps whether the board colours the arrows by play chance, off by default", async () => {
-    store("a");
-    renderSection("/repertoires/a/settings");
+    await store("a");
+    await renderSection("/repertoires/a/settings");
     const toggle = screen.getByTestId("repertoire-settings-chance-arrows");
     expect(toggle).not.toBeChecked();
 
@@ -100,8 +100,8 @@ describe("a repertoire's settings screen", () => {
   });
 
   it("protects a repertoire by default, and saves the reader's no", async () => {
-    store("a");
-    renderSection("/repertoires/a/settings");
+    await store("a");
+    await renderSection("/repertoires/a/settings");
     const toggle = screen.getByTestId("repertoire-settings-protected");
     expect(toggle).toBeChecked();
     await userEvent.click(toggle);
@@ -110,8 +110,8 @@ describe("a repertoire's settings screen", () => {
   });
 
   it("drops the draft on Cancel", async () => {
-    store("a");
-    renderSection("/repertoires");
+    await store("a");
+    await renderSection("/repertoires");
     await userEvent.click(screen.getByTestId("repertoires-settings-a"));
     fireEvent.change(screen.getByTestId("repertoire-settings-name"), {
       target: { value: "Something else" },
@@ -123,8 +123,8 @@ describe("a repertoire's settings screen", () => {
   });
 
   it("opens the board facing the main color, with the description above the lines", async () => {
-    store("a");
-    renderSection("/repertoires/a");
+    await store("a");
+    await renderSection("/repertoires/a");
     await waitFor(() =>
       expect(screen.queryByTestId("repertoire-board-reading")).not.toBeInTheDocument(),
     );
@@ -139,6 +139,8 @@ describe("a repertoire's settings screen", () => {
     });
     await userEvent.click(screen.getByTestId("repertoire-settings-save"));
 
+    // The write lands, then the board: back on it, its tree read.
+    await screen.findByTestId("repertoire-board-description");
     await waitFor(() =>
       expect(screen.queryByTestId("repertoire-board-reading")).not.toBeInTheDocument(),
     );
@@ -150,11 +152,11 @@ describe("a repertoire's settings screen", () => {
   });
 
   it("offers the folders as a tree under Unfiled, preselected where it is filed", async () => {
-    store("a");
-    const caro = createRepertoireFolder("Caro")!;
-    const slav = createRepertoireFolder("Slav")!;
-    fileRepertoire("a", slav.id);
-    renderSection("/repertoires/a/settings");
+    await store("a");
+    const caro = (await createRepertoireFolder("Caro"))!;
+    const slav = (await createRepertoireFolder("Slav"))!;
+    await fileRepertoire("a", slav.id);
+    await renderSection("/repertoires/a/settings");
 
     const tree = screen.getByTestId("repertoire-settings-folder");
     expect(tree).toHaveAttribute("role", "tree");
@@ -177,9 +179,9 @@ describe("a repertoire's settings screen", () => {
   });
 
   it("leaves the folder alone on Cancel", async () => {
-    store("a");
-    const caro = createRepertoireFolder("Caro")!;
-    renderSection("/repertoires/a/settings");
+    await store("a");
+    const caro = (await createRepertoireFolder("Caro"))!;
+    await renderSection("/repertoires/a/settings");
     expect(screen.getByTestId("repertoire-settings-folder-unfiled")).toHaveAttribute(
       "aria-selected",
       "true",
@@ -190,8 +192,8 @@ describe("a repertoire's settings screen", () => {
     expect(findSavedRepertoire("a")?.folderId).toBeNull();
   });
 
-  it("says so for an id this browser does not hold", () => {
-    renderSection("/repertoires/nope/settings");
+  it("says so for an id this browser does not hold", async () => {
+    await renderSection("/repertoires/nope/settings");
     expect(screen.getByTestId("repertoire-settings-missing")).toBeInTheDocument();
   });
 });

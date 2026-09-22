@@ -18,7 +18,7 @@ import type { SavedRepertoire } from "./savedRepertoires";
  * own, named after the text, so hundreds of repertoires do not arrive loose in the
  * list.
  *
- * The pure half; the `localStorage` half and the CRUD are
+ * The pure half; the IndexedDB half and the CRUD are
  * [`savedRepertoireFolderStore.ts`](./savedRepertoireFolderStore.ts).
  */
 

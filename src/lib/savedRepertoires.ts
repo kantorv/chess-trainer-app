@@ -22,7 +22,7 @@ import {
  * repertoires (CTA-61).
  *
  * The three-way split every record in `src/lib/` has: the pure model here, the
- * `localStorage` half in [`savedRepertoireStore.ts`](./savedRepertoireStore.ts),
+ * IndexedDB half in [`savedRepertoireStore.ts`](./savedRepertoireStore.ts),
  * the `useSyncExternalStore` binding in `views/repertoires/useSavedRepertoires.ts`.
  *
  * ## A repertoire is one game

@@ -270,8 +270,8 @@ instead — that is not an omission to fix later, it is the screen's semantics.
 ### 2.4 Where a board writes
 
 A shipped board writes its own real store, through its own record
-constructor, over the shipped `lib/recordStore.ts` / `lib/idbRecordStore.ts`
-factories: Play with Engine and Masked Pieces `lib/playedGameStore.ts`
+constructor, over the shipped IndexedDB factory `lib/idbRecordStore.ts`
+([`database.md`](./database.md)): Play with Engine and Masked Pieces `lib/playedGameStore.ts`
 (through `useAutosave`), the Analysis Board and the Library the analyses'
 store, explicitly. (While the boards were developed in the Development
 section, a dev board wrote **dev-prefixed keys** over the same factory and

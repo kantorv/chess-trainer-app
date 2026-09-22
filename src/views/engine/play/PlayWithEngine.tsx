@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { createSearchParams, Navigate, useSearchParams } from "react-router";
 
+import { PlayedGameRead } from "./PlayedGameRead";
 import PlayScreen from "./PlayScreen";
 import { arrivalOf } from "./usePlayGame";
 
@@ -14,8 +15,19 @@ import { arrivalOf } from "./usePlayGame";
  * would be written back without it. It goes on at `/engine/masked`, in its
  * disguise — the Saved games list links there itself; this covers an old
  * bookmark.
+ *
+ * A `?saved=` arrival waits for the played games' first read (IndexedDB —
+ * `PlayedGameRead`) before the arrival is read.
  */
 function PlayWithEngine() {
+  return (
+    <PlayedGameRead testId="play-with-engine">
+      <PlayWithEngineArrival />
+    </PlayedGameRead>
+  );
+}
+
+function PlayWithEngineArrival() {
   const [searchParams] = useSearchParams();
   const [arrival] = useState(() => arrivalOf(searchParams));
 

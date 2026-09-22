@@ -77,6 +77,9 @@ export const loadSavedAnalyses = analyses.load;
 /** The store's write — every operation below funnels through it. */
 const write = analyses.write;
 
+/** Resolves once every write issued so far has landed — what a test waits on before it resets. */
+export const settledSavedAnalyses = analyses.settled;
+
 /** **For tests**: forget what was read (the database is `deleteAnalysisDb`'s). */
 export const resetSavedAnalysisStore = analyses.reset;
 

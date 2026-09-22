@@ -469,21 +469,22 @@ function RepertoirePlayer({
   if (changesOpen && !changed) setChangesOpen(false);
 
   /** Make the changes part of this repertoire; the session is the record now. */
-  const updateRecord = () => {
+  const updateRecord = async () => {
     // A protected repertoire has no Update in the strip; belt and braces.
     if (saved.settings.protected) return;
-    const problem = saveRepertoire(withRepertoireTree(saved, core.tree));
+    const tree = core.tree;
+    const problem = await saveRepertoire(withRepertoireTree(saved, tree));
     setSaveProblem(problem ?? null);
-    if (problem === undefined) setRepertoire(core.tree);
+    if (problem === undefined) setRepertoire(tree);
   };
 
   /** Keep this repertoire as it is; save a copy with the changes, and go on in it. */
-  const saveCopy = () => {
+  const saveCopy = async () => {
     const copyId = newSavedRepertoireId();
     const name = t("repertoires.changes.copyName", {
       name: saved.name || t("repertoires.untitled"),
     });
-    const problem = addRepertoires([repertoireCopyOf(saved, core.tree, copyId, name)]);
+    const problem = await addRepertoires([repertoireCopyOf(saved, core.tree, copyId, name)]);
     setSaveProblem(problem ?? null);
     if (problem !== undefined) return;
     const at = atParamOf(core.tree, core.nodeId);

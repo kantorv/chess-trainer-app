@@ -1,3 +1,5 @@
+import { committed, done } from "./idb";
+
 /**
  * **The IndexedDB record-store factory** (CTA-77) — the counterpart of
  * [`recordStore.ts`](./recordStore.ts) for a store too big for `localStorage`:
@@ -63,6 +65,8 @@ export interface IdbRecordStore<Row extends { id: string }> {
    * (the same array for "nothing to do"). Queued behind every earlier write.
    */
   write: (update: (rows: readonly Row[]) => readonly Row[]) => Promise<IdbRecordStoreProblem | undefined>;
+  /** Resolves once every write issued so far has landed (or been refused). Never rejects. */
+  settled: () => Promise<void>;
   /** **For tests**: forget everything read — the database itself is the caller's to delete. */
   reset: () => void;
 }
@@ -81,19 +85,6 @@ export type IdbRecordStoreOptions<Row> = {
   /** The `localStorage` key the store used to live under, moved on the first read. */
   legacyKey?: string;
 };
-
-const done = <T>(request: IDBRequest<T>): Promise<T> =>
-  new Promise((resolve, reject) => {
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
-
-const committed = (tx: IDBTransaction): Promise<void> =>
-  new Promise((resolve, reject) => {
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-    tx.onabort = () => reject(tx.error ?? new Error("aborted"));
-  });
 
 const isStored = (value: unknown): value is Stored => {
   if (typeof value !== "object" || value === null) return false;
@@ -298,5 +289,7 @@ export const idbRecordStore = <Row extends { id: string }>({
     queue = Promise.resolve();
   };
 
-  return { snapshot: () => rows, subscribe, load, write, reset };
+  const settled = (): Promise<void> => queue.then(() => undefined);
+
+  return { snapshot: () => rows, subscribe, load, write, settled, reset };
 };

@@ -66,10 +66,10 @@ function RepertoireMergeSplit({
   const withSettings = <T extends { settings: RepertoireSettings }>(record: T): T =>
     settings === undefined ? record : { ...record, settings };
 
-  const merge = () => {
+  const merge = async () => {
     const record = mergedRepertoireOf(replacing ?? newSavedRepertoireId(), reading, typedName);
     if (record === undefined) return;
-    const failed = addRepertoires([withSettings(record)], replacing);
+    const failed = await addRepertoires([withSettings(record)], replacing);
     if (failed !== undefined) return setProblem(failed);
     onDone(`/repertoires/${encodeURIComponent(record.id)}`);
   };
@@ -80,8 +80,8 @@ function RepertoireMergeSplit({
     because the records name it; if the records then cannot be written, the
     folder is taken back out rather than left empty.
   */
-  const split = () => {
-    const folder = createRepertoireFolder(
+  const split = async () => {
+    const folder = await createRepertoireFolder(
       splitFolderNameOf(reading, typedName) ?? t("repertoires.untitled"),
     );
     if (folder === undefined) return setProblem("folder");
@@ -89,9 +89,9 @@ function RepertoireMergeSplit({
     const records = splitRepertoiresOf(newSavedRepertoireId, reading, folder.id).map(
       withSettings,
     );
-    const failed = addRepertoires(records, replacing);
+    const failed = await addRepertoires(records, replacing);
     if (failed !== undefined) {
-      removeRepertoireFolder(folder.id);
+      void removeRepertoireFolder(folder.id);
       return setProblem(failed);
     }
     onDone(`/repertoires?folder=${encodeURIComponent(folder.id)}`);
@@ -104,8 +104,8 @@ function RepertoireMergeSplit({
       count={count}
       skipped={reading.skipped}
       mergeable={reading.mergeable}
-      onMerge={merge}
-      onSplit={split}
+      onMerge={() => void merge()}
+      onSplit={() => void split()}
       problem={
         problem === null
           ? null

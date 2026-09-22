@@ -53,6 +53,9 @@ export const subscribeAnalysisFolders = folders.subscribe;
 /** The folders, read now if they have not been. */
 export const loadAnalysisFolders = folders.load;
 
+/** Resolves once every write issued so far has landed — what a test waits on before it resets. */
+export const settledAnalysisFolders = folders.settled;
+
 /** **For tests**: forget what was read (the database is `deleteAnalysisDb`'s). */
 export const resetAnalysisFolderStore = folders.reset;
 

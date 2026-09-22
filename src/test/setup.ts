@@ -1,15 +1,10 @@
 import "@testing-library/jest-dom/vitest";
-// jsdom has no IndexedDB, and the Library keeps its uploads there
-// (`lib/libraryCollectionStore.ts`), as the saved analyses keep theirs
-// (`lib/savedAnalysisStore.ts`). An in-memory implementation of the real
+// jsdom has no IndexedDB, and every store of the reader's data is kept there
+// (`.claude/rules/database.md`). An in-memory implementation of the real
 // API, so the store's own code is what the tests run.
 import "fake-indexeddb/auto";
 import { afterEach, vi } from "vitest";
 import { cleanup } from "@testing-library/react";
-
-import { deleteAnalysisDb } from "../lib/savedAnalysisDb";
-import { resetAnalysisFolderStore } from "../lib/savedAnalysisFolderStore";
-import { resetSavedAnalysisStore } from "../lib/savedAnalysisStore";
 
 // MUI's color-scheme provider reads `prefers-color-scheme`, which jsdom does not
 // implement. Without this every render throws before a single assertion runs.
@@ -37,12 +32,56 @@ if (!globalThis.ResizeObserver) {
   } as unknown as typeof globalThis.ResizeObserver;
 }
 
+/*
+  The record stores are imported here lazily, at teardown, not at the top of
+  this file: a setup file's static imports load before a test file's
+  `vi.mock`s apply, and the played games reach `lib/pieceMask.ts`, which would
+  then hold the real `react-chessboard` rather than the test's stand-in. By
+  teardown the test file has loaded them itself (with its mocks), so these are
+  cache hits.
+*/
+const recordStores = async () => {
+  const [played, analyses, analysisFolders, analysisDb, repertoires, repertoireFolders, repertoireDb] =
+    await Promise.all([
+      import("../lib/playedGameStore"),
+      import("../lib/savedAnalysisStore"),
+      import("../lib/savedAnalysisFolderStore"),
+      import("../lib/savedAnalysisDb"),
+      import("../lib/savedRepertoireStore"),
+      import("../lib/savedRepertoireFolderStore"),
+      import("../lib/savedRepertoireDb"),
+    ]);
+  return {
+    settled: [
+      analyses.settledSavedAnalyses,
+      analysisFolders.settledAnalysisFolders,
+      played.settledPlayedGames,
+      repertoires.settledSavedRepertoires,
+      repertoireFolders.settledRepertoireFolders,
+    ],
+    reset: [
+      analyses.resetSavedAnalysisStore,
+      analysisFolders.resetAnalysisFolderStore,
+      played.resetPlayedGameStore,
+      repertoires.resetSavedRepertoireStore,
+      repertoireFolders.resetRepertoireFolderStore,
+    ],
+    remove: [analysisDb.deleteAnalysisDb, played.deleteEngineDb, repertoireDb.deleteRepertoireDb],
+  };
+};
+
 afterEach(async () => {
   cleanup();
   localStorage.clear();
-  // The saved analyses and their folders are IndexedDB's since CTA-77: what
-  // each store kept, and the database itself, go as `localStorage` does.
-  resetSavedAnalysisStore();
-  resetAnalysisFolderStore();
-  await deleteAnalysisDb();
+  // Every record store is IndexedDB's: what each store kept, and the
+  // databases themselves, go as `localStorage` does. (The Library's store is
+  // reset by the tests that use it — `resetLibraryCollectionStore`.) First
+  // the writes a screen left in flight land, twice over — a folder's delete
+  // queues its records' unfiling behind it — so none reaches the next test.
+  const stores = await recordStores();
+  for (let round = 0; round < 2; round += 1) {
+    await Promise.all(stores.settled.map((settled) => settled()));
+  }
+  for (const reset of stores.reset) reset();
+  await Promise.all(stores.remove.map((remove) => remove()));
 });

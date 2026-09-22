@@ -1,15 +1,17 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { Chess } from "chess.js";
 
 import { DEFAULT_ENGINE_SETTINGS } from "./engineSettings";
-import { resolveGameReference } from "./gameReference";
+import { isReferenceRead, loadReferencedGames, resolveGameReference } from "./gameReference";
 import { parsePgnTree } from "./pgn";
 import {
   findPlayedGame,
+  loadPlayedGames,
   MAX_PLAYED_GAMES,
   PLAYED_GAMES_STORAGE_KEY,
   playedGamesSnapshot,
   removePlayedGame,
+  resetPlayedGameStore,
   savePlayedGame,
 } from "./playedGameStore";
 import { MASK_PRESETS, withMaskEntry } from "./pieceMask";
@@ -40,7 +42,6 @@ const record = (id: string, pgn: string, path: string[] = [], when = "2026-01-01
     "2026-01-01T10:00:00.000Z",
   );
 
-beforeEach(() => localStorage.clear());
 
 describe("a played game, written down and read back", () => {
   it("keeps the side lines, the place in the tree and the settings", () => {
@@ -118,54 +119,87 @@ describe("a played game, written down and read back", () => {
 });
 
 describe("the played games' store", () => {
-  it("keeps its own key", () => {
-    savePlayedGame(record("a", "1. e4 *"));
-    expect(localStorage.getItem(PLAYED_GAMES_STORAGE_KEY)).toContain('"id":"a"');
-    expect(localStorage.getItem("chessapp.savedGames.v1")).toBeNull();
+  const ids = () => playedGamesSnapshot()?.map((game) => game.id);
+
+  it("keeps its own database, and nothing in localStorage", async () => {
+    await savePlayedGame(record("a", "1. e4 *"));
+    expect(localStorage.length).toBe(0);
+    // Forget what was read: a second read comes from IndexedDB itself.
+    resetPlayedGameStore();
+    expect(playedGamesSnapshot()).toBeUndefined();
+    expect((await loadPlayedGames()).map((game) => game.id)).toEqual(["a"]);
   });
 
-  it("puts a new game and a game with a new move at the top", () => {
-    savePlayedGame(record("a", "1. e4 *"));
-    savePlayedGame(record("b", "1. d4 *"));
-    expect(playedGamesSnapshot().map((game) => game.id)).toEqual(["b", "a"]);
-    savePlayedGame(record("a", "1. e4 e5 *", [], "2026-01-02T10:00:00Z"));
-    expect(playedGamesSnapshot().map((game) => game.id)).toEqual(["a", "b"]);
+  it("moves the games out of the old localStorage key on the first read", async () => {
+    localStorage.setItem(
+      PLAYED_GAMES_STORAGE_KEY,
+      JSON.stringify([record("b", "1. d4 *"), record("a", "1. e4 *")]),
+    );
+    expect((await loadPlayedGames()).map((game) => game.id)).toEqual(["b", "a"]);
+    expect(localStorage.getItem(PLAYED_GAMES_STORAGE_KEY)).toBeNull();
+    resetPlayedGameStore();
+    expect((await loadPlayedGames()).map((game) => game.id)).toEqual(["b", "a"]);
+  });
+
+  it("puts a new game and a game with a new move at the top", async () => {
+    await savePlayedGame(record("a", "1. e4 *"));
+    await savePlayedGame(record("b", "1. d4 *"));
+    expect(ids()).toEqual(["b", "a"]);
+    await savePlayedGame(record("a", "1. e4 e5 *", [], "2026-01-02T10:00:00Z"));
+    expect(ids()).toEqual(["a", "b"]);
     // The day it began is the stored one.
     expect(findPlayedGame("a")?.savedAt).toBe("2026-01-01T10:00:00.000Z");
   });
 
-  it("writes a new place in the tree in place, keeping the order and the date last played", () => {
-    savePlayedGame(record("a", "1. e4 e5 *", ["e4", "e5"]));
-    savePlayedGame(record("b", "1. d4 *"));
-    savePlayedGame(record("a", "1. e4 e5 *", ["e4"], "2026-03-01T10:00:00Z"));
-    expect(playedGamesSnapshot().map((game) => game.id)).toEqual(["b", "a"]);
+  it("writes a new place in the tree in place, keeping the order and the date last played", async () => {
+    await savePlayedGame(record("a", "1. e4 e5 *", ["e4", "e5"]));
+    await savePlayedGame(record("b", "1. d4 *"));
+    await savePlayedGame(record("a", "1. e4 e5 *", ["e4"], "2026-03-01T10:00:00Z"));
+    expect(ids()).toEqual(["b", "a"]);
     expect(findPlayedGame("a")?.path).toEqual(["e4"]);
     expect(findPlayedGame("a")?.updatedAt).toBe("2026-01-01T10:00:00.000Z");
+    // …and so it reads back after a reload.
+    resetPlayedGameStore();
+    expect((await loadPlayedGames()).map((game) => game.id)).toEqual(["b", "a"]);
   });
 
-  it("does nothing for a record identical to the stored one", () => {
-    savePlayedGame(record("a", "1. e4 *"));
-    const before = localStorage.getItem(`${PLAYED_GAMES_STORAGE_KEY}.rev`);
-    savePlayedGame(record("a", "1. e4 *", [], "2026-05-05T10:00:00Z"));
-    expect(localStorage.getItem(`${PLAYED_GAMES_STORAGE_KEY}.rev`)).toBe(before);
+  it("does nothing for a record identical to the stored one", async () => {
+    await savePlayedGame(record("a", "1. e4 *"));
+    const before = playedGamesSnapshot();
+    await savePlayedGame(record("a", "1. e4 *", [], "2026-05-05T10:00:00Z"));
+    expect(playedGamesSnapshot()).toBe(before);
   });
 
-  it("drops the oldest past the cap", () => {
+  it("keeps a burst of autosaves one record, each seeing the one before", async () => {
+    await Promise.all([
+      savePlayedGame(record("a", "1. e4 *")),
+      savePlayedGame(record("a", "1. e4 e5 *", ["e4", "e5"])),
+      savePlayedGame(record("a", "1. e4 e5 *", ["e4"])),
+    ]);
+    expect(ids()).toEqual(["a"]);
+    expect(findPlayedGame("a")?.path).toEqual(["e4"]);
+  });
+
+  it("drops the oldest past the cap", async () => {
     for (let index = 0; index <= MAX_PLAYED_GAMES; index += 1) {
-      savePlayedGame(record(`g${index}`, "1. e4 *"));
+      await savePlayedGame(record(`g${index}`, "1. e4 *"));
     }
     expect(playedGamesSnapshot()).toHaveLength(MAX_PLAYED_GAMES);
     expect(findPlayedGame("g0")).toBeUndefined();
   });
 
-  it("forgets one", () => {
-    savePlayedGame(record("a", "1. e4 *"));
-    removePlayedGame("a");
+  it("forgets one", async () => {
+    await savePlayedGame(record("a", "1. e4 *"));
+    await removePlayedGame("a");
     expect(playedGamesSnapshot()).toHaveLength(0);
   });
 
-  it("hands a game on with ?game=play/games/<id>", () => {
-    savePlayedGame(record("a", "1. e4 (1. d4) 1... e5 *"));
+  it("hands a game on with ?game=play/games/<id>, once the store is read", async () => {
+    await savePlayedGame(record("a", "1. e4 (1. d4) 1... e5 *"));
+    resetPlayedGameStore();
+    expect(isReferenceRead("play/games/a")).toBe(false);
+    await loadReferencedGames("play/games/a");
+    expect(isReferenceRead("play/games/a")).toBe(true);
     const item = resolveGameReference("play/games/a");
     expect(item?.id).toBe("a");
     expect(item?.pgn).toContain("(1. d4)");
@@ -255,12 +289,12 @@ describe("a masked game's costume (CTA-79)", () => {
       .toEqual({ pieces: MASK_PRESETS.allIdentical, notation: true });
   });
 
-  it("is written in place when only the costume changes", () => {
-    savePlayedGame(masked("a"));
-    savePlayedGame(record("b", "1. d4 *"));
+  it("is written in place when only the costume changes", async () => {
+    await savePlayedGame(masked("a"));
+    await savePlayedGame(record("b", "1. d4 *"));
     const changed = { pieces: withMaskEntry(MASK_PRESETS.nonPawns, "wQ", "wQ"), notation: true };
-    savePlayedGame(masked("a", changed));
-    expect(playedGamesSnapshot().map((game) => game.id)).toEqual(["b", "a"]);
+    await savePlayedGame(masked("a", changed));
+    expect(playedGamesSnapshot()?.map((game) => game.id)).toEqual(["b", "a"]);
     expect(findPlayedGame("a")?.mask).toEqual(changed);
   });
 });

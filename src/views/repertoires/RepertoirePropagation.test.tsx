@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act, screen } from "@testing-library/react";
 
 import i18n from "../../i18n";
-import { renderSection, storeRepertoire } from "./repertoireTestKit";
+import { FAKE_TIMERS, renderSection, storeRepertoire } from "./repertoireTestKit";
 
 /*
   **The propagation assertion, for the first shipped screen on the v2 core** —
@@ -44,10 +44,10 @@ beforeEach(async () => {
 });
 
 describe("the repertoire board is composed, not written", () => {
-  it("renders the one shared panel and the one shared square, and nothing of its own", () => {
-    storeRepertoire("r");
+  it("renders the one shared panel and the one shared square, and nothing of its own", async () => {
+    await storeRepertoire("r");
 
-    renderSection("/repertoires/r");
+    await renderSection("/repertoires/r");
 
     const panels = screen.getAllByTestId("the-one-board-panel");
     expect(panels).toHaveLength(1);
@@ -62,11 +62,11 @@ describe("the repertoire board is composed, not written", () => {
 
   // The repertoire games (CTA-63) are under the same guarantee: the trainer
   // and a game's rules are modules, not a panel of their own.
-  it.each(["end", "backtrack"])("plays the %s game on the same shared panel and square", (game) => {
-    vi.useFakeTimers();
+  it.each(["end", "backtrack"])("plays the %s game on the same shared panel and square", async (game) => {
+    vi.useFakeTimers(FAKE_TIMERS);
     try {
-      storeRepertoire("r");
-      renderSection(`/repertoires/r/games/${game}`);
+      await storeRepertoire("r");
+      await renderSection(`/repertoires/r/games/${game}`);
       act(() => {
         vi.advanceTimersByTime(0);
       });

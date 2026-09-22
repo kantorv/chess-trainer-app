@@ -21,7 +21,7 @@ import { pieceMaskFrom, samePieceMask, type PieceMask } from "./pieceMask";
  * since CTA-79, Masked Pieces' — what one is when it is written down, and how
  * it is read back.
  *
- * The three-way split every store keeps (pure model here, `localStorage` in
+ * The three-way split every store keeps (pure model here, IndexedDB in
  * [`playedGameStore.ts`](./playedGameStore.ts), a `useSyncExternalStore`
  * binding in `views/engine/games/usePlayedGames.ts`). It replaced the
  * pre-CTA-74 linear saved game (`savedGames.ts`, deleted in CTA-79; its

@@ -8,9 +8,9 @@ import {
 
 /**
  * The reader's repertoire folders, as React state — `useSavedRepertoires`
- * again, over the folders' own store.
+ * again, over the folders' own store — `undefined` while its first read is out.
  */
-export const useRepertoireFolders = (): readonly RepertoireFolder[] =>
+export const useRepertoireFolders = (): readonly RepertoireFolder[] | undefined =>
   useSyncExternalStore(
     subscribeRepertoireFolders,
     repertoireFoldersSnapshot,

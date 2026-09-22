@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router";
 import { defaultPieces } from "react-chessboard";
 
@@ -101,7 +101,6 @@ const storedMasked = (id: string, mask: PlayedGameMask) =>
   );
 
 beforeEach(async () => {
-  localStorage.clear();
   FakeEngine.reset();
   await i18n.changeLanguage("en");
 });
@@ -197,21 +196,24 @@ describe("Masked Pieces — the costume in the notation", () => {
 });
 
 describe("Masked Pieces — the game is kept with the engine games", () => {
-  it("writes the costume on the record, and a change of it in place", () => {
+  it("writes the costume on the record, and a change of it in place", async () => {
     mount();
     drag("e2", "e4");
-    const [saved] = playedGamesSnapshot();
+    await waitFor(() => expect(playedGamesSnapshot()).toHaveLength(1));
+    const [saved] = playedGamesSnapshot() ?? [];
     expect(saved.mask).toEqual({ pieces: MASK_PRESETS.nonPawns, notation: true });
-    expect(where()).toBe(`/engine/masked?saved=${saved.id}`);
+    await waitFor(() => expect(where()).toBe(`/engine/masked?saved=${saved.id}`));
 
     openMaskingTab();
     click("mask-preset-allIdentical");
-    expect(findPlayedGame(saved.id)?.mask?.pieces).toEqual(MASK_PRESETS.allIdentical);
+    await waitFor(() =>
+      expect(findPlayedGame(saved.id)?.mask?.pieces).toEqual(MASK_PRESETS.allIdentical),
+    );
     expect(findPlayedGame(saved.id)?.updatedAt).toBe(saved.updatedAt);
   });
 
-  it("resumes a masked game in the same disguise", () => {
-    storedMasked("m1", { pieces: MASK_PRESETS.allIdentical, notation: false });
+  it("resumes a masked game in the same disguise", async () => {
+    await storedMasked("m1", { pieces: MASK_PRESETS.allIdentical, notation: false });
     mount("/engine/masked?saved=m1");
     expect(drawnAs("wK")).toBe(defaultPieces.wP);
     // The notation switch came back off: the list names the knight.
@@ -220,16 +222,16 @@ describe("Masked Pieces — the game is kept with the engine games", () => {
     expect(screen.getByTestId("mask-preset-allIdentical")).toHaveAttribute("aria-pressed", "true");
   });
 
-  it("sends an unmasked game to Play with Engine, where it was begun", () => {
-    savePlayedGame(playedGameOf("p1", parsePgnTree("1. e4 *"), ["e4"], DEFAULT_ENGINE_SETTINGS));
+  it("sends an unmasked game to Play with Engine, where it was begun", async () => {
+    await savePlayedGame(playedGameOf("p1", parsePgnTree("1. e4 *"), ["e4"], DEFAULT_ENGINE_SETTINGS));
     mount("/engine/masked?saved=p1");
     expect(where()).toBe("/engine/play?saved=p1");
     expect(boardOptions().id).toBe("play-with-engine");
     expect(findPlayedGame("p1")?.mask).toBeUndefined();
   });
 
-  it("is sent here by Play with Engine when the game it names is masked", () => {
-    storedMasked("m2", { pieces: MASK_PRESETS.nonPawns, notation: true });
+  it("is sent here by Play with Engine when the game it names is masked", async () => {
+    await storedMasked("m2", { pieces: MASK_PRESETS.nonPawns, notation: true });
     mount("/engine/play?saved=m2");
     expect(where()).toBe("/engine/masked?saved=m2");
     expect(boardOptions().id).toBe("masked-play");

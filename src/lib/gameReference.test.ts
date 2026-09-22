@@ -33,8 +33,8 @@ describe("resolveGameReference", () => {
     expect(LIBRARY_REFERENCE_KEY).toBe("library");
   });
 
-  it("tolerates the empty segments a stray slash leaves", () => {
-    savePlayedGame(
+  it("tolerates the empty segments a stray slash leaves", async () => {
+    await savePlayedGame(
       playedGameOf("a", parsePgnTree("1. e4 e5 *"), [], DEFAULT_ENGINE_SETTINGS),
     );
     expect(resolveGameReference("/play/games/a/")?.id).toBe("a");
@@ -79,8 +79,13 @@ describe("a Library game (CTA-77)", () => {
     expect(resolveGameReference(reference)?.name).toBe("Morphy, Paul – Morphy, Alonzo");
   });
 
-  it("is read at once for any other reference", () => {
+  it("waits for the played games' first read, like a Library game", async () => {
+    expect(isReferenceRead("play/games/a")).toBe(false);
+    await loadReferencedGames("play/games/a");
     expect(isReferenceRead("play/games/a")).toBe(true);
+  });
+
+  it("is read at once for no reference", () => {
     expect(isReferenceRead(null)).toBe(true);
   });
 });

@@ -102,7 +102,7 @@ const routes = createBrowserRouter(
           path: "/openings",
           element: <OpeningsScreen />
         },
-        // The reader's own repertoires (CTA-61), kept in `localStorage`
+        // The reader's own repertoires (CTA-61), kept in IndexedDB
         // (`lib/savedRepertoireStore.ts`): the list, the screen one is brought
         // in on, and the v2 board one is read on. `new` is a static segment, so
         // it ranks above `:id` whatever the order here.

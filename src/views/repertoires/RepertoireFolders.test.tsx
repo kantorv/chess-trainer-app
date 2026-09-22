@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, screen, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import i18n from "../../i18n";
@@ -28,12 +28,12 @@ beforeEach(async () => {
 });
 
 const folderNamed = (name: string) =>
-  repertoireFoldersSnapshot().find((folder) => folder.name === name)!;
+  repertoireFoldersSnapshot()!.find((folder) => folder.name === name)!;
 
 describe("repertoire folders on the list", () => {
   it("creates a folder from the top bar, listed ahead of the Unfiled repertoires", async () => {
-    storeRepertoire("a");
-    renderSection("/repertoires");
+    await storeRepertoire("a");
+    await renderSection("/repertoires");
 
     await userEvent.click(screen.getByTestId("repertoires-new-folder"));
     fireEvent.change(screen.getByTestId("repertoire-folder-name-input"), {
@@ -53,9 +53,9 @@ describe("repertoire folders on the list", () => {
   });
 
   it("moves a repertoire into a folder and out again, from its settings", async () => {
-    storeRepertoire("a");
-    const folder = createRepertoireFolder("Caro")!;
-    renderSection("/repertoires");
+    await storeRepertoire("a");
+    const folder = (await createRepertoireFolder("Caro"))!;
+    await renderSection("/repertoires");
 
     await userEvent.click(screen.getByTestId("repertoires-settings-a"));
     await userEvent.click(screen.getByTestId(`repertoire-settings-folder-${folder.id}`));
@@ -85,11 +85,11 @@ describe("repertoire folders on the list", () => {
   });
 
   it("shows only its own repertoires inside a folder, with no folders in it, and a way back", async () => {
-    storeRepertoire("a");
-    storeRepertoire("b");
-    const folder = createRepertoireFolder("Caro")!;
-    fileRepertoire("b", folder.id);
-    renderSection(`/repertoires?folder=${folder.id}`);
+    await storeRepertoire("a");
+    await storeRepertoire("b");
+    const folder = (await createRepertoireFolder("Caro"))!;
+    await fileRepertoire("b", folder.id);
+    await renderSection(`/repertoires?folder=${folder.id}`);
 
     expect(screen.getAllByTestId(/^repertoires-item-/).map((row) => row.dataset.testid)).toEqual(
       ["repertoires-item-b"],
@@ -104,8 +104,8 @@ describe("repertoire folders on the list", () => {
   });
 
   it("renames a folder from inside it", async () => {
-    const folder = createRepertoireFolder("Caro")!;
-    renderSection(`/repertoires?folder=${folder.id}`);
+    const folder = (await createRepertoireFolder("Caro"))!;
+    await renderSection(`/repertoires?folder=${folder.id}`);
 
     await userEvent.click(screen.getByTestId("repertoires-folder-rename"));
     expect(screen.getByTestId("repertoire-folder-name-input")).toHaveValue("Caro");
@@ -117,10 +117,10 @@ describe("repertoire folders on the list", () => {
   });
 
   it("deletes a folder with repertoires only after asking, and keeps them", async () => {
-    storeRepertoire("a");
-    const folder = createRepertoireFolder("Caro")!;
-    fileRepertoire("a", folder.id);
-    renderSection(`/repertoires?folder=${folder.id}`);
+    await storeRepertoire("a");
+    const folder = (await createRepertoireFolder("Caro"))!;
+    await fileRepertoire("a", folder.id);
+    await renderSection(`/repertoires?folder=${folder.id}`);
 
     await userEvent.click(screen.getByTestId("repertoires-folder-delete"));
     expect(screen.getByTestId("repertoire-folder-delete-text")).toHaveTextContent(
@@ -128,45 +128,45 @@ describe("repertoire folders on the list", () => {
     );
     await userEvent.click(screen.getByTestId("repertoire-folder-delete-confirm"));
 
-    expect(repertoireFoldersSnapshot()).toEqual([]);
-    expect(findSavedRepertoire("a")?.folderId).toBeNull();
+    await waitFor(() => expect(findSavedRepertoire("a")?.folderId).toBeNull());
+    expect(repertoireFoldersSnapshot()!).toEqual([]);
     // Back at the top level, where the repertoire now is.
     expect(screen.getByTestId("repertoires-title")).toHaveTextContent("Repertoires");
     expect(screen.getByTestId("repertoires-item-a")).toBeInTheDocument();
   });
 
   it("deletes an empty folder at once, from its row", async () => {
-    const folder = createRepertoireFolder("Empty")!;
-    renderSection("/repertoires");
+    const folder = (await createRepertoireFolder("Empty"))!;
+    await renderSection("/repertoires");
     // Nothing in it, so nothing to download.
     expect(screen.getByTestId(`repertoire-folder-download-${folder.id}`)).toBeDisabled();
 
     await userEvent.click(screen.getByTestId(`repertoire-folder-delete-${folder.id}`));
     expect(screen.queryByTestId("repertoire-folder-delete-text")).not.toBeInTheDocument();
-    expect(repertoireFoldersSnapshot()).toEqual([]);
+    expect(repertoireFoldersSnapshot()!).toEqual([]);
   });
 
   it("shows folders as cards in the board views", async () => {
-    const folder = createRepertoireFolder("Caro")!;
-    renderSection("/repertoires");
+    const folder = (await createRepertoireFolder("Caro"))!;
+    await renderSection("/repertoires");
     await userEvent.click(screen.getByTestId("repertoires-view-compact"));
     expect(
       within(screen.getByTestId("repertoires-grid")).getByTestId(`repertoire-folder-${folder.id}`),
     ).toBeInTheDocument();
   });
 
-  it("reads a folder that is not there as the top level", () => {
-    storeRepertoire("a");
-    renderSection("/repertoires?folder=gone");
+  it("reads a folder that is not there as the top level", async () => {
+    await storeRepertoire("a");
+    await renderSection("/repertoires?folder=gone");
     expect(screen.getByTestId("repertoires-title")).toHaveTextContent("Repertoires");
     expect(screen.getByTestId("repertoires-item-a")).toBeInTheDocument();
   });
 
   it("returns from a repertoire's settings to the folder it was opened in", async () => {
-    storeRepertoire("a");
-    const folder = createRepertoireFolder("Caro")!;
-    fileRepertoire("a", folder.id);
-    renderSection(`/repertoires?folder=${folder.id}`);
+    await storeRepertoire("a");
+    const folder = (await createRepertoireFolder("Caro"))!;
+    await fileRepertoire("a", folder.id);
+    await renderSection(`/repertoires?folder=${folder.id}`);
 
     await userEvent.click(screen.getByTestId("repertoires-settings-a"));
     await userEvent.click(screen.getByTestId("repertoire-settings-cancel"));

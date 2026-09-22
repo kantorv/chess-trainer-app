@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 
 import {
   DEFAULT_ENGINE_SETTINGS,
@@ -253,10 +253,18 @@ export const usePlayGame = (
     evalsByFen,
   ]);
 
+  /*
+    The write is a promise (IndexedDB). Its answer is taken only while it is
+    about the game on screen: a Replay while a write is out gives the board a
+    new id, and the old game's answer must not mark the new one stored.
+  */
+  const currentId = useRef(start.id);
   const save = useCallback((game: PlayedGame) => {
-    const failed = savePlayedGame(game);
-    setProblem(failed ?? null);
-    if (failed === undefined) setStored(true);
+    void savePlayedGame(game).then((failed) => {
+      if (currentId.current !== game.id) return;
+      setProblem(failed ?? null);
+      if (failed === undefined) setStored(true);
+    });
   }, []);
 
   useAutosave({ enabled: true, record, save });
@@ -270,10 +278,14 @@ export const usePlayGame = (
    * is removed from the list, and the new game is written under a new id.
    */
   const replay = () => {
-    if (stored) removePlayedGame(gameId);
+    // Removed whether or not its first write has landed yet: the queue runs
+    // this after it, and an id not there is a no-op.
+    void removePlayedGame(gameId);
     reset();
     clearAnalysis();
-    setGameId(newPlayedGameId());
+    const nextId = newPlayedGameId();
+    currentId.current = nextId;
+    setGameId(nextId);
     setStartedAt(new Date().toISOString());
     setStored(false);
     setResigned(undefined);
