@@ -187,6 +187,47 @@ describe("sidebar navigation", () => {
   });
 });
 
+describe("the pinned foot (CTA-86)", () => {
+  const settingsFolder = () =>
+    screen.getByRole("button", { name: i18n.t("nav.folders.settings") });
+  const pinned = () => screen.getByTestId("layout-sidebar-pinned");
+
+  it("renders Settings apart from the other folders, at the foot", () => {
+    renderAt("/");
+    expect(within(pinned()).getByRole("button", { name: i18n.t("nav.folders.settings") })).toBeInTheDocument();
+    // Nothing else is pinned, and Settings is not in the main list too.
+    expect(within(pinned()).getAllByRole("button")).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: i18n.t("nav.folders.settings") })).toHaveLength(1);
+    expect(within(pinned()).queryByRole("button", { name: i18n.t("nav.folders.library") })).toBeNull();
+  });
+
+  it("opens in place, its screens inside the foot, and shares the one open chain", async () => {
+    const user = userEvent.setup();
+    renderAt(ADD_COLLECTION);
+    expect(libraryFolder()).toHaveAttribute("aria-expanded", "true");
+
+    await user.click(settingsFolder());
+    expect(settingsFolder()).toHaveAttribute("aria-expanded", "true");
+    expect(within(pinned()).getByRole("link", { name: i18n.t("nav.settingsExport") })).toBeVisible();
+    // Opening the pinned folder shuts the one open above it.
+    expect(libraryFolder()).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("opens by itself on its own route", () => {
+    renderAt("/settings/export");
+    expect(settingsFolder()).toHaveAttribute("aria-expanded", "true");
+    expect(within(pinned()).getByRole("link", { name: i18n.t("nav.settingsExport") })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+  });
+
+  it("renders no foot for a tree with nothing pinned", () => {
+    renderAt("/", navTree().filter((node) => !node.pinToBottom));
+    expect(screen.queryByTestId("layout-sidebar-pinned")).toBeNull();
+  });
+});
+
 describe("the folder tree", () => {
   it("renders a row per folder, only the active screen's open", () => {
     renderAt(ADD_COLLECTION);

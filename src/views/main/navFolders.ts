@@ -49,6 +49,13 @@ export type NavFolder = {
    * entry hides is reached from that screen's own controls, not from here.
    */
   singleEntry?: boolean;
+  /**
+   * The folder is the app's own chrome, not a place in it: a **top-level**
+   * folder so marked renders in its own section at the sidebar's foot, under
+   * a divider, apart from the screens above (`Sidebar.tsx`). It still opens
+   * and closes like any folder, and is still a card on the landing page.
+   */
+  pinToBottom?: boolean;
 };
 
 /**
@@ -110,11 +117,13 @@ export const navFolders = (): readonly NavFolder[] => [
   /*
     The app's own settings (CTA-86), one screen per tab of `/settings/<tab>`
     — Export today. A folder rather than a single entry, so a tab added later
-    is one more `navItems()` entry here.
+    is one more `navItems()` entry here; pinned to the sidebar's foot, apart
+    from the screens.
   */
   {
     id: "settings",
     labelKey: "nav.folders.settings",
     icon: SettingsRoundedIcon,
+    pinToBottom: true,
   },
 ];

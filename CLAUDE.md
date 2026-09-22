@@ -204,7 +204,7 @@ The sidebar is a folder tree over the routes; a folder never appears in a URL.
 | Layer | File | What it owns |
 | --- | --- | --- |
 | Walks | `src/lib/treeManager.ts` | Depth-first reads over any tree. |
-| Data | `navFolders()` + `navItems()` | The folders (`{ id, labelKey?, label?, icon, children?, singleEntry? }`) and the screens, each naming its `folder`. **Functions**, so a dev-only entry can be a spread gated on `import.meta.env.DEV`. |
+| Data | `navFolders()` + `navItems()` | The folders (`{ id, labelKey?, label?, icon, children?, singleEntry?, pinToBottom? }`) and the screens, each naming its `folder`. **Functions**, so a dev-only entry can be a spread gated on `import.meta.env.DEV`. |
 | Builder | `navTree.ts` | `buildNavTree`, `folderPath`, `folderChain`, `navLabel` (a catalog key *or* a data label, `lib/localizedText.ts`), `navLabelKeys`. |
 | Renderer | `Sidebar.tsx` | A recursive `TreeRow`: folders are `aria-expanded` toggles, screens are links. |
 
@@ -213,6 +213,10 @@ The sidebar is a folder tree over the routes; a folder never appears in a URL.
 - **A `singleEntry` folder** renders as one row, under its own name, straight
   to its one screen (Analysis → Saved analyses, Openings, Repertoires). Board
   screens those hide are reached from the screens' own controls.
+- **A `pinToBottom` folder** (Settings) renders at the sidebar's foot, under
+  a divider, apart from the screens: the rows above scroll, the foot never
+  does, and opening it grows the foot upwards so its screens stay in view.
+  One `nav` landmark, one open chain across both.
 - **One chain is open at a time, and the route decides which**, adjusted
   during render against the previous pathname (not in an effect, which
   `react-hooks/set-state-in-effect` rejects). Nothing is persisted.

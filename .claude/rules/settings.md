@@ -16,7 +16,7 @@ a route segment. **Export** is the only tab today.
 | --- | --- | --- |
 | Route | `App.tsx` — `/settings` and `/settings/:tab` | Both render `SettingsMain.tsx`; `/settings` and an unknown tab redirect to the first tab. |
 | Screen | `views/settings/SettingsScreen.tsx` | The title, a tab strip (each `Tab` a `RouterLink` to `/settings/<id>`), the active tab's content scrolling under it. |
-| Nav | `navFolders()` — `settings` (`nav.folders.settings`); `navItems()` — one entry per tab | A folder, **not** `singleEntry`, so a later tab is one more entry in it. |
+| Nav | `navFolders()` — `settings` (`nav.folders.settings`, `pinToBottom`); `navItems()` — one entry per tab | A folder, **not** `singleEntry`, so a later tab is one more entry in it. Pinned to the sidebar's foot, under a divider, apart from the screens (`Sidebar.tsx`). |
 | Locale | `settings.*` in `en.ts` / `he.ts` | `settings.title`, `settings.tabs.<id>`, `settings.export.*`. |
 
 **Adding a tab**: an entry in `SETTINGS_TABS` (`SettingsScreen.tsx`), a

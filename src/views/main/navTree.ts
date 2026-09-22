@@ -34,6 +34,8 @@ export type NavTreeNode = {
   children?: NavTreeNode[];
   /** Carried from a single-entry folder, for the top-level fold. */
   singleEntry?: boolean;
+  /** Carried from a folder pinned to the sidebar's foot (`NavFolder.pinToBottom`). */
+  pinToBottom?: boolean;
 };
 
 /**
@@ -48,6 +50,7 @@ type FolderLike<Id extends string> = {
   icon: SvgIconComponent;
   children?: readonly FolderLike<Id>[];
   singleEntry?: boolean;
+  pinToBottom?: boolean;
 };
 
 type ScreenLike = {
@@ -78,6 +81,7 @@ export const buildNavTree = <Id extends string>(
     ...nameOf(folder),
     icon: folder.icon,
     ...(folder.singleEntry ? { singleEntry: true } : {}),
+    ...(folder.pinToBottom ? { pinToBottom: true } : {}),
     children: [
       ...buildNavTree(folder.children ?? [], screensOf),
       ...screensOf(folder.id).map((item) => ({

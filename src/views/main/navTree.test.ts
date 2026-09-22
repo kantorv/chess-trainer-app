@@ -94,6 +94,10 @@ describe("the shipped nav tree", () => {
     const settings = navFolders().find((folder) => folder.id === "settings");
     expect(settings).toMatchObject({ labelKey: "nav.folders.settings" });
     expect(settings?.singleEntry).toBeFalsy();
+    // Pinned to the sidebar's foot, and the flag reaches the rendered tree.
+    expect(settings?.pinToBottom).toBe(true);
+    expect(navTree().find((node) => node.id === "settings")?.pinToBottom).toBe(true);
+    expect(navTree().filter((node) => node.pinToBottom).map((node) => node.id)).toEqual(["settings"]);
     expect(navItemsInFolder("settings").map((item) => [item.to, item.labelKey])).toEqual([
       ["/settings/export", "nav.settingsExport"],
     ]);
