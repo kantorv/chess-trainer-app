@@ -309,7 +309,7 @@ node scripts/wirepgn.js x.pgn ──▶ src/data/library/ ─ manifest.json ─�
   what a reader says.
 - **The table's columns** are the tags the shipped files carry: `#`, White, Elo, Black, Elo, Result, Date (its unknown
   `.??` parts dropped), Round, Event, ECO, Opening (with `Variation` after a
-  comma) and Moves. A click on a header **sorts** (numbers numerically, text
+  comma) and Moves. The table opens **newest first** (Date descending — undated games last, one day's games later first; `#` is the collection's own order). A click on a header **sorts** (numbers numerically, text
   with a numeric-aware collation so round `1.10` follows `1.9`, a missing value
   last either way); a words box over the table and the right-hand panel's
   **filters** narrow it (`CollectionFilters.tsx`, `filteredRows` /

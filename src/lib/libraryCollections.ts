@@ -254,7 +254,8 @@ export const sortedRows = (
       if (left === right) return a.number - b.number;
       return left === undefined ? 1 : -1;
     }
-    return sign * compareValues(left, right) || a.number - b.number;
+    // A tie follows the direction too: of one day's games, newest first reads the later first.
+    return sign * (compareValues(left, right) || a.number - b.number);
   });
 };
 

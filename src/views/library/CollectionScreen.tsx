@@ -123,6 +123,10 @@ import { loadCollectionGames, useCollectionRows } from "./useLibraryCollections"
  * download of the picked games. (The whole collection downloads from its row
  * on `/library`.) A game the index found unreadable is marked in its `#` cell.
  *
+ * **The newest games first**: the table opens sorted by date, descending
+ * (undated games last, one day's games later first); `#` restores the
+ * collection's own order.
+ *
  * The sort, the filters and the page are the URL's (`?sort=`, `?dir=`, `?q=`,
  * `?player=`, `?color=`, `?opening=`, `?event=`, `?from=`, `?to=`,
  * `?result=`, `?line=`, `?page=`, `?rows=`, written with history replace), so going back
@@ -133,6 +137,12 @@ import { loadCollectionGames, useCollectionRows } from "./useLibraryCollections"
 const ROWS_PER_PAGE = [50, 100, 250] as const;
 /** The columns whose values are numbers — sorted high first on the first click. */
 const NUMERIC: ReadonlySet<CollectionColumn> = new Set(["number", "whiteElo", "blackElo", "moves"]);
+
+/** The sort a table opens with: the newest games first (undated ones last). */
+const DEFAULT_SORT: CollectionColumn = "date";
+/** Which way a column sorts until the reader turns it: the date and the numbers high first. */
+const defaultDirection = (column: CollectionColumn): SortDirection =>
+  column === DEFAULT_SORT || (NUMERIC.has(column) && column !== "number") ? "desc" : "asc";
 
 const isColumn = (value: string | null): value is CollectionColumn =>
   (COLLECTION_COLUMNS as readonly string[]).includes(value ?? "");
@@ -154,8 +164,12 @@ function CollectionTable({
   const [picked, setPicked] = useState<ReadonlySet<number>>(() => new Set());
 
   const requestedSort = params.get("sort");
-  const sort: CollectionColumn = isColumn(requestedSort) ? requestedSort : "number";
-  const direction: SortDirection = params.get("dir") === "desc" ? "desc" : "asc";
+  const sort: CollectionColumn = isColumn(requestedSort) ? requestedSort : DEFAULT_SORT;
+  const requestedDirection = params.get("dir");
+  const direction: SortDirection =
+    requestedDirection === "asc" || requestedDirection === "desc"
+      ? requestedDirection
+      : defaultDirection(sort);
   const text = params.get("q") ?? "";
   const requestedResult = params.get("result") ?? "";
   const requestedColor = params.get("color");
@@ -311,12 +325,15 @@ function CollectionTable({
       { replace: true },
     );
 
-  const sortBy = (column: CollectionColumn) =>
-    setState(
-      column === sort
-        ? { dir: direction === "asc" ? "desc" : "asc" }
-        : { sort: column === "number" ? null : column, dir: NUMERIC.has(column) && column !== "number" ? "desc" : null },
-    );
+  /** A new column opens its own way; a second click turns it. The URL keeps only what is not the default. */
+  const sortBy = (column: CollectionColumn) => {
+    if (column !== sort) {
+      setState({ sort: column === DEFAULT_SORT ? null : column, dir: null });
+      return;
+    }
+    const turned: SortDirection = direction === "asc" ? "desc" : "asc";
+    setState({ dir: turned === defaultDirection(column) ? null : turned });
+  };
 
   const gamePath = (number: number) =>
     `/library/${encodeURIComponent(collection.id)}/${number}`;

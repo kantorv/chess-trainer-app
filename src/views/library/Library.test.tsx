@@ -382,9 +382,10 @@ describe("the table's filters", () => {
     expect(within(screen.getByTestId("library-filter-color")).getByTestId("library-filter-color-black")).toBeDisabled();
 
     typeInto("library-filter-player", "carl");
-    expect(rowNumbers()).toEqual(["1", "2", "3"]);
+    // Newest first: "2023.10" is after April.
+    expect(rowNumbers()).toEqual(["3", "2", "1"]);
     fireEvent.click(panel().getByTestId("library-filter-color-black"));
-    expect(rowNumbers()).toEqual(["2", "3"]);
+    expect(rowNumbers()).toEqual(["3", "2"]);
     expect(where()).toContain("player=carl");
     expect(where()).toContain("color=black");
     expect(screen.getByTestId("library-table-count")).toHaveTextContent("2 of 3 games");
@@ -399,18 +400,37 @@ describe("the table's filters", () => {
     expect(rowNumbers()).toEqual(["3"]);
     cleanupAndMount(`/library/${rich.id}?event=Spring+Open`);
     await screen.findByTestId("library-table");
-    expect(rowNumbers()).toEqual(["1", "2"]);
+    expect(rowNumbers()).toEqual(["2", "1"]);
 
     cleanupAndMount(`/library/${rich.id}`);
     await screen.findByTestId("library-table");
     // "2023.10" is any day of October.
     fireEvent.change(screen.getByTestId("library-filter-from"), { target: { value: "2023-04-03" } });
-    expect(rowNumbers()).toEqual(["2", "3"]);
+    expect(rowNumbers()).toEqual(["3", "2"]);
     fireEvent.change(screen.getByTestId("library-filter-to"), { target: { value: "2023-10-05" } });
-    expect(rowNumbers()).toEqual(["2", "3"]);
+    expect(rowNumbers()).toEqual(["3", "2"]);
     fireEvent.change(screen.getByTestId("library-filter-to"), { target: { value: "2023-09-30" } });
     expect(rowNumbers()).toEqual(["2"]);
     expect(screen.getByTestId("library-filter-from")).toHaveAttribute("min", "2023-04-02");
+  });
+
+  it("opens newest first, and turns or leaves the date order from its header", async () => {
+    const rich = await keep("Rich", [...RICH, '[Event "Undated"]\n[White "X"]\n[Black "Y"]\n\n1. e4 *']);
+    await mountTable(`/library/${rich.id}`);
+    // Undated games last, whichever way.
+    expect(rowNumbers()).toEqual(["3", "2", "1", "4"]);
+    expect(where()).toBe(`/library/${rich.id}`);
+
+    fireEvent.click(screen.getByTestId("library-table-sort-date"));
+    expect(rowNumbers()).toEqual(["1", "2", "3", "4"]);
+    expect(where()).toBe(`/library/${rich.id}?dir=asc`);
+    fireEvent.click(screen.getByTestId("library-table-sort-date"));
+    expect(where()).toBe(`/library/${rich.id}`);
+
+    // `#` is the collection's own order.
+    fireEvent.click(screen.getByTestId("library-table-sort-number"));
+    expect(rowNumbers()).toEqual(["1", "2", "3", "4"]);
+    expect(where()).toBe(`/library/${rich.id}?sort=number`);
   });
 
   it("clears every filter at once, leaving the words box alone", async () => {
@@ -418,7 +438,7 @@ describe("the table's filters", () => {
     await mountTable(`/library/${rich.id}?q=open&player=carl&color=white&result=1-0`);
     expect(rowNumbers()).toEqual(["1"]);
     fireEvent.click(panel().getByTestId("library-filter-clear"));
-    expect(rowNumbers()).toEqual(["1", "2"]);
+    expect(rowNumbers()).toEqual(["2", "1"]);
     expect(where()).toBe(`/library/${rich.id}?q=open`);
     expect(panel().getByTestId("library-filter-clear")).toBeDisabled();
   });
@@ -691,7 +711,7 @@ describe("analysing the picks (CTA-77)", () => {
   });
 
   it("works on a shipped collection too", async () => {
-    await mountTable("/library/morphy");
+    await mountTable("/library/morphy?sort=number");
     pick(1);
     fireEvent.click(analyse());
     expect(await notice()).toHaveTextContent("1 game added to Saved analyses, in “Morphy — 1 game”.");
