@@ -28,7 +28,9 @@ is untouched by it and stays the reference until its own issue.
 
 The **Library** of game collections (`/library`) has its own path-scoped
 reference, [`.claude/rules/game-collections.md`](.claude/rules/game-collections.md),
-which loads when you work on its files.
+which loads when you work on its files, and so does the **Openings explorer**
+(`/openings`, the opening book and the Analysis hand-off),
+[`.claude/rules/openings-explorer.md`](.claude/rules/openings-explorer.md).
 
 How such a screen **shows its game tree** — the move list with its side lines,
 the map, the comments, the next-move arrows — is not wired inline either: it
@@ -79,9 +81,9 @@ change by whether it *adds* to that count, not by the exit code.
 | `src/views/shared/folders/` | **The saved lists' folder components** — `SavedFolderViews.tsx` (a folder row and card), `SavedFolderBreadcrumb.tsx`, `FolderNameDialog.tsx` / `FolderMoveDialog.tsx` / `FolderDeleteDialog.tsx` and `FolderPicker.tsx`, over `lib/savedGameFolders.ts`'s `GameFolder`. Moved here from the deleted Saved games (old) screen (CTA-74); the Saved analyses screen, its settings screen and its save dialog use them, each passing its own `labelKey` and test-id prefix. |
 | `src/views/masked/play/` | The Masked Pieces screen — Play with Engine with the piece graphics in disguise. `MaskedPlay.tsx` owns the mask and renders the same `EngineBoardSquare`; **the behaviour is `usePlayWithEngine`, reused verbatim**; `MaskedPanel.tsx` adds a fourth tab over the same three, with `MaskEditor.tsx` under it. |
 | `src/views/tools/editor/` | The Board Editor. `BoardEditor.tsx` is layout (the two palettes and the board, inside a `ChessboardProvider`), board options, the `?fen=` arrival and the PGN/FEN ingestion state; **the behaviour is in `useBoardEditor.ts`**; `EditorPanel.tsx` is the Position / FEN / PGN tab strip over the reset controls and the hand-off, with `PositionFields.tsx`, `FenSetup.tsx`, `PgnSetup.tsx` and `PiecePalette.tsx` under it. |
-| `src/views/tools/analysis/` | **The Analysis Board** — since CTA-73 a v2 screen: the core, the engine module and the shared variations explorer, composed (see *Saving an analysis board* below). `AnalysisBoard.tsx` is the screen — the arrivals (`?fen=`, `?game=` + `?move=`, `?analysis=`, and the `?at=` permanent link it writes back), the slots, the URL; **the session is `useAnalysisBoard.ts`** — the core and the engine (which plays the opponent's best move only while the header's Play toggle is on — a step back pauses it), and the saved record with its baseline: Save / Update / Save as copy / Discard, the Load tab's new boards; `AnalysisLoad.tsx` (the Load tab: a PGN by file or paste — one game, or several merged or split — or a FEN), `AnalysisExport.tsx` (the Export tab: FEN, PGN with or without comments / NAGs / side lines, download), `SaveAnalysisDialog.tsx` (a new board's name and folder), `AnalysisSettings.tsx` (the Engine tab, also the repertoire player's). The folder also keeps what other screens import: `useTreeNavigation.ts` (the core's navigation), `NextMovesBar.tsx` / `nextMoveArrows.ts` (the explorer's). Since CTA-75 `useAnalysisSession.ts` is the session's shareable half — core, engine, Play and the baseline — which `useAnalysisBoard`, the Library's game board and the Openings explorer compose. Since CTA-78 the board also takes a **whole tree handed over** in the router's location state (`lib/analysisHandOff.ts`; see *Exploring an opening*). |
+| `src/views/tools/analysis/` | **The Analysis Board** — since CTA-73 a v2 screen: the core, the engine module and the shared variations explorer, composed (see *Saving an analysis board* below). `AnalysisBoard.tsx` is the screen — the arrivals (`?fen=`, `?game=` + `?move=`, `?analysis=`, and the `?at=` permanent link it writes back), the slots, the URL; **the session is `useAnalysisBoard.ts`** — the core and the engine (which plays the opponent's best move only while the header's Play toggle is on — a step back pauses it), and the saved record with its baseline: Save / Update / Save as copy / Discard, the Load tab's new boards; `AnalysisLoad.tsx` (the Load tab: a PGN by file or paste — one game, or several merged or split — or a FEN), `AnalysisExport.tsx` (the Export tab: FEN, PGN with or without comments / NAGs / side lines, download), `SaveAnalysisDialog.tsx` (a new board's name and folder), `AnalysisSettings.tsx` (the Engine tab, also the repertoire player's). The folder also keeps what other screens import: `useTreeNavigation.ts` (the core's navigation), `NextMovesBar.tsx` / `nextMoveArrows.ts` (the explorer's). Since CTA-75 `useAnalysisSession.ts` is the session's shareable half — core, engine, Play and the baseline — which `useAnalysisBoard`, the Library's game board and the Openings explorer compose. Since CTA-78 the board also takes a **whole tree handed over** in the router's location state (`lib/analysisHandOff.ts`; [`openings-explorer.md`](.claude/rules/openings-explorer.md) §5). |
 | `src/views/tools/analysis/saved/` | The Saved analyses screen — the analyses saved on the board above, newest first, filed into a nested tree of folders (CTA-73; `?folder=<id>` is where the reader stands, and a split on the board lands there), as a list **or** as preview boards at the saved lists' two card sizes (`views/shared/cardSize.ts`). `SavedAnalyses.tsx` is both views — laid out as the Repertoires list without its Games menu: an **Open** button (the card's board), the settings gear and a checkbox on every row and card, deleting in bulk from the export bar in every view; no Play with Engine button — and the folder browsing and CRUD, over the shared folder rows, cards, breadcrumb and dialogs (`views/shared/folders/`, which take a `labelKey` and a test-id prefix); `useSavedAnalyses.ts` / `useAnalysisFolders.ts` the `useSyncExternalStore` bindings. |
-| `src/views/openings/` | **The Openings explorer** (`/openings`) — since CTA-78 a v2 screen composed like the Library's game board, with no behaviour hook of its own: `OpeningsBoard.tsx` composes `useAnalysisSession` (core, engine, Play), `useOpeningBookModule` (eco.json's continuations from the position on screen) and the variations explorer; `OpeningBookList.tsx` is the Book tab (a click plays a move, from any node); `openingArrows.ts` joins the tree's next-move arrows and the book's into the board's one arrow set. Nothing is saved; the header hands the whole tree to the Analysis Board. See *Exploring an opening*. |
+| `src/views/openings/` | **The Openings explorer** (`/openings`; full reference [`.claude/rules/openings-explorer.md`](.claude/rules/openings-explorer.md)) — since CTA-78 a v2 screen composed like the Library's game board, with no behaviour hook of its own: `OpeningsBoard.tsx` composes `useAnalysisSession` (core, engine, Play), `useOpeningBookModule` (eco.json's continuations from the position on screen) and the variations explorer; `OpeningBookList.tsx` is the Book tab (a click plays a move, from any node); `openingArrows.ts` joins the tree's next-move arrows and the book's into the board's one arrow set. Nothing is saved; the header hands the whole tree to the Analysis Board. See *Exploring an opening*. |
 | `src/lib/engineSettings.ts` | **The engine knobs a game is played under** — `EngineSettings`, its defaults, the `SETTING_UCI_OPTION` table and `approximateElo`, plus the non-throwing `engineSettingsFrom` a stored record is read back through. In `src/lib/` because a saved game records them; `usePlayWithEngine.ts` re-exports the lot, so that hook stays the one import a reader of the screen needs. |
 | `src/lib/analysisSettings.ts` | **The engine knobs an analysis is worked under** — `AnalysisSettings`, its defaults, `ANALYSIS_UCI_OPTION` and the non-throwing `analysisSettingsFrom`. The same move for the same reason as the file above: a saved analysis records them, and every consumer imports them from here. |
 | `src/lib/engine.ts` | The Stockfish worker wrapper: search, UCI option discovery, and the protocol discipline that keeps the engine alive (see the chessboard rules §4). |
@@ -109,7 +111,7 @@ change by whether it *adds* to that count, not by the exit code.
 | `src/lib/moveAnnotations.ts` | **A position's annotations, read for display** (CTA-69) — `annotationsAt` (the comments before and after the move on screen, or the game's at the start, and its NAGs; `null` when there are none), `readComment` (a comment's prose in paragraphs, through `pgnComments.ts`'s `reflowComment`, and the attributes inside it: `[%key value]` commands and an engine's trailing evaluation), and `nagGlyph`. Pure; the repertoire player's comment block is its consumer. |
 | `src/lib/repertoireLink.ts` | **A permanent link to a position in a repertoire** (CTA-63) — `?at=` on `/repertoires/<id>`: `atParamOf` (the moves from the start as comma-joined SAN) and `nodeAtParam` (back to a node, as far as the path still matches). Pure. |
 | `src/lib/savedRepertoireFolders.ts` + `savedRepertoireFolderStore.ts` | **The folders repertoires are filed under — one level**: a folder holds repertoires, never another folder, so it has no `parentId` and none of the tree machinery the games' and analyses' folders carry. `repertoiresInFolder` reads a `folderId` naming a missing folder as Unfiled; `sortedRepertoireFolders` orders by name. The store (`chessapp.savedRepertoireFolders.v1`, cap 100) is create (hands the folder back) / rename / delete, and a delete **keeps its repertoires** — `unfileRepertoiresIn`, the repertoire store's half, files them back to Unfiled. A **split** makes a folder of its own, named after the text, and files every split repertoire into it. Non-throwing throughout. |
-| `src/lib/analysisHandOff.ts` | **A whole tree handed to the Analysis Board** (CTA-78) — `analysisHandOffState` (the tree as PGN, and the orientation, as router location state) / `analysisHandOffOf` (read back, non-throwing), and `lineTreeOf` (one SAN line played from a start — how the Openings explorer turns its `?at=` link back into moves). See *Exploring an opening*. |
+| `src/lib/analysisHandOff.ts` | **A whole tree handed to the Analysis Board** (CTA-78) — `analysisHandOffState` (the tree as PGN, and the orientation, as router location state) / `analysisHandOffOf` (read back, non-throwing), and `lineTreeOf` (one SAN line played from a start — how the Openings explorer turns its `?at=` link back into moves). See [`openings-explorer.md`](.claude/rules/openings-explorer.md) §5. |
 | `src/lib/idbRecordStore.ts` + `savedAnalysisDb.ts` | **The IndexedDB record-store factory** (CTA-77) — `recordStore.ts`'s counterpart for a store too big for `localStorage`: a list of rows kept as one IndexedDB record per row, with a `seq` beside each for the list's order (a row keeps its own whenever the new order allows, so an edit in place writes one record); the first subscriber or `load()` reads every row once and the list is then handed out synchronously (`undefined` before that); writes are `rows → rows` updates, **queued** so back-to-back writes see each other, answered once committed (`"storage"` on a refusal, the kept list unchanged); other tabs hear through a `BroadcastChannel`; and a `legacyKey` moves a former `recordStore`'s rows in on the first read, removing the key only after the write committed. `savedAnalysisDb.ts` is the one database both analysis stores share, `chessapp.analyses` (object stores `analyses` and `folders`), and `deleteAnalysisDb` the tests' reset (`src/test/setup.ts`). Non-throwing. |
 | `src/lib/recordStore.ts` | **The shared localStorage record-store factory** — the snapshot/subscribe/write machinery every localStorage record store (`savedGameStore`, `playedGameStore`, `savedRepertoireStore`, …) is built over: the try/catch read, the revision-stamped cached snapshot, the `storage`-event subscription, and the write that stamps the revision after the data. A row the normaliser (the `savedGameFrom`-style guard each store passes in) refuses is dropped, not rendered. Pure, non-throwing; one instance per store, each file keeping its own caps, idempotency comparisons and cross-store operations beside it. |
 | `src/lib/pgnExport.ts` | **Taking games out of the app** — `pgnFileOf` (several stored PGN records joined with a blank line, which is what `splitPgnGames` reads back) and `downloadTextFile` / `downloadPgn`, the blob-URL save. A join rather than a re-write: a saved game *is* PGN already, so nothing is re-parsed and a record this build cannot read still exports intact. |
@@ -320,7 +322,7 @@ are the one thing an analysis board is for.
 **A tree in no store travels as location state** (CTA-78): the Openings
 explorer's Analysis button hands the Analysis Board a whole explored tree
 that no catalog holds, so it goes in the router's state beside `?at=`
-(`lib/analysisHandOff.ts`; *Exploring an opening*), read once like the
+(`lib/analysisHandOff.ts`; [`openings-explorer.md`](.claude/rules/openings-explorer.md) §5), read once like the
 others. It is the one arrival that does not survive being shared as a link —
 which is why `?fen=` and `?game=` stay the carriers for everything that can
 be named.
@@ -508,52 +510,25 @@ The `?game=` hand-off still cost one entry in `catalogsByKey` and nothing else.
 
 ## Exploring an opening
 
-`/openings` is the **Openings explorer** — since CTA-78 a v2 board composed
-like the Library's game board, with no behaviour hook of its own
-(`views/openings/OpeningsBoard.tsx`): `useAnalysisSession` (the core, the
-engine, Play), `useOpeningBookModule` and the variations explorer, in
-`BoardShell` / `BoardPanel`. It is the Analysis Board plus the book, minus
-the saving:
+`/openings` is the **Openings explorer**: an opening played through on a full
+analysis board, with eco.json's continuations from the position on screen
+beside it. The full reference (composition, the opening book, the URL, the
+Analysis hand-off, invariants, tests, debugging and recipes) is
+[`.claude/rules/openings-explorer.md`](.claude/rules/openings-explorer.md),
+which loads when you work on its files. What matters from outside it:
 
-- **The book.** The Book tab (first, and open on arrival) lists every
-  continuation eco.json names from the position on screen, with its ECO code
-  and name; a click plays it under the node on screen, so a book move from an
-  earlier position branches the tree there. The book's moves are drawn as
-  arrows beside the tree's own next-move arrows — one set
-  (`openingArrows.ts`): a move the tree already has is drawn once, as the
-  tree's; the row under the pointer recolours its arrow. The current opening
-  (`CurrentOpening`) heads the panel.
-- **The Analysis Board's tabs and header**: Moves (with the next-move arrows'
-  switch), Map, Load, Export, Engine; the move menu (editing on, *Play
-  chances…* off), the comment block, the next-moves bar, Play, the eval bar
-  and the pinned best variations.
-- **Nothing is kept.** No Save, no changes strip, no folders, no store: the
-  Load tab merges a text of several games onto the board and offers no split.
-  (The saved openings and their folders — `/openings/saved`,
-  `?openings=<id>`, `lib/savedOpening*.ts` — were removed in CTA-78, with no
-  migration: their `localStorage` keys are simply no longer read.)
-- **The Analysis button hands the whole tree on.** A tree does not fit in
-  `?fen=` and lives in no store `?game=` could name, so it travels in the
-  **router's location state** (`lib/analysisHandOff.ts`):
-  `navigate("/tools/analysis?at=<SANs>", { state: analysisHandOffState(tree,
-  orientation) })` — the tree as PGN (`treeToPgn`: side lines, comments and
-  a non-standard start kept), the orientation beside it, the position on
-  screen as the usual `?at=`. The Analysis Board reads it once, on arrival
-  (`analysisHandOffOf`, beside `?fen=` / `?game=` / `?analysis=`, below
-  `?analysis=` in precedence), as a **new unsaved board** — the way a PGN
-  loaded in its Load tab arrives: Save opens the name-and-folder dialog, and
-  a reload asks first. It passes the state on through its own URL writes
-  (a browser keeps an entry's state across a reload) until a load or a save
-  makes the board something else. A state that is not a hand-off is ignored.
-- **Play from here** hands the position on screen to Play with Engine as
-  `?fen=`.
-- **Arrivals and the link.** `?fen=` (the Board Editor's "Open in Openings",
-  `CurrentOpening`'s ECO chip), validated with `parseFen`, turns the board to
-  the side to move. `?at=` is written back on every step with history
-  replace — beside `?fen=` while the tree does not start at the standard
-  position — and read on arrival by replaying its SANs (`lineTreeOf`), so the
-  address is a link to the line on screen (that line only, not the side lines
-  beside it). `/tools/openings` still redirects here.
+- **A v2 board with no behaviour hook** (CTA-78): `useAnalysisSession` +
+  `useOpeningBookModule` + the variations explorer. Tabs: Book · Moves · Map ·
+  Load · Export · Engine.
+- **Nothing is kept.** No Save, no folders, no store. The saved openings
+  (`/openings/saved`, `?openings=<id>`, `lib/savedOpening*.ts`) were removed
+  in CTA-78 with no migration.
+- **The Analysis button hands the whole tree on** as router location state
+  (`lib/analysisHandOff.ts`), arriving on the Analysis Board as a new unsaved
+  board. `?fen=` / `?game=` are unchanged.
+- **Takes `?fen=`** (the Board Editor's *Open in Openings*, `CurrentOpening`'s
+  ECO chip; it turns the board) and **writes `?at=` back**. `/tools/openings`
+  redirects here.
 
 ## Reading a repertoire
 

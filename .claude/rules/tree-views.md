@@ -238,7 +238,8 @@ screen (`views/openings/openingArrows.ts` — a move the tree has is drawn once,
 as the tree's; the book row under the pointer recolours its arrow). It places
 `moves` and `map` in its Moves and Map tabs (both kept mounted) and
 `annotations`, Play's status line and `nextMoves` (on the Moves tab) in its
-footer.
+footer. The screen's own reference is
+[`openings-explorer.md`](./openings-explorer.md).
 
 ---
 

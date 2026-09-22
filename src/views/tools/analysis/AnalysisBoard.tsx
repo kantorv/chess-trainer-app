@@ -81,7 +81,8 @@ import { useAnalysisBoard, type AnalysisBoardStart } from "./useAnalysisBoard";
  * catalog, re-read with `parsePgnTree` for its side lines; the ply or its
  * `StartPly`), `?analysis=<id>` (a saved analysis, where the reader left it,
  * facing the way it faced), and — not in the URL — a **whole tree handed over
- * in the location state** by the Openings explorer (`lib/analysisHandOff.ts`:
+ * in the location state** by the Openings explorer (`lib/analysisHandOff.ts`,
+ * [`openings-explorer.md`](../../../../.claude/rules/openings-explorer.md) §5:
  * a new unsaved board, like a PGN loaded; kept on the screen's own URL writes
  * so a reload keeps it, until a load or a save names something else). **`?at=`** — the moves from the start as SAN
  * (`lib/repertoireLink.ts`) — is written back on every step with history

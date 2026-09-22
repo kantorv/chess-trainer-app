@@ -59,6 +59,10 @@ import { openingArrowsOf } from "./openingArrows";
  * when the tree does not start at the standard position, `?at=` where the
  * reader stands — so the address is a link to the line on screen. (A link
  * carries that one line, not the side lines beside it.)
+ *
+ * The full reference — the book, the arrows, the URL, the hand-off, tests,
+ * debugging and recipes — is
+ * [`.claude/rules/openings-explorer.md`](../../../.claude/rules/openings-explorer.md).
  */
 
 /** The tabs kept mounted once opened — a long move list is costly to mount; the Map keeps its view. */

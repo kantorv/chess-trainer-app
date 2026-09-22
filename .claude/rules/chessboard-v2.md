@@ -626,7 +626,7 @@ what a screen gains:
 | --- | --- |
 | `src/views/dev/core/useBoardCore.ts` | §1 — the base. |
 | `src/views/dev/core/useEngineModule.ts` | §2.1 — the engine, and §4 of `chessboard.md` in one file. |
-| `src/views/dev/core/useOpeningBookModule.ts` | §2.2 — the book and its arrows. |
+| `src/views/dev/core/useOpeningBookModule.ts` | §2.2 — the book and its arrows (the book itself: [`openings-explorer.md`](./openings-explorer.md) §2). |
 | `src/views/dev/core/useAutosave.ts` | §2.3 — write-on-change. |
 | `src/views/dev/core/devStores.ts` | §2.4 — the dev-prefixed keys. |
 | `src/views/dev/core/useTrainerModule.ts` + `src/lib/repertoireTrainer.ts` | §2.5 — the repertoire trainer: the reply guard and timer (the module), the policy and the extension fold (pure). |
@@ -638,7 +638,7 @@ what a screen gains:
 | `src/views/dev/core/usePlayToggle.ts` | **Play** — the engine playing the side not at the bottom while on, pausing on a step back, a change of side, the engine off, the game over or `finished` (a resignation) (CTA-73, a module since CTA-74). The Analysis Board (off at the start) and Play with Engine (on) compose it. |
 | `src/views/engine/play/` | §4 — Play with Engine, Play v2 shipped (CTA-74): `usePlayGame.ts` (core + engine + `usePlayToggle` + the autosave) and `PlayWithEngine.tsx`. Under both propagation tests. |
 | `src/views/library/LibraryGameBoard.tsx` | §4 — the Library's game board (CTA-75): `useAnalysisSession` + the explorer, and the collection's Update / Save as copy. Under both propagation tests. |
-| `src/views/openings/OpeningsBoard.tsx` | §4 — the Openings explorer (CTA-78): `useAnalysisSession` + `useOpeningBookModule` + the explorer, and the Analysis hand-off. Under both propagation tests, in Openings v2's place. |
+| `src/views/openings/OpeningsBoard.tsx` | §4 — the Openings explorer (CTA-78): `useAnalysisSession` + `useOpeningBookModule` + the explorer, and the Analysis hand-off. Under both propagation tests, in Openings v2's place. Its own reference: [`openings-explorer.md`](./openings-explorer.md). |
 | `src/views/dev/devNav.ts` | The dev-gated sidebar folder and its entries. |
 | `src/views/dev/devBoards.test.tsx` | The six boards — the two dev ones and the shipped Analysis Board, Play with Engine, Library game board and Openings explorer — rendered for real: the shared square, the shared skeleton, and the one thing each board keeps as its own. `devPanelPropagation.test.tsx` renders the same six. |
 | `src/views/dev/devPanelPropagation.test.tsx` | The propagation assertion of §0 — `BoardPanel` replaced by a sentinel. |

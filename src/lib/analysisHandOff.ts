@@ -23,6 +23,9 @@ import { parsePgnTree } from "./pgn";
  *
  * Non-throwing: a state that is not a hand-off, or whose PGN will not parse,
  * reads as no hand-off at all, and the board opens as if it were not there.
+ *
+ * The reference, trade-offs and gotchas:
+ * [`.claude/rules/openings-explorer.md`](../../.claude/rules/openings-explorer.md) §5.
  */
 
 export type AnalysisHandOff = {
