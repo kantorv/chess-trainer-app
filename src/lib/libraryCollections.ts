@@ -239,7 +239,8 @@ const compareValues = (a: string | number, b: string | number): number =>
 /**
  * The rows sorted by one column. Numbers numerically, text (a round's `1.10`
  * after its `1.9`) with a numeric-aware collation; a row missing the value
- * sorts **last in either direction**, and ties keep collection order.
+ * sorts **last in either direction**, and ties go by `#` in the same
+ * direction (newest first puts one day's later games first).
  */
 export const sortedRows = (
   rows: readonly CollectionRow[],

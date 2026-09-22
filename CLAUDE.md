@@ -26,6 +26,10 @@ game board was built on it (CTA-75 — see *The Library* below), and Masked
 Pieces and the Openings explorer are untouched by it and stay the reference
 until their own issues.
 
+The **Library** of game collections (`/library`) has its own path-scoped
+reference, [`.claude/rules/game-collections.md`](.claude/rules/game-collections.md),
+which loads when you work on its files.
+
 How such a screen **shows its game tree** — the move list with its side lines,
 the map, the comments, the next-move arrows — is not wired inline either: it
 attaches a **tree view** from the shared explorer in `src/views/explorer/`,
@@ -90,13 +94,7 @@ change by whether it *adds* to that count, not by the exit code.
 | `src/lib/gameNavigation.ts` | Walking a `Game`: `clampPly` / `fenAtPly` / `squareStylesAtPly` (the lichess-style last-move highlight, with `lastMoveSquareStyles` — CTA-48 replaced the old from→to arrow) / `moveRowsOf`. A ply is a half-move index, 0 being the starting position; each ply's FEN is read off the move that already carries it, so nothing re-simulates a game. |
 | `src/lib/capturedPieces.ts` | **The captured-pieces strips' data** — `capturedOfLine` (the history-based walk: each move's optional `captured` names the piece type it took, so a promoted pawn is never a capture — the lists are never a FEN-diff), the per-side lists strongest first, `materialDiff` (the pieces each FEN carries relative to the line's own start, so a promotion is a gain for the side that made it) / `diffForSide`, and `capturedSummaryOf`, the one seam every play/analysis board composes. Pure. |
 | `src/lib/pieceMask.ts` | **Piece masking** — the `PieceMask` (true type → the type drawn in its place, all twelve), the presets, `maskedPieces` (the board's `options.pieces`) and `maskSan` / `maskSanLine` (the notation). Pure, and the only place the mask exists. |
-| `src/data/library/` | **The Library's shipped collections** (CTA-75) — per collection a `.pgn`, its index `<Stem>.index.json`, and an entry in `manifest.json`, all three written by `node scripts/wirepgn.js <file.pgn>`: `WorldCup2023` (674 games), `Bucharest2023` (45) and `Morphy` (211). Its `README.md` says how; `shippedCollections.test.ts` fails on a `.pgn` that is unwired or edited after it was indexed. |
-| `scripts/wirepgn.js` | **The wiring CLI** (CTA-75) — copies a PGN into `src/data/library/` (line endings normalised), indexes it with the app's own `lib/collectionIndex.ts` (loaded through Vite's `runnerImport`, so the CLI and an upload index identically; the opening book read off `src/data/openings/` because `loadOpeningBook`'s dynamic imports answer empty under the runner) and registers it in the manifest; `--list`, `--check` (exit 1 when stale — CI-able), `--rebuild` (a new index format), `--remove <id>`, `--dir` (the tests' temporary folder). About 12 ms a game: two minutes for 10,000. |
-| `src/lib/collectionIndex.ts` | **A collection's index** (CTA-75) — what a Library table is read from: a row per game, made once. `indexedRowOf` is the tags (`collectionRowOf`) plus a `chess.js` pass through `parsePgnTree` (the board's parser): `moves` off the parsed mainline, `unreadable` when it will not parse, `eco` / `opening` from the book when the tags lack them (`OpeningLookup` — a parameter, `loadOpeningLookup` the app's), and `line` (CTA-76: the first 30 plies of the parsed mainline as SAN, `LINE_PLIES`; absent for an unreadable game or one not from the standard start). `buildCollectionIndex` (sync — the CLI, the worker) / `buildCollectionIndexAsync` (yielding — jsdom's fallback), `indexGame` (one game — Update / Save as copy), `numberedRows`, `textHash` (FNV-1a, line endings normalised — a shipped file's staleness check) and the file format: `encodeCollectionIndex` / `decodeCollectionIndex`, tuples under a column list, read by column name so a later column does not break an older file. `collectionIndex.worker.ts` runs it for an upload. Pure but for the book's loader. |
-| `src/lib/openingTree.ts` | **A collection's opening tree** (CTA-76) — `openingTreeOf` merges the index rows' `line`s by SAN into one tree in memory (no `chess.js`; each node a game count and its White / draw / Black split, the most played continuation first), `openingNodeAt` walks a line as far as the games follow it (`openingNodeOn`: the whole line, or a node of no games), and `?line=` is the `?at=` encoding (`openingLineParamOf` / `openingLineOfParam`). Which games pass through a node is not stored: they are the rows whose `line` begins with the path — `filteredRows`' `line`. Pure. |
-| `src/lib/libraryCollections.ts` | **What a Library collection is** (CTA-75) — `LibraryCollection` (id, name, `source`: shipped or uploaded, one PGN chunk per game — what a game's board holds), `CollectionSummary` (the same without its games: the count — what the Library lists), the table's columns (`COLLECTION_COLUMNS`), `CollectionRow` (with the index's `unreadable`) and `collectionRowOf` (the tags' half of a row, `readPgnParts` + `mainlinePlies`, no `chess.js`), `sortedRows` / `filteredRows` (the words box and the panel's filters, `RowFilter`) with `collectionFacetsOf` (which filters a collection can offer, and their suggestions) and `dateBounds` (a partial PGN date as the days it could be), `collectionNameOfStem` / `collectionIdOfStem`, `collectionGamesOf` (the one cutting rule — an upload's and the CLI's) and `readCollectionText` (a file or a paste read as a collection, refused past `MAX_COLLECTION_CHARS`, 30,000,000). Pure. |
-| `src/lib/shippedCollections.ts` | The shipped collections, off `src/data/library/manifest.json` (imported statically — names and counts with no fetch) and two **lazy** globs (`*.pgn` and `*.index.json`, `?raw`): the index fetched when the table opens, the PGN when a game does. Each fetched once, kept, and peekable synchronously (`peekShippedRows` / `peekShippedGames`, `subscribeShipped`). `shippedCollectionsOf` takes the manifest and loaders as parameters. |
-| `src/lib/libraryCollectionStore.ts` | **The reader's uploaded collections** (CTA-75) — **IndexedDB** (`chessapp.library`), the one store that is not `localStorage`, because 5,000–10,000 games is 5–10 million characters and `localStorage` holds about five million for the whole origin. Three object stores, a record each per collection: `collections` (the summary), `indexes` (the rows), `games`. `addCollection` (games + index rows), `removeCollection`, a game's **Update** (`replaceCollectionGame`) and **Save as copy** (`insertCollectionGame`) — each writing the game and its row in one transaction. Reads are promises; what was read is kept and handed out synchronously (`uploadedCollectionsSnapshot`, `peekUploadedRows` / `peekUploadedGames`); other tabs hear through a `BroadcastChannel`. `resetLibraryCollectionStore` is the tests' clear (fake-indexeddb, `src/test/setup.ts`). Non-throwing throughout. |
+| `src/views/library/`, `src/lib/{libraryCollections,libraryCollectionStore,shippedCollections,collectionIndex,openingTree,libraryGameCatalog}.ts`, `src/data/library/`, `scripts/wirepgn.js` | **Game collections — the Library** (CTA-75/76/77): the list, the table with its filters and opening-moves board, uploads and custom collections in IndexedDB, the shipped files and their wiring CLI, and each game on a v2 analysis board. **Everything about it is in [`.claude/rules/game-collections.md`](.claude/rules/game-collections.md)**, which loads when you work on these paths. |
 | `src/lib/playedGames.ts` + `playedGameStore.ts` | **The reader's games against the engine** (CTA-74) — a game is a **tree** (`treeToPgn` / `parsePgnTree` — a move played by hand from an earlier position is a side line), with the `EngineSettings` (`playAs` the reader's side), where the reader stands (SAN from the start), the evals **keyed by FEN** (a ply cannot say which line) and, once resigned, `resigned` (the side that did — `playedGameResult` reads it before the board). `playedGameCatalogOf` makes the `?game=play/games/<id>` hand-off. The store is `chessapp.playedGames.v1` over `recordStore`, capped at 100, flat, idempotent — and **only a change of the moves re-orders it**: a new place in the tree, a new eval or new settings are written in place with the stored `updatedAt`. Non-throwing throughout. |
 | `src/lib/savedGames.ts` + `savedGameStore.ts` | **The pre-CTA-74 linear saved game** — a PGN plus its `EngineSettings`, per-ply evals and a `folderId`, written by an idempotent `saveGame`. Its list was deleted with CTA-74; it stays because `usePlayWithEngine` (Masked Pieces, which never persists) imports it, and `playedGames.ts` borrows its id minter, `resultOfFen` and `savedGameHeaders`. |
 | `src/lib/savedGameFolders.ts` | **The nested-folder model** — `GameFolder` is a name and a parent id, with the reads over a list of them (cycles cut, dangling parents read as top level). The saved games' own folder store went with their list (CTA-74); the model stays as what an `AnalysisFolder` *is*. |
@@ -115,8 +113,7 @@ change by whether it *adds* to that count, not by the exit code.
 | `src/lib/idbRecordStore.ts` + `savedAnalysisDb.ts` | **The IndexedDB record-store factory** (CTA-77) — `recordStore.ts`'s counterpart for a store too big for `localStorage`: a list of rows kept as one IndexedDB record per row, with a `seq` beside each for the list's order (a row keeps its own whenever the new order allows, so an edit in place writes one record); the first subscriber or `load()` reads every row once and the list is then handed out synchronously (`undefined` before that); writes are `rows → rows` updates, **queued** so back-to-back writes see each other, answered once committed (`"storage"` on a refusal, the kept list unchanged); other tabs hear through a `BroadcastChannel`; and a `legacyKey` moves a former `recordStore`'s rows in on the first read, removing the key only after the write committed. `savedAnalysisDb.ts` is the one database both analysis stores share, `chessapp.analyses` (object stores `analyses` and `folders`), and `deleteAnalysisDb` the tests' reset (`src/test/setup.ts`). Non-throwing. |
 | `src/lib/recordStore.ts` | **The shared localStorage record-store factory** — the snapshot/subscribe/write machinery every localStorage record store (`savedGameStore`, `savedOpeningStore`, `savedOpeningFolderStore`, `pgnUploadStore`) is built over: the try/catch read, the revision-stamped cached snapshot, the `storage`-event subscription, and the write that stamps the revision after the data. A row the normaliser (the `savedGameFrom`-style guard each store passes in) refuses is dropped, not rendered. Pure, non-throwing; one instance per store, each file keeping its own caps, idempotency comparisons and cross-store operations beside it. |
 | `src/lib/pgnExport.ts` | **Taking games out of the app** — `pgnFileOf` (several stored PGN records joined with a blank line, which is what `splitPgnGames` reads back) and `downloadTextFile` / `downloadPgn`, the blob-URL save. A join rather than a re-write: a saved game *is* PGN already, so nothing is re-parsed and a record this build cannot read still exports intact. |
-| `src/lib/gameReference.ts` + `gameCatalog.ts` | **The `?game=` carrier** — `<key>/<path>/<id>`, resolved by `resolveGameReference` against a store's `GameCatalog` (`{ path, games }`, `findCatalogGame`). Three keys: `analysis` (saved analyses), `play` (games against the engine) and `library` (a Library collection's game, `library/<collection>/<n>` — `lib/libraryGameCatalog.ts`, CTA-77). A game does not fit in a URL, so what travels is a reference into a store. |
-| `src/views/library/` | **The Library** (CTA-75): `LibraryHome.tsx` (`/library` — the collections, shipped then uploaded, narrowed by a name box (`?q=`), each row with a download of the whole collection, and an upload's with its delete, in a column beside the row's link), `CollectionScreen.tsx` (`/library/<collection>` — the table: sort, filter, pages, a checkbox per row and the export bar to download the picked games — select-all takes every filtered row — and, in an upload, delete them; its state in the URL) with `CollectionFilters.tsx` (its right-hand panel: player and side at the top, then `OpeningFilterBoard.tsx`, the opening-moves board (CTA-76), then opening, event, dates, result — each only where the games carry it), `LibraryUpload.tsx` (`/library/new` — a file or a paste becomes a collection, or a name alone an empty one; `?into=<id>` adds a file's or a paste's games to the end of an upload), `LibraryGameScreen.tsx` (`/library/<collection>/<game>` — resolves and parses the game) over **`LibraryGameBoard.tsx`** (the v2 analysis board: `useAnalysisSession` + the variations explorer, and the collection's Update / Save as copy), `LibraryMiss.tsx`, `useLibraryCollections.ts` (a collection's three parts — summary, rows, games — each read only when a screen needs it) and `indexCollection.ts` (an upload's index pass in the worker, with progress and cancel). |
+| `src/lib/gameReference.ts` + `gameCatalog.ts` | **The `?game=` carrier** — `<key>/<path>/<id>`, resolved by `resolveGameReference` against a store's `GameCatalog` (`{ path, games }`, `findCatalogGame`). Three keys: `analysis` (saved analyses), `play` (games against the engine) and `library` (a Library collection's game, `library/<collection>/<n>`). A game does not fit in a URL, so what travels is a reference into a store. |
 | `src/views/dev/` | **The Development section** (CTA-60) — dev-only, gated on `import.meta.env.DEV` in `navFolders()` / `navItems()` / `App.tsx`, so none of it reaches the deployed build. `core/` is the **unified board core** specified in [`.claude/rules/chessboard-v2.md`](.claude/rules/chessboard-v2.md): the base hook (`useBoardCore.ts` — the `GameTree` as the one game shape, node navigation, the rules oracle, promotion, orientation), the capability modules a board composes rather than is flagged by (`useEngineModule.ts`, whose optional `onBestMove` is the entire Play/Analysis difference; `useOpeningBookModule.ts`; `useTrainerModule.ts`, the repertoire trainer (CTA-63); `useAutosave.ts`; `devStores.ts`, the dev-prefixed `localStorage` keys over the shipped `recordStore` factory and normalisers), and the composition layer that had no owner before — `BoardShell.tsx` (over the shared `EngineBoardSquare`, never a second copy of the `calc()`) and `BoardPanel.tsx`, the one panel skeleton and the one pinned best-variations block. (The variations list `TreeMoveList.tsx` and its move menu lived here until CTA-72; they are the shared explorer's now, `src/views/explorer/`, and the dev boards import them from there.) Beside them the three derived boards — `play/` (whose `usePlayBoard` and `PlayBoardScreen` `masked/` reuses verbatim, adding only the mask), `masked/`, `openings/` — and `devNav.ts`; `analysis/` shipped as the Analysis Board in CTA-73 and left the section (its dev store with it), and `repertoire/` (a line out of the old Library) was retired with that Library in CTA-75. **`core/` alone ships** since CTA-61, imported by the Repertoires board, the Analysis Board, Play with Engine and the Library's game board; the derived boards, `devNav.ts` and `devStores.ts` stay behind the gate. |
 | `src/views/explorer/` | **The shared game-tree views** (CTA-72) — how a board screen shows its tree, specified in [`.claude/rules/tree-views.md`](.claude/rules/tree-views.md). `treeView.ts` is the whole seam (`TreeViewSource` in — `useBoardCore`'s return fits it — `TreeViewParts` out: `moves`, `map`, `annotations`, `nextMoves`, `arrows`, `overlay`, each placed by the screen in its own slot); a **mode** is one hook, and the one built is **`useVariationsExplorer.tsx`**, the rich variations explorer: `TreeMoveList.tsx` (side lines under their moves, comment markers, evals, the extension tint, and — given `onEditTree` — the right-click `MoveContextMenu.tsx` with `CommentDialog.tsx` and `PlayChanceDialog.tsx`), `TreeMap.tsx` (the SVG map over `lib/treeMap.ts`, tab and full screen), `AnnotationsBar.tsx` (the comment block) and `ChanceArrows.tsx` / `chanceArrows.ts` (the play-chance overlay); the next-move arrows and bar are imported from `views/tools/analysis/`. Knows no screen: a saved record, trainer or game arrives as plain options (`playChances: false` hides the menu's *Play chances…* on a board with no trainer). Ships (the repertoire player and, since CTA-73, the Analysis Board are built on it); flat and puzzle modes are specified, not built. |
 | `src/views/repertoires/` | **The Repertoires section** (CTA-61) — the reader's own repertoires. `Repertoires.tsx` is the list (`/repertoires`, over the saved-list machinery; a card previews where the repertoire first branches; `?folder=<id>` opens a folder, and `RepertoireFolderViews.tsx` / `RepertoireFolderDialogs.tsx` are the folder rows and cards and the folder name / delete dialogs and the bulk delete's confirm (CTA-68: every row and card carries a checkbox, the shared export bar — its optional `onDelete` — shows in all three views, and deleting is in bulk only), `useRepertoireFolders.ts` their store binding), `RepertoireUpload.tsx` brings one in (`/repertoires/new`, a `.pgn` file or pasted text through **one** function), `RepertoireMergeSplit.tsx` is the merge-or-split choice a text of several games gets (on the upload screen, and on the route of a record saved before the one-game rule), `RepertoireBoard.tsx` is the route of one (`/repertoires/<id>`: the miss, the legacy choice, else the player) and `RepertoireGame.tsx` the route of its games (`/repertoires/<id>/games/<end|backtrack>`), both over **`RepertoirePlayer.tsx`** — the one screen composed from the v2 core that a repertoire is read, drilled and played on (CTA-63; see *Playing a repertoire*), with `useRepertoireGame.ts` (a game's session state), the shared explorer's `useVariationsExplorer` (CTA-72 — its Moves and Map tabs, comment block, next-moves bar and arrows; the Map was `RepertoireMap.tsx`, the comment block `RepertoireAnnotationsBar.tsx`), `RepertoireChangesBar.tsx` (update the repertoire / save a copy / discard, while the session has changes); on a protected repertoire it says so and links to its settings in Update's place and `RepertoireGamesMenu.tsx` (the menu on the player and on every list row and card) beside it — and `RepertoireSettingsScreen.tsx` edits one (`/repertoires/<id>/settings`: a list of sections from `RepertoireSettingsSections.tsx` over one draft, written on Save — the folder it is filed under among them, CTA-68). `useSavedRepertoires.ts` is the store binding; `repertoireTestKit.tsx` the tests' shared mount and fixtures. |
@@ -267,171 +264,30 @@ move says nothing about which side is being studied. Neither do the editor's
 resets or its side-to-move field, for the same reason in reverse — arranging a
 position is not being handed one, and a viewpoint the reader chose is theirs.
 
-## The Library: collections of games
+## The Library: game collections
 
-`/library` (CTA-75) holds **collections** — a collection is **one PGN text of
-many games**: a tournament (every game of the World Cup 2023), a player's
-games (Morphy). It is not a single game or a position; one of those goes to
-the Analysis Board. There is **no nesting**: the Library is one level of
-collections, each a **table** of its games, each game a **full analysis
-board**.
+`/library` holds **game collections**: one PGN text of many games (a
+tournament, one player's games), shown as a sortable, filterable **table**,
+with each game opening on a **full analysis board**. The full reference —
+model, storage, index, screens, URL state, invariants, tests and recipes — is
+[`.claude/rules/game-collections.md`](.claude/rules/game-collections.md). What
+matters from outside the module:
 
-```
-node scripts/wirepgn.js x.pgn ──▶ src/data/library/ ─ manifest.json ── (static) ──▶ /library                     (the list: names, counts — no fetch)
-  (collectionGamesOf +              x.pgn            ─ x.index.json ── (lazy)  ──▶ /library/<collection>        (the table: sort · filter · pages)
-   buildCollectionIndex)            x.pgn            ─ (lazy) ─────────────────▶ /library/<collection>/<n>    (the board; the download)
-/library/new ─ readCollectionText ─ worker: buildCollectionIndex ─▶ IndexedDB: collections · indexes · games ─▶ the same three screens
-```
-
-- **A collection is a PGN plus its index, made once.** The table never
-  parses a game: it reads the collection's **index** (`lib/collectionIndex.ts`)
-  — a row per game, the tags plus a `chess.js` pass (`parsePgnTree`, the
-  board's parser): the length off the parsed mainline, an **unreadable** flag
-  (a warning in the `#` cell), and the ECO and opening from eco.json where the
-  tags lack them (so Morphy's games, which carry no `Opening`, have one). The
-  pass is ~8–12 ms a game — two minutes for 10,000 — which is why it is paid
-  when the collection comes in and never on view. Sized for 5,000–10,000-game
-  collections: a 10,000-game index is ~1.4 MB (a JSON parse), its PGN ~9.5 MB.
-- **A shipped collection is wired, not dropped in**:
-  `node scripts/wirepgn.js path/to/Candidates2024.pgn [--name …] [--id …]`
-  copies the file into `src/data/library/`, writes `<Stem>.index.json` beside
-  it and registers both in `manifest.json` with the game count and the PGN's
-  hash (the name defaults to the file name's words, `collectionNameOfStem`; the
-  id to its slug, `/library/candidates2024`). The Library lists from the
-  manifest — **opening `/library` fetches nothing** — the table fetches only
-  the index chunk, and the PGN chunk is fetched when a game (or the download)
-  asks for it. `shippedCollections.test.ts` fails on a `.pgn` never wired or
-  edited after it was indexed, and `wirepgn --check` says the same in CI.
-  Three ship: `WorldCup2023` (674 games), `Bucharest2023` (45) and `Morphy`
-  (211).
-- **A game is addressed by its place** — `/library/<collection>/<1-based
-  number>`, the table's `#` column. Nothing in a PGN is an id, and a number is
-  what a reader says.
-- **The table's columns** are the tags the shipped files carry: `#`, White, Elo, Black, Elo, Result, Date (its unknown
-  `.??` parts dropped), Round, Event, ECO, Opening (with `Variation` after a
-  comma) and Moves. The table opens **newest first** (Date descending — undated games last, one day's games later first; `#` is the collection's own order). A click on a header **sorts** (numbers numerically, text
-  with a numeric-aware collation so round `1.10` follows `1.9`, a missing value
-  last either way); a words box over the table and the right-hand panel's
-  **filters** narrow it (`CollectionFilters.tsx`, `filteredRows` /
-  `collectionFacetsOf`): a **player** (part of a name, suggested from the
-  games) and the **side** they had, an **opening** (listed and matched as
-  its ECO code then its name, `B90 Sicilian Defense: Najdorf Variation` —
-  `openingLabelOf`, in ECO order; typing `B9` or `najdorf` works too — the
-  index filled both from eco.json where the tags lacked them), the
-  **event**, a **date range** (the browser's date inputs; a partial PGN date
-  such as `1848` is in range when any day it could be is, `dateBounds`) and
-  the **result**. A filter is shown only where some game carries its field —
-  a PGN has what its source wrote. **The lists are complete**, never a first
-  page: a real 7,818-game collection (`src/test/fixtures/pgn/Carlsen.pgn`, the
-  tests' fixture) offers its 3,040 openings, 1,338 players and 622 events, and
-  opens them in ~100–170 ms in Chrome without virtualization.
-- **Filtering by opening moves** (CTA-76). Under the player and side filters
-  (the rest of the filters under it) is a small board (`OpeningFilterBoard.tsx`, `options.id` `library-filter-board`):
-  every move played on it narrows the table to the games whose mainline
-  began that way. It is drawn from the collection's **opening tree**
-  (`lib/openingTree.ts`) — the index's `line` column (the first 30 plies as
-  SAN, written by `wirepgn`, the upload worker and `indexGame` alike) merged
-  by SAN in memory from **the games the other filters leave** — filter by a
-  player and side, and the board shows that player's openings; rebuilding
-  it takes under 10 ms for 10,000 games. From the position on it the
-  continuations are arrows (`nextMoveArrowsOf`: the most played in the
-  mainline colour) and a lichess-explorer list — each move's games, share and
-  White / draw / Black bar; a click plays it, a hover draws its arrow. Only a
-  move some game played is taken; any other drop snaps back. Back, reset and
-  flip sit over it. The line is `?line=e4,c5,Nf3` (the `?at=` encoding),
-  cut back only where no game of the **whole** collection follows it (a
-  stale link); where only the other filters leave no game on it, it is kept
-  as written, the table is empty and the board says so. Clear takes it off
-  with the rest. An index from before the
-  column (`COLLECTION_INDEX_VERSION` unchanged — it reads as no lines) gets
-  no board.
-- **Picking and downloading a batch.** Every row carries a checkbox, and the
-  top bar the saved lists' export bar (`SavedListExportBar`, test-id prefix
-  `library-picks`): its select-all takes **every row the filters leave, on
-  every page** — filter, select all, download, and the `.pgn` is that batch,
-  in collection order, each game as stored (`<collection>-<N>-games.pgn`).
-  It adds to the picks and unticking removes only the rows shown (the Saved
-  openings rule), while the chip counts every pick. Picks live in the screen,
-  not the URL. **The whole collection** downloads from its row on `/library`
-  (a download icon beside each row's link, `library-collection-download-<id>`
-  — the games read only then), so a table has one download, the picks'.
-  An **uploaded** collection is deleted from its row there too (asked first,
-  `library-collection-delete-<id>`); its table's export bar deletes only
-  **the picked games** (asked first, `removeCollectionGames`, the games after
-  them moving up and the picks cleared). A shipped collection has neither.
-  **Analyse** (CTA-77, a share icon beside the export bar,
-  `library-picks-analyse`, enabled once a game is picked) hands the picks to
-  **Saved analyses**: one new top-level folder named for the collection, the
-  count and the filters that are on — `World Cup 2023 — 12 games (Carlsen,
-  white, B90, 1.e4 c5)` (`batchFolderNameOf` / `activeFilterSummary` in
-  `lib/libraryCollections.ts`, kept within the folder name's 100 characters,
-  the filter summary cut first) — and every picked game saved into it as its
-  own analysis, in collection order, all or nothing: the Load tab's split
-  over games already read (`batchAnalysesOf`: each game's PGN as stored, not
-  re-parsed — the index already parsed it, and a re-write through a tree
-  would cost over a minute on a 7,818-game pick), the folder taken back out
-  if the records cannot be written. A game the index marks **unreadable is
-  left out**, and the notice says how many. The button spins while it works;
-  a snackbar says how many went where, with a link to
-  `/tools/analysis/saved?folder=<id>`; the picks stay. Shipped and uploaded
-  collections alike.
-  The rows are **paged**
-  (50 / 100 / 250). The sort, the filters and the page live in the URL (history
-  replace), so coming back from a game finds the table as it was left.
-- **A game opens on a full analysis board** (`LibraryGameBoard.tsx`), composed
-  as the Analysis Board is and with no behaviour hook of its own: the Analysis
-  Board's session (`views/tools/analysis/useAnalysisSession.ts` — core, engine,
-  **Play**, the baseline, extracted from `useAnalysisBoard` for this), the
-  variations explorer (Moves, Map, the comment block, the next-moves bar, the
-  arrows, the move menu) and tabs Moves (the next-move arrows' switch at its
-  top) · Map · Info (the tags) · Export · Engine. The Export tab also opens the
-  game on the **Analysis Board** (`?game=library/<collection>/<n>` beside the
-  `?at=` on screen, CTA-77) — the game as the collection holds it; the
-  session's unsaved changes stay behind, and the button says so. The game is parsed with `parsePgnTree` (side lines kept); it opens at
-  `?at=`, else its `StartPly` tag, else its start, and writes `?at=` back; the
-  header steps to the previous / next game.
-- **Nothing is written unless the reader asks** — the Analysis Board's changes
-  strip, opened by the header's Save while the tree differs from the game as
-  it arrived. A game of an **uploaded** collection: **Update** (rewritten in
-  place in the collection), **Save as copy** (a copy inserted right after it;
-  the board goes on in the copy) or **Discard** — each writing the game's new
-  index row with it (`indexGame`), so the table is in step. A game of a **shipped**
-  collection is **read-only** (the strip's `readOnly`): **Save as copy** writes
-  it into **Saved analyses** ("‹players› (copy)") and opens it on the Analysis
-  Board, or **Discard**.
-- **Uploads** (`/library/new`): a `.pgn` file or pasted text, one reading for
-  both (`readCollectionText`: line endings normalised, cut into games by the
-  CLI's own rule, a text with no tag and no SAN move refused, up to
-  `MAX_COLLECTION_CHARS` — 30 million characters, ~30,000 games), is **checked
-  game by game before it is kept**: the index pass runs in a Web Worker
-  (`views/library/indexCollection.ts` → `lib/collectionIndex.worker.ts`; the
-  worker is built as an ES module, `worker.format` in `vite.config.ts`, so it
-  can load the book's chunks) under a progress bar with Cancel, and only then
-  does it become a **new one-level folder** — named as typed, else by the
-  `Event` every game shares, else by the file name — and the reader lands on
-  its table. An uploaded collection is deleted from its row on `/library`
-  (asked first).
-- **Custom collections** (CTA-77): the same screen makes an **empty**
-  collection from the name alone ("New collection" when none is typed), and
-  an upload's table has **Add games** — `/library/new?into=<id>`, the upload
-  screen again (one reading, the worker's check, the progress bar and Cancel),
-  whose games are added at the end of that collection
-  (`appendCollectionGames`, games and rows in one transaction) before the
-  reader goes back to its table. A shipped collection takes none (the miss).
-- **Storage: IndexedDB** (`lib/libraryCollectionStore.ts`, database
-  `chessapp.library`) — with the saved analyses (CTA-77, `chessapp.analyses`)
-  one of the two stores in the app that are not `localStorage`,
-  because a 10,000-game collection is ~10 million characters and
-  `localStorage` holds about five million for the whole origin. A record per
-  collection in each of three object stores — its summary, its index, its
-  games — so the list reads only summaries and an Update rewrites one
-  collection, not all of them. Every read is a promise, so an upload's screens
-  wait as a shipped one's chunks do; what was read is kept and handed to
-  `useSyncExternalStore` synchronously. A write the quota refuses is reported,
-  never thrown.
-- **Old URLs.** `/pgn/*` (the pre-CTA-38 Library) redirects to `/library`; a
-  pre-CTA-75 `/library/<folder>/<id>` link reaches the new routes and gets
-  their "no such collection", which links back.
+- **Two sources, one set of screens.** **Shipped** collections are wired with
+  `node scripts/wirepgn.js <file.pgn>` (never drop a `.pgn` in by hand;
+  `shippedCollections.test.ts` and `wirepgn --check` catch it) and are
+  read-only. **Uploaded** ones (a file, a paste, or an empty collection filled
+  later with *Add games*) are the reader's own, kept in **IndexedDB**
+  (`chessapp.library`).
+- **A collection is its PGN plus an index made once**: a row per game, tags
+  plus a `chess.js` pass. The table never parses a game. It is sized for
+  5,000–10,000 games.
+- **A game is addressed by its place**: `/library/<collection>/<1-based n>`.
+  It also crosses to the Analysis Board as `?game=library/<collection>/<n>`.
+- **Analyse** hands picked games to Saved analyses as one new folder (see
+  *Saving an analysis board*).
+- It is built for **game** collections. A positions collection is planned;
+  the rule file (§10.5) says how it should fit in.
 
 ## Handing a game on: `?game=`, beside `?fen=`
 
@@ -448,13 +304,13 @@ wrapped or replaced.
 `path` and its games, each with its PGN and that PGN's mainline), and
 `catalogsByKey` is the whole of the mapping, with three entries: `analysis`
 (the reader's **saved analyses**, `savedAnalysisCatalogOf`), `play` (their games
-against the engine, `playedGameCatalogOf`, CTA-74) and `library` (a Library
-collection's game by its place, `library/<collection>/<n>` —
-`lib/libraryGameCatalog.ts`, CTA-77: the Export tab's "Open in Analysis Board"
-on a Library game). **A line in that registry is the whole cost of a new
-producer of games.** A collection's games are read lazily, so the Analysis
-Board waits for them (`isReferenceRead` / `loadReferencedGames`) as it waits
-for the saved analyses' first read. (The old Library's `pgn/…` key went with it
+against the engine, `playedGameCatalogOf`, CTA-74) and `library` (a game of a
+Library collection, `library/<collection>/<n>`; see
+[`game-collections.md`](.claude/rules/game-collections.md) §6.7). **A line in
+that registry is the whole cost of a new producer of games.** A store read
+asynchronously makes the Analysis Board wait before it resolves
+(`isReferenceRead` / `loadReferencedGames`, and the saved analyses' first
+read). (The old Library's `pgn/…` key went with it
 in CTA-75, and its `library/<folder>/<id>` links name no collection and number;
 such a link resolves to nothing, and the board opens as if `?game=` were not
 there.)
