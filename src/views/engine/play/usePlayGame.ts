@@ -5,8 +5,10 @@ import {
   SETTING_UCI_OPTION,
   type EngineSettings,
 } from "../../../lib/engineSettings";
+import { parseFen } from "../../../lib/fen";
 import { emptyTree, sanPathTo } from "../../../lib/gameTree";
 import {
+  findPlayedGame,
   removePlayedGame,
   savePlayedGame,
   type PlayedGameProblem,
@@ -18,6 +20,7 @@ import {
   playedGameOf,
   playedGameToTree,
   type PlayedGame,
+  type PlayedGameMask,
 } from "../../../lib/playedGames";
 import { useAutosave } from "../../dev/core/useAutosave";
 import { turnOf, useBoardCore } from "../../dev/core/useBoardCore";
@@ -42,7 +45,7 @@ import { usePlayToggle } from "../../dev/core/usePlayToggle";
  *    and turns the board) — with the reader on the side at the bottom and the
  *    engine answering. Everything that pauses Play on the Analysis Board
  *    pauses it here (`usePlayToggle`): a step that is not one move forward,
- *    the reader switching side (the flip, or the Engine tab's *Play as*), the
+ *    the reader switching side (the flip, or the header's side toggle), the
  *    engine off, the game over. Pressing Play goes on from wherever the reader
  *    stands, the engine now playing whichever side is at the top.
  * 2. **The game is a tree.** There is no `canMoveAt`: a move played by hand
@@ -64,6 +67,11 @@ import { usePlayToggle } from "../../dev/core/usePlayToggle";
  * **Resigning** ends the game: the reader's side loses (`resigned` on the
  * record, its PGN `Result` and `Termination`), Play stays off and the board
  * takes no more moves — it can still be stepped through and analysed.
+ *
+ * **A costume** (`mask`, Masked Pieces — CTA-79) is written on the record and
+ * nothing else: this hook never reads it, so the game, the engine and Play
+ * are the true position's. It is the screen's state (the Masking tab), passed
+ * in on every render, and a change of it is written in place.
  */
 
 export type PlayGameStart = {
@@ -73,7 +81,29 @@ export type PlayGameStart = {
   resume?: PlayedGame;
 };
 
-export const usePlayGame = ({ fen, resume }: PlayGameStart = {}) => {
+/**
+ * Everything the URL hands a play screen, read once by its route — `?fen=`
+ * (validated; an unreadable one starts an ordinary game) and `?saved=`.
+ */
+export const arrivalOf = (params: URLSearchParams): PlayGameStart => {
+  let fen: string | undefined;
+  const requestedFen = params.get("fen");
+  if (requestedFen !== null) {
+    try {
+      fen = parseFen(requestedFen);
+    } catch {
+      // A link nobody can read starts an ordinary game.
+      fen = undefined;
+    }
+  }
+  return { fen, resume: findPlayedGame(params.get("saved")) };
+};
+
+export const usePlayGame = (
+  { fen, resume }: PlayGameStart = {},
+  /** Masked Pieces' costume, stored on the record; absent, an unmasked game. */
+  mask?: PlayedGameMask,
+) => {
   /*
     What the board opens on, built once: a resumed game (parsed, at its place
     in the tree, facing its side), else a position, else the standard start.
@@ -207,8 +237,10 @@ export const usePlayGame = ({ fen, resume }: PlayGameStart = {}) => {
       new Date(),
       startedAt,
       resigned,
+      mask,
     );
   }, [
+    mask,
     core.tree,
     core.nodeId,
     core.dirty,
@@ -259,7 +291,7 @@ export const usePlayGame = ({ fen, resume }: PlayGameStart = {}) => {
     setResigned(playAs);
   };
 
-  /** The Engine tab's changes; *Play as* is the orientation. */
+  /** The settings' changes — the Engine tab's, and the header's side (`playAs`, which is the orientation). */
   const updateSettings = useCallback(
     (patch: Partial<EngineSettings>) => {
       const { playAs: side, ...rest } = patch;

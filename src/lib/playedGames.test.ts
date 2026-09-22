@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
+import { Chess } from "chess.js";
 
 import { DEFAULT_ENGINE_SETTINGS } from "./engineSettings";
 import { resolveGameReference } from "./gameReference";
@@ -11,9 +12,12 @@ import {
   removePlayedGame,
   savePlayedGame,
 } from "./playedGameStore";
+import { MASK_PRESETS, withMaskEntry } from "./pieceMask";
 import {
   playedGameFen,
   playedGameFrom,
+  playedGameHeaders,
+  resultOfFen,
   playedGameOf,
   playedGameSummary,
   playedGameToTree,
@@ -166,5 +170,97 @@ describe("the played games' store", () => {
     expect(item?.id).toBe("a");
     expect(item?.pgn).toContain("(1. d4)");
     expect(resolveGameReference("play/games/missing")).toBeUndefined();
+  });
+});
+
+/** The FEN after playing SAN moves from the start. */
+const fenAfter = (moves: readonly string[]): string => {
+  const chess = new Chess();
+  for (const san of moves) chess.move(san);
+  return chess.fen();
+};
+
+describe("resultOfFen", () => {
+  it("reads a checkmate from the position, from whichever side gave it", () => {
+    expect(resultOfFen(fenAfter(["e4", "e5", "Bc4", "Nc6", "Qh5", "Nf6", "Qxf7#"]))).toBe("1-0");
+    expect(resultOfFen(fenAfter(["f3", "e5", "g4", "Qh4#"]))).toBe("0-1");
+  });
+
+  it("calls a stalemate a draw and an unfinished game unfinished", () => {
+    expect(resultOfFen("7k/5Q2/6K1/8/8/8/8/8 b - - 0 1")).toBe("1/2-1/2");
+    expect(resultOfFen(fenAfter([]))).toBe("*");
+  });
+
+  it("answers a FEN it cannot read rather than throwing", () => {
+    expect(resultOfFen("not a position")).toBe("*");
+  });
+});
+
+describe("playedGameHeaders", () => {
+  it("names the reader and the engine by side, and dates the game", () => {
+    const headers = playedGameHeaders(
+      { ...DEFAULT_ENGINE_SETTINGS, playAs: "black", skillLevel: 7 },
+      "*",
+      new Date(2026, 8, 7),
+    );
+    expect(headers.White).toBe("Stockfish (level 7)");
+    expect(headers.Black).toBe("Player");
+    expect(headers.Date).toBe("2026.09.07");
+    expect(headers.Event).toBe("Play with Engine");
+  });
+});
+
+describe("a masked game's costume (CTA-79)", () => {
+  const COSTUME = { pieces: MASK_PRESETS.nonPawns, notation: false };
+
+  const masked = (id: string, mask = COSTUME) =>
+    playedGameOf(
+      id,
+      parsePgnTree("1. e4 *"),
+      [],
+      DEFAULT_ENGINE_SETTINGS,
+      undefined,
+      at("2026-01-01T10:00:00Z"),
+      undefined,
+      undefined,
+      mask,
+    );
+
+  it("rides on the record and reads back", () => {
+    const saved = masked("m");
+    expect(saved.mask).toEqual(COSTUME);
+    expect(playedGameFrom(JSON.parse(JSON.stringify(saved)))?.mask).toEqual(COSTUME);
+    expect(playedGameSummary(saved, playedGameToTree(saved)).masked).toBe(true);
+  });
+
+  it("is absent on an unmasked game, and a record from before reads as one", () => {
+    const plain = record("p", "1. e4 *");
+    expect(plain.mask).toBeUndefined();
+    expect(playedGameFrom(plain)?.mask).toBeUndefined();
+    expect(playedGameSummary(plain, playedGameToTree(plain)).masked).toBe(false);
+  });
+
+  it("reads an unreadable costume as unmasked, never throwing", () => {
+    const saved = masked("m");
+    for (const broken of [
+      "nonPawns",
+      { pieces: { ...MASK_PRESETS.nonPawns, wQ: "bP" } },
+      { pieces: { wK: "wK" } },
+      { notation: false },
+    ]) {
+      expect(playedGameFrom({ ...saved, mask: broken })?.mask).toBeUndefined();
+    }
+    // The notation defaults to on.
+    expect(playedGameFrom({ ...saved, mask: { pieces: MASK_PRESETS.allIdentical } })?.mask)
+      .toEqual({ pieces: MASK_PRESETS.allIdentical, notation: true });
+  });
+
+  it("is written in place when only the costume changes", () => {
+    savePlayedGame(masked("a"));
+    savePlayedGame(record("b", "1. d4 *"));
+    const changed = { pieces: withMaskEntry(MASK_PRESETS.nonPawns, "wQ", "wQ"), notation: true };
+    savePlayedGame(masked("a", changed));
+    expect(playedGamesSnapshot().map((game) => game.id)).toEqual(["b", "a"]);
+    expect(findPlayedGame("a")?.mask).toEqual(changed);
   });
 });

@@ -11,8 +11,8 @@
  *
  * ## Why a join rather than a re-write
  *
- * A saved game and a saved analysis are already stored *as PGN* — that is the
- * whole point of the storage format (`lib/savedGames.ts`). So exporting is
+ * A played game and a saved analysis are already stored *as PGN* — that is the
+ * whole point of the storage format (`lib/playedGames.ts`, `lib/savedAnalyses.ts`). So exporting is
  * concatenation, not serialisation: nothing is re-parsed, nothing can be lost in
  * a second pass through the writer, and a record this build cannot read still
  * exports byte for byte. The separator is one blank line, which is what the PGN

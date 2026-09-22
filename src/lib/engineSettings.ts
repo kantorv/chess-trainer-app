@@ -3,11 +3,10 @@
  * Engine tab drives, and the value a saved game carries so resuming it puts the
  * engine back the way it was.
  *
- * It lived in `views/engine/play/usePlayWithEngine.ts` until a saved game had to
- * record it: `lib/savedGames.ts` is plain data and cannot import a hook, so the
- * type and its defaults moved here and the hook re-exports them. Nothing else
- * changed — `EngineSettings.tsx` and its tests still import them from the hook,
- * which is the one module a reader of that screen has to open.
+ * It lives in `src/lib/` because a played game records it
+ * (`lib/playedGames.ts`), and plain data cannot import a hook. (It moved here
+ * out of the pre-v2 `usePlayWithEngine`, deleted with Masked Pieces' old
+ * screen in CTA-79; `EngineSettings.tsx` imports it from here.)
  *
  * It is **not** a description of the running engine. Which of these knobs the
  * worker actually has is `Engine.options`' business (`.claude/rules/chessboard.md`

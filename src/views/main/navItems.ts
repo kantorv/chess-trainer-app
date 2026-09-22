@@ -10,7 +10,6 @@ import DashboardCustomizeRoundedIcon from "@mui/icons-material/DashboardCustomiz
 import VisibilityOffRoundedIcon from "@mui/icons-material/VisibilityOffRounded";
 
 import type { LocalizedText } from "../../lib/localizedText";
-import { devNavItems } from "../dev/devNav";
 import type { NavFolderId } from "./navFolders";
 
 export type NavItem = {
@@ -30,8 +29,8 @@ export type NavItem = {
  * repeating a list item per route, so adding a screen is one entry here plus
  * the route in `App.tsx` and a string in both catalogs.
  *
- * A **function**, for the reason `navFolders` is one: the Development
- * section's entries are a spread gated on `import.meta.env.DEV`.
+ * A **function**, for the reason `navFolders` is one: a dev-only entry is a
+ * spread gated on `import.meta.env.DEV` (none today — `chessboard-v2.md` §5).
  */
 export const navItems = (): readonly NavItem[] => [
   {
@@ -47,11 +46,12 @@ export const navItems = (): readonly NavItem[] => [
     icon: HistoryRoundedIcon,
     folder: "engine",
   },
+  // Masked Pieces (CTA-79) — Play with Engine in a costume, beside it.
   {
-    to: "/masked/play",
+    to: "/engine/masked",
     labelKey: "nav.maskedPlay",
     icon: VisibilityOffRoundedIcon,
-    folder: "masked-pieces",
+    folder: "engine",
   },
   /*
     The Library (CTA-75): the collections, and the screen one is brought in
@@ -112,13 +112,6 @@ export const navItems = (): readonly NavItem[] => [
     icon: LibraryAddRoundedIcon,
     folder: "repertoires",
   },
-  /*
-    The Development section's five boards (CTA-60) — the same `import.meta.env.DEV`
-    gate the folder and the routes carry, and for the same reason: in a
-    production build the spread is dead code and rollup drops the module behind
-    it. See `views/dev/devNav.ts`.
-  */
-  ...(import.meta.env.DEV ? devNavItems() : []),
 ];
 
 /** The screens filed under one folder, in registration order. */

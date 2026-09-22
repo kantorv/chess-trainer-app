@@ -15,12 +15,8 @@ const en = {
     playWithEngine: "Play with Engine",
     /** The games played on that screen, kept in this browser — the flat list at `/engine/games` (CTA-74). */
     savedGames: "Saved games",
-    /**
-     * The same screen as `playWithEngine`, with the pieces in disguise. The
-     * qualifier is not decoration: two sidebar entries with one accessible name
-     * are two links a screen reader cannot tell apart.
-     */
-    maskedPlay: "Play with Engine (masked)",
+    /** Play with Engine with the pieces in disguise (`/engine/masked`, CTA-79), beside it in the Engine folder. */
+    maskedPlay: "Masked Pieces",
     analysisBoard: "Analysis Board",
     savedAnalyses: "Saved analyses",
     boardEditor: "Board Editor",
@@ -35,7 +31,6 @@ const en = {
     /** Sidebar folders — groupings over the routes, never routes themselves. */
     folders: {
       engine: "Engine",
-      maskedPieces: "Masked Pieces",
       tools: "Tools",
       analysisBoard: "Analysis Board",
       openings: "Openings",
@@ -138,10 +133,10 @@ const en = {
     copyFailed: "Could not copy — select the text and copy it by hand.",
   },
   /**
-   * Piece masking — the Masking tab of `views/masked/play/`, and the one
-   * setting that reaches the shared move list and variations. Top-level like
-   * the other shared-component namespaces: the mask is a concept two of them
-   * now take a prop for, not something one screen owns.
+   * Piece masking — the Masking tab of Masked Pieces (`views/engine/masked/`,
+   * CTA-79), and the Saved games list's marker. Top-level like the other
+   * shared-component namespaces: the mask is a prop the shared move list,
+   * explorer and variations take, not something one screen owns.
    */
   masking: {
     tab: "Masking",
@@ -167,7 +162,13 @@ const en = {
     },
     notation: "Hide masked pieces in the notation",
     notationHint:
-      "A move by a masked piece is written as coordinates (g1f3) in the move list and the variations, so the notation does not name what the board is hiding.",
+      "A move by a masked piece is written as coordinates (g1f3) wherever a move is written — the move list, the map, the next moves, the engine's lines — so the notation does not name what the board is hiding.",
+    /** The pinned engine lines' switch — off by default (CTA-79). */
+    lines: "Show the engine's best lines",
+    linesHint:
+      "Off by default: an engine line is a list of the pieces the mask is hiding. The evaluation bar and the score are unaffected.",
+    /** The Saved games list's marker on a game played on Masked Pieces. */
+    marker: "Masked",
   },
   /**
    * The variations explorer's right-click menu on a move (CTA-64) — shared by
@@ -293,18 +294,10 @@ const en = {
    */
   playEngine: {
     tabs: {
-      game: "Game",
       engine: "Engine",
-      lines: "Variations",
       /** Play with Engine v2's (CTA-74) — the variations explorer's two tabs. */
       moves: "Moves",
       map: "Map",
-    },
-    status: {
-      yourTurn: "Your move",
-      engineTurn: "The engine is thinking…",
-      /** Shown while an earlier ply is on screen, where no move can be made. */
-      reviewing: "Reviewing an earlier move",
     },
     /** Play with Engine v2's header controls (CTA-74). */
     game: {
@@ -341,7 +334,6 @@ const en = {
       white: "White",
       black: "Black",
       evalBar: "Show evaluation bar",
-      newGame: "New game",
     },
   },
   /**
@@ -1259,53 +1251,6 @@ const en = {
   footer: {
     /** Label on the link out to the project's source repository. */
     source: "Source",
-  },
-  /**
-   * The **Development** section (CTA-60) — the five boards composed from the
-   * unified board core (`.claude/rules/chessboard-v2.md`). Dev-only: the
-   * sidebar folder and the routes are behind `import.meta.env.DEV`, so no
-   * Development screen, route, test id or storage key reaches the deployed
-   * build.
-   *
-   * **These strings are the one exception, deliberately.** A catalog is one
-   * plain object, so a property cannot be tree-shaken out of it; gating the
-   * block would give up `he: typeof en` (a missing translation as a compile
-   * error) and `locales.test.ts`'s assertion that every nav label resolves in
-   * both languages — which is the only thing covering a dev-only label, the
-   * kind nobody would notice missing. A few hundred bytes of dead text is the
-   * cheaper price. `.claude/rules/chessboard-v2.md` §6 carries the reasoning.
-   *
-   * It is a block of its own and a thin one on purpose. Everything a v2 board
-   * says that a shipped board already says is read from that screen's block —
-   * `analysis.*` for the engine settings and the position tab, `masking.*` for
-   * the mask editor, and the shared
-   * `moveList.*` / `variations.*` / `promotion.*` / `board.*` for the pieces
-   * every board renders. A derived board that needed a locale block of its own
-   * would not be derived.
-   */
-  dev: {
-    folder: "Development",
-    /** The five boards, in the order the spec derives them. */
-    screens: {
-      play: "Play with Engine v2",
-      masked: "Masked Pieces v2",
-    },
-    /**
-     * The panel's tab strip. Named here rather than read from five screens'
-     * blocks because the strip is the shared skeleton's, and a tab that means
-     * the same thing on five boards should not be five keys.
-     */
-    tabs: {
-      moves: "Moves",
-      engine: "Engine",
-      position: "Position",
-      mask: "Mask",
-    },
-    /** The header slot's controls, where a v2 board's differ from a shipped one's. */
-    controls: {
-      newGame: "New game",
-      newBoard: "New board",
-    },
   },
 };
 

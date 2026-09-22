@@ -1,12 +1,11 @@
 //import * as Sentry from "@sentry/react";
-import { lazy, Suspense, type ReactNode } from "react";
-import { createBrowserRouter, Navigate, RouterProvider, useLocation, type RouteObject } from "react-router";
+import { createBrowserRouter, Navigate, RouterProvider, useLocation } from "react-router";
 
 import { DefaultLayout } from './views/main/Layout';
 import { default as HomeScreen  } from './views/home/Main'
 import { default as PlayWithEngineScreen  } from './views/engine/play/Main'
 import { default as PlayedGamesScreen  } from './views/engine/games/Main'
-import { default as MaskedPlayScreen  } from './views/masked/play/Main'
+import { default as MaskedPlayScreen  } from './views/engine/masked/Main'
 import { default as AnalysisBoardScreen  } from './views/tools/analysis/Main'
 import { default as SavedAnalysesScreen  } from './views/tools/analysis/saved/Main'
 import { default as AnalysisSettingsScreen  } from './views/tools/analysis/saved/AnalysisSettingsScreenMain'
@@ -45,40 +44,6 @@ export function ToolsOpeningsRedirect() {
   return <Navigate to={`/openings${location.search}${location.hash}`} replace />;
 }
 
-/**
- * The **Development** section's routes (CTA-60) — the boards composed from
- * the unified board core (`.claude/rules/chessboard-v2.md`).
- *
- * Dev-only, and this array is the whole of the gate. Two things make it
- * provable rather than hopeful:
- *
- * - `import.meta.env.DEV` is replaced by the literal `false` in a production
- *   build, so the conditional below is dead code;
- * - every screen is reached through `lazy(() => import(…))` rather than a
- *   static import at the top of this file, so with the branch dead there is no
- *   reference to `views/dev/` left for rollup to keep — no dev chunk is
- *   emitted at all, where a static import would have been bundled whether the
- *   route existed or not.
- *
- * `Suspense` is required by `lazy`, and a board screen resolves from the same
- * dev server in a frame, so the fallback is deliberately nothing.
- */
-const devScreen = (load: Parameters<typeof lazy>[0]): ReactNode => {
-  const Screen = lazy(load);
-  return (
-    <Suspense fallback={null}>
-      <Screen />
-    </Suspense>
-  );
-};
-
-const devRoutes: RouteObject[] = import.meta.env.DEV
-  ? [
-      { path: "/dev/play", element: devScreen(() => import("./views/dev/play/Main")) },
-      { path: "/dev/masked", element: devScreen(() => import("./views/dev/masked/Main")) },
-    ]
-  : [];
-
 const routes = createBrowserRouter(
 
   [
@@ -103,8 +68,11 @@ const routes = createBrowserRouter(
           path: "/engine/games",
           element: <PlayedGamesScreen />
         },
+        // Masked Pieces (CTA-79): Play with Engine's screen in a costume; its
+        // games are kept with the engine games above. The pre-CTA-79
+        // `/masked/play` route is gone, with no redirect.
         {
-          path: "/masked/play",
+          path: "/engine/masked",
           element: <MaskedPlayScreen />
         },
         {
@@ -192,8 +160,6 @@ const routes = createBrowserRouter(
           path: "/pgn/*",
           element: <LegacyPgnRedirect />
         },
-        // The Development section — dev-only; see `devRoutes` above.
-        ...devRoutes
 
       ]
     }

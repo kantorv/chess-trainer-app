@@ -22,7 +22,8 @@ import ZoomOutRoundedIcon from "@mui/icons-material/ZoomOutRounded";
 import type { SxProps, Theme } from "@mui/material/styles";
 import { useTranslation } from "react-i18next";
 
-import { pathTo, type GameTree } from "../../lib/gameTree";
+import { findNode, pathTo, type GameTree } from "../../lib/gameTree";
+import { maskNodeSan, type PieceMask } from "../../lib/pieceMask";
 import MoveContextMenu, { type MoveMenuTarget } from "./MoveContextMenu";
 import { menuAnchorOf, type ContextMenuNodeHandler } from "../shared/moveContextMenu";
 import {
@@ -180,6 +181,8 @@ type Drawing = {
   here: { px: number; py: number };
   width: number;
   height: number;
+  /** A move's label — its SAN, or a masked board's coordinates (CTA-79). */
+  labelOf: (id: string, san: string) => string;
 };
 
 /** The drawing itself — the same layers in every viewport. */
@@ -309,6 +312,7 @@ function TreeMap({
   onEditTree,
   playChances,
   addedIds,
+  mask,
 }: {
   testId: string;
   /** The tree to draw — the session's in the player, the repertoire in a game. */
@@ -325,6 +329,11 @@ function TreeMap({
   playChances?: boolean;
   /** The moves in `tree` the reader added this session — the player's. */
   addedIds?: ReadonlySet<string>;
+  /**
+   * A masked board's costume (CTA-79): a label whose piece is hidden prints
+   * as coordinates. Absent — every board but Masked Pieces — the SAN prints.
+   */
+  mask?: PieceMask;
 }) {
   const { t } = useTranslation();
   const [fullScreen, setFullScreen] = useState(false);
@@ -365,6 +374,11 @@ function TreeMap({
     here: mapPixel(nodeId === null ? layout.root : (layout.points.get(nodeId) ?? layout.root)),
     width: MAP_PAD * 2 + layout.columns * MAP_DX,
     height: MAP_PAD * 2 + (layout.rows - 1) * MAP_DY,
+    labelOf: (id, san) => {
+      if (mask === undefined) return san;
+      const node = findNode(tree, id);
+      return node === null ? san : maskNodeSan(mask, node);
+    },
   };
 
   const covered = coverage === undefined ? 0 : coverage.total - coverage.under(null);
@@ -520,6 +534,7 @@ function TreeMap({
           onClose={() => setMenuOpen(false)}
           onEditTree={onEditTree}
           playChances={playChances}
+          mask={mask}
         />
       )}
     </Box>
@@ -795,7 +810,7 @@ function MapViewport({
                       }
                       data-testid={`${testId}-label-${label.id}`}
                     >
-                      {label.san}
+                      {drawing.labelOf(label.id, label.san)}
                     </text>
                   );
                   if (onSelectNode === undefined && onContextMenuNode === undefined) {
@@ -811,7 +826,7 @@ function MapViewport({
                       aria-label={
                         onSelectNode === undefined
                           ? undefined
-                          : t("treeMap.goTo", { move: label.san })
+                          : t("treeMap.goTo", { move: drawing.labelOf(label.id, label.san) })
                       }
                       data-testid={`${testId}-go-${label.id}`}
                       onClick={() => {

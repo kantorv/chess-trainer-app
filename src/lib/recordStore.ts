@@ -3,7 +3,7 @@
  * store in `src/lib/` is built over.
  *
  * A record store keeps one JSON array under one versioned `localStorage` key,
- * one row per record (a [`SavedGame`](./savedGames.ts), an upload, an opening),
+ * one row per record (a [`PlayedGame`](./playedGames.ts), a repertoire, a folder),
  * newest first. Five stores were written by hand with the same scaffolding — a
  * try/catch read, a revision-stamped cached snapshot, a listener set over a
  * `storage`-event subscription, and a write that bumps the revision — and this

@@ -11,14 +11,13 @@ import { RightPanelOutlet, RightPanelProvider } from "../main/rightPanel";
   **The propagation assertion** — CTA-60's acceptance criterion 4, and the whole
   reason the issue exists.
 
-  The claim the unified core makes is not "five screens look alike"; it is that
+  The claim the unified core makes is not "the screens look alike"; it is that
   the best-variations block and the panel skeleton live in **one component**, so
-  a change to that component demonstrably changes all five boards. Asserting
+  a change to that component demonstrably changes every board. Asserting
   that by comparing rendered markup would only say they agree today. So this
-  file **replaces** `core/BoardPanel` with a sentinel and renders all five
-  boards: if any one of them grew a panel of its own — a fork, a copy, a second
-  skeleton — its sentinel would be missing, and the count below would not be
-  five.
+  file **replaces** `core/BoardPanel` with a sentinel and renders every
+  board: if any one of them grew a panel of its own — a fork, a copy, a second
+  skeleton — its sentinel would be missing, and the count below would be short.
 
   That is the failure this test exists to catch, and it is the one a reviewer
   cannot catch by reading: a screen that renders `<MyOwnPanel>` looks perfectly
@@ -67,8 +66,7 @@ import PlayWithEngine from "../engine/play/PlayWithEngine";
 import LibraryGameBoard from "../library/LibraryGameBoard";
 import OpeningsBoard from "../openings/OpeningsBoard";
 import { parsePgnTree } from "../../lib/pgn";
-import MaskedV2 from "./masked/MaskedV2";
-import PlayV2 from "./play/PlayV2";
+import MaskedPlay from "../engine/masked/MaskedPlay";
 
 /** A game of an uploaded collection on the Library's board (CTA-75). */
 const LIBRARY_FIXTURE = {
@@ -85,7 +83,7 @@ const LibraryGame = () => (
   />
 );
 
-/** Every board of the Development section, by the name its route carries. */
+/** Every board composed from the core, by the id its panel carries. */
 const BOARDS: readonly { name: string; panelId: string; Screen: () => ReactNode }[] =
   [
     // Analysis v2, shipped as the Analysis Board (CTA-73) and kept under the
@@ -97,8 +95,9 @@ const BOARDS: readonly { name: string; panelId: string; Screen: () => ReactNode 
     { name: "Library game", panelId: "library-game-panel", Screen: LibraryGame },
     // The Openings explorer (CTA-78), in Openings v2's place.
     { name: "Openings explorer", panelId: "openings-panel", Screen: OpeningsBoard },
-    { name: "Play with Engine v2", panelId: "dev-play-panel", Screen: PlayV2 },
-    { name: "Masked Pieces v2", panelId: "dev-masked-panel", Screen: MaskedV2 },
+    // Masked Pieces (CTA-79), Play with Engine's screen in a costume — in the
+    // dev boards' place.
+    { name: "Masked Pieces", panelId: "masked-play-panel", Screen: MaskedPlay },
   ];
 
 const renderBoard = (Screen: () => ReactNode) =>
@@ -138,8 +137,8 @@ describe("the one panel skeleton", () => {
   it("changes every board at once when that one component changes", () => {
     /*
       The propagation itself, stated as an assertion. The mock above *is* the
-      change: one edit to one module, and all five boards render it. Five
-      mounts, five sentinels, and the panel id proving each one came from the
+      change: one edit to one module, and every board renders it. A mount
+      and a sentinel each, and the panel id proving each one came from the
       screen under test rather than from a leftover mount.
     */
     const seen: string[] = [];
@@ -162,7 +161,7 @@ describe("the one panel skeleton", () => {
 
   it("gives every board the Moves and Engine tabs, through the same slot", () => {
     // The tab strip is the skeleton's; what goes in it is the screen's. Two
-    // tabs are common to all five because all five are boards with an engine.
+    // tabs are common to all of them because all are boards with an engine.
     for (const { Screen } of BOARDS) {
       const { unmount } = renderBoard(Screen);
       const ids = screen.getByTestId("panel-tab-ids").textContent ?? "";

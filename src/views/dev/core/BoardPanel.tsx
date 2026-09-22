@@ -14,16 +14,17 @@ import BoardControls from "../../shared/BoardControls";
  * **The panel skeleton every v2 board shares** — §3.2 of
  * [`.claude/rules/chessboard-v2.md`](../../../../.claude/rules/chessboard-v2.md).
  *
- * One component, five consumers. This is the layer that had no owner before
- * CTA-60, and it is the reason the issue exists: the pinned best-variations
- * block lived in `AnalysisPanel` alone, so CTA-55 reached one screen of five
- * and every later change to it would have had to be applied four more times.
+ * One component, every v2 board its consumer. This is the layer that had no
+ * owner before CTA-60, and it is the reason that issue existed: the pinned
+ * best-variations block lived in `AnalysisPanel` alone, so CTA-55 reached one
+ * screen of five and every later change to it would have had to be applied
+ * four more times.
  *
  * ```
  * ┌──────────────────────────────────────┐
  * │ header slot                          │  fixed   — opening line, hand-offs, the switch
  * ├──────────────────────────────────────┤
- * │ ▸ pinned BestVariations              │  fixed   — ONE block, all five boards (CTA-55)
+ * │ ▸ pinned BestVariations              │  fixed   — ONE block, every board (CTA-55)  
  * ├──────────────────────────────────────┤
  * │ tab strip                            │  fixed   — the tabs the screen supplied
  * ├──────────────────────────────────────┤
@@ -94,7 +95,7 @@ export type BoardPanelProps = {
   /**
    * The panel's root test id, and the root of every id under it —
    * `<testId>-variations`, `<testId>-status`, `<testId>-tab-<id>`,
-   * `<testId>-content-<id>`. One per screen, because five panels can share a
+   * `<testId>-content-<id>`. One per screen, because many panels can share a
    * test run even if they never share a page.
    */
   testId: string;
@@ -116,6 +117,12 @@ export type BoardPanelProps = {
   onPlayVariation?: (sans: readonly string[]) => void;
   /** Masked notation inside the block, for a board that hides piece identities. */
   mask?: PieceMask;
+  /**
+   * Whether the pinned variations block shows — on by default. Masked Pieces
+   * (CTA-79) opens with it off behind a switch: an engine line is a list of
+   * the pieces the mask hides. The status row, and its score, stay.
+   */
+  showVariations?: boolean;
 
   tabs: readonly BoardPanelTab[];
   /**
@@ -149,6 +156,7 @@ function BoardPanel({
   engineOn = false,
   onPlayVariation,
   mask,
+  showVariations = true,
   tabs,
   keepMounted,
   activeTab,
@@ -241,11 +249,11 @@ function BoardPanel({
       )}
 
       {/*
-        THE propagation point. One block, five boards — see the header note.
+        THE propagation point. One block, every board — see the header note.
         Nothing at all while the engine is off, and nothing at all on a board
         that has no engine to be off.
       */}
-      {hasEngine && engineOn && (
+      {hasEngine && engineOn && showVariations && (
         <Box
           data-testid={`${testId}-variations`}
           sx={{

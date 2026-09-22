@@ -33,9 +33,11 @@ import { useTreeNavigation } from "../../tools/analysis/useTreeNavigation";
  * got, which is every improvement written against the tree (CTA-53/54/55).
  *
  * A linear board stays linear through **one predicate**, not a mode:
- * {@link BoardCoreStart.canMoveAt}. Play v2 passes `(_, { isLive }) => isLive`,
- * so a drag anywhere but the end of the mainline is refused and no branch can
- * ever form. This hook has no branch on "am I a play board"; it asks a question
+ * {@link BoardCoreStart.canMoveAt}. A board passing `(_, { isLive }) => isLive`
+ * refuses a drag anywhere but the end of the mainline, so no branch can ever
+ * form (the dev board Play v2 did, until CTA-79; every shipped board branches,
+ * and the flat tree view of `.claude/rules/tree-views.md` §3 is specified for
+ * the next one that does not). This hook has no branch on "am I a play board"; it asks a question
  * the screen answers.
  *
  * ## The node is the state; the ply is derived
@@ -96,8 +98,8 @@ export type BoardCoreStart = {
   dirty?: boolean;
   /**
    * Whether a move may be made from the position on screen — the one seam a
-   * **linear** board needs. Play v2 passes `(_, { isLive }) => isLive`; the
-   * branching boards pass nothing and both colours move from any node.
+   * **linear** board needs: `(_, { isLive }) => isLive`. The branching boards
+   * — every shipped one — pass nothing and both colours move from any node.
    */
   canMoveAt?: (fen: string, core: { isLive: boolean }) => boolean;
 };

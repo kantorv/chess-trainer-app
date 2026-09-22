@@ -3,6 +3,7 @@ import ButtonBase from "@mui/material/ButtonBase";
 import Typography from "@mui/material/Typography";
 import { useTranslation } from "react-i18next";
 import type { VariationNode } from "../../../lib/gameTree";
+import { maskNodeSan, type PieceMask } from "../../../lib/pieceMask";
 import { moveSx, sanTokenSx } from "../../shared/moveTokenSx";
 
 /**
@@ -69,6 +70,7 @@ function NextMovesBar({
   onSelect,
   onHover,
   chances,
+  mask,
 }: {
   /** The continuations of the position on screen; `nodes[0]` is the mainline. */
   nodes: readonly VariationNode[];
@@ -89,6 +91,11 @@ function NextMovesBar({
    * the green and blue.
    */
   chances?: readonly (number | undefined)[];
+  /**
+   * A masked board's costume (CTA-79): a move whose piece is hidden prints as
+   * coordinates. Absent — every board but Masked Pieces — the SAN prints.
+   */
+  mask?: PieceMask;
 }) {
   const { t } = useTranslation();
 
@@ -141,7 +148,7 @@ function NextMovesBar({
               ...(index === 0 ? {} : { color: "text.secondary" }),
             }}
           >
-            {node.san}
+            {maskNodeSan(mask, node)}
             {chance !== undefined && (
               <Typography
                 component="span"

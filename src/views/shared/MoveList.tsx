@@ -430,6 +430,7 @@ function MoveList({
           groupLabel={t("moveList.variation")}
           markComments={markCommentedNodes}
           showEvals={!mainlineEvalsOnly}
+          mask={mask}
         />
       ));
 
@@ -514,6 +515,7 @@ function MoveList({
   }, [
     rows,
     maskedSan,
+    mask,
     branches,
     startFen,
     onSelectNode,

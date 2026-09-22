@@ -2,6 +2,7 @@ import { memo, type ReactNode } from "react";
 import ChatBubbleOutlineRoundedIcon from "@mui/icons-material/ChatBubbleOutlineRounded";
 import { styled } from "@mui/material/styles";
 import { hasComments, plyLabel, type VariationNode } from "../../lib/gameTree";
+import { maskNodeSan, type PieceMask } from "../../lib/pieceMask";
 import {
   useEvalText,
   useIsCurrentNode,
@@ -140,6 +141,7 @@ const MoveToken = memo(function MoveToken({
   forceNumber,
   markComments,
   showEvals = true,
+  mask,
   onSelect,
   onContextMenu,
 }: {
@@ -148,6 +150,7 @@ const MoveToken = memo(function MoveToken({
   forceNumber: boolean;
   markComments?: boolean;
   showEvals?: boolean;
+  mask?: PieceMask;
   onSelect?: (id: string) => void;
   onContextMenu?: ContextMenuNodeHandler;
 }) {
@@ -186,7 +189,7 @@ const MoveToken = memo(function MoveToken({
             }
       }
     >
-      {`${prefix}${node.san}`}
+      {`${prefix}${maskNodeSan(mask, node)}`}
       {hasComment && (
         <CommentIcon aria-hidden data-testid={`tree-comment-icon-${node.id}`} />
       )}
@@ -220,6 +223,12 @@ type LineProps = {
    * and the side lines read as lines, not as a column of numbers.
    */
   showEvals?: boolean;
+  /**
+   * A masked board's costume (CTA-79): a move whose piece is hidden prints as
+   * coordinates, as the mainline's cells do (`MoveList`'s `mask`). Absent —
+   * every board but Masked Pieces — the SAN prints as it is.
+   */
+  mask?: PieceMask;
 };
 
 /**
@@ -234,6 +243,7 @@ export const VariationBlock = memo(function VariationBlock({
   groupLabel,
   markComments,
   showEvals,
+  mask,
 }: LineProps & {
   /** The side line's first move; its children continue it, and branch in turn. */
   node: VariationNode;
@@ -254,6 +264,7 @@ export const VariationBlock = memo(function VariationBlock({
         groupLabel={groupLabel}
         markComments={markComments}
         showEvals={showEvals}
+        mask={mask}
       />
     </Block>
   );
@@ -277,6 +288,7 @@ export const VariationLine = memo(function VariationLine({
   groupLabel,
   markComments,
   showEvals,
+  mask,
 }: LineProps & {
   /** The alternatives at this point; `nodes[0]` is the line, the rest side lines. */
   nodes: readonly VariationNode[];
@@ -298,6 +310,7 @@ export const VariationLine = memo(function VariationLine({
         forceNumber={restate}
         markComments={markComments}
         showEvals={showEvals}
+        mask={mask}
         onSelect={onSelectNode}
         onContextMenu={onContextMenuNode}
       />,
@@ -313,6 +326,7 @@ export const VariationLine = memo(function VariationLine({
           groupLabel={groupLabel}
           markComments={markComments}
           showEvals={showEvals}
+          mask={mask}
         />,
       );
     }

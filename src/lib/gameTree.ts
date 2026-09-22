@@ -885,8 +885,8 @@ export const treeToPgn = (tree: GameTree, options?: PgnExportOptions): string =>
 
 /**
  * A **linear** {@link Game} as PGN — the writer the shared game model was
- * missing, and the one a saved engine game is serialised through
- * (`lib/savedGames.ts`).
+ * missing (the pre-CTA-74 linear saved game was its first user; its store
+ * went in CTA-79).
  *
  * It is `treeToPgn` over the one-line tree, not a second writer: the move
  * numbering of a game that starts from a FEN, the `SetUp`/`FEN` tags that make

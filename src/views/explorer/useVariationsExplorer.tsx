@@ -13,6 +13,7 @@ import {
   type VariationNode,
 } from "../../lib/gameTree";
 import { annotationsAt } from "../../lib/moveAnnotations";
+import { maskNodeSan, type PieceMask } from "../../lib/pieceMask";
 import { playChances, playChanceOf } from "../../lib/playChance";
 import type { MapCoverage } from "../../lib/treeMap";
 import NextMovesBar from "../tools/analysis/NextMovesBar";
@@ -80,6 +81,15 @@ export type VariationsExplorerOptions = {
   arrows?: ExplorerArrowOptions;
   /** The map part; absent, `parts.map` is `undefined`. */
   map?: ExplorerMapOptions;
+  /**
+   * **A masked board's notation** (CTA-79, Masked Pieces): every part that
+   * prints a move — the list and its side lines, the map's labels, the
+   * next-moves bar, the move menu, the comment block's move — prints plain
+   * coordinates for a move whose piece the mask hides (`maskNodeSan`). The
+   * screen passes it only while its notation switch is on. Absent, every
+   * part prints SAN, as on every other board.
+   */
+  mask?: PieceMask;
 };
 
 const NO_ARROWS: ExplorerArrowOptions = { show: false };
@@ -114,6 +124,7 @@ export function useVariationsExplorer({
   annotations: showAnnotations = false,
   arrows: arrowOptions = NO_ARROWS,
   map,
+  mask,
 }: VariationsExplorerOptions): TreeViewParts {
   const { t } = useTranslation();
   const { tree, nodeId, goToNode } = source;
@@ -183,8 +194,8 @@ export function useVariationsExplorer({
     const node = findNode(tree, nodeId);
     if (node === null) return t("moveList.startPosition");
     const { number, isWhiteMove } = plyLabel(tree.startFen, node.ply);
-    return `${number}${isWhiteMove ? "." : "…"} ${node.san}`;
-  }, [tree, nodeId, t]);
+    return `${number}${isWhiteMove ? "." : "…"} ${maskNodeSan(mask, node)}`;
+  }, [tree, nodeId, t, mask]);
 
   const [commentEdit, setCommentEdit] = useState<{
     nodeId: string | null;
@@ -237,6 +248,7 @@ export function useVariationsExplorer({
         evalsByFen={evalsByFen}
         onEditTree={onEditTree}
         playChances={offerPlayChances}
+        mask={mask}
       />
     ),
     map:
@@ -250,6 +262,7 @@ export function useVariationsExplorer({
           onSelectNode={map.linked === true ? goToNode : undefined}
           onEditTree={onEditTree}
           playChances={offerPlayChances}
+          mask={mask}
         />
       ),
     annotations: showAnnotations ? (
@@ -271,6 +284,7 @@ export function useVariationsExplorer({
         onSelect={goToNode}
         onHover={setHovered}
         chances={chances}
+        mask={mask}
       />
     ),
     arrows,

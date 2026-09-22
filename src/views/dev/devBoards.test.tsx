@@ -2,23 +2,22 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import type { ReactNode } from "react";
-import { Chess } from "chess.js";
 
 import i18n from "../../i18n";
 import AppThemeWithLang from "../../theme/AppThemeWithLang";
-import { navFolders } from "../main/navFolders";
-import { navItems } from "../main/navItems";
-import { navLabelKeys } from "../main/navTree";
 import { RightPanelOutlet, RightPanelProvider } from "../main/rightPanel";
 
 /*
-  The Development section's five boards, rendered for real (CTA-60 acceptance
-  criteria 2, 3, 4, 5 and 6).
+  Every board composed from the v2 core, rendered for real (CTA-60's criteria,
+  carried on as the boards shipped): the Analysis Board, Play with Engine,
+  Masked Pieces (CTA-79), the Library's game board and the Openings explorer.
+  (The Development section's own boards, Play v2 and Masked v2, were the last
+  there and went with CTA-79.)
 
-  `devPanelPropagation.test.tsx` is the other half of criterion 4: it replaces
-  the panel with a sentinel to prove all five render *one* component. This file
-  keeps the real one and asserts what is inside it — that the shared skeleton's
-  parts actually reach every board, that the masked board adds a mask and
+  `devPanelPropagation.test.tsx` is the other half: it replaces the panel with
+  a sentinel to prove every board renders *one* component. This file keeps
+  the real one and asserts what is inside it — that the shared skeleton's
+  parts actually reach every board, that the masked board adds a costume and
   nothing else, and that each board keeps the one thing that is its own.
 */
 
@@ -39,15 +38,13 @@ vi.mock("../../lib/openings", async (importOriginal) => {
 });
 
 import { boardOptions, FakeEngine } from "./devTestHarness";
-import { DEV_NAV_FOLDER_ID, devNavItems } from "./devNav";
-import { devSavedGamesSnapshot } from "./core/devStores";
+import { playedGamesSnapshot } from "../../lib/playedGameStore";
 import AnalysisBoard from "../tools/analysis/AnalysisBoard";
 import PlayWithEngine from "../engine/play/PlayWithEngine";
 import LibraryGameBoard from "../library/LibraryGameBoard";
 import OpeningsBoard from "../openings/OpeningsBoard";
 import { parsePgnTree } from "../../lib/pgn";
-import MaskedV2 from "./masked/MaskedV2";
-import PlayV2 from "./play/PlayV2";
+import MaskedPlay from "../engine/masked/MaskedPlay";
 
 
 /** A game of an uploaded collection on the Library's board (CTA-75). */
@@ -68,6 +65,8 @@ const BOARDS: readonly {
   name: string;
   id: string;
   Screen: () => ReactNode;
+  /** Whether the pinned engine lines show from the start — all but Masked Pieces. */
+  linesShown?: false;
 }[] = [
   // Analysis v2 shipped as the Analysis Board (CTA-73); it stays in the set.
   { name: "Analysis Board", id: "analysis", Screen: AnalysisBoard },
@@ -76,8 +75,9 @@ const BOARDS: readonly {
   { name: "Library game", id: "library-game", Screen: LibraryGame },
   // The Openings explorer (CTA-78), in Openings v2's place.
   { name: "Openings explorer", id: "openings", Screen: OpeningsBoard },
-  { name: "Play with Engine v2", id: "dev-play", Screen: PlayV2 },
-  { name: "Masked Pieces v2", id: "dev-masked", Screen: MaskedV2 },
+  // Masked Pieces (CTA-79): Play with Engine's screen in a costume — its
+  // engine lines wait behind a switch.
+  { name: "Masked Pieces", id: "masked-play", Screen: MaskedPlay, linesShown: false },
 ];
 
 const renderBoard = (Screen: () => ReactNode, entry = "/dev") =>
@@ -140,47 +140,6 @@ beforeEach(async () => {
   await i18n.changeLanguage("en");
 });
 
-describe("the Development section", () => {
-  it("is gated on import.meta.env.DEV, and so is in the sidebar under test", () => {
-    /*
-      Criterion 2. Under Vitest `import.meta.env.DEV` is true, which is exactly
-      what makes this assertable: the folder and its five screens are in the
-      registries here, so the *only* thing keeping them out of a production
-      bundle is that same expression being replaced by `false` — and the
-      absence from `dist/` is checked by the build, not by jsdom.
-    */
-    expect(import.meta.env.DEV).toBe(true);
-
-    expect(navFolders().map((folder) => folder.id)).toContain(
-      DEV_NAV_FOLDER_ID,
-    );
-    // Two: Analysis v2 shipped as the Analysis Board (CTA-73), Repertoire v2
-    // was retired with the old Library (CTA-75) and Openings v2 when the
-    // shipped Openings explorer was rebuilt on the core (CTA-78).
-    expect(navItems().filter((item) => item.folder === DEV_NAV_FOLDER_ID)).toHaveLength(
-      2,
-    );
-  });
-
-  it("names every dev screen with a key both catalogs resolve", () => {
-    // `locales.test.ts` asserts this over the whole nav; stated here too
-    // because a dev-only label is the one kind nobody sees in production and
-    // a missing Hebrew string would otherwise be found by nobody.
-    const keys = navLabelKeys();
-    for (const item of devNavItems()) {
-      expect(keys).toContain(item.labelKey);
-      expect(i18n.t(item.labelKey!)).not.toBe(item.labelKey);
-    }
-  });
-
-  it("routes the two boards at /dev/*", () => {
-    expect(devNavItems().map((item) => item.to)).toEqual([
-      "/dev/play",
-      "/dev/masked",
-    ]);
-  });
-});
-
 describe("every v2 board, from the same core", () => {
   it.each(BOARDS)("$name renders the shared board square", ({ id, Screen }) => {
     // Criterion 3: the board, the eval bar and the captured strips are the
@@ -201,7 +160,6 @@ describe("every v2 board, from the same core", () => {
     // Criterion 4, rendered for real: the pinned variations block, the status
     // row, the Moves and Engine tabs and the shared board controls.
     expect(screen.getByTestId(`${id}-panel`)).toBeInTheDocument();
-    expect(screen.getByTestId(`${id}-panel-variations`)).toBeInTheDocument();
     expect(screen.getByTestId(`${id}-panel-status`)).toBeInTheDocument();
     expect(screen.getByTestId(`${id}-panel-tab-moves`)).toBeInTheDocument();
     expect(screen.getByTestId(`${id}-panel-tab-engine`)).toBeInTheDocument();
@@ -210,7 +168,9 @@ describe("every v2 board, from the same core", () => {
     unmount();
   });
 
-  it.each(BOARDS)("$name pins the engine's lines above its tabs", ({ id, Screen }) => {
+  it.each(BOARDS.filter((board) => board.linesShown !== false))(
+    "$name pins the engine's lines above its tabs",
+    ({ id, Screen }) => {
     /*
       CTA-55 on every board, which is the drift this issue closes: before
       CTA-60 this block existed on the Analysis Board alone. The lines are
@@ -228,7 +188,8 @@ describe("every v2 board, from the same core", () => {
     );
 
     unmount();
-  });
+    },
+  );
 
   it.each(BOARDS)("$name hides the lines while its engine is off", ({ id, Screen }) => {
     const { unmount } = renderBoard(Screen);
@@ -258,50 +219,6 @@ describe("every v2 board, from the same core", () => {
   });
 });
 
-describe("Play with Engine v2", () => {
-  it("plays the engine's reply at the live position", () => {
-    renderBoard(PlayV2);
-
-    expect(drag("e2", "e4")).toBe(true);
-
-    // The reply, through the capability's `onBestMove` — which only this board
-    // supplies. `e7e5` answers the position the human just made.
-    engineReports({ depth: 12, cp: 10, pv: "e7e5" });
-    engineFinishes("e7e5");
-
-    // Two plies played: the human's, and the engine's answer to it. Compared
-    // against a `chess.js` that made the same two moves rather than a FEN
-    // written out by hand.
-    const expected = new Chess();
-    expected.move("e4");
-    expected.move("e5");
-    expect(boardOptions().position).toBe(expected.fen());
-  });
-
-  it("writes the game to the dev store, not the shipped one", () => {
-    renderBoard(PlayV2);
-
-    expect(drag("e2", "e4")).toBe(true);
-
-    const saved = devSavedGamesSnapshot();
-    expect(saved).toHaveLength(1);
-    expect(saved[0].pgn).toContain("e4");
-  });
-
-  it("refuses a drag off the live position, so the game stays one line", () => {
-    renderBoard(PlayV2);
-
-    expect(drag("e2", "e4")).toBe(true);
-    // Step back to the start and try to branch: `canMoveAt` refuses, which is
-    // the one seam that makes this board linear.
-    act(() => {
-      screen.getByTestId("board-control-first").click();
-    });
-
-    expect(drag("d2", "d4")).toBe(false);
-  });
-});
-
 describe("the Analysis Board (Analysis v2, shipped)", () => {
   it("never moves a piece, whatever the engine says", () => {
     renderBoard(AnalysisBoard);
@@ -327,31 +244,30 @@ describe("the Analysis Board (Analysis v2, shipped)", () => {
   });
 });
 
-describe("Masked Pieces v2", () => {
-  it("adds a mask and nothing else", () => {
+describe("Masked Pieces (CTA-79)", () => {
+  it("adds a costume and nothing else", () => {
     /*
-      Criterion 5. The masked board hands the board a `pieces` renderer — the
-      only honest place to disguise a piece — and the same composition
-      underneath, which is why the true position it reports is identical to the
-      unmasked board's.
+      The masked board hands the board a `pieces` renderer — the only honest
+      place to disguise a piece — and the same composition underneath, which
+      is why the true position it reports is identical to Play with Engine's.
     */
-    const { unmount } = renderBoard(MaskedV2);
+    const { unmount } = renderBoard(MaskedPlay);
     expect(boardOptions().pieces).toBeDefined();
     const maskedStart = boardOptions().position;
     // The extra tab, and only one.
-    expect(screen.getByTestId("dev-masked-panel-tab-mask")).toBeInTheDocument();
+    expect(screen.getByTestId("masked-play-panel-tab-masking")).toBeInTheDocument();
     unmount();
 
-    renderBoard(PlayV2);
+    renderBoard(PlayWithEngine);
     expect(boardOptions().pieces).toBeUndefined();
     expect(boardOptions().position).toBe(maskedStart);
     expect(
-      screen.queryByTestId("dev-play-panel-tab-mask"),
+      screen.queryByTestId("play-with-engine-panel-tab-masking"),
     ).not.toBeInTheDocument();
   });
 
   it("plays ordinary legal chess underneath the costume", () => {
-    renderBoard(MaskedV2);
+    renderBoard(MaskedPlay);
 
     // A knight move the mask draws as a pawn is still a knight move.
     expect(drag("g1", "f3")).toBe(true);
@@ -359,12 +275,30 @@ describe("Masked Pieces v2", () => {
     expect(drag("a1", "a5")).toBe(false);
   });
 
-  it("does not persist, because a costume cannot be restored on /dev/play", () => {
-    renderBoard(MaskedV2);
+  it("keeps its engine lines behind a switch, the score still shown", () => {
+    renderBoard(MaskedPlay);
+
+    engineReports({ depth: 14, multipv: 1, cp: 42, pv: "e2e4 e7e5" });
+    expect(screen.queryByTestId("masked-play-panel-variations")).not.toBeInTheDocument();
+    expect(screen.getByTestId("masked-play-panel-status-score")).toHaveTextContent("+0.42");
+
+    act(() => {
+      screen.getByTestId("masked-play-panel-tab-masking").click();
+    });
+    act(() => {
+      screen.getByTestId("mask-setting-lines").querySelector("input")!.click();
+    });
+    expect(screen.getByTestId("masked-play-panel-variations")).toBeInTheDocument();
+  });
+
+  it("saves its game with the engine games, costume and all", () => {
+    renderBoard(MaskedPlay);
 
     expect(drag("e2", "e4")).toBe(true);
 
-    expect(devSavedGamesSnapshot()).toEqual([]);
+    const saved = playedGamesSnapshot();
+    expect(saved).toHaveLength(1);
+    expect(saved[0].mask?.notation).toBe(true);
   });
 });
 
@@ -374,7 +308,7 @@ describe("the Openings explorer (CTA-78)", () => {
 
     expect(drag("e2", "e4")).toBe(true);
     expect(screen.queryByTestId("openings-save")).not.toBeInTheDocument();
-    expect(devSavedGamesSnapshot()).toEqual([]);
+    expect(playedGamesSnapshot()).toEqual([]);
   });
 
   it("carries the book explorer in a tab of its own", () => {
