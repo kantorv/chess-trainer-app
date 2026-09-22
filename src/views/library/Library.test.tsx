@@ -658,7 +658,9 @@ describe("analysing the picks (CTA-77)", () => {
   const analyse = () => screen.getByTestId("library-picks-analyse");
   const pick = (number: number) =>
     fireEvent.click(within(screen.getByTestId(`library-picks-row-${number}`)).getByRole("checkbox"));
-  const notice = () => screen.findByTestId("library-picks-analyse-notice");
+  // A shipped collection's games are a lazy `?raw` chunk, fetched on the first
+  // Analyse; on a cold CI runner under coverage that outlasts the 1s default.
+  const notice = () => screen.findByTestId("library-picks-analyse-notice", {}, { timeout: 10_000 });
 
   it("is offered beside the export bar, and only once a game is picked", async () => {
     const mine = await upload();
