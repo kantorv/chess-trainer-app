@@ -384,6 +384,7 @@ const en = {
   savedAnalyses: {
     title: "Saved analyses",
     count: "Analyses: {{count}}",
+    loading: "Reading your saved analyses…",
     empty:
       "No saved analyses yet. Work on a board at the Analysis Board and save it, and it appears here.",
     hint: "Every analysis you save on the Analysis Board is kept here — side lines, comments and all — filed into your folders. Open one to pick it up where you left it.",
@@ -878,9 +879,15 @@ const en = {
     games_other: "{{count}} games",
     shipped: "Shipped",
     uploaded: "Uploaded",
+    /** The words box over the list — a collection's name, or part of it. */
+    filter: "Filter collections by name",
+    shown: "{{shown}} of {{count}} collections",
+    noMatches: "No collection's name matches.",
     add: "Add collection",
     /** A collection row's download — the whole collection, as one PGN. */
     download: "Download the whole collection as PGN",
+    /** An uploaded collection's row — delete it, asked first. */
+    delete: "Delete collection",
     hint: "A collection is one PGN file of many games — a tournament, a player's games. Open one to sort and filter its games, and open a game to analyse it: side lines, the engine, Play against it, the map and comments.",
     /** The table screen — `/library/<collection>`. */
     table: {
@@ -891,7 +898,10 @@ const en = {
       shown: "{{shown}} of {{count}} games",
       noMatches: "No games match the filter.",
       rowsPerPage: "Rows per page",
-      delete: "Delete collection",
+      /** An upload's table: its games from a file or a paste (CTA-77). */
+      addGames: "Add games",
+      addGamesHint: "Add games to this collection from a PGN file or pasted text",
+      noGames: "This collection has no games yet — add some with Add games.",
       loading: "Reading the collection…",
       /**
        * The picks — a checkbox per row and the export bar in the top bar,
@@ -901,7 +911,32 @@ const en = {
         selectAll: "Select all games shown by the filters",
         selected: "{{count}} selected",
         download: "Download selected as one PGN",
+        /** An uploaded collection's picked games, deleted from it. */
+        deleteSelected: "Delete selected games from the collection",
         pick: "Select {{title}}",
+        /**
+         * The Analyse hand-off (CTA-77): the picked games saved to Saved
+         * analyses, one analysis each, in a new folder named after the
+         * collection, the count and the filters that are on.
+         */
+        analyse: "Analyse",
+        analyseHint: "Save the selected games to Saved analyses, each its own analysis, in a new folder",
+        analysing: "Saving the selected games to Saved analyses…",
+        /** The side a player filter names, as the folder name carries it. */
+        white: "white",
+        black: "black",
+        done_one: "{{count}} game added to Saved analyses, in “{{folder}}”.",
+        done_other: "{{count}} games added to Saved analyses, in “{{folder}}”.",
+        skipped_one: "{{count}} game could not be read and was left out.",
+        skipped_other: "{{count}} games could not be read and were left out.",
+        openFolder: "Open folder",
+        problem: {
+          read: "The games could not be read. Nothing was saved.",
+          none: "None of the selected games can be read. Nothing was saved.",
+          folder: "No new folder could be made — Saved analyses holds at most {{max}} folders. Nothing was saved.",
+          tooMany: "Saved analyses holds at most {{max}} analyses, and these would pass it. Nothing was saved.",
+          storage: "The browser refused to store the games — its storage may be full. Nothing was saved.",
+        },
       },
       /** The `#` cell's mark on a game the index could not parse. */
       unreadable: "This game could not be read — its moves have an error.",
@@ -920,7 +955,13 @@ const en = {
         opening: "Opening",
         moves: "Moves",
       },
-      hint: "Click a column to sort by it, type in the box or use the filters above to narrow the games, and click a game to open it on an analysis board.",
+      /** Deleting an uploaded collection's picked games — asked first. */
+      confirmDeleteGames: {
+        title_one: "Delete {{count}} game?",
+        title_other: "Delete {{count}} games?",
+        body: "They are removed from “{{name}}” in this browser, and the games after them move up. This cannot be undone.",
+        problem: "They could not be deleted — this browser's storage is unavailable, or the games have changed.",
+      },
       shippedNote: "This collection ships with the app. Its games are read-only: changes you make on a game are saved as a copy in Saved analyses.",
       uploadedNote: "You added this collection; it is kept in this browser only. Changes to a game can update it in place or be saved as a copy next to it.",
     },
@@ -968,6 +1009,13 @@ const en = {
       pasteLabel: "Or paste PGN text",
       read_one: "{{count}} game found",
       read_other: "{{count}} games found",
+      /** A collection made with no games — filled later from its table (CTA-77). */
+      empty: "Create empty collection",
+      emptyName: "New collection",
+      /** The same screen adding games to one of the reader's collections — `?into=<id>`. */
+      intoTitle: "Add games to {{name}}",
+      intoIntro: "A .pgn file or pasted PGN text of one game or many. Every game is checked, then added at the end of the collection.",
+      intoSave: "Add games",
       save: "Add collection",
       pastedName: "Pasted collection",
       storage: "Collections you add are kept in this browser only. Clearing site data removes them, and they do not follow you to another device. Every game is checked when it is added — a few seconds for a tournament, a minute or more for 10,000 games.",
@@ -1006,6 +1054,10 @@ const en = {
       engineSwitch: "Engine",
       arrows: "Next-move arrows",
       unreadable: "This game could not be read.",
+      /** The Export tab's hand-off to the Analysis Board. */
+      openAnalysis: "Open in Analysis Board",
+      openAnalysisHelp: "Opens this game on the Analysis Board, at the position on screen.",
+      openAnalysisChanged: "Opens the game as the collection holds it, at the position on screen — your unsaved changes stay here.",
     },
     /**
      * The changes strip over a game of an **uploaded** collection — Update

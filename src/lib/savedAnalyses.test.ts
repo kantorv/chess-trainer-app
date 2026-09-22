@@ -23,6 +23,7 @@ import {
   savedAnalysisSummary,
   savedAnalysisToTree,
   splitAnalysesOf,
+  batchAnalysesOf,
   type SavedAnalysis,
 } from "./savedAnalyses";
 
@@ -325,5 +326,33 @@ describe("a saved analysis' name and folder (CTA-73)", () => {
       ["id2", "Line 2", "folder"],
     ]);
     expect(savedAnalysisToTree(records[1])?.moves[0].san).toBe("d4");
+  });
+});
+
+describe("batchAnalysesOf — the Library's picked games (CTA-77)", () => {
+  it("keeps each game's PGN as it is, side lines and comments too, opened at the start facing White", () => {
+    let next = 0;
+    const game = '[White "Carlsen, Magnus"]\n[Black "Nepomniachtchi, Ian"]\n\n1. e4 {Best by test.} e5 (1... c5) 1-0\n';
+    const records = batchAnalysesOf(
+      () => `id${(next += 1)}`,
+      [
+        { name: "Carlsen, Magnus – Nepomniachtchi, Ian", pgn: game },
+        { name: "Two", pgn: "1. d4 d5 *" },
+      ],
+      "folder",
+      DEFAULT_ANALYSIS_SETTINGS,
+      new Date("2026-09-22T10:00:00.000Z"),
+    );
+    expect(records.map((record) => [record.id, record.name, record.folderId])).toEqual([
+      ["id1", "Carlsen, Magnus – Nepomniachtchi, Ian", "folder"],
+      ["id2", "Two", "folder"],
+    ]);
+    expect(records[0]).toMatchObject({ path: [], orientation: "white", showArrows: true, description: "" });
+    expect(records[0].pgn).toBe(game.trim());
+    const tree = savedAnalysisToTree(records[0])!;
+    expect(tree.moves[0].comments).toEqual(["Best by test."]);
+    expect(tree.moves[0].children.map((node) => node.san)).toEqual(["e5", "c5"]);
+    // A record the store would read back as it was written.
+    expect(savedAnalysisFrom(records[0])).toEqual(records[0]);
   });
 });

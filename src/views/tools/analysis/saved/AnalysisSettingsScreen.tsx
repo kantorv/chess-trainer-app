@@ -18,6 +18,7 @@ import {
   type SavedAnalysisSettingsEdit,
 } from "../../../../lib/savedAnalyses";
 import { updateSavedAnalysisSettings } from "../../../../lib/savedAnalysisStore";
+import type { AnalysisFolder } from "../../../../lib/savedAnalysisFolders";
 import FolderPicker from "../../../shared/folders/FolderPicker";
 import { RightPanel } from "../../../main/rightPanel";
 import { useAnalysisFolders } from "./useAnalysisFolders";
@@ -41,9 +42,19 @@ import { useSavedAnalyses } from "./useSavedAnalyses";
  */
 function AnalysisSettingsScreen() {
   const { id } = useParams();
-  const saved = useSavedAnalyses().find((row) => row.id === id);
+  const analyses = useSavedAnalyses();
+  const folders = useAnalysisFolders();
   const { t } = useTranslation();
 
+  // Arriving by URL: the store's first read is still out — not a miss yet.
+  if (analyses === undefined || folders === undefined) {
+    return (
+      <Typography data-testid="analysis-settings-loading" sx={{ color: "text.secondary", p: 2 }}>
+        {t("savedAnalyses.loading")}
+      </Typography>
+    );
+  }
+  const saved = analyses.find((row) => row.id === id);
   if (saved === undefined) {
     return (
       <Box data-testid="analysis-settings-missing" sx={{ py: 4, textAlign: "center" }}>
@@ -62,7 +73,7 @@ function AnalysisSettingsScreen() {
     );
   }
   // Keyed, so the draft is seeded from this record and no other.
-  return <SettingsForm key={saved.id} saved={saved} />;
+  return <SettingsForm key={saved.id} saved={saved} folders={folders} />;
 }
 
 /** One labelled section of the form. */
@@ -88,11 +99,16 @@ function Section({
   );
 }
 
-function SettingsForm({ saved }: { saved: SavedAnalysis }) {
+function SettingsForm({
+  saved,
+  folders,
+}: {
+  saved: SavedAnalysis;
+  folders: readonly AnalysisFolder[];
+}) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
-  const folders = useAnalysisFolders();
 
   // Where Save and Cancel go: the screen that linked here, else the board.
   const from = (location.state as { from?: unknown } | null)?.from;
@@ -116,8 +132,8 @@ function SettingsForm({ saved }: { saved: SavedAnalysis }) {
   const change = (patch: Partial<SavedAnalysisSettingsEdit>) =>
     setDraft((current) => ({ ...current, ...patch }));
 
-  const save = () => {
-    if (updateSavedAnalysisSettings(saved.id, draft) !== undefined) {
+  const save = async () => {
+    if ((await updateSavedAnalysisSettings(saved.id, draft)) !== undefined) {
       setFailed(true);
       return;
     }
@@ -240,7 +256,7 @@ function SettingsForm({ saved }: { saved: SavedAnalysis }) {
         )}
 
         <Box sx={{ display: "flex", gap: 1, pb: 1 }}>
-          <Button variant="contained" onClick={save} data-testid="analysis-settings-save">
+          <Button variant="contained" onClick={() => void save()} data-testid="analysis-settings-save">
             {t("analysis.settingsScreen.save")}
           </Button>
           <Button component={RouterLink} to={back} data-testid="analysis-settings-cancel">

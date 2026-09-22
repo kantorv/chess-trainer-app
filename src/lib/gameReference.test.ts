@@ -1,12 +1,18 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
+import { indexedRowOf } from "./collectionIndex";
 import { DEFAULT_ENGINE_SETTINGS } from "./engineSettings";
+import { addCollection, resetLibraryCollectionStore } from "./libraryCollectionStore";
 import { findCatalogGame } from "./gameCatalog";
 import { savePlayedGame } from "./playedGameStore";
 import { playedGameOf } from "./playedGames";
 import { parsePgnGame, parsePgnTree } from "./pgn";
 import {
   ANALYSIS_REFERENCE_KEY,
+  isReferenceRead,
+  LIBRARY_REFERENCE_KEY,
+  libraryGameReference,
+  loadReferencedGames,
   PLAY_REFERENCE_KEY,
   resolveGameReference,
 } from "./gameReference";
@@ -21,9 +27,10 @@ import {
 beforeEach(() => localStorage.clear());
 
 describe("resolveGameReference", () => {
-  it("knows exactly the two stores' keys", () => {
+  it("knows exactly the three stores' keys", () => {
     expect(ANALYSIS_REFERENCE_KEY).toBe("analysis");
     expect(PLAY_REFERENCE_KEY).toBe("play");
+    expect(LIBRARY_REFERENCE_KEY).toBe("library");
   });
 
   it("tolerates the empty segments a stray slash leaves", () => {
@@ -38,13 +45,43 @@ describe("resolveGameReference", () => {
     ["an empty string", ""],
     ["a key with no path after it", "play"],
     ["an unregistered key", "endgames/pawn-endgames/opposition"],
-    // The pre-CTA-75 Library's keys went with it (CTA-75).
+    // The pre-CTA-75 Library's links name no collection and number now.
     ["the old Library's key", "library/queen-vs-rook/chapter-1"],
+    ["a Library game number that is not one", "library/morphy/0"],
     ["the pre-CTA-38 key", "pgn/queen-vs-rook/chapter-1"],
     ["a path the store does not have", "play/nope/a"],
     ["an id the store does not have", "play/games/missing"],
   ])("comes back undefined for %s", (_name, reference) => {
     expect(resolveGameReference(reference)).toBeUndefined();
+  });
+});
+
+describe("a Library game (CTA-77)", () => {
+  beforeEach(() => resetLibraryCollectionStore());
+
+  it("resolves an upload's game", async () => {
+    const pgn = '[White "Kim"]\n[Black "Lee"]\n\n1. e4 e5 *';
+    const added = await addCollection("Mine", [pgn], [indexedRowOf(pgn)]);
+    if (!("collection" in added)) throw new Error("not added");
+    const reference = libraryGameReference(added.collection.id, 1);
+    await loadReferencedGames(reference);
+    expect(isReferenceRead(reference)).toBe(true);
+    expect(resolveGameReference(reference)).toMatchObject({ id: "1", name: "Kim – Lee", pgn });
+    expect(resolveGameReference(libraryGameReference(added.collection.id, 2))).toBeUndefined();
+  });
+
+  it("resolves a shipped collection's game after its PGN chunk is fetched", async () => {
+    const reference = libraryGameReference("morphy", 1);
+    expect(isReferenceRead(reference)).toBe(false);
+    expect(resolveGameReference(reference)).toBeUndefined();
+    await loadReferencedGames(reference);
+    expect(isReferenceRead(reference)).toBe(true);
+    expect(resolveGameReference(reference)?.name).toBe("Morphy, Paul – Morphy, Alonzo");
+  });
+
+  it("is read at once for any other reference", () => {
+    expect(isReferenceRead("play/games/a")).toBe(true);
+    expect(isReferenceRead(null)).toBe(true);
   });
 });
 

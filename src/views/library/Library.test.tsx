@@ -20,7 +20,16 @@ import {
   readCollectionText,
 } from "../../lib/libraryCollections";
 import { peekShippedGames, peekShippedRows, shippedCollections } from "../../lib/shippedCollections";
-import { findSavedAnalysis, savedAnalysesSnapshot } from "../../lib/savedAnalysisStore";
+import {
+  findSavedAnalysis,
+  loadSavedAnalyses,
+  savedAnalysesSnapshot,
+} from "../../lib/savedAnalysisStore";
+import {
+  createAnalysisFolder,
+  loadAnalysisFolders,
+  MAX_ANALYSIS_FOLDERS,
+} from "../../lib/savedAnalysisFolderStore";
 import { downloadPgn } from "../../lib/pgnExport";
 import AppThemeWithLang from "../../theme/AppThemeWithLang";
 import { boardOptions, FakeEngine } from "../dev/devTestHarness";
@@ -193,6 +202,56 @@ describe("the Library's collections", () => {
     }
   });
 
+  it("filters the collections by name, from the URL, saying when none matches", async () => {
+    const mine = await upload();
+    mount("/library");
+    await screen.findByTestId(`library-collection-${mine.id}`);
+
+    fireEvent.change(screen.getByTestId("library-filter"), { target: { value: "  CUP " } });
+    expect(where()).toContain("q=");
+    expect(screen.getByTestId("library-collection-worldcup2023")).toBeInTheDocument();
+    expect(screen.queryByTestId("library-collection-morphy")).toBeNull();
+    expect(screen.queryByTestId(`library-collection-${mine.id}`)).toBeNull();
+    expect(screen.getByTestId("library-count")).toHaveTextContent("1 of 4 collections");
+
+    fireEvent.change(screen.getByTestId("library-filter"), { target: { value: "club" } });
+    expect(screen.getByTestId(`library-collection-${mine.id}`)).toBeInTheDocument();
+    expect(screen.queryByTestId("library-collection-worldcup2023")).toBeNull();
+
+    fireEvent.change(screen.getByTestId("library-filter"), { target: { value: "nothing like it" } });
+    expect(screen.getByTestId("library-no-matches")).toBeInTheDocument();
+
+    cleanupAndMount("/library?q=morphy");
+    expect(screen.getByTestId("library-filter")).toHaveValue("morphy");
+    expect(screen.getByTestId("library-collection-morphy")).toBeInTheDocument();
+    expect(screen.queryByTestId("library-collection-bucharest2023")).toBeNull();
+  });
+
+  it("keeps each row's download and delete in a column beside its link, not inside it", async () => {
+    const mine = await upload();
+    mount("/library");
+    for (const id of ["morphy", mine.id]) {
+      const actions = await screen.findByTestId(`library-collection-actions-${id}`);
+      expect(screen.getByTestId(`library-collection-${id}`)).not.toContainElement(actions);
+      expect(actions).toContainElement(screen.getByTestId(`library-collection-download-${id}`));
+    }
+    expect(screen.getByTestId(`library-collection-actions-${mine.id}`)).toContainElement(
+      screen.getByTestId(`library-collection-delete-${mine.id}`),
+    );
+  });
+
+  it("deletes an uploaded collection from its row, asking first — a shipped one has no delete", async () => {
+    const mine = await upload();
+    mount("/library");
+    expect(screen.queryByTestId("library-collection-delete-morphy")).toBeNull();
+    fireEvent.click(await screen.findByTestId(`library-collection-delete-${mine.id}`));
+    expect(screen.getByTestId("library-delete-dialog")).toHaveTextContent("Delete Club games?");
+    fireEvent.click(screen.getByTestId("library-delete-confirm"));
+    await waitFor(() => expect(uploadedCollectionsSnapshot()).toEqual([]));
+    expect(where()).toBe("/library");
+    expect(screen.queryByTestId(`library-collection-${mine.id}`)).toBeNull();
+  });
+
   it("downloads a whole collection from its row, reading its games only then", async () => {
     vi.mocked(downloadPgn).mockClear();
     const mine = await upload();
@@ -220,7 +279,8 @@ describe("a collection's table", () => {
     expect(screen.getByTestId("library-table-note")).toHaveTextContent(
       i18n.t("library.table.shippedNote"),
     );
-    expect(screen.queryByTestId("library-table-delete")).toBeNull();
+    // A shipped collection's games are not deleted; a collection is deleted from /library.
+    expect(screen.queryByTestId("library-picks-delete")).toBeNull();
     // The whole collection downloads from its row on /library; here only the picks do.
     expect(screen.queryByTestId("library-table-download")).toBeNull();
     expect(screen.getByTestId("library-picks-download")).toBeInTheDocument();
@@ -271,13 +331,22 @@ describe("a collection's table", () => {
     expect(screen.queryByTestId("library-table-unreadable-1")).toBeNull();
   });
 
-  it("deletes an uploaded collection, asking first", async () => {
+  it("deletes the picked games of an uploaded collection, asking first", async () => {
     const mine = await upload();
     await mountTable(`/library/${mine.id}`);
-    fireEvent.click(screen.getByTestId("library-table-delete"));
-    fireEvent.click(screen.getByTestId("library-delete-confirm"));
-    await waitFor(() => expect(where()).toBe("/library"));
-    expect(uploadedCollectionsSnapshot()).toEqual([]);
+    expect(screen.getByTestId("library-picks-delete")).toBeDisabled();
+    for (const number of [1, 3]) {
+      fireEvent.click(within(screen.getByTestId(`library-picks-row-${number}`)).getByRole("checkbox"));
+    }
+    fireEvent.click(screen.getByTestId("library-picks-delete"));
+    expect(screen.getByTestId("library-picks-delete-dialog")).toHaveTextContent("Delete 2 games?");
+    fireEvent.click(screen.getByTestId("library-picks-delete-confirm"));
+
+    await waitFor(() => expect(rowNumbers()).toEqual(["1"]));
+    expect(peekUploadedGames(mine.id)).toEqual([GAMES[1]]);
+    expect(screen.getByTestId("library-table-count")).toHaveTextContent("1 game");
+    expect(screen.queryByTestId("library-picks-selected-count")).toBeNull();
+    expect(where()).toBe(`/library/${mine.id}`);
   });
 
   it("says so for a collection that is not there", async () => {
@@ -313,9 +382,10 @@ describe("the table's filters", () => {
     expect(within(screen.getByTestId("library-filter-color")).getByTestId("library-filter-color-black")).toBeDisabled();
 
     typeInto("library-filter-player", "carl");
-    expect(rowNumbers()).toEqual(["1", "2", "3"]);
+    // Newest first: "2023.10" is after April.
+    expect(rowNumbers()).toEqual(["3", "2", "1"]);
     fireEvent.click(panel().getByTestId("library-filter-color-black"));
-    expect(rowNumbers()).toEqual(["2", "3"]);
+    expect(rowNumbers()).toEqual(["3", "2"]);
     expect(where()).toContain("player=carl");
     expect(where()).toContain("color=black");
     expect(screen.getByTestId("library-table-count")).toHaveTextContent("2 of 3 games");
@@ -330,18 +400,37 @@ describe("the table's filters", () => {
     expect(rowNumbers()).toEqual(["3"]);
     cleanupAndMount(`/library/${rich.id}?event=Spring+Open`);
     await screen.findByTestId("library-table");
-    expect(rowNumbers()).toEqual(["1", "2"]);
+    expect(rowNumbers()).toEqual(["2", "1"]);
 
     cleanupAndMount(`/library/${rich.id}`);
     await screen.findByTestId("library-table");
     // "2023.10" is any day of October.
     fireEvent.change(screen.getByTestId("library-filter-from"), { target: { value: "2023-04-03" } });
-    expect(rowNumbers()).toEqual(["2", "3"]);
+    expect(rowNumbers()).toEqual(["3", "2"]);
     fireEvent.change(screen.getByTestId("library-filter-to"), { target: { value: "2023-10-05" } });
-    expect(rowNumbers()).toEqual(["2", "3"]);
+    expect(rowNumbers()).toEqual(["3", "2"]);
     fireEvent.change(screen.getByTestId("library-filter-to"), { target: { value: "2023-09-30" } });
     expect(rowNumbers()).toEqual(["2"]);
     expect(screen.getByTestId("library-filter-from")).toHaveAttribute("min", "2023-04-02");
+  });
+
+  it("opens newest first, and turns or leaves the date order from its header", async () => {
+    const rich = await keep("Rich", [...RICH, '[Event "Undated"]\n[White "X"]\n[Black "Y"]\n\n1. e4 *']);
+    await mountTable(`/library/${rich.id}`);
+    // Undated games last, whichever way.
+    expect(rowNumbers()).toEqual(["3", "2", "1", "4"]);
+    expect(where()).toBe(`/library/${rich.id}`);
+
+    fireEvent.click(screen.getByTestId("library-table-sort-date"));
+    expect(rowNumbers()).toEqual(["1", "2", "3", "4"]);
+    expect(where()).toBe(`/library/${rich.id}?dir=asc`);
+    fireEvent.click(screen.getByTestId("library-table-sort-date"));
+    expect(where()).toBe(`/library/${rich.id}`);
+
+    // `#` is the collection's own order.
+    fireEvent.click(screen.getByTestId("library-table-sort-number"));
+    expect(rowNumbers()).toEqual(["1", "2", "3", "4"]);
+    expect(where()).toBe(`/library/${rich.id}?sort=number`);
   });
 
   it("clears every filter at once, leaving the words box alone", async () => {
@@ -349,7 +438,7 @@ describe("the table's filters", () => {
     await mountTable(`/library/${rich.id}?q=open&player=carl&color=white&result=1-0`);
     expect(rowNumbers()).toEqual(["1"]);
     fireEvent.click(panel().getByTestId("library-filter-clear"));
-    expect(rowNumbers()).toEqual(["1", "2"]);
+    expect(rowNumbers()).toEqual(["2", "1"]);
     expect(where()).toBe(`/library/${rich.id}?q=open`);
     expect(panel().getByTestId("library-filter-clear")).toBeDisabled();
   });
@@ -446,6 +535,20 @@ describe("the opening-moves filter", () => {
     expect(dropOn("b8", null as unknown as string)).toBe(false);
     expect(dropOn("b8", "c6")).toBe(false);
     expect(where()).toContain("line=e4%2Ce5%2CNf3");
+  });
+
+  it("sits under the player and side, with the other filters under it", async () => {
+    const rich = await keep("Rich", RICH);
+    await mountTable(`/library/${rich.id}`);
+    const board = screen.getByTestId("library-filter-moves");
+    const before = (testId: string) =>
+      screen.getByTestId(testId).compareDocumentPosition(board) & Node.DOCUMENT_POSITION_FOLLOWING;
+    const after = (testId: string) =>
+      screen.getByTestId(testId).compareDocumentPosition(board) & Node.DOCUMENT_POSITION_PRECEDING;
+    expect(before("library-filter-player")).toBeTruthy();
+    expect(before("library-filter-color")).toBeTruthy();
+    expect(after("library-filter-event")).toBeTruthy();
+    expect(after("library-table-result")).toBeTruthy();
   });
 
   it("draws the tree of the games the other filters leave, and Clear takes the line off with them", async () => {
@@ -551,6 +654,109 @@ describe("picking games to download", () => {
   });
 });
 
+describe("analysing the picks (CTA-77)", () => {
+  const analyse = () => screen.getByTestId("library-picks-analyse");
+  const pick = (number: number) =>
+    fireEvent.click(within(screen.getByTestId(`library-picks-row-${number}`)).getByRole("checkbox"));
+  const notice = () => screen.findByTestId("library-picks-analyse-notice");
+
+  it("is offered beside the export bar, and only once a game is picked", async () => {
+    const mine = await upload();
+    await mountTable(`/library/${mine.id}`);
+    expect(analyse()).toHaveTextContent("Analyse");
+    expect(analyse()).toBeDisabled();
+    pick(1);
+    expect(analyse()).toBeEnabled();
+  });
+
+  it("saves the picks into one new folder, in collection order, named for the collection and the filters", async () => {
+    const mine = await upload();
+    await mountTable(`/library/${mine.id}?player=Amy`);
+    pick(2);
+    pick(1);
+    fireEvent.click(analyse());
+    // Working: it cannot be clicked twice.
+    expect(analyse()).toBeDisabled();
+
+    expect(await notice()).toHaveTextContent("2 games added to Saved analyses, in “Club games — 2 games (Amy)”.");
+    const folders = await loadAnalysisFolders();
+    expect(folders).toHaveLength(1);
+    expect(folders[0]).toMatchObject({ name: "Club games — 2 games (Amy)", parentId: null });
+    const saved = await loadSavedAnalyses();
+    expect(saved.map((row) => [row.name, row.folderId, row.pgn])).toEqual([
+      ["Zed – Amy", folders[0].id, GAMES[0]],
+      ["Amy – Bob", folders[0].id, GAMES[1]],
+    ]);
+    expect(saved[0]).toMatchObject({ path: [], orientation: "white" });
+    expect(screen.getByTestId("library-picks-analyse-open")).toHaveAttribute(
+      "href",
+      `/tools/analysis/saved?folder=${folders[0].id}`,
+    );
+    // The picks stay as they were.
+    expect(screen.getByTestId("library-picks-selected-count")).toHaveTextContent("2 selected");
+    expect(analyse()).toBeEnabled();
+  });
+
+  it("leaves out a game the index could not read, and says so", async () => {
+    const mine = await keep("Mixed", [GAMES[0], '[White "Broken"]\n[Black "Game"]\n\n1. e4 Zz9 *']);
+    await mountTable(`/library/${mine.id}`);
+    expect(screen.getByTestId("library-table-unreadable-2")).toBeInTheDocument();
+    fireEvent.click(within(screen.getByTestId("library-picks-select-all")).getByRole("checkbox"));
+    fireEvent.click(analyse());
+
+    expect(await notice()).toHaveTextContent(
+      "1 game added to Saved analyses, in “Mixed — 1 game”. 1 game could not be read and was left out.",
+    );
+    expect((await loadSavedAnalyses()).map((row) => row.pgn)).toEqual([GAMES[0]]);
+  });
+
+  it("works on a shipped collection too", async () => {
+    await mountTable("/library/morphy?sort=number");
+    pick(1);
+    fireEvent.click(analyse());
+    expect(await notice()).toHaveTextContent("1 game added to Saved analyses, in “Morphy — 1 game”.");
+    const [saved] = await loadSavedAnalyses();
+    expect(saved.pgn).toBe((peekShippedGames("morphy") ?? [])[0].trim());
+    expect(saved.name).toBe("Morphy, Paul – Morphy, Alonzo");
+  });
+
+  it("says why, and leaves nothing behind, when no folder can be made", async () => {
+    for (let index = 0; index < MAX_ANALYSIS_FOLDERS; index += 1) {
+      await createAnalysisFolder(`F${index}`, null);
+    }
+    const mine = await upload();
+    await mountTable(`/library/${mine.id}`);
+    pick(1);
+    fireEvent.click(analyse());
+    expect(await notice()).toHaveTextContent(`at most ${MAX_ANALYSIS_FOLDERS} folders`);
+    expect(await loadSavedAnalyses()).toEqual([]);
+    expect(screen.queryByTestId("library-picks-analyse-open")).toBeNull();
+  });
+
+  it("takes the folder back out when the games cannot be stored", async () => {
+    const put = IDBObjectStore.prototype.put;
+    vi.spyOn(IDBObjectStore.prototype, "put").mockImplementation(function (
+      this: IDBObjectStore,
+      value: unknown,
+      key?: IDBValidKey,
+    ) {
+      // The analyses' records carry a PGN; the folder's does not.
+      if ((value as { value?: { pgn?: string } }).value?.pgn !== undefined) {
+        throw new DOMException("full", "QuotaExceededError");
+      }
+      return put.call(this, value, key);
+    });
+    const mine = await upload();
+    await mountTable(`/library/${mine.id}`);
+    pick(1);
+    fireEvent.click(analyse());
+    expect(await notice()).toHaveTextContent("storage may be full");
+    vi.restoreAllMocks();
+    expect(await loadAnalysisFolders()).toEqual([]);
+    expect(await loadSavedAnalyses()).toEqual([]);
+  });
+});
+
 describe("adding a collection", () => {
   it("checks every game of a pasted text, then keeps it as a new collection named by its Event", async () => {
     mount("/library/new");
@@ -584,6 +790,55 @@ describe("adding a collection", () => {
     expect(where()).toBe("/library/new");
   });
 
+  it("creates an empty collection from a name, and fills it from its table's Add games", async () => {
+    mount("/library/new");
+    fireEvent.change(screen.getByTestId("library-upload-name"), { target: { value: "My picks" } });
+    fireEvent.click(screen.getByTestId("library-upload-empty"));
+
+    await waitFor(() => expect(where()).toMatch(/^\/library\/u/));
+    const [empty] = await loadUploadedCollections();
+    expect(empty).toMatchObject({ name: "My picks", count: 0 });
+    expect(await screen.findByTestId("library-table-empty")).toHaveTextContent(
+      i18n.t("library.table.noGames"),
+    );
+
+    fireEvent.click(screen.getByTestId("library-table-add-games"));
+    expect(where()).toBe(`/library/new?into=${empty.id}`);
+    expect(await screen.findByTestId("library-upload-title")).toHaveTextContent("Add games to My picks");
+    expect(screen.queryByTestId("library-upload-name")).toBeNull();
+    expect(screen.queryByTestId("library-upload-empty")).toBeNull();
+    fireEvent.change(screen.getByTestId("library-upload-paste"), { target: { value: GAMES.slice(0, 2).join("\n\n") } });
+    fireEvent.click(screen.getByTestId("library-upload-save"));
+
+    await waitFor(() => expect(where()).toBe(`/library/${empty.id}`));
+    expect(peekUploadedGames(empty.id)).toEqual(GAMES.slice(0, 2));
+    expect(await screen.findByTestId("library-table-count")).toHaveTextContent("2 games");
+
+    // Again: the next games go at the end, and the name stays the reader's.
+    cleanupAndMount(`/library/new?into=${empty.id}`);
+    fireEvent.change(await screen.findByTestId("library-upload-paste"), { target: { value: GAMES[2] } });
+    fireEvent.click(screen.getByTestId("library-upload-save"));
+    await waitFor(() => expect(peekUploadedGames(empty.id)).toEqual(GAMES));
+    expect((await loadUploadedCollections())[0]).toMatchObject({ name: "My picks", count: 3 });
+  });
+
+  it("names an empty collection for the reader when no name is typed", async () => {
+    mount("/library/new");
+    fireEvent.click(screen.getByTestId("library-upload-empty"));
+    await waitFor(() => expect(where()).toMatch(/^\/library\/u/));
+    expect((await loadUploadedCollections())[0].name).toBe("New collection");
+  });
+
+  it("adds games only to the reader's own collections", async () => {
+    mount("/library/bucharest2023");
+    await screen.findByTestId("library-table");
+    expect(screen.queryByTestId("library-table-add-games")).toBeNull();
+    cleanupAndMount("/library/new?into=bucharest2023");
+    expect(await screen.findByTestId("library-not-found")).toBeInTheDocument();
+    cleanupAndMount("/library/new?into=nothing-here");
+    expect(await screen.findByTestId("library-not-found")).toBeInTheDocument();
+  });
+
   it("says why a text was not taken", async () => {
     mount("/library/new");
     fireEvent.change(screen.getByTestId("library-upload-paste"), { target: { value: "hello" } });
@@ -596,6 +851,29 @@ describe("adding a collection", () => {
 });
 
 describe("a game on its analysis board", () => {
+  it("hands the game to the Analysis Board from its Export tab, at the position on screen", async () => {
+    const mine = await upload();
+    await mountGame(`/library/${mine.id}/1?at=e4`);
+    expect(screen.getByTestId("library-game-arrows")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("library-game-panel-tab-export"));
+    expect(screen.getByTestId("library-game-open-analysis")).toHaveAttribute(
+      "href",
+      `/tools/analysis?game=library%2F${mine.id}%2F1&at=e4`,
+    );
+  });
+
+  it("switches the next-move arrows from its Moves tab", async () => {
+    const mine = await upload();
+    await mountGame(`/library/${mine.id}/1`);
+    expect(boardOptions().arrows).toHaveLength(1);
+    fireEvent.click(screen.getByTestId("library-game-arrows"));
+    expect(boardOptions().arrows).toEqual([]);
+    fireEvent.click(screen.getByTestId("library-game-panel-tab-engine"));
+    // The Moves tab stays mounted, hidden; the Engine tab has no switch of its own.
+    expect(screen.getAllByTestId("library-game-arrows")).toHaveLength(1);
+    expect(screen.getByTestId("library-game-arrows")).not.toBeVisible();
+  });
+
   it("is the v2 board, with the explorer's tabs and the engine", async () => {
     const mine = await upload();
     await mountGame(`/library/${mine.id}/1`);
@@ -649,7 +927,8 @@ describe("a game on its analysis board", () => {
     expect(screen.queryByTestId("library-game-changes-update")).toBeNull();
     fireEvent.click(screen.getByTestId("library-game-changes-copy"));
 
-    const [copy] = savedAnalysesSnapshot();
+    await waitFor(() => expect(where()).toContain("/tools/analysis?analysis="));
+    const [copy] = savedAnalysesSnapshot() ?? [];
     expect(copy.name).toBe("Morphy, Paul – Morphy, Alonzo (copy)");
     expect(findSavedAnalysis(copy.id)?.pgn).toContain("1... c5");
     expect(where()).toBe(`/tools/analysis?analysis=${copy.id}`);

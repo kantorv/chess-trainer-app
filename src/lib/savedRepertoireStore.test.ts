@@ -111,17 +111,17 @@ describe("the saved-repertoires store", () => {
     expect(savedRepertoiresSnapshot().map((row) => row.id)).toEqual(["a"]);
   });
 
-  it("lives under its own key: a wipe leaves games, analyses and openings untouched", () => {
+  it("lives under its own key: a wipe leaves games, analyses and openings untouched", async () => {
     const game = parsePgnGame("1. e4 e5 *");
     saveGame(savedGameOf("g1", game, DEFAULT_ENGINE_SETTINGS));
-    saveAnalysis(
+    await saveAnalysis(
       savedAnalysisOf("a1", treeFromGame(game), [], DEFAULT_ANALYSIS_SETTINGS, "white"),
     );
     saveOpening(savedOpeningOf("o1", emptyTree(), "white", "", null));
     saveRepertoire(record("r1"));
 
     const games = savedGamesSnapshot();
-    const analyses = savedAnalysesSnapshot();
+    const analyses = savedAnalysesSnapshot() ?? [];
     const openings = savedOpeningsSnapshot();
     expect([games.length, analyses.length, openings.length]).toEqual([1, 1, 1]);
 

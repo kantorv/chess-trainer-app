@@ -2,8 +2,9 @@
 
 Every collection here is one **collection** of the Library (`/library`,
 CTA-75) — a top-level folder whose games are listed as a sortable, filterable
-table, each game opening on a full analysis board. A collection is three
-things, all written by one command:
+table, each game opening on a full analysis board. (The module's full
+reference is [`.claude/rules/game-collections.md`](../../../.claude/rules/game-collections.md).)
+A collection is three things, all written by one command:
 
 | File | What it is | Fetched |
 | --- | --- | --- |

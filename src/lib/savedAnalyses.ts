@@ -23,7 +23,7 @@ import { parsePgnGame, parsePgnTree, readPgnTags } from "./pgn";
  * The Analysis Board grows a {@link GameTree} move by move
  * (`lib/gameTree.ts`); this is the layer that lets that work outlive the tab.
  * It is [`savedGames.ts`](./savedGames.ts) again, in the same three-way split
- * (pure model here, `localStorage` in
+ * (pure model here, IndexedDB since CTA-77 in
  * [`savedAnalysisStore.ts`](./savedAnalysisStore.ts), a `useSyncExternalStore`
  * binding in `views/tools/analysis/saved/useSavedAnalyses.ts`) and for the same
  * reasons — so only what is **different** is written out below.
@@ -404,4 +404,40 @@ export const splitAnalysesOf = (
     ...savedAnalysisOf(newId(), game.tree, [], settings, "white", now),
     name: game.name,
     folderId,
+  }));
+
+/**
+ * **The Library's picked games as analyses** (CTA-77, the collection
+ * table's Analyse): each game its own analysis, in the order given — named
+ * as a split names a game (`repertoireGameNamesOf`'s names, passed in),
+ * opened at its start facing White, worked under `settings`, and filed under
+ * `folderId` (the folder the batch makes).
+ *
+ * Unlike {@link splitAnalysesOf}, the game is **not re-parsed**: its PGN is
+ * kept as the collection holds it. A collection's games were each parsed
+ * with `parsePgnTree` when it came in — its index marks the ones that would
+ * not, and the caller leaves those out — and a stored PGN keeps its side
+ * lines and comments by being the text it is; re-writing it through a tree
+ * would cost ~10 ms a game on the main thread, over a minute for a
+ * 7,818-game pick. It is parsed when the analysis is opened, as any is.
+ */
+export const batchAnalysesOf = (
+  newId: () => string,
+  games: readonly { name: string; pgn: string }[],
+  folderId: string | null,
+  settings: AnalysisSettings,
+  now: Date = new Date(),
+): SavedAnalysis[] =>
+  games.map((game) => ({
+    id: newId(),
+    pgn: game.pgn.trim(),
+    settings,
+    path: [],
+    orientation: "white",
+    description: "",
+    showArrows: true,
+    name: game.name,
+    folderId,
+    savedAt: now.toISOString(),
+    updatedAt: now.toISOString(),
   }));

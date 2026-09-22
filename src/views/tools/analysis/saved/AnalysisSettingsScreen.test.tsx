@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router";
 
 import i18n from "../../../../i18n";
@@ -53,15 +53,16 @@ beforeEach(async () => {
 });
 
 describe("a saved analysis' settings screen", () => {
-  it("says so when the analysis is not there", () => {
+  it("says it is reading, then that the analysis is not there", async () => {
     mount("nothing");
-    expect(screen.getByTestId("analysis-settings-missing")).toBeInTheDocument();
+    expect(screen.getByTestId("analysis-settings-loading")).toBeInTheDocument();
+    expect(await screen.findByTestId("analysis-settings-missing")).toBeInTheDocument();
   });
 
-  it("seeds the draft from the record", () => {
-    store("a1");
+  it("seeds the draft from the record", async () => {
+    await store("a1");
     mount("a1");
-    expect(screen.getByTestId("analysis-settings-name")).toHaveValue("Open game");
+    expect(await screen.findByTestId("analysis-settings-name")).toHaveValue("Open game");
     expect(screen.getByTestId("analysis-settings-description")).toHaveValue("");
     expect(screen.getByTestId("analysis-settings-color-white")).toHaveAttribute(
       "aria-pressed",
@@ -70,13 +71,13 @@ describe("a saved analysis' settings screen", () => {
     expect(screen.getByTestId("analysis-settings-show-arrows")).toBeChecked();
   });
 
-  it("writes title, description, side, arrows and folder on Save, and goes to the board", () => {
-    store("a1");
-    store("a2");
-    const folder = createAnalysisFolder("Openings", null)!;
+  it("writes title, description, side, arrows and folder on Save, and goes to the board", async () => {
+    await store("a1");
+    await store("a2");
+    const folder = (await createAnalysisFolder("Openings", null))!;
     mount("a1");
 
-    fireEvent.change(screen.getByTestId("analysis-settings-name"), {
+    fireEvent.change(await screen.findByTestId("analysis-settings-name"), {
       target: { value: "Italian" },
     });
     fireEvent.change(screen.getByTestId("analysis-settings-description"), {
@@ -87,6 +88,9 @@ describe("a saved analysis' settings screen", () => {
     fireEvent.click(screen.getByTestId(`analysis-settings-folder-picker-${folder.id}`));
     fireEvent.click(screen.getByTestId("analysis-settings-save"));
 
+    await waitFor(() =>
+      expect(screen.getByTestId("where")).toHaveTextContent("/tools/analysis?analysis=a1"),
+    );
     expect(findSavedAnalysis("a1")).toMatchObject({
       name: "Italian",
       description: "Giuoco piano ideas.",
@@ -95,14 +99,13 @@ describe("a saved analysis' settings screen", () => {
       folderId: folder.id,
     });
     // In place: the list's order is kept.
-    expect(savedAnalysesSnapshot().map((row) => row.id)).toEqual(["a2", "a1"]);
-    expect(screen.getByTestId("where")).toHaveTextContent("/tools/analysis?analysis=a1");
+    expect(savedAnalysesSnapshot()?.map((row) => row.id)).toEqual(["a2", "a1"]);
   });
 
-  it("writes nothing on Cancel", () => {
-    store("a1");
+  it("writes nothing on Cancel", async () => {
+    await store("a1");
     mount("a1");
-    fireEvent.change(screen.getByTestId("analysis-settings-name"), {
+    fireEvent.change(await screen.findByTestId("analysis-settings-name"), {
       target: { value: "Changed" },
     });
     fireEvent.click(screen.getByTestId("analysis-settings-cancel"));

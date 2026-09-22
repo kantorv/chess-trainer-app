@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { indexedRowOf } from "./collectionIndex";
 import {
   addCollection,
+  appendCollectionGames,
   insertCollectionGame,
   LIBRARY_DB_NAME,
   loadUploadedCollections,
@@ -11,6 +12,7 @@ import {
   peekUploadedGames,
   peekUploadedRows,
   removeCollection,
+  removeCollectionGames,
   replaceCollectionGame,
   resetLibraryCollectionStore,
   uploadedCollectionsSnapshot,
@@ -126,6 +128,35 @@ describe("editing a game", () => {
       [3, "C", 1],
     ]);
     expect(uploadedCollectionsSnapshot()?.[0].count).toBe(3);
+  });
+
+  it("adds games at the end — an empty collection filling up", async () => {
+    const added = await addCollection("Empty", [], []);
+    if (!("collection" in added)) throw new Error("not added");
+    const { id } = added.collection;
+    expect(await loadUploadedGames(id)).toEqual([]);
+    expect(await appendCollectionGames(id, [ONE, TWO], [indexedRowOf(ONE), indexedRowOf(TWO)])).toBeUndefined();
+    expect(await appendCollectionGames(id, [COPY], [indexedRowOf(COPY)])).toBeUndefined();
+    expect(await loadUploadedGames(id)).toEqual([ONE, TWO, COPY]);
+    expect((await loadUploadedRows(id))?.map((row) => [row.number, row.white])).toEqual([
+      [1, "A"],
+      [2, "C"],
+      [3, "A"],
+    ]);
+    expect(uploadedCollectionsSnapshot()?.find((summary) => summary.id === id)?.count).toBe(3);
+    expect(await appendCollectionGames("nope", [ONE], [indexedRowOf(ONE)])).toBe("missing");
+  });
+
+  it("deletes games, the rows after them moving up — or none, for a number not there", async () => {
+    const mine = await added();
+    expect(await insertCollectionGame(mine.id, 3, COPY, indexedRowOf(COPY))).toBeUndefined();
+    expect(await removeCollectionGames(mine.id, [1, 9])).toBe("missing");
+    expect(await loadUploadedGames(mine.id)).toEqual([ONE, TWO, COPY]);
+
+    expect(await removeCollectionGames(mine.id, [1, 3])).toBeUndefined();
+    expect(await loadUploadedGames(mine.id)).toEqual([TWO]);
+    expect((await loadUploadedRows(mine.id))?.map((row) => [row.number, row.white])).toEqual([[1, "C"]]);
+    expect(uploadedCollectionsSnapshot()?.[0].count).toBe(1);
   });
 
   it("says so for a game or a collection that is not there", async () => {

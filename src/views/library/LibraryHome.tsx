@@ -1,6 +1,13 @@
+import { useState } from "react";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
+import TextField from "@mui/material/TextField";
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogContentText from "@mui/material/DialogContentText";
+import DialogTitle from "@mui/material/DialogTitle";
 import IconButton from "@mui/material/IconButton";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
@@ -9,12 +16,14 @@ import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
+import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
 import FolderRoundedIcon from "@mui/icons-material/FolderRounded";
 import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
-import { Link as RouterLink } from "react-router";
+import { Link as RouterLink, useSearchParams } from "react-router";
 import { useTranslation } from "react-i18next";
 
+import { removeCollection } from "../../lib/libraryCollectionStore";
 import type { CollectionSummary } from "../../lib/libraryCollections";
 import { downloadPgn } from "../../lib/pgnExport";
 import { slugify } from "../../lib/pgnText";
@@ -27,14 +36,25 @@ import { loadCollectionGames, useUploadedCollections } from "./useLibraryCollect
  * shipped ones (wired by `scripts/wirepgn.js`, by name) and then the reader's
  * uploads (newest first). Each row opens the collection's table, and its
  * download icon saves **the whole collection** as one `.pgn` (a table's own
- * download is its picked games).
+ * download is its picked games); an upload's row also **deletes** it, asked
+ * first (a table deletes only its picked games).
  *
  * **Listing fetches nothing.** A shipped collection's name and game count are
  * its manifest entry (`src/data/library/manifest.json`); an upload's are its
  * small IndexedDB summary — no index and no game is read to draw this page.
  * The games are read only when a download asks for them.
+ *
+ * **A words box** over the list narrows it by name (part of it, any case) —
+ * `?q=`, written with history replace, as the table's box is.
  */
-function CollectionRow({ summary }: { summary: CollectionSummary }) {
+function CollectionRow({
+  summary,
+  onDelete,
+}: {
+  summary: CollectionSummary;
+  /** An upload's delete — asked first by the list. */
+  onDelete?: () => void;
+}) {
   const { t } = useTranslation();
   const { id, name, source, count } = summary;
   const download = async () => {
@@ -44,27 +64,13 @@ function CollectionRow({ summary }: { summary: CollectionSummary }) {
   return (
     <ListItem
       disablePadding
-      sx={{ borderBottom: "1px solid", borderColor: "divider" }}
-      // Beside the row's link, not inside it: a button in a link is not valid HTML.
-      secondaryAction={
-        <Tooltip title={t("library.download")}>
-          <IconButton
-            edge="end"
-            size="small"
-            aria-label={t("library.download")}
-            data-testid={`library-collection-download-${id}`}
-            onClick={() => void download()}
-          >
-            <DownloadRoundedIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
-      }
+      sx={{ borderBottom: "1px solid", borderColor: "divider", display: "flex", alignItems: "center" }}
     >
       <ListItemButton
         component={RouterLink}
         to={`/library/${encodeURIComponent(id)}`}
         data-testid={`library-collection-${id}`}
-        sx={{ gap: 1 }}
+        sx={{ gap: 1, flex: 1, minWidth: 0 }}
       >
         <ListItemIcon sx={{ minWidth: 36 }}>
           <FolderRoundedIcon color={source === "shipped" ? "primary" : "success"} />
@@ -78,8 +84,39 @@ function CollectionRow({ summary }: { summary: CollectionSummary }) {
           size="small"
           variant="outlined"
           label={t(source === "shipped" ? "library.shipped" : "library.uploaded")}
+          sx={{ flexShrink: 0 }}
         />
       </ListItemButton>
+      {/* Beside the row's link, not inside it (a button in a link is not valid
+          HTML), and a column of its own — two icons wide on every row, so the
+          downloads line up and nothing sits over the chip. */}
+      <Box
+        data-testid={`library-collection-actions-${id}`}
+        sx={{ flexShrink: 0, width: 76, display: "flex", gap: 0.5, px: 0.5 }}
+      >
+        <Tooltip title={t("library.download")}>
+          <IconButton
+            size="small"
+            aria-label={t("library.download")}
+            data-testid={`library-collection-download-${id}`}
+            onClick={() => void download()}
+          >
+            <DownloadRoundedIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+        {onDelete !== undefined && (
+          <Tooltip title={t("library.delete")}>
+            <IconButton
+              size="small"
+              aria-label={t("library.delete")}
+              data-testid={`library-collection-delete-${id}`}
+              onClick={onDelete}
+            >
+              <DeleteOutlineRoundedIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        )}
+      </Box>
     </ListItem>
   );
 }
@@ -88,6 +125,25 @@ function LibraryHome() {
   const { t } = useTranslation();
   const uploaded = useUploadedCollections() ?? [];
   const total = shippedCollections.length + uploaded.length;
+  const [params, setParams] = useSearchParams();
+  const text = params.get("q") ?? "";
+  const needle = text.trim().toLocaleLowerCase();
+  const matches = (summary: CollectionSummary) =>
+    needle === "" || summary.name.toLocaleLowerCase().includes(needle);
+  const shippedShown = shippedCollections.filter(matches);
+  const uploadedShown = uploaded.filter(matches);
+  const shown = shippedShown.length + uploadedShown.length;
+  const setText = (value: string) =>
+    setParams(
+      (current) => {
+        const next = new URLSearchParams(current);
+        if (value === "") next.delete("q");
+        else next.set("q", value);
+        return next;
+      },
+      { replace: true },
+    );
+  const [deleting, setDeleting] = useState<CollectionSummary | null>(null);
 
   return (
     <>
@@ -116,7 +172,9 @@ function LibraryHome() {
               variant="caption"
               sx={{ display: "block", color: "text.secondary" }}
             >
-              {t("library.count", { count: total })}
+              {shown === total
+                ? t("library.count", { count: total })
+                : t("library.shown", { shown, count: total })}
             </Typography>
           </Box>
           <Button
@@ -130,16 +188,39 @@ function LibraryHome() {
             {t("library.add")}
           </Button>
         </Box>
+        <Box sx={{ flexShrink: 0, display: "flex", py: 1 }}>
+          <TextField
+            size="small"
+            label={t("library.filter")}
+            value={text}
+            onChange={(event) => setText(event.target.value)}
+            slotProps={{ htmlInput: { "data-testid": "library-filter" } }}
+            sx={{ flex: 1 }}
+          />
+        </Box>
         {/* The one region that scrolls: the shell scrolls nothing in the square. */}
         <Box sx={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
           <List disablePadding data-testid="library-collections">
-            {shippedCollections.map((entry) => (
+            {shippedShown.map((entry) => (
               <CollectionRow key={entry.id} summary={entry} />
             ))}
-            {uploaded.map((collection) => (
-              <CollectionRow key={collection.id} summary={collection} />
+            {uploadedShown.map((collection) => (
+              <CollectionRow
+                key={collection.id}
+                summary={collection}
+                onDelete={() => setDeleting(collection)}
+              />
             ))}
           </List>
+          {shown === 0 && (
+            <Typography
+              data-testid="library-no-matches"
+              variant="body2"
+              sx={{ color: "text.secondary", textAlign: "center", py: 4 }}
+            >
+              {t("library.noMatches")}
+            </Typography>
+          )}
         </Box>
       </Box>
       <RightPanel>
@@ -147,6 +228,35 @@ function LibraryHome() {
           {t("library.hint")}
         </Typography>
       </RightPanel>
+      <Dialog
+        open={deleting !== null}
+        onClose={() => setDeleting(null)}
+        data-testid="library-delete-dialog"
+      >
+        {deleting !== null && (
+          <>
+            <DialogTitle>{t("library.confirmDelete.title", { name: deleting.name })}</DialogTitle>
+            <DialogContent>
+              <DialogContentText>
+                {t("library.confirmDelete.body", { count: deleting.count })}
+              </DialogContentText>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setDeleting(null)}>{t("library.confirmDelete.cancel")}</Button>
+              <Button
+                color="error"
+                data-testid="library-delete-confirm"
+                onClick={async () => {
+                  await removeCollection(deleting.id);
+                  setDeleting(null);
+                }}
+              >
+                {t("library.confirmDelete.confirm")}
+              </Button>
+            </DialogActions>
+          </>
+        )}
+      </Dialog>
     </>
   );
 }
