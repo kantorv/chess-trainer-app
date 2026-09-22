@@ -790,6 +790,55 @@ describe("adding a collection", () => {
     expect(where()).toBe("/library/new");
   });
 
+  it("creates an empty collection from a name, and fills it from its table's Add games", async () => {
+    mount("/library/new");
+    fireEvent.change(screen.getByTestId("library-upload-name"), { target: { value: "My picks" } });
+    fireEvent.click(screen.getByTestId("library-upload-empty"));
+
+    await waitFor(() => expect(where()).toMatch(/^\/library\/u/));
+    const [empty] = await loadUploadedCollections();
+    expect(empty).toMatchObject({ name: "My picks", count: 0 });
+    expect(await screen.findByTestId("library-table-empty")).toHaveTextContent(
+      i18n.t("library.table.noGames"),
+    );
+
+    fireEvent.click(screen.getByTestId("library-table-add-games"));
+    expect(where()).toBe(`/library/new?into=${empty.id}`);
+    expect(await screen.findByTestId("library-upload-title")).toHaveTextContent("Add games to My picks");
+    expect(screen.queryByTestId("library-upload-name")).toBeNull();
+    expect(screen.queryByTestId("library-upload-empty")).toBeNull();
+    fireEvent.change(screen.getByTestId("library-upload-paste"), { target: { value: GAMES.slice(0, 2).join("\n\n") } });
+    fireEvent.click(screen.getByTestId("library-upload-save"));
+
+    await waitFor(() => expect(where()).toBe(`/library/${empty.id}`));
+    expect(peekUploadedGames(empty.id)).toEqual(GAMES.slice(0, 2));
+    expect(await screen.findByTestId("library-table-count")).toHaveTextContent("2 games");
+
+    // Again: the next games go at the end, and the name stays the reader's.
+    cleanupAndMount(`/library/new?into=${empty.id}`);
+    fireEvent.change(await screen.findByTestId("library-upload-paste"), { target: { value: GAMES[2] } });
+    fireEvent.click(screen.getByTestId("library-upload-save"));
+    await waitFor(() => expect(peekUploadedGames(empty.id)).toEqual(GAMES));
+    expect((await loadUploadedCollections())[0]).toMatchObject({ name: "My picks", count: 3 });
+  });
+
+  it("names an empty collection for the reader when no name is typed", async () => {
+    mount("/library/new");
+    fireEvent.click(screen.getByTestId("library-upload-empty"));
+    await waitFor(() => expect(where()).toMatch(/^\/library\/u/));
+    expect((await loadUploadedCollections())[0].name).toBe("New collection");
+  });
+
+  it("adds games only to the reader's own collections", async () => {
+    mount("/library/bucharest2023");
+    await screen.findByTestId("library-table");
+    expect(screen.queryByTestId("library-table-add-games")).toBeNull();
+    cleanupAndMount("/library/new?into=bucharest2023");
+    expect(await screen.findByTestId("library-not-found")).toBeInTheDocument();
+    cleanupAndMount("/library/new?into=nothing-here");
+    expect(await screen.findByTestId("library-not-found")).toBeInTheDocument();
+  });
+
   it("says why a text was not taken", async () => {
     mount("/library/new");
     fireEvent.change(screen.getByTestId("library-upload-paste"), { target: { value: "hello" } });

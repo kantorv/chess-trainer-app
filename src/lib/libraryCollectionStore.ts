@@ -33,7 +33,8 @@ import { newSavedGameId } from "./savedGames";
  * The index is built **before** a collection is added (a worker's pass over
  * every game, `views/library/indexCollection.ts`) and kept in step by every
  * write here: an Update replaces one game and its row, a Save as copy inserts
- * one of each — so the table never re-reads a game.
+ * one of each, Add games appends, a delete removes — so the table never
+ * re-reads a game. A collection may be empty (made from a name alone).
  *
  * ### Nothing here throws
  *
@@ -371,6 +372,26 @@ export const insertCollectionGame = (
   });
 
 /**
+ * **Add games** to a collection — at its end, in order, each with its index
+ * row (`buildCollectionIndex`'s, one per game): how an empty collection fills.
+ */
+export const appendCollectionGames = (
+  id: string,
+  added: readonly string[],
+  addedRows: readonly IndexedRow[],
+): Promise<LibraryCollectionProblem | undefined> => {
+  if (addedRows.length !== added.length) throw new Error("appendCollectionGames: one index row per game");
+  return editGames(id, (games, rows) => {
+    // A loop, not a spread: an upload can be tens of thousands of games.
+    for (let index = 0; index < added.length; index += 1) {
+      games.push(added[index]);
+      rows.push(addedRows[index]);
+    }
+    return true;
+  });
+};
+
+/**
  * **Delete games** (the table's picks): games `numbers` (1-based) and their
  * rows go, the games after them moving up. A number that is not there
  * refuses the whole delete (`"missing"`), so nothing goes half-way.
@@ -384,10 +405,16 @@ export const removeCollectionGames = (
     if ([...gone].some((number) => !Number.isInteger(number) || number < 1 || number > games.length)) {
       return false;
     }
-    const keptGames = games.filter((_game, index) => !gone.has(index + 1));
-    const keptRows = rows.filter((_row, index) => !gone.has(index + 1));
-    games.splice(0, games.length, ...keptGames);
-    rows.splice(0, rows.length, ...keptRows);
+    // In place, without a spread: a collection can be tens of thousands of games.
+    let kept = 0;
+    for (let index = 0; index < games.length; index += 1) {
+      if (gone.has(index + 1)) continue;
+      games[kept] = games[index];
+      rows[kept] = rows[index];
+      kept += 1;
+    }
+    games.length = kept;
+    rows.length = kept;
     return true;
   });
 

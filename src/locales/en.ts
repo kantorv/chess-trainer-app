@@ -898,6 +898,10 @@ const en = {
       shown: "{{shown}} of {{count}} games",
       noMatches: "No games match the filter.",
       rowsPerPage: "Rows per page",
+      /** An upload's table: its games from a file or a paste (CTA-77). */
+      addGames: "Add games",
+      addGamesHint: "Add games to this collection from a PGN file or pasted text",
+      noGames: "This collection has no games yet — add some with Add games.",
       loading: "Reading the collection…",
       /**
        * The picks — a checkbox per row and the export bar in the top bar,
@@ -1005,6 +1009,13 @@ const en = {
       pasteLabel: "Or paste PGN text",
       read_one: "{{count}} game found",
       read_other: "{{count}} games found",
+      /** A collection made with no games — filled later from its table (CTA-77). */
+      empty: "Create empty collection",
+      emptyName: "New collection",
+      /** The same screen adding games to one of the reader's collections — `?into=<id>`. */
+      intoTitle: "Add games to {{name}}",
+      intoIntro: "A .pgn file or pasted PGN text of one game or many. Every game is checked, then added at the end of the collection.",
+      intoSave: "Add games",
       save: "Add collection",
       pastedName: "Pasted collection",
       storage: "Collections you add are kept in this browser only. Clearing site data removes them, and they do not follow you to another device. Every game is checked when it is added — a few seconds for a tournament, a minute or more for 10,000 games.",

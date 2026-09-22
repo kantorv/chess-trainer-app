@@ -23,6 +23,7 @@ import TextField from "@mui/material/TextField";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
+import PostAddRoundedIcon from "@mui/icons-material/PostAddRounded";
 import ShareRoundedIcon from "@mui/icons-material/ShareRounded";
 import WarningAmberRoundedIcon from "@mui/icons-material/WarningAmberRounded";
 import {
@@ -104,6 +105,10 @@ import { loadCollectionGames, useCollectionRows } from "./useLibraryCollections"
  * whole collection is deleted from its row on `/library`. Picks
  * are the screen's, not the URL's: a link carries the filter, not a hand-made
  * selection.
+ *
+ * **Add games** (an upload's only — an empty collection starts here) opens
+ * the upload screen on this collection (`/library/new?into=<id>`): a file or
+ * a paste, checked as an upload is, added at the end.
  *
  * **Analyse** (CTA-77), beside the export bar, hands the picks to **Saved
  * analyses**: one new top-level folder, named after the collection, the
@@ -391,6 +396,21 @@ function CollectionTable({
                 : t("library.table.shown", { shown: shown.length, count: rows.length })}
             </Typography>
           </Box>
+          {collection.source === "uploaded" && (
+            <Tooltip title={t("library.table.addGamesHint")}>
+              <Button
+                size="small"
+                variant={rows.length === 0 ? "contained" : "outlined"}
+                startIcon={<PostAddRoundedIcon fontSize="small" />}
+                component={RouterLink}
+                to={`/library/new?into=${encodeURIComponent(collection.id)}`}
+                data-testid="library-table-add-games"
+                sx={{ flexShrink: 0 }}
+              >
+                {t("library.table.addGames")}
+              </Button>
+            </Tooltip>
+          )}
           <SavedListExportBar
             testIdPrefix="library-picks"
             labelKey="library.table.picks"
@@ -539,7 +559,7 @@ function CollectionTable({
               variant="body2"
               sx={{ color: "text.secondary", textAlign: "center", py: 4 }}
             >
-              {t("library.table.noMatches")}
+              {t(rows.length === 0 ? "library.table.noGames" : "library.table.noMatches")}
             </Typography>
           )}
         </TableContainer>
