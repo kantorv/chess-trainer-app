@@ -44,14 +44,20 @@ function AnalysisLoad({
   onLoadTree,
   onLoadFen,
   onSplit,
+  choiceLabelKey = "analysis.load.choice",
 }: {
   /** The engine knobs a split's analyses are saved under — the board's own. */
   settings: AnalysisSettings;
   onLoadTree: (tree: GameTree) => void;
   /** Throws on a FEN that will not parse. */
   onLoadFen: (fen: string) => void;
-  /** A split was saved into this folder. */
-  onSplit: (folderId: string) => void;
+  /**
+   * A split was saved into this folder. Absent, a text of several games can
+   * only be merged — the Openings explorer keeps nothing (CTA-78).
+   */
+  onSplit?: (folderId: string) => void;
+  /** The merge-or-split choice's locale block — a board without a split words it without one. */
+  choiceLabelKey?: string;
 }) {
   const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -124,7 +130,7 @@ function AnalysisLoad({
     cannot be written, it is taken back out rather than left empty.
   */
   const split = async () => {
-    if (choice === null) return;
+    if (choice === null || onSplit === undefined) return;
     const folder = await createAnalysisFolder(choice.name ?? t("analysis.load.splitFolder"), null);
     if (folder === undefined) {
       setChoiceProblem(t("analysis.load.problem.folder", { max: MAX_ANALYSIS_FOLDERS }));
@@ -229,13 +235,13 @@ function AnalysisLoad({
       )}
       {choice !== null && (
         <MergeSplitChoice
-          labelKey="analysis.load.choice"
+          labelKey={choiceLabelKey}
           testIdPrefix="analysis-choice"
           count={choice.games.length}
           skipped={choice.skipped}
           mergeable={choice.mergeable}
           onMerge={merge}
-          onSplit={() => void split()}
+          onSplit={onSplit === undefined ? undefined : () => void split()}
           problem={choiceProblem}
         />
       )}

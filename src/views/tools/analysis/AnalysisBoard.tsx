@@ -18,6 +18,7 @@ import {
 import { useTranslation } from "react-i18next";
 import type { ChessboardOptions } from "react-chessboard";
 
+import { analysisHandOffOf } from "../../../lib/analysisHandOff";
 import { parseFen } from "../../../lib/fen";
 import { initialPlyOf, parseMoveParam } from "../../../lib/gameNavigation";
 import {
@@ -79,7 +80,10 @@ import { useAnalysisBoard, type AnalysisBoardStart } from "./useAnalysisBoard";
  * the board turns to the side to move), `?game=` + `?move=` (a game out of a
  * catalog, re-read with `parsePgnTree` for its side lines; the ply or its
  * `StartPly`), `?analysis=<id>` (a saved analysis, where the reader left it,
- * facing the way it faced). **`?at=`** — the moves from the start as SAN
+ * facing the way it faced), and — not in the URL — a **whole tree handed over
+ * in the location state** by the Openings explorer (`lib/analysisHandOff.ts`:
+ * a new unsaved board, like a PGN loaded; kept on the screen's own URL writes
+ * so a reload keeps it, until a load or a save names something else). **`?at=`** — the moves from the start as SAN
  * (`lib/repertoireLink.ts`) — is written back on every step with history
  * replace, so the address bar is always a permanent link to the position on
  * screen; it beats `?move=` and the record's own place on the way in. Once a
@@ -92,8 +96,8 @@ import { useAnalysisBoard, type AnalysisBoardStart } from "./useAnalysisBoard";
  */
 const KEEP_MOUNTED = ["moves", "map"] as const;
 
-/** Everything the URL hands the screen, read once. */
-const arrivalOf = (params: URLSearchParams): AnalysisBoardStart => {
+/** Everything the URL (and a hand-off's location state) hands the screen, read once. */
+const arrivalOf = (params: URLSearchParams, state: unknown): AnalysisBoardStart => {
   // A link nobody can read opens as if that parameter were not there.
   let fen: string | undefined;
   const requestedFen = params.get("fen");
@@ -122,6 +126,7 @@ const arrivalOf = (params: URLSearchParams): AnalysisBoardStart => {
       parseMoveParam(params.get("move")) ??
       (arrived === undefined ? undefined : initialPlyOf(arrived.game)),
     resume: findSavedAnalysis(params.get("analysis")),
+    handOff: analysisHandOffOf(state),
     at: params.get(REPERTOIRE_AT_PARAM),
   };
 };
@@ -130,13 +135,13 @@ function AnalysisBoard() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [arrival] = useState(() => arrivalOf(searchParams));
+  const location = useLocation();
+  const [arrival] = useState(() => arrivalOf(searchParams, location.state));
 
   const state = useAnalysisBoard(arrival);
   const { core, engine, record } = state;
 
   const [tab, setTab] = useState("moves");
-  const location = useLocation();
   // Opens as the record's settings say (on for a new board); the Engine tab's
   // switch is the session's.
   const [showArrows, setShowArrows] = useState(record?.showArrows ?? true);
@@ -196,16 +201,33 @@ function AnalysisBoard() {
       ).toString(),
     [urlBase, linkedAt],
   );
+  /*
+    A hand-off's location state rides along on those writes — the browser
+    keeps a history entry's state across a reload, so a reload reopens the
+    handed-over tree — until the board is something else: a load or a save.
+  */
+  const [urlState, setUrlState] = useState<unknown>(() =>
+    arrival.handOff === undefined ? null : location.state,
+  );
+  // Whether the entry carries a state is compared, not the state itself: the
+  // browser's history hands back a clone, never the object that was written.
+  const stateKept = (location.state ?? null) !== null;
   useEffect(() => {
-    if (searchParams.toString() === wantedSearch) return;
-    setSearchParams(wantedSearch, { replace: true });
-  }, [wantedSearch, searchParams, setSearchParams]);
+    if (searchParams.toString() === wantedSearch && stateKept === (urlState !== null)) return;
+    setSearchParams(wantedSearch, { replace: true, state: urlState });
+  }, [wantedSearch, searchParams, setSearchParams, urlState, stateKept]);
 
   /** The URL of a board that is a record now: `?analysis=<id>`. */
-  const pointUrlAt = (id: string) => setUrlBase({ analysis: id });
+  const pointUrlAt = (id: string) => {
+    setUrlBase({ analysis: id });
+    setUrlState(null);
+  };
 
   /** A new board loaded: the URL no longer names what arrived. */
-  const clearArrivalUrl = () => setUrlBase({});
+  const clearArrivalUrl = () => {
+    setUrlBase({});
+    setUrlState(null);
+  };
 
   // Leaving with changes unsaved — a reload, a closed tab — asks first.
   useEffect(() => {

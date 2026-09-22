@@ -39,7 +39,8 @@ function MergeSplitChoice({
   /** Whether the games share a start position, so one tree can hold them. */
   mergeable: boolean;
   onMerge: () => void;
-  onSplit: () => void;
+  /** Absent, no Split is offered — a board that keeps nothing (the Openings explorer). */
+  onSplit?: () => void;
   /** What went wrong with the last choice, already worded; `null` for nothing. */
   problem: string | null;
 }) {
@@ -86,22 +87,24 @@ function MergeSplitChoice({
         </Typography>
       </Box>
 
-      <Box>
-        <Button
-          variant="outlined"
-          startIcon={<CallSplitRoundedIcon />}
-          onClick={onSplit}
-          data-testid={`${testIdPrefix}-split`}
-        >
-          {t(`${labelKey}.split`, { count })}
-        </Button>
-        <Typography
-          variant="caption"
-          sx={{ display: "block", color: "text.secondary", mt: 0.5 }}
-        >
-          {t(`${labelKey}.splitHelp`)}
-        </Typography>
-      </Box>
+      {onSplit !== undefined && (
+        <Box>
+          <Button
+            variant="outlined"
+            startIcon={<CallSplitRoundedIcon />}
+            onClick={onSplit}
+            data-testid={`${testIdPrefix}-split`}
+          >
+            {t(`${labelKey}.split`, { count })}
+          </Button>
+          <Typography
+            variant="caption"
+            sx={{ display: "block", color: "text.secondary", mt: 0.5 }}
+          >
+            {t(`${labelKey}.splitHelp`)}
+          </Typography>
+        </Box>
+      )}
 
       {problem !== null && (
         <Alert severity="error" data-testid={`${testIdPrefix}-problem`}>

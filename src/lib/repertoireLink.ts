@@ -24,11 +24,14 @@ export const REPERTOIRE_AT_PARAM = "at";
 export const atParamOf = (tree: GameTree, nodeId: string | null): string =>
   sanPathTo(tree, nodeId).join(",");
 
+/** The SANs a parameter names, in order — none for an empty or absent value. */
+export const atParamSans = (value: string | null | undefined): string[] =>
+  value === null || value === undefined
+    ? []
+    : value.split(",").map((san) => san.trim()).filter((san) => san !== "");
+
 /** The node a parameter names in `tree`, as far as it goes; `null` is the start. */
-export const nodeAtParam = (tree: GameTree, value: string | null | undefined): string | null =>
-  value === null || value === undefined || value.trim() === ""
-    ? null
-    : nodeAtSanPath(
-        tree,
-        value.split(",").map((san) => san.trim()).filter((san) => san !== ""),
-      );
+export const nodeAtParam = (tree: GameTree, value: string | null | undefined): string | null => {
+  const sans = atParamSans(value);
+  return sans.length === 0 ? null : nodeAtSanPath(tree, sans);
+};
