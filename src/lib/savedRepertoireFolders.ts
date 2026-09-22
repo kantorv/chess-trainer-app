@@ -4,8 +4,8 @@ import type { SavedRepertoire } from "./savedRepertoires";
  * **The folders the reader files repertoires under** — one level of them
  * (CTA-61).
  *
- * The saved games' and saved openings' folders (`savedGameFolders.ts`,
- * `savedOpeningFolders.ts`) are a tree; these are deliberately **flat**: a
+ * The saved games' and saved analyses' folders (`savedGameFolders.ts`,
+ * `savedAnalysisFolders.ts`) are a tree; these are deliberately **flat**: a
  * folder holds repertoires, never another folder. So a folder has no
  * `parentId`, and everything those files do to keep a tree sound — cycle
  * guards, re-parenting on delete, a nested picker — has nothing to do here.

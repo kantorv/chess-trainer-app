@@ -28,7 +28,7 @@ import { formatScore, type Score } from "../../lib/engineAnalysis";
  * only when its own answer changes, so a step touches the token losing the
  * highlight and the token gaining it, and an engine message touches none.
  *
- * The store is owned by the list component (`MoveList`, `VariationTree`) and
+ * The store is owned by the list component (`MoveList`) and
  * handed down by context; the list writes its props into it in a layout
  * effect, so the tokens have caught up before the browser paints. A token
  * rendered with no list around it reads a store that never selects anything.

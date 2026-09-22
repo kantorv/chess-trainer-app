@@ -29,9 +29,9 @@ import { useEffect } from "react";
  * the engine's reply, a settings change, a step to a different node — and only
  * one of them would otherwise be covered.
  *
- * **Openings v2 does not use this.** An opening is explored and discarded far
- * more often than it is kept, so it saves on a button. That is the screen's
- * semantics, not an omission.
+ * **The Openings explorer does not use this** (CTA-78): an opening is
+ * explored, not kept — it saves nothing, and hands its tree to the Analysis
+ * Board instead. That is the screen's semantics, not an omission.
  */
 export const useAutosave = <T>({
   enabled,

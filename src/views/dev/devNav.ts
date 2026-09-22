@@ -1,13 +1,12 @@
 import ScienceRoundedIcon from "@mui/icons-material/ScienceRounded";
 import SportsEsportsRoundedIcon from "@mui/icons-material/SportsEsportsRounded";
 import VisibilityOffRoundedIcon from "@mui/icons-material/VisibilityOffRounded";
-import TravelExploreRoundedIcon from "@mui/icons-material/TravelExploreRounded";
 
 import type { NavFolder } from "../main/navFolders";
 import type { NavItem } from "../main/navItems";
 
 /**
- * **The Development section's sidebar entries** — the folder and the three
+ * **The Development section's sidebar entries** — the folder and the two
  * screens composed from the unified board core
  * ([`.claude/rules/chessboard-v2.md`](../../../.claude/rules/chessboard-v2.md)).
  *
@@ -42,11 +41,12 @@ export const devNavFolder = (): NavFolder => ({
 });
 
 /**
- * The three boards, in the order the spec derives them: Play v2 the linear
- * case, Masked v2 derived from Play, then Openings v2. (Analysis v2, the
- * reference, shipped as the Analysis Board in CTA-73 and left the section;
- * Repertoire v2 read the old Library's catalog and was retired with it in
- * CTA-75 — the Library's own board is its successor.)
+ * The two boards, in the order the spec derives them: Play v2 the linear
+ * case, Masked v2 derived from Play. (Analysis v2, the reference, shipped as
+ * the Analysis Board in CTA-73 and left the section; Repertoire v2 read the
+ * old Library's catalog and was retired with it in CTA-75 — the Library's own
+ * board is its successor; Openings v2 was retired in CTA-78, when the shipped
+ * Openings explorer was rebuilt on the core.)
  */
 export const devNavItems = (): readonly NavItem[] => [
   {
@@ -59,12 +59,6 @@ export const devNavItems = (): readonly NavItem[] => [
     to: "/dev/masked",
     labelKey: "dev.screens.masked",
     icon: VisibilityOffRoundedIcon,
-    folder: DEV_NAV_FOLDER_ID,
-  },
-  {
-    to: "/dev/openings",
-    labelKey: "dev.screens.openings",
-    icon: TravelExploreRoundedIcon,
     folder: DEV_NAV_FOLDER_ID,
   },
 ];

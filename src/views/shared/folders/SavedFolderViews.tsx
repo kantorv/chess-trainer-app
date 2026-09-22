@@ -18,9 +18,7 @@ import type { GameFolder } from "../../../lib/savedGameFolders";
 
 /**
  * The Saved games screen's folder row and card — one folder in the two views,
- * split out of `SavedGames.tsx` beside the game rows for the same reason the
- * openings' [`SavedFolderViews.tsx`](../../../tools/openings/saved/SavedFolderViews.tsx)
- * is split out of theirs. The folder is **not** a game, which is why this is a
+ * split out of `SavedGames.tsx` beside the game rows. The folder is **not** a game, which is why this is a
  * second file and not a prop on that one: a folder carries a name, a count and
  * four management controls, where a game carries a position and three
  * destinations.

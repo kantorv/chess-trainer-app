@@ -5,9 +5,10 @@ map, the comments, the next-move arrows — instead of wiring them inline. This
 is the spec the shared explorer in [`src/views/explorer/`](../../src/views/explorer/)
 implements (CTA-72). The repertoire player (`/repertoires/<id>` and its games)
 and, since CTA-73, the Analysis Board (`/tools/analysis`), since CTA-74,
-Play with Engine (`/engine/play`) and, since CTA-75, the Library's game board
-(`/library/<collection>/<game>`) are built on it. The other screens will move
-onto it in later issues.
+Play with Engine (`/engine/play`), since CTA-75, the Library's game board
+(`/library/<collection>/<game>`) and, since CTA-78, the Openings explorer
+(`/openings`) are built on it. The other screens will move onto it in later
+issues.
 
 Read [`chessboard-v2.md`](./chessboard-v2.md) first. It owns the board core a
 tree view reads from (`useBoardCore`), the shell and panel a view's parts are
@@ -222,6 +223,23 @@ strip offers to keep. Its session is the Analysis Board's own
 (both kept mounted) and `annotations`, its changes strip, Play's status line
 and `nextMoves` (on the Moves tab) in its footer — the Analysis Board's
 layout, with an Info tab (the game's tags) in place of Load.
+
+### The Openings explorer — the fifth (CTA-78)
+
+`views/openings/OpeningsBoard.tsx` passes Play with Engine's options — nothing
+is "added" against a record, because nothing on it is kept:
+`onEditTree: core.replaceTree`, `playChances: false`, `annotations: true`,
+`arrows: { show }` (a switch at the top of its Moves tab, on) and
+`map: { linked: true }`. Its session is the Analysis Board's
+(`useAnalysisSession`). What it adds is beside the view, not inside it: the
+**book** (`useOpeningBookModule`) gets a tab of its own, first, and its
+arrows are joined with the view's `arrows` into the board's one set by the
+screen (`views/openings/openingArrows.ts` — a move the tree has is drawn once,
+as the tree's; the book row under the pointer recolours its arrow). It places
+`moves` and `map` in its Moves and Map tabs (both kept mounted) and
+`annotations`, Play's status line and `nextMoves` (on the Moves tab) in its
+footer. The screen's own reference is
+[`openings-explorer.md`](./openings-explorer.md).
 
 ---
 

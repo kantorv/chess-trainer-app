@@ -15,8 +15,8 @@ import {
  * The store half of [`savedRepertoires.ts`](./savedRepertoires.ts), built over
  * the shared [`recordStore.ts`](./recordStore.ts) scaffolding, which carries
  * the reasoning for the non-throwing read, the revision-stamped snapshot and
- * the `storage`-event subscription. [`savedOpeningStore.ts`](./savedOpeningStore.ts)
- * again, with one difference worth saying:
+ * the `storage`-event subscription — the saved games' store again, with one
+ * difference worth saying:
  *
  * - **The folder a repertoire is filed under is a second store**
  *   ([`savedRepertoireFolderStore.ts`](./savedRepertoireFolderStore.ts)), one
@@ -112,7 +112,7 @@ export const addRepertoires = (
 /**
  * Change one repertoire's title and settings, **in place** — the record keeps
  * its position in the list, because editing what a repertoire is called is
- * not working on it (`updateSavedOpeningNote`'s rule). An unknown id, or a
+ * not working on it. An unknown id, or a
  * write that changes nothing, is a no-op.
  */
 export const updateRepertoireSettings = (

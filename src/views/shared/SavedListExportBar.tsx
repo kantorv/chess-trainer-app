@@ -14,12 +14,10 @@ import { useTranslation } from "react-i18next";
  * decides whether to render it (it belongs beside a view that has the
  * checkboxes it drives) and hands the tri-state in:
  *
- * - `checked` / `indeterminate` are **the caller's** computation, because the
- *   two screens that keep a flat list compute them over the whole list while
- *   the Saved openings screen computes them over the rows on screen — its
- *   select-all works on the folder the reader is standing in, while its chip
- *   counts the whole picked set wherever they are. Both read `selectedCount`
- *   for the chip, so the count is one prop and the tri-state is two.
+ * - `checked` / `indeterminate` are **the caller's** computation, because
+ *   screens differ in what select-all covers (the rows on screen, a whole
+ *   folder, every row a filter leaves). All read `selectedCount` for the
+ *   chip, so the count is one prop and the tri-state is two.
  * - `onClearSelected` is the chip's clear. `onDownload` is the download; it is
  *   enabled exactly when something is picked, which this derives from
  *   `selectedCount`.

@@ -40,7 +40,7 @@
  * ### A row the normaliser refuses is dropped, not rendered
  *
  * Stored JSON is data from another tab, an older build, or a hand edit. The
- * normaliser — the `savedGameFrom` / `openingFolderFrom`-style guard each
+ * normaliser — the `savedGameFrom`-style guard each
  * store passes in — is what turns a row back into a record, and a row it does
  * not recognise is dropped rather than handed to a screen as one.
  */

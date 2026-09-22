@@ -65,9 +65,9 @@ vi.mock("../../lib/openings", async (importOriginal) => {
 import AnalysisBoard from "../tools/analysis/AnalysisBoard";
 import PlayWithEngine from "../engine/play/PlayWithEngine";
 import LibraryGameBoard from "../library/LibraryGameBoard";
+import OpeningsBoard from "../openings/OpeningsBoard";
 import { parsePgnTree } from "../../lib/pgn";
 import MaskedV2 from "./masked/MaskedV2";
-import OpeningsV2 from "./openings/OpeningsV2";
 import PlayV2 from "./play/PlayV2";
 
 /** A game of an uploaded collection on the Library's board (CTA-75). */
@@ -95,9 +95,10 @@ const BOARDS: readonly { name: string; panelId: string; Screen: () => ReactNode 
     { name: "Play with Engine", panelId: "play-with-engine-panel", Screen: PlayWithEngine },
     // The Library's game board (CTA-75), composed as the Analysis Board is.
     { name: "Library game", panelId: "library-game-panel", Screen: LibraryGame },
+    // The Openings explorer (CTA-78), in Openings v2's place.
+    { name: "Openings explorer", panelId: "openings-panel", Screen: OpeningsBoard },
     { name: "Play with Engine v2", panelId: "dev-play-panel", Screen: PlayV2 },
     { name: "Masked Pieces v2", panelId: "dev-masked-panel", Screen: MaskedV2 },
-    { name: "Openings v2", panelId: "dev-openings-panel", Screen: OpeningsV2 },
   ];
 
 const renderBoard = (Screen: () => ReactNode) =>

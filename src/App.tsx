@@ -11,8 +11,7 @@ import { default as AnalysisBoardScreen  } from './views/tools/analysis/Main'
 import { default as SavedAnalysesScreen  } from './views/tools/analysis/saved/Main'
 import { default as AnalysisSettingsScreen  } from './views/tools/analysis/saved/AnalysisSettingsScreenMain'
 import { default as BoardEditorScreen  } from './views/tools/editor/Main'
-import { default as OpeningsScreen  } from './views/tools/openings/Main'
-import { default as SavedOpeningsScreen  } from './views/tools/openings/saved/Main'
+import { default as OpeningsScreen  } from './views/openings/Main'
 import { default as LibraryScreen  } from './views/library/LibraryHomeMain'
 import { default as LibraryUploadScreen  } from './views/library/LibraryUploadMain'
 import { default as LibraryCollectionScreen  } from './views/library/CollectionScreenMain'
@@ -47,7 +46,7 @@ export function ToolsOpeningsRedirect() {
 }
 
 /**
- * The **Development** section's routes (CTA-60) — the five boards composed from
+ * The **Development** section's routes (CTA-60) — the boards composed from
  * the unified board core (`.claude/rules/chessboard-v2.md`).
  *
  * Dev-only, and this array is the whole of the gate. Two things make it
@@ -77,7 +76,6 @@ const devRoutes: RouteObject[] = import.meta.env.DEV
   ? [
       { path: "/dev/play", element: devScreen(() => import("./views/dev/play/Main")) },
       { path: "/dev/masked", element: devScreen(() => import("./views/dev/masked/Main")) },
-      { path: "/dev/openings", element: devScreen(() => import("./views/dev/openings/Main")) },
     ]
   : [];
 
@@ -130,17 +128,11 @@ const routes = createBrowserRouter(
           path: "/tools/editor",
           element: <BoardEditorScreen />
         },
+        // The Openings explorer (CTA-78): a v2 board with the opening book.
+        // It keeps nothing — its Analysis button hands the tree on.
         {
           path: "/openings",
           element: <OpeningsScreen />
-        },
-        // The reader's own saved openings, kept in `localStorage`
-        // (`lib/savedOpeningStore.ts`). The Saved analyses screen's counterpart,
-        // and a screen of its own for the same reason: these
-        // are this app's own output, so there is no catalog to nest.
-        {
-          path: "/openings/saved",
-          element: <SavedOpeningsScreen />
         },
         // The reader's own repertoires (CTA-61), kept in `localStorage`
         // (`lib/savedRepertoireStore.ts`): the list, the screen one is brought

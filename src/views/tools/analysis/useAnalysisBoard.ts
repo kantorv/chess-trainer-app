@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 import { DEFAULT_POSITION } from "chess.js";
 
+import type { AnalysisHandOff } from "../../../lib/analysisHandOff";
 import { emptyTree, sanPathTo, type GameTree } from "../../../lib/gameTree";
 import { parseFen } from "../../../lib/fen";
 import { nodeAtParam } from "../../../lib/repertoireLink";
@@ -61,7 +62,8 @@ import { useAnalysisSession } from "./useAnalysisSession";
  * record takes the tree, the place in it and the engine settings),
  * **Save as copy** (a new record, the session moves to it) or **Discard**
  * (back to the baseline). Without one — a blank board, a `?fen=` or `?game=`
- * arrival, a PGN just loaded — **Save** names it and files it.
+ * arrival, a tree handed over by the Openings explorer, a PGN just loaded —
+ * **Save** names it and files it.
  *
  * The moves added since the baseline are the explorer's extensions — tinted in
  * the list and ringed on the map (`extensionIdsOf`, recomputed, never tracked).
@@ -80,8 +82,14 @@ export type AnalysisBoardStart = {
   tree?: GameTree;
   /** The mainline ply an arriving game opens at — `?move=`, or its `StartPly`. */
   ply?: number;
-  /** A saved analysis to go on working on — `?analysis=`. Beats the other two. */
+  /** A saved analysis to go on working on — `?analysis=`. Beats everything else. */
   resume?: SavedAnalysis;
+  /**
+   * A whole tree handed over in the location state (`lib/analysisHandOff.ts`,
+   * the Openings explorer's Analysis button): a new board, not yet saved,
+   * facing the way it was handed over. Beats `tree` and `fen`.
+   */
+  handOff?: AnalysisHandOff;
   /** A permanent link's position, SAN from the start — `?at=`. Beats `ply` and the record's own place. */
   at?: string | null;
 };
@@ -95,6 +103,7 @@ export const useAnalysisBoard = ({
   tree: arrivedTree,
   ply,
   resume,
+  handOff,
   at,
 }: AnalysisBoardStart = {}) => {
   /*
@@ -106,28 +115,38 @@ export const useAnalysisBoard = ({
   */
   const [start] = useState(() => {
     const reopened = resume === undefined ? undefined : savedAnalysisToTree(resume);
+    const handedOver = reopened === undefined ? handOff : undefined;
     const tree =
-      reopened ?? arrivedTree ?? (fen === undefined ? emptyTree() : emptyTree(fen));
+      reopened ??
+      handedOver?.tree ??
+      arrivedTree ??
+      (fen === undefined ? emptyTree() : emptyTree(fen));
     const linked = at === undefined || at === null ? null : nodeAtParam(tree, at);
     const nodeId =
       linked ??
       (reopened !== undefined && resume !== undefined
         ? savedAnalysisNode(resume, reopened)
         : undefined);
-    // A position turns the board; a game does not; a record keeps its own.
+    // A position turns the board; a game does not; a record and a hand-off keep their own.
     const orientation: "white" | "black" =
       reopened !== undefined && resume !== undefined
         ? resume.orientation
-        : arrivedTree === undefined && fen !== undefined && turnOf(fen) === "b"
+        : handedOver !== undefined
+          ? handedOver.orientation
+          : arrivedTree === undefined && fen !== undefined && turnOf(fen) === "b"
           ? "black"
           : "white";
     return {
       tree,
       nodeId: nodeId ?? undefined,
       // `?move=` is a mainline ply of a game; a record or a link beats it.
-      ply: reopened === undefined && linked === null && arrivedTree !== undefined ? ply : undefined,
+      ply:
+        reopened === undefined && handedOver === undefined && linked === null && arrivedTree !== undefined
+          ? ply
+          : undefined,
       orientation,
       record: reopened === undefined ? null : (resume ?? null),
+      handedOver: handedOver !== undefined,
     };
   });
 
@@ -143,8 +162,8 @@ export const useAnalysisBoard = ({
   const { clearAnalysis } = engine;
 
   const [record, setRecord] = useState<SavedAnalysis | null>(start.record);
-  /** A tree the reader loaded (Load tab, Clear) and has not saved yet. */
-  const [loadedUnsaved, setLoadedUnsaved] = useState(false);
+  /** A tree the reader loaded (Load tab, Clear, a hand-off) and has not saved yet. */
+  const [loadedUnsaved, setLoadedUnsaved] = useState(start.handedOver);
   const [problem, setProblem] = useState<SavedAnalysisProblem | null>(null);
 
   /** Whether leaving now would lose something — what `beforeunload` asks about. */

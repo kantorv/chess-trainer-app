@@ -462,7 +462,7 @@ carries the filter, not a hand-made selection.
   `SavedListExportBar` (prefix `library-picks`, `labelKey`
   `library.table.picks`). **Select-all takes every row the filters leave, on
   every page**, and adds them to the picks. Unticking removes only the rows
-  shown. The chip counts every pick. This is the Saved openings rule.
+  shown. The chip counts every pick.
 - **Download** (`library-picks-download`): one `.pgn` of the picked games in
   collection order, each game exactly as stored,
   `<collection>-<N>-games.pgn`. The whole collection downloads from its

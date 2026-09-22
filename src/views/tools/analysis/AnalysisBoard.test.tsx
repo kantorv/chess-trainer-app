@@ -3,6 +3,7 @@ import { act, fireEvent, render, screen, waitFor, within } from "@testing-librar
 import { MemoryRouter, Route, Routes, useLocation } from "react-router";
 
 import i18n from "../../../i18n";
+import { analysisHandOffState } from "../../../lib/analysisHandOff";
 import { DEFAULT_ANALYSIS_SETTINGS } from "../../../lib/analysisSettings";
 import { parsePgnTree } from "../../../lib/pgn";
 import { savedAnalysisOf, type SavedAnalysis } from "../../../lib/savedAnalyses";
@@ -55,7 +56,9 @@ function Where() {
   return <div data-testid="where">{`${location.pathname}${location.search}`}</div>;
 }
 
-const mount = (entry = "/tools/analysis") =>
+const mount = (
+  entry: string | { pathname: string; search?: string; state?: unknown } = "/tools/analysis",
+) =>
   render(
     <AppThemeWithLang>
       <MemoryRouter initialEntries={[entry]}>
@@ -187,6 +190,46 @@ describe("the Analysis Board's arrivals", () => {
       screen.getByTestId("board-control-first").click();
     });
     expect(where()).toBe("/tools/analysis");
+  });
+});
+
+describe("a whole tree handed over by the Openings explorer (CTA-78)", () => {
+  const AFTER_E4_C5 = "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2";
+  const handedOver = () =>
+    mount({
+      pathname: "/tools/analysis",
+      search: "?at=e4,c5",
+      state: analysisHandOffState(
+        parsePgnTree("1. e4 e5 {The main line} (1... c5 2. Nf3) 2. Nf3 *"),
+        "black",
+      ),
+    });
+
+  it("opens the tree, side lines and comments, at ?at=, facing the way it was handed over", () => {
+    handedOver();
+    expect(boardOptions().position).toBe(AFTER_E4_C5);
+    expect(boardOptions().boardOrientation).toBe("black");
+    openTab("export");
+    const pgn = (screen.getByTestId("analysis-export-pgn") as HTMLTextAreaElement).value;
+    expect(pgn).toContain("{ The main line }");
+    expect(pgn).toContain("(1... c5 2. Nf3)");
+  });
+
+  it("is a new board, not saved: Save names it, and a reload asks first", () => {
+    handedOver();
+    const unload = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(unload);
+    expect(unload.defaultPrevented).toBe(true);
+
+    fireEvent.click(screen.getByTestId("analysis-save"));
+    expect(screen.getByTestId("analysis-save-name")).toBeInTheDocument();
+    expect(listed()).toEqual([]);
+  });
+
+  it("ignores a location state that is not a hand-off", () => {
+    mount({ pathname: "/tools/analysis", state: { analysisHandOff: { pgn: 3 } } });
+    expect(boardOptions().position).toBe(START);
+    expect(screen.getByTestId("analysis-save")).toBeDisabled();
   });
 });
 

@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act, render, screen, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import type { ReactNode } from "react";
 import { Chess } from "chess.js";
@@ -41,13 +40,13 @@ vi.mock("../../lib/openings", async (importOriginal) => {
 
 import { boardOptions, FakeEngine } from "./devTestHarness";
 import { DEV_NAV_FOLDER_ID, devNavItems } from "./devNav";
-import { devSavedGamesSnapshot, devSavedOpeningsSnapshot } from "./core/devStores";
+import { devSavedGamesSnapshot } from "./core/devStores";
 import AnalysisBoard from "../tools/analysis/AnalysisBoard";
 import PlayWithEngine from "../engine/play/PlayWithEngine";
 import LibraryGameBoard from "../library/LibraryGameBoard";
+import OpeningsBoard from "../openings/OpeningsBoard";
 import { parsePgnTree } from "../../lib/pgn";
 import MaskedV2 from "./masked/MaskedV2";
-import OpeningsV2 from "./openings/OpeningsV2";
 import PlayV2 from "./play/PlayV2";
 
 
@@ -75,9 +74,10 @@ const BOARDS: readonly {
   // Play with Engine, a v2 screen since CTA-74.
   { name: "Play with Engine", id: "play-with-engine", Screen: PlayWithEngine },
   { name: "Library game", id: "library-game", Screen: LibraryGame },
+  // The Openings explorer (CTA-78), in Openings v2's place.
+  { name: "Openings explorer", id: "openings", Screen: OpeningsBoard },
   { name: "Play with Engine v2", id: "dev-play", Screen: PlayV2 },
   { name: "Masked Pieces v2", id: "dev-masked", Screen: MaskedV2 },
-  { name: "Openings v2", id: "dev-openings", Screen: OpeningsV2 },
 ];
 
 const renderBoard = (Screen: () => ReactNode, entry = "/dev") =>
@@ -154,10 +154,11 @@ describe("the Development section", () => {
     expect(navFolders().map((folder) => folder.id)).toContain(
       DEV_NAV_FOLDER_ID,
     );
-    // Three: Analysis v2 shipped as the Analysis Board (CTA-73), and
-    // Repertoire v2 was retired with the old Library (CTA-75).
+    // Two: Analysis v2 shipped as the Analysis Board (CTA-73), Repertoire v2
+    // was retired with the old Library (CTA-75) and Openings v2 when the
+    // shipped Openings explorer was rebuilt on the core (CTA-78).
     expect(navItems().filter((item) => item.folder === DEV_NAV_FOLDER_ID)).toHaveLength(
-      3,
+      2,
     );
   });
 
@@ -172,11 +173,10 @@ describe("the Development section", () => {
     }
   });
 
-  it("routes the three boards at /dev/*", () => {
+  it("routes the two boards at /dev/*", () => {
     expect(devNavItems().map((item) => item.to)).toEqual([
       "/dev/play",
       "/dev/masked",
-      "/dev/openings",
     ]);
   });
 });
@@ -368,32 +368,21 @@ describe("Masked Pieces v2", () => {
   });
 });
 
-describe("Openings v2", () => {
-  it("keeps its button-triggered save, and never autosaves", async () => {
-    // Criterion 6: an opening is explored and discarded far more often than it
-    // is kept, so this is the one derived board that composes no persistence.
-    const user = userEvent.setup();
-    renderBoard(OpeningsV2);
+describe("the Openings explorer (CTA-78)", () => {
+  it("keeps nothing: no save, and no store written", () => {
+    renderBoard(OpeningsBoard);
 
     expect(drag("e2", "e4")).toBe(true);
-    expect(devSavedOpeningsSnapshot()).toEqual([]);
-
-    await user.type(screen.getByTestId("dev-openings-note"), "My line");
-    await user.click(screen.getByTestId("dev-openings-save"));
-
-    const saved = devSavedOpeningsSnapshot();
-    expect(saved).toHaveLength(1);
-    expect(saved[0].note).toBe("My line");
+    expect(screen.queryByTestId("openings-save")).not.toBeInTheDocument();
+    expect(devSavedGamesSnapshot()).toEqual([]);
   });
 
-  it("carries the book explorer in its footer", () => {
-    renderBoard(OpeningsV2);
+  it("carries the book explorer in a tab of its own", () => {
+    renderBoard(OpeningsBoard);
 
     // The book is stubbed empty here, so what is asserted is that the explorer
     // is on screen at all — the slot, not eco.json.
-    expect(screen.getByTestId("dev-openings-explorer")).toBeInTheDocument();
-    expect(screen.getByTestId("dev-openings-panel-footer")).toContainElement(
-      screen.getByTestId("dev-openings-explorer"),
-    );
+    expect(screen.getByTestId("openings-panel-tab-book")).toBeInTheDocument();
+    expect(screen.getByTestId("openings-book")).toBeInTheDocument();
   });
 });

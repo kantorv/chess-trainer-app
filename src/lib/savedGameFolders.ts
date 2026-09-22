@@ -6,10 +6,7 @@ import type { SavedGame } from "./savedGames";
  *
  * The Saved games screen's flat list grew into a folder system (CTA-46), and
  * this is the pure half of it: the {@link GameFolder} entity and the reads over
- * a list of them. It is
- * [`savedOpeningFolders.ts`](./savedOpeningFolders.ts) again, and for the same
- * reason — the same deliberate near-copy the saved analyses are of the saved
- * games. The storage half is
+ * a list of them. The storage half is
  * [`savedGameFolderStore.ts`](./savedGameFolderStore.ts) — a versioned
  * `localStorage` key beside the games' own
  * ([`savedGameStore.ts`](./savedGameStore.ts)) — and the React binding is
