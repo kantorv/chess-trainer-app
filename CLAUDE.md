@@ -255,7 +255,9 @@ Four things follow, and they are the whole design:
   hand-off and no store. An **initial FEN** (already validated by the host)
   seeds it, turns the board to the side to move, and adds a third reset,
   **"Reset"**, back to it — beside "New board" (the standard start) and "Clear
-  board".
+  board". A host may also **pin the orientation** (the Lobby pins it to the
+  side the reader chose to play; Random pins nothing); pinned, the board
+  faces that side whatever is loaded, and there is no Flip.
 
 A position crosses to the other screens as a **query parameter** —
 `/engine/play?fen=…` (the Lobby's Start, `lib/newGameLink.ts`),

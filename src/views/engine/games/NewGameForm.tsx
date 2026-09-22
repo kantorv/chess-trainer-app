@@ -47,7 +47,8 @@ import EngineSettings from "../play/EngineSettings";
  * and the storage note sit below the tabs, on both. Whenever the editor holds
  * a position other than the standard start, Start carries it as `?fen=`
  * (from either tab — the Game tab says so, with a way back to the standard
- * start), and Start is off while that position cannot be played from. A
+ * start), and Start is off while that position cannot be played from. The
+ * editor's board faces the side chosen on the Game tab (Random: its own). A
  * `side` on the link still beats the position's side to move (`arrivalOf`).
  */
 
@@ -63,7 +64,10 @@ function NewGameForm() {
   const [side, setSide] = useState<NewGameSide>("white");
   const [evalBar, setEvalBar] = useState(true);
   const [tab, setTab] = useState<FormTab>("game");
-  const editor = usePositionEditor();
+  // The editor faces the side the reader will play; Random leaves it its own.
+  const editor = usePositionEditor(undefined, {
+    orientation: side === "random" ? undefined : side,
+  });
 
   /*
     The position Start carries: none for the standard start, so an ordinary

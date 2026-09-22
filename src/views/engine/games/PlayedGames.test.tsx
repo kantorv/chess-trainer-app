@@ -377,6 +377,29 @@ describe("Lobby — the new-game form's Board editor (CTA-83)", () => {
     expect(startParams().has("fen")).toBe(false);
   });
 
+  it("faces the editor's board to the side chosen on the Game tab", () => {
+    mount();
+    const orientation = () =>
+      editorBoard.options?.boardOrientation;
+
+    fireEvent.click(screen.getByTestId("new-game-tab-editor"));
+    expect(orientation()).toBe("white");
+
+    fireEvent.click(screen.getByTestId("new-game-tab-game"));
+    fireEvent.click(screen.getByTestId("new-game-side-black"));
+    fireEvent.click(screen.getByTestId("new-game-tab-editor"));
+    expect(orientation()).toBe("black");
+    // The side is the reader's choice, so the editor offers no Flip of its own.
+    expect(screen.queryByTestId("new-game-editor-reset-flip")).toBeNull();
+
+    // Random names no side: the editor faces its own way, and can be flipped.
+    fireEvent.click(screen.getByTestId("new-game-tab-game"));
+    fireEvent.click(screen.getByTestId("new-game-side-random"));
+    fireEvent.click(screen.getByTestId("new-game-tab-editor"));
+    expect(orientation()).toBe("white");
+    expect(screen.getByTestId("new-game-editor-reset-flip")).toBeInTheDocument();
+  });
+
   it("switches Start off, and says why, while the position is illegal", () => {
     mount();
     fireEvent.click(screen.getByTestId("new-game-tab-editor"));

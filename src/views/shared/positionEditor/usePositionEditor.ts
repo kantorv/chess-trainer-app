@@ -57,9 +57,26 @@ import {
  * `CLAUDE.md`, "A position turns the board; a game does not"), and is what the
  * third reset, "Reset", returns to. Absent, the standard start, and no third
  * reset.
+ *
+ * ## A host may pin the orientation
+ *
+ * `options.orientation` is the host's say over which way the board faces —
+ * the Lobby passes the side the reader chose to play (CTA-83). While it is
+ * set the board faces it on every render: a load, Reset and Flip no longer
+ * turn it (the component hides Flip), because the host's choice is the one
+ * the reader made. Unset (the Lobby's Random), the editor's own orientation
+ * rules again, as it last stood.
  */
 
-export const usePositionEditor = (initialFen?: string) => {
+export type PositionEditorOptions = {
+  /** The side the board is pinned to face; absent, the editor turns it itself. */
+  orientation?: "white" | "black";
+};
+
+export const usePositionEditor = (
+  initialFen?: string,
+  { orientation: pinnedOrientation }: PositionEditorOptions = {},
+) => {
   // Both seeds come off one string: the handed-over position when there is one,
   // the standard start otherwise.
   const initial = initialFen ?? START_POSITION;
@@ -275,7 +292,10 @@ export const usePositionEditor = (initialFen?: string) => {
     problems,
     /** Whether the position could be played from — the host's gate for taking it elsewhere. */
     isValid: problems.length === 0,
-    orientation,
+    /** The side at the bottom — the host's pin when it set one. */
+    orientation: pinnedOrientation ?? orientation,
+    /** Whether the host pinned it — the component then offers no Flip. */
+    orientationPinned: pinnedOrientation !== undefined,
     /** The position the editor was opened on, or `undefined` if none was given. */
     initialFen,
     flipBoard,

@@ -251,12 +251,17 @@ function PositionEditor({ editor, testId, boardMaxWidth }: PositionEditorProps) 
       icon: <DeleteSweepRoundedIcon fontSize="small" />,
       onClick: editor.clearBoard,
     },
-    {
-      key: "flip",
-      label: t("positionEditor.controls.flip"),
-      icon: <SwapVertRoundedIcon fontSize="small" />,
-      onClick: editor.flipBoard,
-    },
+    // A board whose side the host pinned has nothing to flip.
+    ...(editor.orientationPinned
+      ? []
+      : [
+          {
+            key: "flip",
+            label: t("positionEditor.controls.flip"),
+            icon: <SwapVertRoundedIcon fontSize="small" />,
+            onClick: editor.flipBoard,
+          },
+        ]),
   ];
 
   return (

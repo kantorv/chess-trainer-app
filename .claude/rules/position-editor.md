@@ -42,7 +42,7 @@ like every shared piece's (`tabs`, `palette`, `fields`, `controls`,
 ## 1. The contract
 
 ```tsx
-const editor = usePositionEditor(initialFen?);   // the host owns it
+const editor = usePositionEditor(initialFen?, { orientation? });   // the host owns it
 <PositionEditor editor={editor} testId="…" boardMaxWidth={360} />
 
 editor.fen        // the position as a FEN — always whole, illegal or not
@@ -60,6 +60,13 @@ editor.isValid    // problems.length === 0
 validated by the host (`parseFen`). Given: the board and fields start there,
 the board faces its side to move, and a third reset, **Reset**, returns to it.
 Absent: the standard start, facing White, no third reset.
+
+`options.orientation` — the host **pins** which way the board faces. While
+set, `editor.orientation` is it on every render: loads, Reset and Flip no
+longer turn the board, and the component renders no Flip
+(`editor.orientationPinned`). Unset, the editor turns the board by its own
+rules, from where its own orientation last stood. The Lobby pins it to the
+side chosen on the Game tab.
 
 **Why a hook plus a component, not `onChange(fen, problems)`**: the host has
 to *act* on the position (the Lobby's "Use the standard start" on another tab)
@@ -87,7 +94,8 @@ switches off itself is the FEN tab's copy button.
 4. **A position turns the board; arranging one does not.** `loadFen`,
    `loadPosition` (a PGN's final position) and Reset (back to the initial
    position) face the side to move; New board, Clear board, the trash and the
-   side-to-move field leave the reader's viewpoint alone.
+   side-to-move field leave the reader's viewpoint alone. A host's pin
+   (`options.orientation`) beats all of it.
 5. **`ChessboardProvider` carries every option**, `<Chessboard />` takes none,
    and the palettes are inside the provider (a `SparePiece` reaches the drag
    context only from there). `options.id` is `${testId}-board`.
@@ -104,8 +112,11 @@ switches off itself is the FEN tab's copy button.
 
 `NewGameForm.tsx` (`/engine/games`, the right-hand panel):
 
-- The form holds `const editor = usePositionEditor()` beside its settings,
-  side and eval-bar state, and renders two tabs, **Game** and **Board
+- The form holds `usePositionEditor(undefined, { orientation })` beside its
+  settings, side and eval-bar state, the orientation pinned to the side chosen
+  on the Game tab — White or Black at the bottom, as the reader will play;
+  **Random** pins nothing, and the editor faces its own way with its Flip
+  back. It renders two tabs, **Game** and **Board
   editor**; the Board editor tab is `<PositionEditor editor={editor}
   testId="new-game-editor" boardMaxWidth={360} />` inside the panel's one
   scrolling region. The games list keeps the board square.

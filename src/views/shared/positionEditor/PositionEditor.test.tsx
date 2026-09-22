@@ -615,6 +615,49 @@ describe("PositionEditor — illegal positions", () => {
   });
 });
 
+describe("PositionEditor — an orientation the host pins", () => {
+  function Pinned({ side }: { side?: "white" | "black" }) {
+    const editor = usePositionEditor(undefined, { orientation: side });
+    return <PositionEditor editor={editor} testId="editor" />;
+  }
+  const mountPinned = (side?: "white" | "black") =>
+    render(
+      <AppThemeWithLang>
+        <Pinned side={side} />
+      </AppThemeWithLang>,
+    );
+
+  it("faces the pinned side, offers no Flip, and a load does not turn it", async () => {
+    mountPinned("black");
+    expect(orientation()).toBe("black");
+    expect(screen.queryByTestId("editor-reset-flip")).toBeNull();
+
+    await setUpFen("7k/8/8/8/8/8/8/K7 w - - 0 1");
+    expect(orientation()).toBe("black");
+  });
+
+  it("follows the pin as it changes, and hands the board back when it goes", () => {
+    const view = mountPinned("white");
+    expect(orientation()).toBe("white");
+
+    view.rerender(
+      <AppThemeWithLang>
+        <Pinned side="black" />
+      </AppThemeWithLang>,
+    );
+    expect(orientation()).toBe("black");
+
+    view.rerender(
+      <AppThemeWithLang>
+        <Pinned />
+      </AppThemeWithLang>,
+    );
+    // The editor's own orientation, as it last stood — the standard start's White.
+    expect(orientation()).toBe("white");
+    expect(screen.getByTestId("editor-reset-flip")).toBeInTheDocument();
+  });
+});
+
 describe("PositionEditor — what the host reads", () => {
   it("hands the host the position and its problems, and nothing else", () => {
     renderEditor();
