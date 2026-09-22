@@ -6,9 +6,8 @@
  * It lived in `views/tools/analysis/useAnalysisBoard.ts` until a saved analysis
  * had to record it, and then moved here for the reason
  * [`engineSettings.ts`](./engineSettings.ts) exists: `lib/savedAnalyses.ts` is
- * plain data and cannot import a hook. Nothing else changed —
- * `AnalysisSettings.tsx` still imports these from the hook, which re-exports
- * them, so that hook stays the one module a reader of the screen has to open.
+ * plain data and cannot import a hook. Since the v2 Analysis Board (CTA-73)
+ * every consumer — `AnalysisSettings.tsx` included — imports them from here.
  *
  * As there, it is **not** a description of the running engine. Which knobs the
  * worker actually has is `Engine.options`' business

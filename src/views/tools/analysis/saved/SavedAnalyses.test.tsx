@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { act, render, screen } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { Chess } from "chess.js";
@@ -15,10 +15,18 @@ import {
   type GameTree,
 } from "../../../../lib/gameTree";
 import { savedAnalysisOf, type SavedAnalysis } from "../../../../lib/savedAnalyses";
-import { saveAnalysis } from "../../../../lib/savedAnalysisStore";
-import { cardSizeTrack } from "../../../library/cardSize";
+import {
+  createAnalysisFolder,
+  analysisFoldersSnapshot,
+} from "../../../../lib/savedAnalysisFolderStore";
+import {
+  addAnalyses,
+  findSavedAnalysis,
+  saveAnalysis,
+} from "../../../../lib/savedAnalysisStore";
+import { cardSizeTrack } from "../../../shared/cardSize";
 import { RightPanelOutlet, RightPanelProvider } from "../../../main/rightPanel";
-import SavedAnalyses from "./SavedAnalyses";
+import SavedAnalyses, { SAVED_ANALYSES_PAGE } from "./SavedAnalyses";
 
 /*
   The same two stand-ins the Saved games suite needs, and for the same reasons.
@@ -103,10 +111,11 @@ const save = (
     now,
   );
 
-const renderScreen = () =>
-  render(
+/** Mount the screen, and wait for the store's first read — the list's first frame. */
+const renderScreen = async (entry = "/tools/analysis/saved") => {
+  const rendered = render(
     <AppThemeWithLang>
-      <MemoryRouter initialEntries={["/tools/analysis/saved"]}>
+      <MemoryRouter initialEntries={[entry]}>
         <RightPanelProvider>
           <SavedAnalyses />
           <RightPanelOutlet />
@@ -114,6 +123,9 @@ const renderScreen = () =>
       </MemoryRouter>
     </AppThemeWithLang>,
   );
+  await screen.findByTestId("saved-analyses-screen");
+  return rendered;
+};
 
 /** Let the opening book's promise settle, as it does a tick after mount. */
 const settleBook = async () => {
@@ -127,8 +139,8 @@ beforeEach(async () => {
 });
 
 describe("Saved analyses — the list", () => {
-  it("says there is nothing yet on a browser that has analysed nothing", () => {
-    renderScreen();
+  it("says there is nothing yet on a browser that has analysed nothing", async () => {
+    await renderScreen();
 
     expect(screen.getByTestId("saved-analyses-empty")).toBeInTheDocument();
     expect(screen.getByTestId("saved-analyses-count")).toHaveTextContent(
@@ -136,11 +148,11 @@ describe("Saved analyses — the list", () => {
     );
   });
 
-  it("lists what has been saved, newest first", () => {
-    saveAnalysis(save("a1", [[[], ["e4"]]]));
-    saveAnalysis(save("a2", [[[], ["d4"]]]));
+  it("lists what has been saved, newest first", async () => {
+    await saveAnalysis(save("a1", [[[], ["e4"]]]));
+    await saveAnalysis(save("a2", [[[], ["d4"]]]));
 
-    renderScreen();
+    await renderScreen();
 
     expect(
       screen.getAllByTestId(/^saved-analyses-item-/).map((row) => row.dataset.testid),
@@ -150,8 +162,8 @@ describe("Saved analyses — the list", () => {
     );
   });
 
-  it("says how long the mainline is, how many side lines and where the reader stopped", () => {
-    saveAnalysis(
+  it("says how long the mainline is, how many side lines and where the reader stopped", async () => {
+    await saveAnalysis(
       save(
         "a1",
         [
@@ -162,7 +174,7 @@ describe("Saved analyses — the list", () => {
       ),
     );
 
-    renderScreen();
+    await renderScreen();
 
     const row = screen.getByTestId("saved-analyses-item-a1");
     expect(row).toHaveTextContent("2 moves");
@@ -170,25 +182,25 @@ describe("Saved analyses — the list", () => {
     expect(row).toHaveTextContent("at ply 2");
   });
 
-  it("counts a side line once no matter how many moves it runs to", () => {
-    saveAnalysis(
+  it("counts a side line once no matter how many moves it runs to", async () => {
+    await saveAnalysis(
       save("a1", [
         [[], ["e4", "e5", "Nf3"]],
         [["e4"], ["c5", "Nc3", "a6", "Bc4", "e6", "Qf3"]],
       ]),
     );
 
-    renderScreen();
+    await renderScreen();
 
     expect(screen.getByTestId("saved-analyses-item-a1")).toHaveTextContent(
       "1 variation",
     );
   });
 
-  it("says nothing about variations for a board with only one line", () => {
-    saveAnalysis(save("a1", [[[], ["e4", "e5"]]]));
+  it("says nothing about variations for a board with only one line", async () => {
+    await saveAnalysis(save("a1", [[[], ["e4", "e5"]]]));
 
-    renderScreen();
+    await renderScreen();
 
     const row = screen.getByTestId("saved-analyses-item-a1");
     expect(row).toHaveTextContent("1 move");
@@ -197,19 +209,19 @@ describe("Saved analyses — the list", () => {
     expect(row).not.toHaveTextContent("at ply");
   });
 
-  it("names a board that is nobody's game for what it is", () => {
-    saveAnalysis(save("a1", [[[], ["e4"]]]));
+  it("names a board that is nobody's game for what it is", async () => {
+    await saveAnalysis(save("a1", [[[], ["e4"]]]));
 
-    renderScreen();
+    await renderScreen();
 
     expect(screen.getByTestId("saved-analyses-item-a1")).toHaveTextContent(
       "Analysis board",
     );
   });
 
-  it("names one begun from a real game by its players", () => {
+  it("names one begun from a real game by its players", async () => {
     const tree = grow([[[], ["e4", "e5"]]]);
-    saveAnalysis(
+    await saveAnalysis(
       savedAnalysisOf(
         "a1",
         { ...tree, headers: { White: "Carlsen", Black: "Nakamura" } },
@@ -220,7 +232,7 @@ describe("Saved analyses — the list", () => {
       ),
     );
 
-    renderScreen();
+    await renderScreen();
 
     expect(screen.getByTestId("saved-analyses-item-a1")).toHaveTextContent(
       "Carlsen – Nakamura",
@@ -228,10 +240,10 @@ describe("Saved analyses — the list", () => {
   });
 
   it("says so in Hebrew too, without a key falling through", async () => {
-    saveAnalysis(save("a1", [[[], ["e4"]]]));
+    await saveAnalysis(save("a1", [[[], ["e4"]]]));
     await i18n.changeLanguage("he");
 
-    renderScreen();
+    await renderScreen();
 
     expect(screen.getByTestId("saved-analyses-item-a1")).toHaveTextContent(
       "לוח ניתוח",
@@ -240,51 +252,44 @@ describe("Saved analyses — the list", () => {
 });
 
 describe("Saved analyses — where a row goes", () => {
-  beforeEach(() => {
-    saveAnalysis(save("a1", [[[], ["e4", "e5", "Nf3"]]], ["e4", "e5"]));
+  beforeEach(async () => {
+    await saveAnalysis(save("a1", [[[], ["e4", "e5", "Nf3"]]], ["e4", "e5"]));
   });
 
-  it("offers to go on working on it, by its id", () => {
-    renderScreen();
+  it("opens it on the Analysis Board, by its id — its one destination", async () => {
+    await renderScreen();
 
-    expect(screen.getByTestId("saved-analyses-continue-a1")).toHaveAttribute(
+    expect(screen.getByTestId("saved-analyses-open-a1")).toHaveAttribute(
       "href",
       "/tools/analysis?analysis=a1",
     );
+    // No hand-off to Play with Engine, and no delete of its own.
+    expect(screen.queryByTestId("saved-analyses-loadpgn-a1")).toBeNull();
+    expect(screen.queryByTestId("saved-analyses-play-a1")).toBeNull();
+    expect(screen.queryByTestId("saved-analyses-remove-a1")).toBeNull();
   });
 
-  it("hands the whole game to Load PGN as the reference it already takes", () => {
-    renderScreen();
+  it("deletes the picks in bulk, after asking, and the list follows", async () => {
+    const user = userEvent.setup();
+    await renderScreen();
 
-    expect(screen.getByTestId("saved-analyses-loadpgn-a1")).toHaveAttribute(
-      "href",
-      `/games/load-pgn?game=${encodeURIComponent("analysis/saved/a1")}`,
+    await user.click(
+      within(screen.getByTestId("saved-analyses-select-a1")).getByRole("checkbox"),
     );
-  });
-
-  it("hands Play with Engine the position it was left on, not the last move", () => {
-    renderScreen();
-
-    const tree = grow([[[], ["e4", "e5", "Nf3"]]]);
-    const left = fenAtNode(tree, nodeAtSanPath(tree, ["e4", "e5"]));
-
-    expect(screen.getByTestId("saved-analyses-play-a1")).toHaveAttribute(
-      "href",
-      `/engine/play?fen=${encodeURIComponent(left)}`,
+    await user.click(screen.getByTestId("saved-analyses-delete"));
+    expect(screen.getByTestId("saved-analyses-delete-title")).toHaveTextContent(
+      "Delete 1 analysis?",
     );
-  });
+    await user.click(screen.getByTestId("saved-analyses-delete-confirm"));
 
-  it("deletes one, and the list follows without a reload", async () => {
-    renderScreen();
-
-    await userEvent.click(screen.getByTestId("saved-analyses-remove-a1"));
-
-    expect(screen.queryByTestId("saved-analyses-item-a1")).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.queryByTestId("saved-analyses-item-a1")).not.toBeInTheDocument(),
+    );
     expect(screen.getByTestId("saved-analyses-empty")).toBeInTheDocument();
   });
 
-  it("offers a New button to the plain board view, with no query params", () => {
-    renderScreen();
+  it("offers a New button to the plain board view, with no query params", async () => {
+    await renderScreen();
 
     // The board left the sidebar (CTA-58) — this button is how it is reached.
     expect(screen.getByTestId("saved-analyses-new")).toHaveAttribute(
@@ -295,17 +300,15 @@ describe("Saved analyses — where a row goes", () => {
 });
 
 describe("Saved analyses — a record that will not read", () => {
-  it("still lists it, and offers the one action that means anything", () => {
-    saveAnalysis({ ...save("a1", [[[], ["e4"]]]), pgn: "1. Zz9" });
+  it("still lists it — nothing to open, but it can be picked (to delete or export)", async () => {
+    await saveAnalysis({ ...save("a1", [[[], ["e4"]]]), pgn: "1. Zz9" });
 
-    renderScreen();
+    await renderScreen();
 
     const row = screen.getByTestId("saved-analyses-item-a1");
     expect(row).toHaveTextContent("This analysis could not be read.");
-    expect(
-      screen.queryByTestId("saved-analyses-continue-a1"),
-    ).not.toBeInTheDocument();
-    expect(screen.getByTestId("saved-analyses-remove-a1")).toBeInTheDocument();
+    expect(screen.queryByTestId("saved-analyses-open-a1")).not.toBeInTheDocument();
+    expect(screen.getByTestId("saved-analyses-select-a1")).toBeInTheDocument();
   });
 });
 
@@ -314,9 +317,9 @@ describe("Saved analyses — the board view", () => {
     userEvent.click(screen.getByTestId(`saved-analyses-view-${size}`));
 
   it("opens on the list, and switches to boards when asked", async () => {
-    saveAnalysis(save("a1", [[[], ["e4"]]]));
+    await saveAnalysis(save("a1", [[[], ["e4"]]]));
 
-    renderScreen();
+    await renderScreen();
     expect(screen.getByTestId("saved-analyses-body")).toBeInTheDocument();
 
     await showBoards();
@@ -328,9 +331,9 @@ describe("Saved analyses — the board view", () => {
   });
 
   it("previews the position the reader was standing on", async () => {
-    saveAnalysis(save("a1", [[[], ["e4", "e5", "Nf3"]]], ["e4"]));
+    await saveAnalysis(save("a1", [[[], ["e4", "e5", "Nf3"]]], ["e4"]));
 
-    renderScreen();
+    await renderScreen();
     await showBoards();
 
     const tree = grow([[[], ["e4", "e5", "Nf3"]]]);
@@ -343,9 +346,9 @@ describe("Saved analyses — the board view", () => {
   });
 
   it("faces the way the board was left", async () => {
-    saveAnalysis(save("a1", [[[], ["e4"]]], [], "black"));
+    await saveAnalysis(save("a1", [[[], ["e4"]]], [], "black"));
 
-    renderScreen();
+    await renderScreen();
     await showBoards();
 
     expect(screen.getByTestId("board-saved-analyses-preview-a1")).toHaveAttribute(
@@ -355,10 +358,10 @@ describe("Saved analyses — the board view", () => {
   });
 
   it("names the opening the mainline reached, and only when the book knows it", async () => {
-    saveAnalysis(save("a1", [[[], ["e4", "e5"]]]));
-    saveAnalysis(save("a2", [[[], ["d4", "d5"]]]));
+    await saveAnalysis(save("a1", [[[], ["e4", "e5"]]]));
+    await saveAnalysis(save("a2", [[[], ["d4", "d5"]]]));
 
-    renderScreen();
+    await renderScreen();
     await showBoards();
     await settleBook();
 
@@ -371,9 +374,9 @@ describe("Saved analyses — the board view", () => {
   });
 
   it("shows the message in the square for a record with no position to draw", async () => {
-    saveAnalysis({ ...save("a1", [[[], ["e4"]]]), pgn: "1. Zz9" });
+    await saveAnalysis({ ...save("a1", [[[], ["e4"]]]), pgn: "1. Zz9" });
 
-    renderScreen();
+    await renderScreen();
     await showBoards();
 
     expect(
@@ -386,11 +389,137 @@ describe("Saved analyses — the board view", () => {
 });
 
 describe("Saved analyses — the panel", () => {
-  it("says where the analyses are kept", () => {
-    renderScreen();
+  it("says where the analyses are kept", async () => {
+    await renderScreen();
 
     expect(screen.getByTestId("saved-analyses-storage-note")).toHaveTextContent(
       "this browser only",
     );
+  });
+});
+
+describe("Saved analyses — named, and filed in folders (CTA-73)", () => {
+  it("names a row by the record's name", async () => {
+    await saveAnalysis({ ...save("a1", [[[], ["e4"]]]), name: "My Scotch" });
+    await renderScreen();
+    expect(screen.getByTestId("saved-analyses-item-a1")).toHaveTextContent("My Scotch");
+  });
+
+  it("lists the folders first, and opens one from ?folder= with its breadcrumb", async () => {
+    const folder = (await createAnalysisFolder("Openings", null))!;
+    await saveAnalysis({ ...save("inside", [[[], ["e4"]]]), folderId: folder.id });
+    await saveAnalysis(save("outside", [[[], ["d4"]]]));
+
+    const { unmount } = await renderScreen();
+    expect(screen.getByTestId(`saved-analyses-folder-${folder.id}`)).toHaveTextContent(
+      "1 analysis",
+    );
+    expect(screen.getByTestId("saved-analyses-item-outside")).toBeInTheDocument();
+    expect(screen.queryByTestId("saved-analyses-item-inside")).toBeNull();
+    unmount();
+
+    await renderScreen(`/tools/analysis/saved?folder=${folder.id}`);
+    expect(screen.getByTestId("saved-analyses-breadcrumb")).toHaveTextContent("Openings");
+    expect(screen.getByTestId("saved-analyses-item-inside")).toBeInTheDocument();
+    expect(screen.queryByTestId("saved-analyses-item-outside")).toBeNull();
+  });
+
+  it("creates a folder where the reader stands", async () => {
+    const user = userEvent.setup();
+    await saveAnalysis(save("a1", [[[], ["e4"]]]));
+    await renderScreen();
+
+    await user.click(screen.getByTestId("saved-analyses-new-folder"));
+    await user.type(screen.getByTestId("analysis-folder-name-input"), "Sicilian");
+    await user.click(screen.getByTestId("analysis-folder-name-save"));
+    await waitFor(() => expect(analysisFoldersSnapshot()).toHaveLength(1));
+    const [folder] = analysisFoldersSnapshot() ?? [];
+    expect(folder).toMatchObject({ name: "Sicilian", parentId: null });
+    expect(screen.getByTestId(`saved-analyses-folder-${folder.id}`)).toBeInTheDocument();
+  });
+
+  it("has a checkbox on every card too, and keeps the picks across a view switch", async () => {
+    const user = userEvent.setup();
+    await saveAnalysis(save("a1", [[[], ["e4"]]]));
+    await renderScreen();
+
+    await user.click(
+      within(screen.getByTestId("saved-analyses-select-a1")).getByRole("checkbox"),
+    );
+    await user.click(screen.getByTestId("saved-analyses-view-compact"));
+    expect(
+      within(screen.getByTestId("saved-analyses-select-a1")).getByRole("checkbox"),
+    ).toBeChecked();
+    expect(screen.getByTestId("saved-analyses-selected-count")).toHaveTextContent("1 selected");
+  });
+
+  it("links every analysis to its settings", async () => {
+    await saveAnalysis(save("a1", [[[], ["e4"]]]));
+    await renderScreen();
+    expect(screen.getByTestId("saved-analyses-settings-a1")).toHaveAttribute(
+      "href",
+      "/tools/analysis/saved/a1/settings",
+    );
+  });
+
+  it("deletes a folder keeping its analyses, after asking", async () => {
+    const user = userEvent.setup();
+    const folder = (await createAnalysisFolder("Old", null))!;
+    await saveAnalysis({ ...save("a1", [[[], ["e4"]]]), folderId: folder.id });
+    await renderScreen();
+
+    await user.click(screen.getByTestId(`saved-analyses-folder-delete-${folder.id}`));
+    expect(screen.getByTestId("analysis-folder-delete-counts")).toHaveTextContent(
+      "1 analyses",
+    );
+    await user.click(screen.getByTestId("analysis-folder-delete-confirm"));
+    await waitFor(() => expect(findSavedAnalysis("a1")?.folderId).toBeNull());
+    expect(analysisFoldersSnapshot()).toEqual([]);
+    expect(findSavedAnalysis("a1")?.folderId).toBeNull();
+    expect(screen.getByTestId("saved-analyses-item-a1")).toBeInTheDocument();
+  });
+
+  it("keeps picks across folders, select-all adding the rows on screen", async () => {
+    const user = userEvent.setup();
+    const folder = (await createAnalysisFolder("F", null))!;
+    await saveAnalysis({ ...save("in", [[[], ["e4"]]]), folderId: folder.id });
+    await saveAnalysis(save("out", [[[], ["d4"]]]));
+    await renderScreen();
+
+    const box = (testId: string) => within(screen.getByTestId(testId)).getByRole("checkbox");
+    await user.click(box("saved-analyses-select-out"));
+    await user.click(screen.getByTestId(`saved-analyses-folder-open-${folder.id}`));
+    await user.click(box("saved-analyses-select-all"));
+    expect(screen.getByTestId("saved-analyses-selected-count")).toHaveTextContent("2 selected");
+  });
+});
+
+describe("Saved analyses — a folder of thousands (CTA-77)", () => {
+  it("shows a page at a time, and keeps counting and picking the whole folder", async () => {
+    const user = userEvent.setup();
+    const record = save("x", [[[], ["e4"]]]);
+    const total = SAVED_ANALYSES_PAGE + 12;
+    await addAnalyses(
+      Array.from({ length: total }, (_, index) => ({ ...record, id: `r${index}`, name: `R${index}` })),
+    );
+    await renderScreen();
+
+    expect(screen.getByTestId("saved-analyses-count")).toHaveTextContent(`Analyses: ${total}`);
+    expect(screen.getAllByTestId(/^saved-analyses-item-/)).toHaveLength(SAVED_ANALYSES_PAGE);
+    expect(screen.getByTestId("saved-analyses-item-r0")).toBeInTheDocument();
+
+    await user.click(within(screen.getByTestId("saved-analyses-pagination")).getByText("2"));
+    expect(screen.getAllByTestId(/^saved-analyses-item-/)).toHaveLength(12);
+    expect(screen.getByTestId(`saved-analyses-item-r${total - 1}`)).toBeInTheDocument();
+
+    // Select-all takes the whole folder, not the page.
+    await user.click(within(screen.getByTestId("saved-analyses-select-all")).getByRole("checkbox"));
+    expect(screen.getByTestId("saved-analyses-selected-count")).toHaveTextContent(`${total} selected`);
+  });
+
+  it("has no pager for a folder that fits one page", async () => {
+    await saveAnalysis(save("a1", [[[], ["e4"]]]));
+    await renderScreen();
+    expect(screen.queryByTestId("saved-analyses-pagination")).toBeNull();
   });
 });

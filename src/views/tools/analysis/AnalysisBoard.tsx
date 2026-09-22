@@ -1,570 +1,541 @@
-import {
-  useMemo,
-  useState,
-  type ChangeEvent,
-  type DragEvent,
-  type FormEvent,
-} from "react";
+import { useEffect, useMemo, useState } from "react";
 import Box from "@mui/material/Box";
-import { createSearchParams, useNavigate, useSearchParams } from "react-router";
-import { useTranslation } from "react-i18next";
+import FormControlLabel from "@mui/material/FormControlLabel";
+import IconButton from "@mui/material/IconButton";
+import Switch from "@mui/material/Switch";
+import Tooltip from "@mui/material/Tooltip";
+import Typography from "@mui/material/Typography";
+import FolderOpenRoundedIcon from "@mui/icons-material/FolderOpenRounded";
+import SaveRoundedIcon from "@mui/icons-material/SaveRounded";
+import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
 import {
-  Chessboard,
-  type Arrow,
-  type ChessboardOptions,
-  type PieceDropHandlerArgs,
-} from "react-chessboard";
-import { FenParseError, parseFen } from "../../../lib/fen";
-import { resolveGameReference } from "../../../lib/gameReference";
-import { findSavedAnalysis } from "../../../lib/savedAnalysisStore";
+  createSearchParams,
+  Link as RouterLink,
+  useLocation,
+  useNavigate,
+  useSearchParams,
+} from "react-router";
+import { useTranslation } from "react-i18next";
+import type { ChessboardOptions } from "react-chessboard";
+
+import { analysisHandOffOf } from "../../../lib/analysisHandOff";
+import { parseFen } from "../../../lib/fen";
 import { initialPlyOf, parseMoveParam } from "../../../lib/gameNavigation";
 import {
-  findNode,
-  pathTo,
-  type GameTree,
-  type VariationNode,
-} from "../../../lib/gameTree";
-import { capturedSummaryOf, diffForSide } from "../../../lib/capturedPieces";
+  isAnalysisReference,
+  isReferenceRead,
+  loadReferencedGames,
+  resolveGameReference,
+} from "../../../lib/gameReference";
+import type { GameTree } from "../../../lib/gameTree";
+import { parsePgnTree } from "../../../lib/pgn";
+import { slugify } from "../../../lib/pgnText";
+import { atParamOf, REPERTOIRE_AT_PARAM } from "../../../lib/repertoireLink";
+import { savedAnalysisDerivedName } from "../../../lib/savedAnalyses";
 import {
-  EmptyPgnError,
-  PgnParseError,
-  parsePgnTree,
-  parsePgnTrees,
-} from "../../../lib/pgn";
-import { RightPanel } from "../../main/rightPanel";
-import EvalBar, {
-  EVAL_BAR_GAP_PX,
-  EVAL_BAR_TOTAL_PX,
-} from "../../shared/EvalBar";
-import PromotionPicker from "../../shared/PromotionPicker";
-import CapturedPieces, {
-  CAPTURED_STRIPS_TOTAL_PX,
-  CAPTURED_STRIP_GAP_PX,
-} from "../../shared/CapturedPieces";
-import AnalysisPanel, { type AnalysisTabId } from "./AnalysisPanel";
-import {
-  HOVERED_NEXT_MOVE_ARROW_COLOR,
-  NEXT_MOVE_ARROW_COLOR,
-} from "./nextMoveArrows";
-import PositionSetup from "./PositionSetup";
-import { useAnalysisBoard } from "./useAnalysisBoard";
+  findSavedAnalysis,
+  loadSavedAnalyses,
+  savedAnalysesSnapshot,
+} from "../../../lib/savedAnalysisStore";
+import BoardShell from "../../dev/core/BoardShell";
+import { useVariationsExplorer } from "../../explorer/useVariationsExplorer";
+import RepertoireChangesBar from "../../repertoires/RepertoireChangesBar";
+import CurrentOpening from "../../shared/CurrentOpening";
+import AnalysisExport from "./AnalysisExport";
+import EngineThinking from "./EngineThinking";
+import PlayToggleButton from "./PlayToggleButton";
+import AnalysisLoad from "./AnalysisLoad";
+import AnalysisSettingsPanel from "./AnalysisSettings";
+import SaveAnalysisDialog from "./SaveAnalysisDialog";
+import { useAnalysisBoard, type AnalysisBoardStart } from "./useAnalysisBoard";
 
 /**
- * Analysis Board — a position you set up, a game you play out for both sides,
- * and an engine you can switch off.
+ * **The Analysis Board** (`/tools/analysis`, CTA-73) — the board a game or a
+ * position is taken apart on: both colours move from any node, side lines
+ * branch off wherever the reader plays something else, and the engine reads
+ * the position on screen — moving a piece only while the header's **Play** is
+ * on, and then only for the side not at the bottom of the board, until
+ * paused or until the reader steps back (`useAnalysisBoard`).
  *
- * The screen fills two of the shell's regions and draws no columns of its own:
+ * Composed from the v2 core
+ * ([`.claude/rules/chessboard-v2.md`](../../../../.claude/rules/chessboard-v2.md))
+ * and the shared tree view
+ * ([`.claude/rules/tree-views.md`](../../../../.claude/rules/tree-views.md)) —
+ * functionally the repertoire player without its trainer and its protection:
  *
- * - the **board square** holds the evaluation bar and the board, side by side;
- * - the **right-hand panel** (`<RightPanel>`) holds `AnalysisPanel` — the
- *   engine's lines pinned above the Moves / Engine / Position tabs, over the
- *   board controls.
+ * | Capability | Taken | Because |
+ * | --- | --- | --- |
+ * | Base | `useBoardCore`, through `useAnalysisBoard` | the tree, the node, the oracle, promotion, orientation |
+ * | Engine | switch, **on by default**; its best move played **only while Play is on, for the opponent's side** (`onBestMove`, `useAnalysisBoard`) | the pinned lines, the eval bar and the Engine tab; Play is disabled while the engine is off, and a step back pauses it |
+ * | Tree view | `useVariationsExplorer` | Moves (side lines, comment marks, evals, the move menu), Map, the comment block, the next-moves bar and arrows — editing on, *Play chances…* off (nothing here plays by chance) |
+ * | Saving | `useAnalysisBoard` — explicit | no autosave: the header's Save lights while the board differs from its record, and opens the changes strip (Update / Save as copy / Discard); a board with no record yet saves through a name-and-folder dialog |
  *
- * ### Arriving with a position, or with a game
+ * **Tabs: Moves · Map · Load · Export · Engine.** Load brings a PGN (a file or
+ * a paste — several games are merged onto the board or split into a folder of
+ * saved analyses) or a FEN; Export copies the FEN, and copies or downloads the
+ * PGN with or without comments, NAGs and side lines.
  *
- * `/tools/analysis?fen=<position>` opens on that position — the Board Editor's
- * hand-off. `/tools/analysis?game=<reference>` opens on a whole game out of a
- * library, side lines and all — the User PGNs hand-off, where what travels is a
- * catalog reference rather than the PGN, because a game does not fit in a URL
- * (`lib/gameReference.ts`). `/tools/analysis?analysis=<id>` reopens one of this
- * screen's *own* boards, which the Saved analyses screen lists — `?analysis=`
- * rather than `?game=` for the one thing a catalog reference cannot carry: an
- * analysis is a tree, a place inside it, an orientation and the engine settings,
- * and going on with it needs all four.
- *
- * ### And it is written down as it is worked on
- *
- * Every board here is saved to `localStorage` as the reader works — no button,
- * the same rule Play with Engine follows (`lib/savedAnalyses.ts`). The whole of
- * it on this side is `persist: true` below; the effect, the id and the rule
- * about *when* a board becomes worth keeping are all in `useAnalysisBoard`.
- *
- * Both travel in the URL rather than in router state so that the link survives
- * being bookmarked, shared or reloaded, and both are validated here — `parseFen`
- * and `resolveGameReference` are the gates, and a parameter that will not pass
- * one is ignored rather than allowed to throw on someone else's mistyped link.
- * The hook takes the result as its *initial* state, so nothing is written from
- * an effect.
- *
- * The game is re-read from its PGN text with `parsePgnTrees`' single-game
- * parser rather than taken from the catalog's parsed `Game`: the catalog parses
- * a **mainline** (`chess.js` `loadPgn` discards `( … )`), and an analysis board
- * is the one screen those side lines are the whole point for.
- *
- * All the behaviour lives in `useAnalysisBoard`; this component is the layout,
- * the board options, and the ingestion state that the Position tab and the drop
- * targets share. `<RightPanel>` portals the panel out of this tree, so it still
- * shares this screen's state by closure and nothing is threaded through the
- * shell. The same closure is what the pinned next-moves bar (CTA-54) rests on:
- * its tokens are drawn in the panel and its arrows in the board options here,
- * so the open tab, the continuations of the position on screen and the bar
- * move the pointer is over are this screen's state, handed down to the panel
- * and read back here — two halves of one feature, one owner.
- *
- * ### How the eval bar and the board split the square
- *
- * The shell hands this screen a square of side S and computes it without knowing
- * anything about the bar (`Layout.tsx` is not changed for one). The bar takes a
- * fixed strip out of that square and the board gives up the width, so the board
- * is a `S - EVAL_BAR_TOTAL_PX` square. Bar width + gap must come to exactly that
- * constant and the board box needs `flexShrink: 0`, or flex shaves the
- * difference off and the board stops being square — which is why the switch that
- * hides the bar also drops the gap.
+ * **Arrivals, read once** (arriving at the URL is what mounts the screen, and
+ * the screen writes its own URL as the reader moves): `?fen=` (a position —
+ * the board turns to the side to move), `?game=` + `?move=` (a game out of a
+ * catalog, re-read with `parsePgnTree` for its side lines; the ply or its
+ * `StartPly`), `?analysis=<id>` (a saved analysis, where the reader left it,
+ * facing the way it faced), and — not in the URL — a **whole tree handed over
+ * in the location state** by the Openings explorer (`lib/analysisHandOff.ts`,
+ * [`openings-explorer.md`](../../../../.claude/rules/openings-explorer.md) §5:
+ * a new unsaved board, like a PGN loaded; kept on the screen's own URL writes
+ * so a reload keeps it, until a load or a save names something else). **`?at=`** — the moves from the start as SAN
+ * (`lib/repertoireLink.ts`) — is written back on every step with history
+ * replace, so the address bar is always a permanent link to the position on
+ * screen; it beats `?move=` and the record's own place on the way in. Once a
+ * board is saved, its URL becomes `?analysis=<id>`.
  */
+
+/**
+ * The tabs that stay mounted once opened — `BoardPanel`'s `keepMounted`: a long
+ * move list is costly to mount, and the Map keeps where it was panned.
+ */
+const KEEP_MOUNTED = ["moves", "map"] as const;
+
+/** Everything the URL (and a hand-off's location state) hands the screen, read once. */
+const arrivalOf = (params: URLSearchParams, state: unknown): AnalysisBoardStart => {
+  // A link nobody can read opens as if that parameter were not there.
+  let fen: string | undefined;
+  const requestedFen = params.get("fen");
+  if (requestedFen !== null) {
+    try {
+      fen = parseFen(requestedFen);
+    } catch {
+      fen = undefined;
+    }
+  }
+
+  const arrived = resolveGameReference(params.get("game"));
+  let tree: GameTree | undefined;
+  if (arrived !== undefined) {
+    try {
+      tree = parsePgnTree(arrived.pgn);
+    } catch {
+      tree = undefined;
+    }
+  }
+
+  return {
+    fen,
+    tree,
+    ply:
+      parseMoveParam(params.get("move")) ??
+      (arrived === undefined ? undefined : initialPlyOf(arrived.game)),
+    resume: findSavedAnalysis(params.get("analysis")),
+    handOff: analysisHandOffOf(state),
+    at: params.get(REPERTOIRE_AT_PARAM),
+  };
+};
+
 function AnalysisBoard() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
+  const [arrival] = useState(() => arrivalOf(searchParams, location.state));
+
+  const state = useAnalysisBoard(arrival);
+  const { core, engine, record } = state;
+
+  const [tab, setTab] = useState("moves");
+  // Opens as the record's settings say (on for a new board); the Engine tab's
+  // switch is the session's.
+  const [showArrows, setShowArrows] = useState(record?.showArrows ?? true);
+  const [changesOpen, setChangesOpen] = useState(false);
+  const [saveOpen, setSaveOpen] = useState(false);
+  // The strip closes itself once the changes are kept or dropped — adjusted
+  // during render (`react-hooks/set-state-in-effect`).
+  if (changesOpen && !state.changed) setChangesOpen(false);
+
+  const name =
+    record?.name || savedAnalysisDerivedName(core.tree.headers) || t("savedAnalyses.untitled");
 
   /*
-    The position handed over by the Board Editor, if this is that arrival. Only
-    the first render's value is ever used (see `useAnalysisBoard`), but parsing
-    it on every render would build a `chess.js` instance for nothing.
+    The variations explorer (CTA-72): the parts are placed below. Editing is
+    on — the menu's edits and the comment block's go through `replaceTree`,
+    session changes like a move added — and *Play chances…* off: no trainer
+    here plays by them. The map draws the session, the moves added since the
+    baseline ringed, every dot a link.
   */
-  const requested = searchParams.get("fen");
-  const initialFen = useMemo(() => {
-    if (requested === null) return undefined;
-    try {
-      return parseFen(requested);
-    } catch {
-      // A link nobody can read opens on the starting position, as if the
-      // parameter had not been there at all.
-      return undefined;
-    }
-  }, [requested]);
-
-  /*
-    The game handed over by a library detail page, if this is that arrival. Same
-    discipline as the FEN above: resolved and parsed once, and a reference that
-    names nothing — or a game whose side lines will not parse — opens the screen
-    empty rather than throwing on a bad link.
-  */
-  const requestedGame = searchParams.get("game");
-  const arrived = useMemo(
-    () => resolveGameReference(requestedGame),
-    [requestedGame],
-  );
-  const initialTree = useMemo(() => {
-    if (arrived === undefined) return undefined;
-    try {
-      return parsePgnTree(arrived.pgn);
-    } catch {
-      return undefined;
-    }
-  }, [arrived]);
-
-  /*
-    The `?move=` that rode beside the `?game=`, if any: the mainline ply the
-    board opens on. Read with the same discipline as its siblings — parsed once,
-    and a value that will not parse is as absent as the parameter being missing.
-    Then the game's own `StartPly` tag has its say: a puzzle chapter opens on
-    the position it is about, and a game without one opens at ply 0.
-  */
-  const requestedMove = searchParams.get("move");
-  const initialPly = useMemo(
-    () =>
-      parseMoveParam(requestedMove) ??
-      (arrived === undefined ? undefined : initialPlyOf(arrived.game)),
-    [requestedMove, arrived],
-  );
-
-  /*
-    One of this screen's own boards, handed back by the Saved analyses screen.
-    Looked up rather than parsed: what travels is an id, and the store is the
-    only thing that knows what it names. An id that names nothing opens an empty
-    board, exactly as an unreadable `?fen=` does.
-  */
-  const requestedAnalysis = searchParams.get("analysis");
-  const resume = useMemo(
-    () => findSavedAnalysis(requestedAnalysis),
-    [requestedAnalysis],
-  );
-
-  const state = useAnalysisBoard({
-    fen: initialFen,
-    tree: initialTree,
-    ply: initialPly,
-    resume,
-    // The screen that writes. Everything about the board is already in the hook;
-    // this is the one line that says the work outlives the tab.
-    persist: true,
+  const explorer = useVariationsExplorer({
+    testId: "analysis",
+    source: core,
+    evalsByFen: engine.evalsByFen,
+    extensionIds: state.extensionIds,
+    onEditTree: core.replaceTree,
+    playChances: false,
+    annotations: true,
+    arrows: { show: showArrows },
+    map: { addedIds: state.extensionIds, linked: true },
   });
+  const boardOptions: ChessboardOptions = { arrows: explorer.arrows };
+  const topLine = engine.analysis.lines.find((line) => line !== undefined);
 
   /*
-    Ingestion state: what the reader has typed, what came out of the last
-    multi-game file, and what went wrong. It lives here rather than in the hook
-    because it is about the *forms*, not about the game — the hook takes a tree
-    and knows nothing about where it came from.
+    The URL, derived and written back with history replace: what the board
+    *is* — the arrival's parameters, `?analysis=<id>` once it is a record,
+    nothing once the reader loads something new — plus **`?at=`**, where the
+    reader stands, so the address bar is always a permanent link. `?move=` is
+    the arrival's alone; the link says where the reader is now. One write
+    from one value, so a save and a step cannot race each other's URL.
   */
-  const [games, setGames] = useState<readonly GameTree[]>([]);
-  const [selected, setSelected] = useState(0);
-  const [error, setError] = useState<string | null>(null);
-  const [pgnText, setPgnText] = useState("");
-  const [fenText, setFenText] = useState("");
-  const [isDragOver, setIsDragOver] = useState(false);
-
-  const topLine = state.analysis.lines.find((line) => line !== undefined);
-
-  /*
-    The captured pieces for the position on screen, walked from the tree's own
-    start position — the study-friendly baseline, not the standard one. The
-    diff is the position on screen against that same start, so a promotion
-    counts as a gain for the side that made it.
-  */
-  const captured = useMemo(
-    () =>
-      capturedSummaryOf(
-        pathTo(state.tree, state.nodeId),
-        state.tree.startFen,
-        state.fen,
-      ),
-    [state.tree, state.nodeId, state.fen],
-  );
-
-  /*
-    The panel's open tab, lifted to the screen (CTA-54): the pinned next-moves
-    bar is a Moves-tab piece, and its board-side half — the arrows — is drawn
-    from the options this component builds, so the board needs the same gate
-    the bar renders under. The panel renders the strip; the state is the
-    screen's.
-  */
-  const [tab, setTab] = useState<AnalysisTabId>("moves");
-
-  /*
-    The continuations of the position on screen (CTA-54) — what the pinned bar
-    offers and the board arrows draw. The children of the node the reader
-    stands on, or the tree's own first moves at the start position; the tree's
-    invariant orders them — `children[0]` is the mainline at every level — and
-    two or more of them is the fork the bar appears at. Re-reading them on
-    every step is what makes the bar re-offer the choices of wherever a click
-    lands. Built here rather than in the panel because both halves read it:
-    the board for arrows, the panel for the bar.
-  */
-  const continuations = useMemo(
-    () =>
-      state.nodeId === null
-        ? state.tree.moves
-        : (findNode(state.tree, state.nodeId)?.children ?? []),
-    [state.tree, state.nodeId],
-  );
-
-  /*
-    The bar move the pointer is over, lifted for the same reason the tab and
-    the continuations are: the board recolours that move's arrow, and the bar
-    — portalled into the panel — is where the pointer events happen. `null`
-    is "the pointer is over no bar move".
-  */
-  const [hoveredNextMove, setHoveredNextMove] =
-    useState<VariationNode | null>(null);
-
-  /** Turn a parse failure into a translated line; never let one escape. */
-  const messageFor = (cause: unknown) => {
-    if (cause instanceof EmptyPgnError) return t("analysis.position.errors.emptyPgn");
-    if (cause instanceof PgnParseError) {
-      return cause.gameNumber === undefined
-        ? t("analysis.position.errors.pgn", { detail: cause.detail })
-        : t("analysis.position.errors.pgnGame", {
-            number: cause.gameNumber,
-            detail: cause.detail,
-          });
-    }
-    if (cause instanceof FenParseError) {
-      return t("analysis.position.errors.fen", { detail: cause.detail });
-    }
-    return t("analysis.position.errors.pgn", {
-      detail: cause instanceof Error ? cause.message : String(cause),
+  const [urlBase, setUrlBase] = useState<Record<string, string>>(() => {
+    const base: Record<string, string> = {};
+    searchParams.forEach((value, key) => {
+      if (key !== REPERTOIRE_AT_PARAM && key !== "move") base[key] = value;
     });
-  };
-
-  const loadPgnText = (text: string) => {
-    try {
-      const parsed = parsePgnTrees(text);
-      setGames(parsed);
-      setSelected(0);
-      setError(null);
-      state.loadTree(parsed[0]);
-    } catch (cause) {
-      // A malformed PGN is a message in the panel, not a thrown error.
-      setGames([]);
-      setError(messageFor(cause));
-    }
-  };
-
-  const loadFromFile = (file: File) => {
-    const reader = new FileReader();
-    reader.onerror = () => setError(t("analysis.position.errors.file"));
-    reader.onload = () =>
-      loadPgnText(typeof reader.result === "string" ? reader.result : "");
-    reader.readAsText(file);
-  };
-
-  const onFileChosen = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) loadFromFile(file);
-    // Clear the input so re-picking the same file fires `change` again.
-    event.target.value = "";
-  };
-
-  const onLoadPgn = (event: FormEvent) => {
-    event.preventDefault();
-    loadPgnText(pgnText);
-  };
-
-  const onLoadFen = (event: FormEvent) => {
-    event.preventDefault();
-    try {
-      state.loadFen(fenText);
-      setGames([]);
-      setError(null);
-    } catch (cause) {
-      setError(messageFor(cause));
-    }
-  };
-
-  const selectGame = (index: number) => {
-    setSelected(index);
-    state.loadTree(games[index]);
-  };
-
-  /**
-   * "Play from here" — continue the position at the node on screen against the
-   * engine. The FEN crosses to `/engine/play` as a query parameter, the same
-   * carrier the Board Editor's hand-off uses: it is in the URL, so it survives
-   * a bookmark or a reload, and Play with Engine reads it once as its initial
-   * position, deriving `playAs` and the orientation from it. No `?move=` — that
-   * screen replays nothing, it only takes the position.
-   */
-  const onPlayFromHere = () =>
-    navigate({
-      pathname: "/engine/play",
-      search: createSearchParams({ fen: state.fen }).toString(),
-    });
-
-  // Both handlers must preventDefault, or the browser leaves the app and opens
-  // the dropped file itself.
-  const onDragOver = (event: DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    setIsDragOver(true);
-  };
-
-  const onDragLeave = (event: DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    setIsDragOver(false);
-  };
-
-  const onDrop = (event: DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    setIsDragOver(false);
-    const file = event.dataTransfer?.files?.[0];
-    if (file) loadFromFile(file);
-  };
-
+    return base;
+  });
+  const linkedAt = useMemo(
+    () => atParamOf(core.tree, core.nodeId),
+    [core.tree, core.nodeId],
+  );
+  const wantedSearch = useMemo(
+    () =>
+      createSearchParams(
+        linkedAt === "" ? urlBase : { ...urlBase, [REPERTOIRE_AT_PARAM]: linkedAt },
+      ).toString(),
+    [urlBase, linkedAt],
+  );
   /*
-    Dropping a PGN works over the board and over the panel alike. They are two
-    separate subtrees once the panel is portalled out, so a single drop target
-    cannot span them and both get the handlers.
+    A hand-off's location state rides along on those writes — the browser
+    keeps a history entry's state across a reload, so a reload reopens the
+    handed-over tree — until the board is something else: a load or a save.
   */
-  const dropTargetProps = { onDragOver, onDragLeave, onDrop };
+  const [urlState, setUrlState] = useState<unknown>(() =>
+    arrival.handOff === undefined ? null : location.state,
+  );
+  // Whether the entry carries a state is compared, not the state itself: the
+  // browser's history hands back a clone, never the object that was written.
+  const stateKept = (location.state ?? null) !== null;
+  useEffect(() => {
+    if (searchParams.toString() === wantedSearch && stateKept === (urlState !== null)) return;
+    setSearchParams(wantedSearch, { replace: true, state: urlState });
+  }, [wantedSearch, searchParams, setSearchParams, urlState, stateKept]);
 
-  /*
-    The bar's board-side half (CTA-54): one arrow per continuation of the
-    fork — the mainline first — green while on offer, red while its token in
-    the bar is hovered (`nextMoveArrows.ts` has the colours' story).
-    External arrows are controlled: the board never clears or adds to them
-    itself (`.claude/rules/chessboard.md` §3.4), so this is the whole set,
-    recomputed on every step, click and hover — and drawn only while the bar
-    is, the same Moves-tab-at-a-fork gate `NextMovesBar` renders under.
-  */
-  const nextMoveArrows: Arrow[] =
-    tab === "moves" && continuations.length >= 2
-      ? continuations.map((node) => ({
-          startSquare: node.from,
-          endSquare: node.to,
-          color:
-            hoveredNextMove?.id === node.id
-              ? HOVERED_NEXT_MOVE_ARROW_COLOR
-              : NEXT_MOVE_ARROW_COLOR,
-        }))
-      : [];
-
-  const chessboardOptions: ChessboardOptions = {
-    id: "analysis-board",
-    position: state.fen,
-    boardOrientation: state.orientation,
-    /*
-      The move that produced the position on screen. External square styles are
-      never cleared by the board itself (`.claude/rules/chessboard.md` §3.3), so
-      this is the whole set for the current position, recomputed on every change.
-    */
-    squareStyles: state.squareStyles,
-    // The pinned next-moves bar's arrows (CTA-54) — built above; they ride
-    // beside the last-move highlight, not over it.
-    arrows: nextMoveArrows,
-    onPieceDrop: ({ sourceSquare, targetSquare }: PieceDropHandlerArgs) =>
-      state.onPieceDrop({ sourceSquare, targetSquare }),
-    /*
-      Both colours, from any position in the tree — playing a move from an
-      earlier ply is how a variation is made, so unlike Play with Engine there is
-      no "live position" to restrict dragging to. Only an open promotion picker
-      stops a drag, because the move it is asking about has not been decided yet.
-    */
-    allowDragging: state.promotion === null,
+  /** The URL of a board that is a record now: `?analysis=<id>`. */
+  const pointUrlAt = (id: string) => {
+    setUrlBase({ analysis: id });
+    setUrlState(null);
   };
 
-  // The bar is inside the square, so the board gives up its width. Without it
-  // the board takes the whole square back.
-  const boardSide = state.showEvalBar
-    ? `calc(100% - ${EVAL_BAR_TOTAL_PX}px)`
-    : "100%";
-  // The strips sit on the board's top and bottom edges, so the board gives up
-  // their height — and, to stay square, the same amount of its width.
-  const boardInnerSide = `calc(100% - ${CAPTURED_STRIPS_TOTAL_PX}px)`;
+  /** A new board loaded: the URL no longer names what arrived. */
+  const clearArrivalUrl = () => {
+    setUrlBase({});
+    setUrlState(null);
+  };
 
-  // Each strip belongs to the side it is beside, whichever way the board faces.
-  const topColor = state.orientation === "white" ? "black" : "white";
-  const bottomColor = state.orientation === "white" ? "white" : "black";
+  // Leaving with changes unsaved — a reload, a closed tab — asks first.
+  useEffect(() => {
+    if (!state.unsaved) return;
+    const warn = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [state.unsaved]);
+
+  const onSaveClick = () => {
+    if (record === null) setSaveOpen(true);
+    else setChangesOpen((open) => !open);
+  };
+
+  const saveCopy = async () => {
+    const copy = await state.saveCopy(
+      t("analysis.changes.copyName", { name: record?.name || name }),
+    );
+    if (copy !== undefined) pointUrlAt(copy.id);
+  };
+
+  const saveLabel = t(
+    record === null
+      ? "analysis.save.open"
+      : state.changed
+        ? "analysis.changes.saveOpen"
+        : "analysis.changes.saveNothing",
+  );
 
   return (
     <>
-      <Box
-        data-testid="analysis-board-screen"
-        {...dropTargetProps}
-        sx={{
-          width: "100%",
-          height: "100%",
-          display: "flex",
-          alignItems: "flex-start",
-          /*
-            The gap is the other half of `EVAL_BAR_TOTAL_PX`, so bar + gap +
-            board comes to exactly the square the shell handed over. Any other
-            value here and the row overflows, flex shrinks the board, and it
-            stops being square.
-          */
-          gap: state.showEvalBar ? `${EVAL_BAR_GAP_PX}px` : 0,
-          borderRadius: 1,
-          // An outline, not a border: it is painted outside the box model, so
-          // switching it on does not shrink the board by its own width.
-          outline: isDragOver ? "2px dashed" : "none",
-          outlineOffset: "-2px",
-          color: isDragOver ? "primary.main" : "inherit",
+      <BoardShell
+        id="analysis"
+        core={core}
+        score={topLine?.score ?? null}
+        showEvalBar={state.engineOn && state.showEvalBar}
+        boardOptions={boardOptions}
+        overlay={explorer.overlay}
+        panel={{
+          header: (
+            <>
+              <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                <Typography
+                  variant="subtitle2"
+                  data-testid="analysis-name"
+                  dir="auto"
+                  sx={{ fontWeight: 700, lineHeight: 1.3 }}
+                  noWrap
+                >
+                  {name}
+                </Typography>
+                {record !== null && record.description !== "" && (
+                  // The reader's notes on it: one line here, all of it on hover.
+                  <Typography
+                    variant="caption"
+                    data-testid="analysis-description"
+                    dir="auto"
+                    title={record.description}
+                    sx={{ color: "text.secondary", display: "block" }}
+                    noWrap
+                  >
+                    {record.description}
+                  </Typography>
+                )}
+                <CurrentOpening fen={core.fen} testId="analysis-current-opening" />
+              </Box>
+              <Tooltip title={saveLabel}>
+                <span>
+                  <IconButton
+                    size="small"
+                    disabled={!state.canSave}
+                    color={state.unsaved ? "primary" : "default"}
+                    onClick={onSaveClick}
+                    aria-label={saveLabel}
+                    aria-pressed={record !== null && state.changed ? changesOpen : undefined}
+                    data-testid="analysis-save"
+                    sx={{ flexShrink: 0 }}
+                  >
+                    <SaveRoundedIcon fontSize="small" />
+                  </IconButton>
+                </span>
+              </Tooltip>
+              <PlayToggleButton
+                testId="analysis-play"
+                engineOn={state.engineOn}
+                playing={state.playing}
+                thinking={state.thinking}
+                onToggle={state.togglePlaying}
+              />
+              <Tooltip title={t("savedAnalyses.title")}>
+                <IconButton
+                  size="small"
+                  component={RouterLink}
+                  to="/tools/analysis/saved"
+                  aria-label={t("savedAnalyses.title")}
+                  data-testid="analysis-saved-list"
+                  sx={{ flexShrink: 0 }}
+                >
+                  <FolderOpenRoundedIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+              {record !== null && (
+                // Its settings — off while there are unsaved changes, which
+                // leaving the board would lose.
+                <Tooltip
+                  title={t(
+                    state.unsaved ? "analysis.settingsLink.unsaved" : "analysis.settingsLink.open",
+                  )}
+                >
+                  <span>
+                    <IconButton
+                      size="small"
+                      component={RouterLink}
+                      to={`/tools/analysis/saved/${encodeURIComponent(record.id)}/settings`}
+                      state={{ from: `${location.pathname}${location.search}` }}
+                      disabled={state.unsaved}
+                      aria-label={t("analysis.settingsLink.open")}
+                      data-testid="analysis-settings"
+                      sx={{ flexShrink: 0 }}
+                    >
+                      <SettingsRoundedIcon fontSize="small" />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+              )}
+              <FormControlLabel
+                sx={{ flexShrink: 0, marginInlineEnd: 0 }}
+                control={
+                  <Switch
+                    size="small"
+                    checked={state.engineOn}
+                    data-testid="analysis-setting-engine"
+                    onChange={(event) => state.setEngineOn(event.target.checked)}
+                  />
+                }
+                label={t("analysis.engineSwitch")}
+              />
+            </>
+          ),
+          analysis: engine.analysis,
+          requestedMultiPv: state.settings.multiPv,
+          engineOn: state.engineOn,
+          // Present, so the pinned lines are clickable (CTA-55).
+          onPlayVariation: core.playVariation,
+          activeTab: tab,
+          onTabChange: setTab,
+          keepMounted: KEEP_MOUNTED,
+          tabs: [
+            { id: "moves", label: t("analysis.tabs.moves"), content: explorer.moves },
+            { id: "map", label: t("analysis.tabs.map"), content: explorer.map },
+            {
+              id: "load",
+              label: t("analysis.tabs.load"),
+              content: (
+                <AnalysisLoad
+                  settings={state.settings}
+                  onLoadTree={(tree) => {
+                    state.loadNew(tree);
+                    clearArrivalUrl();
+                  }}
+                  onLoadFen={(fen) => {
+                    state.loadFen(fen);
+                    clearArrivalUrl();
+                  }}
+                  onSplit={(folderId) =>
+                    navigate(`/tools/analysis/saved?folder=${encodeURIComponent(folderId)}`)
+                  }
+                />
+              ),
+            },
+            {
+              id: "export",
+              label: t("analysis.tabs.export"),
+              content: (
+                <AnalysisExport
+                  fen={core.fen}
+                  tree={core.tree}
+                  fileStem={slugify(name) || "analysis"}
+                />
+              ),
+            },
+            {
+              id: "engine",
+              label: t("analysis.tabs.engine"),
+              content: (
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                  <FormControlLabel
+                    sx={{ m: 0, px: 1 }}
+                    control={
+                      <Switch
+                        size="small"
+                        checked={showArrows}
+                        data-testid="analysis-arrows"
+                        onChange={(event) => setShowArrows(event.target.checked)}
+                      />
+                    }
+                    label={t("analysis.settings.arrows")}
+                  />
+                  <AnalysisSettingsPanel
+                    settings={state.settings}
+                    onChange={state.updateSettings}
+                    engineOptions={engine.engineOptions}
+                    engineOn={state.engineOn}
+                    showEvalBar={state.showEvalBar}
+                    onShowEvalBarChange={state.setShowEvalBar}
+                    onClear={() => {
+                      state.clearBoard();
+                      clearArrivalUrl();
+                    }}
+                  />
+                </Box>
+              ),
+            },
+          ],
+          footer: (
+            <>
+              {explorer.annotations}
+              {record !== null && state.changed && changesOpen && (
+                <RepertoireChangesBar
+                  testId="analysis-changes"
+                  labelKey="analysis.changes"
+                  summary={
+                    state.extensionIds.size === 0
+                      ? t("analysis.changes.edited")
+                      : t("analysis.changes.added", { count: state.extensionIds.size })
+                  }
+                  problem={state.problem}
+                  onUpdate={() => void state.update()}
+                  onCopy={() => void saveCopy()}
+                  onDiscard={state.discard}
+                />
+              )}
+              {record === null && state.problem !== null && (
+                <Typography
+                  variant="caption"
+                  role="alert"
+                  data-testid="analysis-save-problem"
+                  sx={{ display: "block", color: "error.main", px: 1 }}
+                >
+                  {t(`analysis.changes.problem.${state.problem}`)}
+                </Typography>
+              )}
+              {/* Play's status — the engine thinking, or the reader's move. */}
+              {state.playing && (
+                <EngineThinking
+                  thinking={state.thinking}
+                  depth={engine.analysis.fen === core.fen ? engine.analysis.depth : 0}
+                />
+              )}
+              {tab === "moves" && explorer.nextMoves}
+            </>
+          ),
         }}
-      >
-        {state.showEvalBar && (
-          <Box sx={{ height: boardSide, display: "flex" }}>
-            <EvalBar
-              score={topLine?.score ?? null}
-              orientation={state.orientation}
-              label={t("board.evalBar")}
-            />
-          </Box>
-        )}
-
-        {/*
-          The board square is a column now: the captured-pieces strip above, the
-          board, the strip below. Both boxes keep their side a calc of the same
-          percentage base — the column's against the shell's square, the
-          board's against the column — so the board stays square.
-        */}
-        <Box
-          data-testid="analysis-board-square"
-          sx={{
-            width: boardSide,
-            height: boardSide,
-            // The width is already exact; never let flex shave a pixel off it,
-            // which would make the board a rectangle.
-            flexShrink: 0,
-            display: "flex",
-            flexDirection: "column",
-          }}
-        >
-          <CapturedPieces
-            testId="analysis-captured"
-            color={topColor}
-            captured={captured.captured[topColor]}
-            diff={diffForSide(captured.materialDiff, topColor)}
-          />
-
-          {/*
-            `position: relative` so the promotion picker, which is absolutely
-            positioned in percentages of the board, has this box to measure
-            against — it overlays the board exactly.
-          */}
-          <Box
-            sx={{
-              position: "relative",
-              width: boardInnerSide,
-              height: boardInnerSide,
-              // The side is already exact; never let flex shave a pixel off
-              // it, which would make the board a rectangle.
-              flexShrink: 0,
-              alignSelf: "center",
-              marginBlock: `${CAPTURED_STRIP_GAP_PX}px`,
-            }}
-          >
-            <Chessboard options={chessboardOptions} />
-
-            {state.promotion && (
-              <PromotionPicker
-                targetSquare={state.promotion.to}
-                orientation={state.orientation}
-                // The side promoting is the side to move in the position the pawn
-                // is being pushed from — both colours move here.
-                color={state.turn}
-                onSelect={state.resolvePromotion}
-              />
-            )}
-          </Box>
-
-          <CapturedPieces
-            testId="analysis-captured"
-            color={bottomColor}
-            captured={captured.captured[bottomColor]}
-            diff={diffForSide(captured.materialDiff, bottomColor)}
-          />
-        </Box>
-      </Box>
-
-      <RightPanel>
-        <Box
-          {...dropTargetProps}
-          sx={{
-            flexGrow: 1,
-            minHeight: 0,
-            display: "flex",
-            flexDirection: "column",
-            borderRadius: 1,
-            bgcolor: isDragOver ? "action.hover" : "transparent",
-          }}
-        >
-          <AnalysisPanel
-            state={state}
-            tab={tab}
-            onTabChange={setTab}
-            continuations={continuations}
-            onHoverNextMove={setHoveredNextMove}
-            onPlayFromHere={onPlayFromHere}
-            position={
-              <PositionSetup
-                games={games}
-                selected={selected}
-                onSelectGame={selectGame}
-                error={error}
-                pgnText={pgnText}
-                onPgnTextChange={setPgnText}
-                onLoadPgn={onLoadPgn}
-                onFileChosen={onFileChosen}
-                fenText={fenText}
-                onFenTextChange={setFenText}
-                onLoadFen={onLoadFen}
-                currentFen={state.fen}
-                currentPgn={state.pgn}
-              />
-            }
-          />
-        </Box>
-      </RightPanel>
+      />
+      <SaveAnalysisDialog
+        open={saveOpen}
+        initialName={savedAnalysisDerivedName(core.tree.headers)}
+        onSave={async (typed, folderId) => {
+          const saved = await state.saveNew(typed, folderId, showArrows);
+          if (saved !== undefined) pointUrlAt(saved.id);
+        }}
+        onClose={() => setSaveOpen(false)}
+      />
     </>
   );
 }
 
-export default AnalysisBoard;
+/**
+ * The route: the board, once what its URL names can be read. The saved
+ * analyses are IndexedDB's (CTA-77) and a read is a promise, so an arrival
+ * that names one — `?analysis=<id>`, or `?game=analysis/…` — waits for the
+ * store's first read rather than opening a blank board and calling the
+ * record missing; so does a Library game (`?game=library/<collection>/<n>`),
+ * whose collection's games are read lazily. Every other arrival mounts at once.
+ */
+function AnalysisBoardRoute() {
+  const { t } = useTranslation();
+  const [searchParams] = useSearchParams();
+  const game = searchParams.get("game");
+  const waitsForAnalyses = searchParams.get("analysis") !== null || isAnalysisReference(game);
+  const [ready, setReady] = useState(
+    () => (!waitsForAnalyses || savedAnalysesSnapshot() !== undefined) && isReferenceRead(game),
+  );
+  useEffect(() => {
+    if (ready) return;
+    let live = true;
+    void Promise.all([
+      waitsForAnalyses ? loadSavedAnalyses() : undefined,
+      loadReferencedGames(game),
+    ]).then(() => {
+      if (live) setReady(true);
+    });
+    return () => {
+      live = false;
+    };
+  }, [ready, waitsForAnalyses, game]);
+
+  if (!ready) {
+    return (
+      <Typography data-testid="analysis-loading" sx={{ color: "text.secondary", p: 2 }}>
+        {t("savedAnalyses.loading")}
+      </Typography>
+    );
+  }
+  return <AnalysisBoard />;
+}
+
+export default AnalysisBoardRoute;

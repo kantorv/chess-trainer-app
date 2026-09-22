@@ -11,7 +11,7 @@ import {
   CARO,
   CARO_TWO_GAMES,
   renderSection,
-  storeLegacyRepertoire,
+  storeMultiGameRepertoire,
   storeRepertoire,
 } from "./repertoireTestKit";
 
@@ -35,12 +35,12 @@ vi.mock("../../lib/openings", async (importOriginal) => {
   );
 });
 
-const files = import.meta.glob<string>("../../data/pgn/*.pgn", {
+const files = import.meta.glob<string>("../../test/fixtures/pgn/*.pgn", {
   query: "?raw",
   import: "default",
   eager: true,
 });
-const shipped = (name: string) => files[`../../data/pgn/${name}`]!;
+const fixture = (name: string) => files[`../../test/fixtures/pgn/${name}`]!;
 
 const AFTER_NF3 = "rn1qkbnr/pp2pppp/2p5/3pPb2/3P4/5N2/PPP2PPP/RNBQKB1R b KQkq - 2 4";
 
@@ -59,7 +59,7 @@ const ready = () =>
 
 describe("a repertoire's own view — the player, on the v2 board", () => {
   it("renders the shared board square and the shared panel skeleton", async () => {
-    renderSection(`/repertoires/${storeRepertoire("r", CARO, "Caro")}`);
+    await renderSection(`/repertoires/${await storeRepertoire("r", CARO, "Caro")}`);
     await ready();
 
     // The square is `EngineBoardSquare`'s, reached through `BoardShell`.
@@ -86,7 +86,7 @@ describe("a repertoire's own view — the player, on the v2 board", () => {
   });
 
   it("opens on the Moves tab with the repertoire's side lines in the list", async () => {
-    renderSection(`/repertoires/${storeRepertoire("r")}`);
+    await renderSection(`/repertoires/${await storeRepertoire("r")}`);
     await ready();
 
     const moves = screen.getByTestId("repertoire-board-panel-content-moves");
@@ -101,7 +101,7 @@ describe("a repertoire's own view — the player, on the v2 board", () => {
   });
 
   it("keeps the Moves tab mounted across tab switches, and follows the board while hidden", async () => {
-    renderSection(`/repertoires/${storeRepertoire("r")}`);
+    await renderSection(`/repertoires/${await storeRepertoire("r")}`);
     await ready();
     const list = screen.getByTestId("move-list");
 
@@ -127,7 +127,7 @@ describe("a repertoire's own view — the player, on the v2 board", () => {
   });
 
   it("never moves a piece by itself", async () => {
-    renderSection(`/repertoires/${storeRepertoire("r")}`);
+    await renderSection(`/repertoires/${await storeRepertoire("r")}`);
     await ready();
     const before = boardOptions().position;
     act(() => {
@@ -136,14 +136,14 @@ describe("a repertoire's own view — the player, on the v2 board", () => {
     expect(boardOptions().position).toBe(before);
   });
 
-  it("says so for an id this browser does not hold", () => {
-    renderSection("/repertoires/nope");
+  it("says so for an id this browser does not hold", async () => {
+    await renderSection("/repertoires/nope");
     expect(screen.getByTestId("repertoire-board-missing")).toBeInTheDocument();
   });
 
-  it("opens the shipped one-tree example (7,859 nodes), reading first and then showing it", async () => {
-    const big = shipped("live-chess-2026-09-18.pgn");
-    renderSection(`/repertoires/${storeRepertoire("big", big)}`);
+  it("opens the one-tree example (7,859 nodes), reading first and then showing it", async () => {
+    const big = fixture("live-chess-2026-09-18.pgn");
+    await renderSection(`/repertoires/${await storeRepertoire("big", big)}`);
 
     // The screen is up before the tree is: it says it is reading.
     expect(screen.getByTestId("repertoire-board-panel")).toBeInTheDocument();
@@ -162,7 +162,7 @@ describe("a repertoire's own view — the player, on the v2 board", () => {
 
 describe("a record from before the one-game rule", () => {
   it("opens on the merge-or-split choice, not on a board", async () => {
-    renderSection(`/repertoires/${storeLegacyRepertoire("old", CARO_TWO_GAMES, "Old Caro")}`);
+    await renderSection(`/repertoires/${await storeMultiGameRepertoire("old", CARO_TWO_GAMES, "Old Caro")}`);
 
     expect(screen.getByTestId("repertoire-board-multi")).toHaveTextContent("Old Caro");
     expect(await screen.findByTestId("repertoire-choice")).toHaveTextContent(
@@ -172,32 +172,34 @@ describe("a record from before the one-game rule", () => {
   });
 
   it("merges in place: the same id, now one game, and opens on the board", async () => {
-    storeRepertoire("newer");
-    storeLegacyRepertoire("old", CARO_TWO_GAMES, "Old Caro");
-    renderSection("/repertoires/old");
+    await storeMultiGameRepertoire("old", CARO_TWO_GAMES, "Old Caro");
+    await storeRepertoire("newer");
+    await renderSection("/repertoires/old");
     await userEvent.click(await screen.findByTestId("repertoire-choice-merge"));
 
+    await waitFor(() => expect(isMultiGameRepertoire(findSavedRepertoire("old")!)).toBe(false));
     const merged = findSavedRepertoire("old")!;
     expect(isMultiGameRepertoire(merged)).toBe(false);
     expect(merged.name).toBe("Old Caro");
     expect(repertoireTreeOf(merged)?.moves).toHaveLength(1);
     // In its own place in the list, not moved to the top.
-    expect(savedRepertoiresSnapshot().map((row) => row.id)).toEqual(["newer", "old"]);
+    expect(savedRepertoiresSnapshot()!.map((row) => row.id)).toEqual(["newer", "old"]);
 
     await ready();
     expect(screen.getByTestId("repertoire-board-board")).toBeInTheDocument();
   });
 
   it("splits in place: one repertoire per game where the old one stood", async () => {
-    storeRepertoire("newer");
-    storeLegacyRepertoire("old", CARO_TWO_GAMES, "Old Caro");
-    renderSection("/repertoires/old");
+    await storeMultiGameRepertoire("old", CARO_TWO_GAMES, "Old Caro");
+    await storeRepertoire("newer");
+    await renderSection("/repertoires/old");
     await userEvent.click(await screen.findByTestId("repertoire-choice-split"));
 
     // Into a folder named after the old record, in the old record's place.
-    const [folder] = repertoireFoldersSnapshot();
+    await waitFor(() => expect(findSavedRepertoire("old")).toBeUndefined());
+    const [folder] = repertoireFoldersSnapshot()!;
     expect(folder.name).toBe("Old Caro");
-    const rows = savedRepertoiresSnapshot();
+    const rows = savedRepertoiresSnapshot()!;
     expect(rows.map((row) => [row.name, row.folderId])).toEqual([
       ["My Caro", null],
       ["Advance · 3...Bf5", folder.id],

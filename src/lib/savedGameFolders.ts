@@ -1,31 +1,16 @@
-import type { SavedGame } from "./savedGames";
-
 /**
- * **The reader's saved-game folders** — what one is, and the tree it nests
- * into.
+ * **The nested-folder model** — what a folder is, and the tree it nests into.
  *
- * The Saved games screen's flat list grew into a folder system (CTA-46), and
- * this is the pure half of it: the {@link GameFolder} entity and the reads over
- * a list of them. It is
- * [`savedOpeningFolders.ts`](./savedOpeningFolders.ts) again, and for the same
- * reason — the same deliberate near-copy the saved analyses are of the saved
- * games. The storage half is
- * [`savedGameFolderStore.ts`](./savedGameFolderStore.ts) — a versioned
- * `localStorage` key beside the games' own
- * ([`savedGameStore.ts`](./savedGameStore.ts)) — and the React binding is
- * `views/engine/saved/useGameFolders.ts`. A folder is **not** a game, which is
- * the whole reason it is a separate record in a separate store: a game carries
- * a PGN and the settings it was played under; a folder carries only a name and
- * a parent. What joins them is {@link SavedGame.folderId}, a plain id — no join
- * table, no `children` array on the folder, because a folder's children are
- * derivable from the list and a second copy of them could desync.
- *
- * What the openings' version has that this does not: nothing — the entity is
- * the same shape, and so are the reads. What this has that the openings' does
- * not is the **autosave trap**: a game is written by an effect on every move
- * (`usePlayWithEngine`), so the record that effect writes must carry the stored
- * `folderId` forward — the stores and the effect own that rule, not these
- * reads.
+ * The old Saved games screen's flat list grew into a folder system (CTA-46);
+ * that screen, its store and its games are gone (CTA-74, CTA-79), and what
+ * stays is this pure half: the {@link GameFolder} entity and the reads over a
+ * list of them, which the saved analyses' folders *are*
+ * (`savedAnalysisFolders.ts`). A folder is **not** a record of what it holds,
+ * which is the whole reason it is a separate record in a separate store: it
+ * carries only a name and a parent. What joins the two is a
+ * {@link FiledRecord}'s `folderId`, a plain id — no join table, no `children`
+ * array on the folder, because a folder's children are derivable from the
+ * list and a second copy of them could desync.
  *
  * ## A parent is an id, not a position in a list
  *
@@ -45,9 +30,12 @@ import type { SavedGame } from "./savedGames";
  *   (`moveGameFolder` refuses a folder's own subtree), so these reads are
  *   defence in depth, not the rule.
  */
-/** One folder in the reader's saved-game tree. Plain JSON. */
+/** Anything filed under a folder — the join a folder's contents are read by. */
+export type FiledRecord = { folderId: string | null };
+
+/** One folder in a nested tree. Plain JSON. */
 export type GameFolder = {
-  /** Stable for the life of the record, and the join to {@link SavedGame.folderId}. */
+  /** Stable for the life of the record, and the join to {@link FiledRecord.folderId}. */
   id: string;
   /** The reader's own name for the folder. Not unique — ids are. */
   name: string;
@@ -206,11 +194,11 @@ export const gameFolderSubtree = (
  * order is the caller's (the store's, which is newest first) — the filter does
  * not sort.
  */
-export const gamesInFolder = (
-  games: readonly SavedGame[],
+export const gamesInFolder = <T extends FiledRecord>(
+  games: readonly T[],
   folders: readonly GameFolder[],
   id: string,
-): SavedGame[] => {
+): T[] => {
   const subtree = gameFolderSubtree(folders, id);
   return games.filter(
     (game) => game.folderId !== null && subtree.has(game.folderId),
@@ -223,7 +211,7 @@ export const gamesInFolder = (
  * subtree export behind it name the same set by construction.
  */
 export const gamesUnderFolder = (
-  games: readonly SavedGame[],
+  games: readonly FiledRecord[],
   folders: readonly GameFolder[],
   id: string,
 ): number => gamesInFolder(games, folders, id).length;

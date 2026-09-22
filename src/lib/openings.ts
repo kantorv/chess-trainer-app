@@ -14,6 +14,9 @@ import { Chess, type Square } from "chess.js";
  * `.npmignore` excludes every `*.json`). CTA-30 rules that out: this screen
  * has to work offline and on GitHub Pages, so the data is vendored into the
  * repo and loaded through Vite's own code splitting instead of a `fetch`.
+ *
+ * The reference for the book — data, loading, lookups, consumers — is
+ * [`.claude/rules/openings-explorer.md`](../../.claude/rules/openings-explorer.md) §2.
  */
 
 /** One opening, trimmed to what the app shows. */
@@ -109,27 +112,6 @@ export const findOpening = (
 
   const candidates = positionBook?.[positionOf(fen)];
   return candidates && candidates.length > 0 ? book[candidates[0]] : undefined;
-};
-
-/**
- * The opening's top-level name: the part of eco.json's
- * `"Opening: Variation, SubVariation"` convention before its first `":"` — the
- * family, which is what the save dialog's default rule files a position under.
- * A name with no `":"` is its own top level, and one that trims to nothing
- * stays empty for the caller's normaliser to refuse.
- */
-export const topLevelOpeningName = (name: string): string =>
-  name.split(":")[0].trim();
-
-/**
- * The opening's variation name: the part of eco.json's
- * `"Opening: Variation, SubVariation"` convention after its first `":"`, or
- * `""` for a name without one — the piece a saved opening's default note
- * names, with the top level as the fallback when there is no variation.
- */
-export const openingVariationName = (name: string): string => {
-  const index = name.indexOf(":");
-  return index === -1 ? "" : name.slice(index + 1).trim();
 };
 
 /**

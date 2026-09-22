@@ -3,10 +3,10 @@ import { type Chess, DEFAULT_POSITION, type Square } from "chess.js";
 /**
  * The shared game model: what a "game" is to everything that displays one.
  *
- * Two screens produce games from opposite directions — Load PGN parses an
- * immutable game out of text, Play with Engine grows one move by move out of a
- * live `chess.js` instance — and both feed the same move list, the same ply
- * navigation and the same board controls. That is only true because they hand
+ * Games are produced from opposite directions — `parsePgnGames` parses an
+ * immutable game out of text, `gameFromChess` snapshots one grown move by move
+ * in a live `chess.js` instance (Masked Pieces) — and both feed the same move
+ * list, the same ply navigation and the same board controls. That is only true because they hand
  * those pieces the *same* type, so the model lives here rather than inside
  * either producer.
  *

@@ -9,11 +9,12 @@ import {
 /**
  * The reader's repertoires, as React state — the whole of the binding between
  * [`lib/savedRepertoireStore.ts`](../../lib/savedRepertoireStore.ts) and the
- * components, for the reason `views/engine/saved/useSavedGames.ts` gives: the
- * store is `localStorage`, shared with the other tabs, so React has to *read*
- * it rather than own it. A hook, so `src/lib/` stays free of React.
+ * components, for the reason `views/engine/games/usePlayedGames.ts` gives: the
+ * store is shared with the other tabs, so React has to *read* it rather than
+ * own it. **`undefined` while the store's first read is out** (IndexedDB). A
+ * hook, so `src/lib/` stays free of React.
  */
-export const useSavedRepertoires = (): readonly SavedRepertoire[] =>
+export const useSavedRepertoires = (): readonly SavedRepertoire[] | undefined =>
   useSyncExternalStore(
     subscribeSavedRepertoires,
     savedRepertoiresSnapshot,

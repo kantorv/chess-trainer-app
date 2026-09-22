@@ -35,6 +35,7 @@ import { useSavedRepertoires } from "./useSavedRepertoires";
 function RepertoireBoard() {
   const { id } = useParams();
   const repertoires = useSavedRepertoires();
+  if (repertoires === undefined) return <ReadingRepertoires />;
   const saved = repertoires.find((row) => row.id === id);
 
   if (saved === undefined) return <MissingRepertoire />;
@@ -84,6 +85,19 @@ export function MultiGameRepertoire({ saved }: { saved: SavedRepertoire }) {
         </Typography>
       )}
     </Box>
+  );
+}
+
+/**
+ * The store's first read still out (IndexedDB — a read is a promise): the
+ * routes wait rather than calling the repertoire missing before it lands.
+ */
+export function ReadingRepertoires() {
+  const { t } = useTranslation();
+  return (
+    <Typography data-testid="repertoires-loading" sx={{ color: "text.secondary", p: 2 }}>
+      {t("repertoires.loading")}
+    </Typography>
   );
 }
 

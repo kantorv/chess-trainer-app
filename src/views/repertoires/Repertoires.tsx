@@ -35,7 +35,7 @@ import {
   type RepertoireFolder,
 } from "../../lib/savedRepertoireFolders";
 import { removeSavedRepertoires } from "../../lib/savedRepertoireStore";
-import { slugify } from "../../lib/pgnLibrary";
+import { slugify } from "../../lib/pgnText";
 import { RightPanel } from "../main/rightPanel";
 import SavedListExportBar from "../shared/SavedListExportBar";
 import SavedListViewToggle from "../shared/SavedListViewToggle";
@@ -52,13 +52,14 @@ import {
   RepertoireFolderNameDialog,
 } from "./RepertoireFolderDialogs";
 import { RepertoireFolderCard, RepertoireFolderRow } from "./RepertoireFolderViews";
+import { ReadingRepertoires } from "./RepertoireBoard";
 import RepertoireGamesMenu from "./RepertoireGamesMenu";
 import { useRepertoireFolders } from "./useRepertoireFolders";
 import { useSavedRepertoires } from "./useSavedRepertoires";
 
 /**
  * **Repertoires** (`/repertoires`) — the reader's own repertoires, newest
- * first, as rows or as preview boards at the library's two card sizes (CTA-61).
+ * first, as rows or as preview boards at the saved lists' two card sizes (CTA-61).
  *
  * It is `views/tools/analysis/saved/SavedAnalyses.tsx` again, over the same
  * saved-list machinery (`views/shared/savedList.ts` and the `SavedList*.tsx`
@@ -73,8 +74,8 @@ import { useSavedRepertoires } from "./useSavedRepertoires";
  *
  * - **One destination, and its games.** A repertoire opens on its own view
  *   (`/repertoires/<id>`, the player) — there is no single position to hand
- *   Play with Engine and no single game to hand Load PGN, since a repertoire
- *   is many lines — and each row and card carries the Games menu
+ *   Play with Engine and no single game to hand on, since a repertoire is
+ *   many lines — and each row and card carries the Games menu
  *   (`RepertoireGamesMenu.tsx`, CTA-63) beside it.
  * - **Folders, one level deep.** The top level lists the folders, then the
  *   Unfiled repertoires; `?folder=<id>` opens one — its repertoires, with its
@@ -276,12 +277,28 @@ function RepertoireCard({ saved, checked, onToggle }: ItemProps) {
   );
 }
 
+/**
+ * The route: the list, once both stores' first reads have landed (IndexedDB —
+ * a read is a promise), so a `?folder=` link is not read as the top level
+ * before the folders are there.
+ */
 function Repertoires() {
+  const repertoires = useSavedRepertoires();
+  const folders = useRepertoireFolders();
+  if (repertoires === undefined || folders === undefined) return <ReadingRepertoires />;
+  return <RepertoiresList repertoires={repertoires} folders={folders} />;
+}
+
+function RepertoiresList({
+  repertoires,
+  folders,
+}: {
+  repertoires: readonly SavedRepertoire[];
+  folders: readonly RepertoireFolder[];
+}) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [view, setView] = useState<SavedListView>(SAVED_LIST_DEFAULT_VIEW);
-  const repertoires = useSavedRepertoires();
-  const folders = useRepertoireFolders();
 
   /*
     Where the reader is: a folder named by `?folder=`, or the top level. A
@@ -338,17 +355,17 @@ function Repertoires() {
 
   // One write for the lot; the picks go with them.
   const deletePicked = () => {
-    removeSavedRepertoires(selected.map((saved) => saved.id));
+    void removeSavedRepertoires(selected.map((saved) => saved.id));
     setPicked(new Set());
   };
 
   const saveName = (name: string) => {
-    if (naming?.folder) renameRepertoireFolder(naming.folder.id, name);
-    else createRepertoireFolder(name);
+    if (naming?.folder) void renameRepertoireFolder(naming.folder.id, name);
+    else void createRepertoireFolder(name);
   };
 
   const deleteFolder = (folder: RepertoireFolder) => {
-    removeRepertoireFolder(folder.id);
+    void removeRepertoireFolder(folder.id);
     if (folder.id === folderId) navigate("/repertoires");
   };
 

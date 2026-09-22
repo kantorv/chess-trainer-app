@@ -4,7 +4,7 @@ import { Chess } from "chess.js";
 
 import i18n from "../../i18n";
 import { boardOptions, FakeEngine } from "../dev/devTestHarness";
-import { renderSection, storeRepertoire } from "./repertoireTestKit";
+import { FAKE_TIMERS, renderSection, storeRepertoire } from "./repertoireTestKit";
 
 /*
   Play chances in the player (CTA-69) — lichess-tools' `prc:N`, set per
@@ -35,8 +35,8 @@ const fenAfter = (...sans: string[]) => {
   return chess.fen();
 };
 
-const mountIdle = (path: string) => {
-  renderSection(path);
+const mountIdle = async (path: string) => {
+  await renderSection(path);
   act(() => {
     vi.advanceTimersByTime(0);
   });
@@ -57,7 +57,7 @@ const setChance = (san: string, value: string) =>
 beforeEach(async () => {
   FakeEngine.reset();
   await i18n.changeLanguage("en");
-  vi.useFakeTimers();
+  vi.useFakeTimers(FAKE_TIMERS);
   // A draw of 0 takes the first move with any chance.
   vi.spyOn(Math, "random").mockReturnValue(0);
 });
@@ -68,8 +68,8 @@ afterEach(() => {
 });
 
 describe("play chances", () => {
-  it("are offered on a move with alternatives, and not on one without", () => {
-    mountIdle(`/repertoires/${storeRepertoire("r", CARO)}`);
+  it("are offered on a move with alternatives, and not on one without", async () => {
+    await mountIdle(`/repertoires/${await storeRepertoire("r", CARO)}`);
     openMenuOn(1);
     expect(screen.queryByTestId("move-menu-chances")).not.toBeInTheDocument();
     fireEvent.keyDown(screen.getByRole("menu"), { key: "Escape" });
@@ -77,8 +77,8 @@ describe("play chances", () => {
     expect(screen.getByTestId("move-menu-chances")).toBeInTheDocument();
   });
 
-  it("list the branch's moves with the chance each is played, worked out live", () => {
-    mountIdle(`/repertoires/${storeRepertoire("r", CARO)}`);
+  it("list the branch's moves with the chance each is played, worked out live", async () => {
+    await mountIdle(`/repertoires/${await storeRepertoire("r", CARO)}`);
     openMenuOn(6);
     fireEvent.click(screen.getByTestId("move-menu-chances"));
 
@@ -97,8 +97,8 @@ describe("play chances", () => {
     expect(dialog.getByTestId("play-chance-save")).toBeDisabled();
   });
 
-  it("save as prc:N in the moves' comments — a session change the trainer follows at once", () => {
-    mountIdle(`/repertoires/${storeRepertoire("r", CARO)}`);
+  it("save as prc:N in the moves' comments — a session change the trainer follows at once", async () => {
+    await mountIdle(`/repertoires/${await storeRepertoire("r", CARO)}`);
     expect(screen.getByTestId("repertoire-board-save")).toBeDisabled();
 
     openMenuOn(6);
@@ -122,9 +122,9 @@ describe("play chances", () => {
     expect(boardOptions().position).toBe(fenAfter("e4", "c6", "d4", "d5", "e5", "c5"));
   });
 
-  it("show as a Play chance chip in the comment block", () => {
-    mountIdle(
-      `/repertoires/${storeRepertoire("r", CARO.replace("3... c5", "3... c5 {Sharp. prc:30}"))}?at=e4,c6,d4,d5,e5,c5`,
+  it("show as a Play chance chip in the comment block", async () => {
+    await mountIdle(
+      `/repertoires/${await storeRepertoire("r", CARO.replace("3... c5", "3... c5 {Sharp. prc:30}"))}?at=e4,c6,d4,d5,e5,c5`,
     );
     const block = screen.getByTestId("repertoire-board-annotations");
     expect(block).toHaveTextContent("Sharp.");
@@ -140,8 +140,8 @@ describe("↑ / ↓ in the player — switching the trainer's reply", () => {
   const TWO_REPLIES = ['[Event "Two"]', "", "1. e4 c6 (1... e5 2. Nf3 Nc6) 2. d4 *"].join("\n");
   const key = (name: string) => fireEvent.keyDown(document.body, { key: name });
 
-  it("cycle the siblings, and the trainer goes on from the one chosen", () => {
-    mountIdle(`/repertoires/${storeRepertoire("r", TWO_REPLIES)}`);
+  it("cycle the siblings, and the trainer goes on from the one chosen", async () => {
+    await mountIdle(`/repertoires/${await storeRepertoire("r", TWO_REPLIES)}`);
     fireEvent.click(screen.getByTestId("repertoire-board-panel-tab-settings"));
     fireEvent.click(screen.getByTestId("repertoire-board-setting-autoplay").querySelector("input")!);
     fireEvent.click(screen.getByTestId("repertoire-board-panel-tab-moves"));
@@ -169,8 +169,8 @@ describe("↑ / ↓ in the player — switching the trainer's reply", () => {
     expect(boardOptions().position).toBe(fenAfter("e4", "c6", "d4"));
   });
 
-  it("wrap around, and do nothing on a move without alternatives", () => {
-    mountIdle(`/repertoires/${storeRepertoire("r", TWO_REPLIES)}?at=e4,c6`);
+  it("wrap around, and do nothing on a move without alternatives", async () => {
+    await mountIdle(`/repertoires/${await storeRepertoire("r", TWO_REPLIES)}?at=e4,c6`);
     key("ArrowUp");
     expect(boardOptions().position).toBe(fenAfter("e4", "e5"));
     key("ArrowUp");

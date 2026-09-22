@@ -7,6 +7,7 @@ import Typography from "@mui/material/Typography";
 import { Link as RouterLink, useLocation, useNavigate, useParams } from "react-router";
 import { useTranslation } from "react-i18next";
 
+import type { RepertoireFolder } from "../../lib/savedRepertoireFolders";
 import type { SavedRepertoire } from "../../lib/savedRepertoires";
 import { fileRepertoire, updateRepertoireSettings } from "../../lib/savedRepertoireStore";
 import { RightPanel } from "../main/rightPanel";
@@ -17,6 +18,7 @@ import {
   type RepertoireSettingsDraft,
   type RepertoireSettingsSectionProps,
 } from "./RepertoireSettingsSections";
+import { ReadingRepertoires } from "./RepertoireBoard";
 import { useRepertoireFolders } from "./useRepertoireFolders";
 import { useSavedRepertoires } from "./useSavedRepertoires";
 
@@ -50,8 +52,11 @@ const SECTIONS: readonly {
 function RepertoireSettingsScreen() {
   const { id } = useParams();
   const repertoires = useSavedRepertoires();
-  const saved = repertoires.find((row) => row.id === id);
+  // The draft is seeded from the folders too, so both reads must have landed.
+  const folders = useRepertoireFolders();
   const { t } = useTranslation();
+  if (repertoires === undefined || folders === undefined) return <ReadingRepertoires />;
+  const saved = repertoires.find((row) => row.id === id);
 
   if (saved === undefined) {
     return (
@@ -66,10 +71,16 @@ function RepertoireSettingsScreen() {
     );
   }
   // Keyed, so the draft is seeded from this record and no other.
-  return <SettingsForm key={saved.id} saved={saved} />;
+  return <SettingsForm key={saved.id} saved={saved} folders={folders} />;
 }
 
-function SettingsForm({ saved }: { saved: SavedRepertoire }) {
+function SettingsForm({
+  saved,
+  folders,
+}: {
+  saved: SavedRepertoire;
+  folders: readonly RepertoireFolder[];
+}) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
@@ -81,7 +92,6 @@ function SettingsForm({ saved }: { saved: SavedRepertoire }) {
 
   // A `folderId` naming a folder that is gone reads as Unfiled, as the list
   // reads it, so the tree preselects what the reader actually sees.
-  const folders = useRepertoireFolders();
   const [draft, setDraft] = useState<RepertoireSettingsDraft>(() => ({
     name: saved.name,
     settings: saved.settings,
@@ -100,12 +110,12 @@ function SettingsForm({ saved }: { saved: SavedRepertoire }) {
       folderId: patch.folderId === undefined ? current.folderId : patch.folderId,
     }));
 
-  const save = () => {
+  const save = async () => {
     const problem =
-      updateRepertoireSettings(saved.id, draft.name.trim(), {
+      (await updateRepertoireSettings(saved.id, draft.name.trim(), {
         ...draft.settings,
         description: draft.settings.description.trim(),
-      }) ?? fileRepertoire(saved.id, draft.folderId);
+      })) ?? (await fileRepertoire(saved.id, draft.folderId));
     if (problem !== undefined) {
       setFailed(true);
       return;
@@ -155,7 +165,7 @@ function SettingsForm({ saved }: { saved: SavedRepertoire }) {
         )}
 
         <Box sx={{ display: "flex", gap: 1, pb: 1 }}>
-          <Button variant="contained" onClick={save} data-testid="repertoire-settings-save">
+          <Button variant="contained" onClick={() => void save()} data-testid="repertoire-settings-save">
             {t("repertoires.settings.save")}
           </Button>
           <Button

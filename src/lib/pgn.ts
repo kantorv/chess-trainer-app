@@ -158,6 +158,15 @@ const splitTags = (pgn: string): { headers: GameHeaders; movetext: string } => {
 export const readPgnTags = (pgn: string): GameHeaders => splitTags(pgn).headers;
 
 /**
+ * The tag pairs **and** the raw movetext of one game, without reading its
+ * moves — what the Library's table counts a game's length from (CTA-75),
+ * where parsing 674 games with `chess.js` to fill one column would be seconds.
+ */
+export const readPgnParts = (
+  pgn: string,
+): { headers: GameHeaders; movetext: string } => splitTags(pgn);
+
+/**
  * One token of movetext, in a single left-to-right pass (CTA-69 — before, the
  * annotations were stripped out ahead of the walk and lost):
  *

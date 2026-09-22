@@ -19,7 +19,7 @@
  * ```tsx
  * import { RightPanel } from '../main/rightPanel';
  *
- * function LoadPgnScreen() {
+ * function SomeGameScreen() {
  *   const [moves, setMoves] = useState<Move[]>([]);
  *   return (
  *     <>

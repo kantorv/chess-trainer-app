@@ -1,71 +1,105 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
+import { indexedRowOf } from "./collectionIndex";
+import { DEFAULT_ENGINE_SETTINGS } from "./engineSettings";
+import { addCollection, resetLibraryCollectionStore } from "./libraryCollectionStore";
+import { findCatalogGame } from "./gameCatalog";
+import { savePlayedGame } from "./playedGameStore";
+import { playedGameOf } from "./playedGames";
+import { parsePgnGame, parsePgnTree } from "./pgn";
 import {
-  LEGACY_PGN_REFERENCE_KEY,
+  ANALYSIS_REFERENCE_KEY,
+  isReferenceRead,
   LIBRARY_REFERENCE_KEY,
-  PGN_REFERENCE_KEY,
-  gameReferenceOf,
+  libraryGameReference,
+  loadReferencedGames,
+  PLAY_REFERENCE_KEY,
   resolveGameReference,
 } from "./gameReference";
-import { pgnCatalog } from "./pgnCatalog";
 
 /**
- * The `?game=` carrier: what a detail page writes into a link and what a
- * destination screen gets back out of one.
- *
- * The shipped User PGNs folders sit one segment deep now, but a reference is
- * still *resolved* against the catalog rather than split by counting segments —
- * the leftover after the section key goes to `resolveLibraryPath`, the same
- * longest-prefix match the splat route uses — so a reference into a folder the
- * manifest nested any number of levels needs no extra work here.
- * `resolveLibraryPath`'s own nested fixtures cover the deep case.
+ * The `?game=` carrier: a key, a store's catalog path and an id, resolved
+ * against that store. The two producers' own tests
+ * (`savedAnalysisStore.test.ts`, `playedGames.test.ts`) cover their round
+ * trips; this covers what the carrier refuses.
  */
 
-const first = pgnCatalog.items[0];
-const last = pgnCatalog.items[pgnCatalog.items.length - 1];
+beforeEach(() => localStorage.clear());
 
-describe("gameReferenceOf and resolveGameReference round-trip", () => {
-  it.each([
-    ["the first shipped game", first],
-    ["one in a different folder", last],
-  ])("carries %s there and back", (_name, item) => {
-    if (item.kind !== "game") throw new Error("expected a game");
-    expect(item.category).not.toBe("");
-
-    const reference = gameReferenceOf(PGN_REFERENCE_KEY, item);
-
-    expect(reference).toBe(`library/${item.category}/${item.id}`);
-    expect(resolveGameReference(reference)).toBe(item);
+describe("resolveGameReference", () => {
+  it("knows exactly the three stores' keys", () => {
+    expect(ANALYSIS_REFERENCE_KEY).toBe("analysis");
+    expect(PLAY_REFERENCE_KEY).toBe("play");
+    expect(LIBRARY_REFERENCE_KEY).toBe("library");
   });
 
-  it("tolerates the empty segments a stray slash leaves", () => {
-    expect(resolveGameReference(`/library/${first.category}/${first.id}/`)).toBe(
-      first,
+  it("tolerates the empty segments a stray slash leaves", async () => {
+    await savePlayedGame(
+      playedGameOf("a", parsePgnTree("1. e4 e5 *"), [], DEFAULT_ENGINE_SETTINGS),
     );
+    expect(resolveGameReference("/play/games/a/")?.id).toBe("a");
   });
 
-  it("still resolves the pre-CTA-38 `pgn/` section key", () => {
-    // `PGN_REFERENCE_KEY` now equals `LIBRARY_REFERENCE_KEY`; the *string*
-    // "pgn" a bookmarked link carries is kept resolvable via the legacy alias.
-    expect(PGN_REFERENCE_KEY).toBe(LIBRARY_REFERENCE_KEY);
-    expect(LEGACY_PGN_REFERENCE_KEY).toBe("pgn");
-    expect(
-      resolveGameReference(`pgn/${first.category}/${first.id}`),
-    ).toBe(first);
-  });
-});
-
-describe("resolveGameReference refuses everything it cannot resolve", () => {
   it.each([
     ["nothing at all", null],
     ["an empty string", ""],
-    ["a section key nobody registered", "library/basic/back-rank"],
-    ["another unregistered section key", "endgames/pawn-endgames/opposition"],
-    ["a key with no path after it", "pgn"],
-    ["a folder the catalog does not have", "pgn/no-such-folder/whatever"],
-    ["a game the folder does not have", `pgn/${first.category}/no-such-game`],
-    ["the old nested path, since the folders were flattened", `pgn/studies/${first.category}/${first.id}`],
+    ["a key with no path after it", "play"],
+    ["an unregistered key", "endgames/pawn-endgames/opposition"],
+    // The pre-CTA-75 Library's links name no collection and number now.
+    ["the old Library's key", "library/queen-vs-rook/chapter-1"],
+    ["a Library game number that is not one", "library/morphy/0"],
+    ["the pre-CTA-38 key", "pgn/queen-vs-rook/chapter-1"],
+    ["a path the store does not have", "play/nope/a"],
+    ["an id the store does not have", "play/games/missing"],
   ])("comes back undefined for %s", (_name, reference) => {
     expect(resolveGameReference(reference)).toBeUndefined();
+  });
+});
+
+describe("a Library game (CTA-77)", () => {
+  beforeEach(() => resetLibraryCollectionStore());
+
+  it("resolves an upload's game", async () => {
+    const pgn = '[White "Kim"]\n[Black "Lee"]\n\n1. e4 e5 *';
+    const added = await addCollection("Mine", [pgn], [indexedRowOf(pgn)]);
+    if (!("collection" in added)) throw new Error("not added");
+    const reference = libraryGameReference(added.collection.id, 1);
+    await loadReferencedGames(reference);
+    expect(isReferenceRead(reference)).toBe(true);
+    expect(resolveGameReference(reference)).toMatchObject({ id: "1", name: "Kim – Lee", pgn });
+    expect(resolveGameReference(libraryGameReference(added.collection.id, 2))).toBeUndefined();
+  });
+
+  it("resolves a shipped collection's game after its PGN chunk is fetched", async () => {
+    const reference = libraryGameReference("morphy", 1);
+    expect(isReferenceRead(reference)).toBe(false);
+    expect(resolveGameReference(reference)).toBeUndefined();
+    await loadReferencedGames(reference);
+    expect(isReferenceRead(reference)).toBe(true);
+    expect(resolveGameReference(reference)?.name).toBe("Morphy, Paul – Morphy, Alonzo");
+  });
+
+  it("waits for the played games' first read, like a Library game", async () => {
+    expect(isReferenceRead("play/games/a")).toBe(false);
+    await loadReferencedGames("play/games/a");
+    expect(isReferenceRead("play/games/a")).toBe(true);
+  });
+
+  it("is read at once for no reference", () => {
+    expect(isReferenceRead(null)).toBe(true);
+  });
+});
+
+describe("findCatalogGame", () => {
+  const catalog = {
+    path: "games",
+    games: [{ id: "a", name: "A – B", pgn: "1. e4 *", game: parsePgnGame("1. e4 *") }],
+  };
+
+  it("finds [path, id] and nothing longer or shorter", () => {
+    expect(findCatalogGame(["games", "a"], catalog)?.id).toBe("a");
+    expect(findCatalogGame(["games"], catalog)).toBeUndefined();
+    expect(findCatalogGame(["games", "a", "b"], catalog)).toBeUndefined();
+    expect(findCatalogGame(["other", "a"], catalog)).toBeUndefined();
   });
 });

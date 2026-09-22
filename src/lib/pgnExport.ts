@@ -6,19 +6,19 @@
  * large, but they are not the same kind of thing and the split is worth seeing:
  * {@link pgnFileOf} is pure text and knows nothing about a browser;
  * {@link downloadTextFile} is the DOM, and is the only part that cannot run
- * anywhere else. The same line `pgnUploadStore.ts` draws — `src/lib/` is free of
+ * anywhere else. The same line every store draws — `src/lib/` is free of
  * React, not of the platform.
  *
  * ## Why a join rather than a re-write
  *
- * A saved game and a saved analysis are already stored *as PGN* — that is the
- * whole point of the storage format (`lib/savedGames.ts`). So exporting is
+ * A played game and a saved analysis are already stored *as PGN* — that is the
+ * whole point of the storage format (`lib/playedGames.ts`, `lib/savedAnalyses.ts`). So exporting is
  * concatenation, not serialisation: nothing is re-parsed, nothing can be lost in
  * a second pass through the writer, and a record this build cannot read still
  * exports byte for byte. The separator is one blank line, which is what the PGN
  * export format uses between games and what `splitPgnGames` (`lib/pgn.ts`) reads
- * back — so a file written here loads into this app's own Load PGN screen, and
- * into anything else that reads PGN.
+ * back — so a file written here loads into this app's own Library (as a
+ * collection) and Analysis Board, and into anything else that reads PGN.
  */
 
 /** One PGN file out of several single-game records, in the order given. */

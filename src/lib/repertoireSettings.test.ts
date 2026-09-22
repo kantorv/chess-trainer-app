@@ -18,12 +18,14 @@ describe("a repertoire's settings", () => {
       description: "Mine",
       color: "white",
       showArrows: true,
+      chanceArrows: false,
       protected: true,
     });
     expect(repertoireSettingsFrom({ color: "black", showArrows: "no" })).toEqual({
       description: "",
       color: "black",
       showArrows: true,
+      chanceArrows: false,
       protected: true,
     });
   });
@@ -43,6 +45,14 @@ describe("a repertoire's settings", () => {
     expect(repertoireSettingsFrom({ showArrows: false }).showArrows).toBe(false);
   });
 
+  it("colour the arrows by play chance only where the reader asked", () => {
+    expect(DEFAULT_REPERTOIRE_SETTINGS.chanceArrows).toBe(false);
+    // A record from before the option reads as off.
+    expect(repertoireSettingsFrom({ description: "Old", color: "white" }).chanceArrows).toBe(false);
+    expect(repertoireSettingsFrom({ chanceArrows: true }).chanceArrows).toBe(true);
+    expect(repertoireSettingsFrom({ chanceArrows: "no" }).chanceArrows).toBe(false);
+  });
+
   it("cap a description", () => {
     const long = "x".repeat(MAX_REPERTOIRE_DESCRIPTION_CHARS + 10);
     expect(repertoireSettingsFrom({ description: long }).description).toHaveLength(
@@ -51,9 +61,16 @@ describe("a repertoire's settings", () => {
   });
 
   it("compare over every field the defaults name", () => {
-    const base = { description: "a", color: "white" as const, showArrows: true, protected: true };
+    const base = {
+      description: "a",
+      color: "white" as const,
+      showArrows: true,
+      chanceArrows: false,
+      protected: true,
+    };
     expect(sameRepertoireSettings(base, { ...base })).toBe(true);
     expect(sameRepertoireSettings(base, { ...base, showArrows: false })).toBe(false);
+    expect(sameRepertoireSettings(base, { ...base, chanceArrows: true })).toBe(false);
     expect(sameRepertoireSettings(base, { ...base, protected: false })).toBe(false);
     expect(sameRepertoireSettings(base, { ...base, color: "black" })).toBe(false);
     expect(sameRepertoireSettings(base, { ...base, description: "b" })).toBe(false);

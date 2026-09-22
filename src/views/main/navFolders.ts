@@ -1,15 +1,12 @@
 import type { SvgIconComponent } from "@mui/icons-material";
 import AccountTreeRoundedIcon from "@mui/icons-material/AccountTreeRounded";
-import FolderSpecialRoundedIcon from "@mui/icons-material/FolderSpecialRounded";
 import HandymanRoundedIcon from "@mui/icons-material/HandymanRounded";
 import MenuBookRoundedIcon from "@mui/icons-material/MenuBookRounded";
 import MemoryRoundedIcon from "@mui/icons-material/MemoryRounded";
+import SnippetFolderRoundedIcon from "@mui/icons-material/SnippetFolderRounded";
 import TravelExploreRoundedIcon from "@mui/icons-material/TravelExploreRounded";
-import VisibilityOffRoundedIcon from "@mui/icons-material/VisibilityOffRounded";
 
-import type { LocalizedText } from "../../lib/libraryCatalog";
-import { devNavFolder } from "../dev/devNav";
-import { userPgnsNavFolder } from "./navFromLibrary";
+import type { LocalizedText } from "../../lib/localizedText";
 
 /**
  * Folders are the groupings in the sidebar. Each screen names exactly one of
@@ -27,12 +24,10 @@ import { userPgnsNavFolder } from "./navFromLibrary";
  */
 
 /**
- * A folder id. A plain string rather than a union of the authored ids, because
- * the User PGNs subtree is **generated** from the `.pgn` files under
- * `src/data/pgn/` — a file dropped in there would otherwise be a TypeScript
- * edit, which is the one thing that section exists to avoid. Authored ids are
- * still written out below, where a typo is caught by the screen that fails to
- * find its folder.
+ * A folder id. A plain string rather than a union of the authored ids, so a
+ * folder built from data (the `label` case) needs no TypeScript edit. Authored
+ * ids are written out below, where a typo is caught by the screen that fails
+ * to find its folder.
  */
 export type NavFolderId = string;
 
@@ -40,7 +35,7 @@ export type NavFolder = {
   id: NavFolderId;
   /** i18n key — for an authored folder, whose name is chrome the app ships. */
   labelKey?: string;
-  /** Per-language name — for a folder generated from a data catalog. */
+  /** Per-language name — for a folder whose name is data, not chrome. */
   label?: LocalizedText;
   icon: SvgIconComponent;
   /** Sub-folders. A folder may carry these *and* screens of its own. */
@@ -59,18 +54,13 @@ export type NavFolder = {
 /**
  * The folder tree, top to bottom.
  *
- * Every folder here is written out by hand except one: the User PGNs subtree is
- * **generated** by `navFromLibrary.ts` from a library catalog — a folder per
- * `.pgn` file under `src/data/pgn/`, named from its data, so dropping a PGN
- * file in changes this tree without touching this file, which is the whole of
- * that section's promise.
- *
- * **A function, not a constant**, and that is the whole of what uploads cost
- * the navigation: the User PGNs library grows a folder when the reader uploads
- * a `.pgn` (`lib/pgnUploads.ts`), so the tree is built when it is asked for
- * rather than when this module is imported. `navTree()` already rebuilt on
- * every call, and `Sidebar.tsx` re-renders on a store change, so the new folder
- * appears without a reload. Everything else here is unchanged.
+ * **A function, not a constant**, so a dev-only folder can be a spread gated
+ * on `import.meta.env.DEV`, evaluated when the tree is asked for — the
+ * Development section's (CTA-60) was one; it closed with its last board in
+ * CTA-79, and `chessboard-v2.md` §5 says how to open one again. The Library's collections are
+ * not folders here: they are the rows of the Library screen (`/library`), so
+ * a `.pgn` dropped into `src/data/library/` or uploaded by the reader changes
+ * that screen, not this tree.
  */
 export const navFolders = (): readonly NavFolder[] => [
   {
@@ -78,17 +68,15 @@ export const navFolders = (): readonly NavFolder[] => [
     labelKey: "nav.folders.engine",
     icon: MemoryRoundedIcon,
   },
+  /*
+    The Library (CTA-75): collections of games — the shipped `.pgn` files and
+    the reader's uploads — each a table, each game an analysis board.
+  */
   {
-    id: "masked-pieces",
-    labelKey: "nav.folders.maskedPieces",
-    icon: VisibilityOffRoundedIcon,
+    id: "library",
+    labelKey: "nav.folders.library",
+    icon: SnippetFolderRoundedIcon,
   },
-  {
-    id: "games",
-    labelKey: "nav.folders.games",
-    icon: FolderSpecialRoundedIcon,
-  },
-  userPgnsNavFolder(),
   {
     id: "tools",
     labelKey: "nav.folders.tools",
@@ -108,9 +96,8 @@ export const navFolders = (): readonly NavFolder[] => [
     id: "openings",
     labelKey: "nav.folders.openings",
     icon: TravelExploreRoundedIcon,
-    // One destination (CTA-42): the saved list is the screen worth reaching
-    // for, so the folder renders as one clickable row to it and the board
-    // view leaves the sidebar entirely — it is the saved list's New button.
+    // One destination: the folder renders as one clickable row to the
+    // Openings explorer (CTA-78; the saved list it pointed at before is gone).
     singleEntry: true,
   },
   /*
@@ -123,13 +110,4 @@ export const navFolders = (): readonly NavFolder[] => [
     labelKey: "nav.folders.repertoires",
     icon: MenuBookRoundedIcon,
   },
-  /*
-    The Development section (CTA-60) — the boards composed from the unified
-    board core, `.claude/rules/chessboard-v2.md`. Dev-only, and this is the
-    whole of the gate on the folder: in a production build Vite replaces
-    `import.meta.env.DEV` with `false`, the spread is dead code, and rollup
-    drops `views/dev/devNav.ts` and its icons with it. The gate is cheap
-    because this was already a function — see the note above.
-  */
-  ...(import.meta.env.DEV ? [devNavFolder()] : []),
 ];

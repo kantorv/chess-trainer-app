@@ -15,6 +15,9 @@ import { ForceLTR } from '../../theme/ForceLTR';
 import ColorModeIconDropdown from '../../theme/ColorModeIconDropdown';
 import LanguageSwitch from '../../theme/LanguageSwitch';
 
+
+import chessFavicon from '../../assets/chess-favicon.svg';
+
 /**
  * Board inset in pixels — the MUI `p: 2` (2 × the 8px spacing unit), applied
  * once here in the shell so every board screen gets the same breathing room.
@@ -86,21 +89,20 @@ const Header = () => {
                         marginInlineEnd: 'auto',
                     }}
                 >
-                    <Box
-                        sx={{
-                            display: 'grid',
-                            placeItems: 'center',
-                            width: 30,
-                            height: 30,
-                            borderRadius: '9px',
-                            bgcolor: 'text.primary',
-                            color: 'background.paper',
-                            fontSize: 12,
-                            fontWeight: 800,
-                        }}
-                    >
-                        {t('app.brandMark')}
-                    </Box>
+                        <Box
+                                component="img"
+                                src={chessFavicon}
+                                alt=""
+                                sx={{
+                                    width: 30,
+                                    height: 30,
+                                    borderRadius: '3px',
+                                    display: 'block',
+                                    objectFit: 'cover',
+                                    flexShrink: 0,
+                                    overflow:"hidden"
+                                }}
+                            />
                     <Typography
                         component="span"
                         sx={{ fontWeight: 800, letterSpacing: '-0.01em' }}
@@ -273,9 +275,9 @@ const DefaultLayoutViewport = () => {
                 >
                     {/*
                         The per-route left-panel slot (`leftPanel.tsx`), mirroring
-                        the aside's `RightPanelOutlet` below. A library detail
-                        screen renders `<LeftPanel>` to replace the nav tree with a
-                        sibling-item list for as long as it is mounted; with none
+                        the aside's `RightPanelOutlet` below. A screen may render
+                        `<LeftPanel>` to replace the nav tree for as long as it
+                        is mounted (no shipped screen does today); with none
                         registered the outlet renders `<SideBar/>` and this box is
                         exactly what it always was. Same fixed width either way —
                         this slot swaps *content*, not the row's proportions.
@@ -367,7 +369,7 @@ const DefaultLayoutViewport = () => {
                                 /*
                                   A column, and it does not scroll itself: a
                                   panel that wants a section pinned to the foot
-                                  of the aside — the Load PGN controls under the
+                                  of the aside — the board controls under the
                                   move list — needs the height to divide up, and
                                   a scrolling parent would let the pinned part
                                   slide off instead. Panels scroll their own

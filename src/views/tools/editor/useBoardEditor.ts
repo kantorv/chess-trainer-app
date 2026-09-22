@@ -24,7 +24,7 @@ import {
  *
  * ## The board is not a game
  *
- * `useAnalysisBoard` and `usePlayWithEngine` both own a *game*: legal moves,
+ * `useAnalysisBoard` and `usePlayGame` both own a *game*: legal moves,
  * played in order, and a `chess.js` instance that is the rules authority. An
  * editor owns neither. Its board is built with `{ skipValidation: true }` and is
  * only ever `put` to and `remove`d from, so it will hold a board with no kings,

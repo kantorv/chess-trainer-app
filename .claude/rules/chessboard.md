@@ -27,12 +27,46 @@ these instead.
 
 **Also on disk, and the one to read before building a *new* board screen** —
 [`chessboard-v2.md`](./chessboard-v2.md) (CTA-60): the **unified board core**
-the `/dev/*` Development screens are composed from. A base hook, optional
-capability modules (engine, opening book, persistence), and one slotted
-shell/panel layer, plus a derivation table for the five boards and a recipe for
-adding a sixth. Nothing there overrides this file — it says who *owns* which of
-these rules once five screens share one implementation. The five shipped board
-screens of §5 below are untouched by it and stay the reference.
+every game board is composed from. A base hook, optional capability modules
+(engine, Play, opening book, trainer, persistence), and one slotted
+shell/panel layer, plus a derivation table for the boards and a recipe for
+adding the next. Nothing there overrides this file — it says who *owns* which
+of these rules once the screens share one implementation. Every game board of
+§5 below is built on it: the Analysis Board since CTA-73, Play with Engine
+since CTA-74, the Library's game board since CTA-75, the Openings explorer
+since CTA-78, the repertoire player since CTA-61/63 and Masked Pieces since
+CTA-79. The Board Editor, which edits a position, is the one board that is
+not.
+
+**And, for how such a board shows its game tree** —
+[`tree-views.md`](./tree-views.md) (CTA-72): the move list, map, comments
+and next-move arrows as a pluggable **tree view** out of
+`src/views/explorer/` — one seam (`TreeViewSource` in, `TreeViewParts` out),
+the rich variations explorer built (the repertoire player's), the flat and
+puzzle modes specified.
+
+**And, for the Library** —
+[`game-collections.md`](./game-collections.md): game collections (the list,
+the table and its filters, the shipped files and uploads, each game on a v2
+board). It loads when you work on the Library's own paths.
+
+**And, for the Openings explorer** —
+[`openings-explorer.md`](./openings-explorer.md): `/openings`, the eco.json
+opening book (`lib/openings.ts`, `useOpeningBookModule`, `CurrentOpening`) and
+the whole-tree hand-off to the Analysis Board (`lib/analysisHandOff.ts`). It
+loads when you work on those paths.
+
+**And, for Masked Pieces** —
+[`masked-pieces.md`](./masked-pieces.md): `/engine/masked`, Play with
+Engine's screen in a costume — the mask (`lib/pieceMask.ts`), every surface it
+is applied on and why, the costume on the played game's record, the
+invariants, tests and recipes. It loads when you work on those paths.
+
+**And, for where the reader's data is kept** —
+[`database.md`](./database.md): every store (IndexedDB, one database per
+module), the connection helper and the record-store factory, screens waiting
+for a store's first read, testing and extending it, and when Dexie would be
+worth adding. It loads when you work on the stores.
 
 **On disk, read on demand** — [`docs/vendor/react-chessboard/`](../../docs/vendor/react-chessboard/),
 routed by its [`INDEX.md`](../../docs/vendor/react-chessboard/INDEX.md):
@@ -348,18 +382,17 @@ Consequences for a caller:
 | Route | File | Based on upstream story | Demonstrates |
 | --- | --- | --- | --- |
 | `/` | [`views/home/Home.tsx`](../../src/views/home/Home.tsx) | — | Landing page, no board — a card per screen, built from `navTree()` |
-| `/engine/play` | [`views/engine/play/PlayWithEngine.tsx`](../../src/views/engine/play/PlayWithEngine.tsx) | (composed) | The full screen: eval bar, move list, MultiPV variations, live UCI settings, a real promotion picker. Takes a `?fen=` starting position |
-| `/engine/saved` | [`views/engine/saved/SavedGames.tsx`](../../src/views/engine/saved/SavedGames.tsx) | (composed) | The games played on the screen above, kept in `localStorage` and listed newest first, filed into a tree of folders (CTA-46) — as rows, or as read-only preview boards at either of the library's two card sizes, each showing the position that game was **left at**. `?saved=<id>` resumes one there; `?game=engine/saved/<id>` hands it to the Analysis Board or Load PGN; folders are display organisation only and the hand-offs are untouched |
-| `/masked/play` | [`views/masked/play/MaskedPlay.tsx`](../../src/views/masked/play/MaskedPlay.tsx) | `Pieces` | The same screen with the pieces in disguise: `options.pieces` built from a `PieceMask` (`lib/pieceMask.ts`), and the notation masked to match. `usePlayWithEngine` reused verbatim |
-| `/games/load-pgn` | [`views/games/load_pgn/LoadPgn.tsx`](../../src/views/games/load_pgn/LoadPgn.tsx) | (composed) | A PGN pasted in, parsed to a `Game`, walked with the shared `MoveList` / `useGameNavigation` / `BoardControls` |
-| `/tools/analysis` | [`views/tools/analysis/AnalysisBoard.tsx`](../../src/views/tools/analysis/AnalysisBoard.tsx) | (composed) | Analysis: a **variation tree** (`lib/gameTree.ts`), PGN/FEN set-up and export, both colours movable, engine and eval bar switched independently. Written to `localStorage` as it is worked on; takes `?fen=`, `?game=` and `?analysis=` |
-| `/tools/analysis/saved` | [`views/tools/analysis/saved/SavedAnalyses.tsx`](../../src/views/tools/analysis/saved/SavedAnalyses.tsx) | (composed) | The boards worked on above, kept in `localStorage` and listed newest first — as rows, or as read-only preview boards at either card size, each showing the position and the side the reader **was standing on**. `?analysis=<id>` reopens one; `?game=analysis/saved/<id>` hands it to Load PGN and `?fen=` to Play with Engine. The Saved games screen with two changes — see the root `CLAUDE.md` |
-| `/openings` | [`views/tools/openings/OpeningsBoard.tsx`](../../src/views/tools/openings/OpeningsBoard.tsx) | (composed) | Opening exploration: a regular board the reader plays through, the book continuations from the position on screen listed explorer-style, and the Analysis Board's variation tree behind it all. Takes `?fen=` (the arrival the three board screens share) and `?openings=<id>` (a saved opening to go on exploring); hands Play with Engine `?fen=` from the position on screen |
-| `/openings/saved` | [`views/tools/openings/saved/SavedOpenings.tsx`](../../src/views/tools/openings/saved/SavedOpenings.tsx) | (composed) | The openings saved from the screen above, newest first, filed into a tree of folders — as rows, or as read-only preview boards at either card size, each showing the end of the mainline. Drilling in, a breadcrumb back up, and folder CRUD; the view toggle, the export bar and the delete control are the shared saved-list machinery (`views/shared/savedList.ts`). `?openings=<id>` reopens one there; `?fen=` hands Play with Engine the end of the mainline. The Saved analyses screen over the same view machinery — see the root `CLAUDE.md` |
-| `/library/*` | [`views/pgn/UserPgnsSection.tsx`](../../src/views/pgn/UserPgnsSection.tsx) | (composed) | The one browsable library (was "User PGNs" at `/pgn/*` — old URLs redirect), over items that are whole **games** out of the project's `.pgn` files, behind one splat route resolved against a catalog nested to any depth. The list screen is [`views/library/LibraryList.tsx`](../../src/views/library/LibraryList.tsx) — a read-only preview board per card, several on one page, so `options.id` is the item's id, not a constant, under a fixed top bar (name + count, search, card-size toggle) over the one region that scrolls. The detail screen is [`views/library/LibraryDetail.tsx`](../../src/views/library/LibraryDetail.tsx), which resolves the URL and dispatches on the item's kind: a game replays over the shared `MoveList` / `BoardControls` / `useGameNavigation` (`LibraryGameDetail.tsx`) and hands on with `?game=`; a **repertoire** line instead opens in [`LibraryVariationDetail.tsx`](../../src/views/library/LibraryVariationDetail.tsx) — `parsePgnTree` + the shared `VariationTree`, since a repertoire's `( )` side lines are the content; a position (`LibraryPositionDetail.tsx`, kept for a future section) is read-only, faces the side to move, and hands on with `?fen=` |
+| `/engine/play` | [`views/engine/play/PlayWithEngine.tsx`](../../src/views/engine/play/PlayWithEngine.tsx), over [`PlayScreen.tsx`](../../src/views/engine/play/PlayScreen.tsx) | (composed) | **A v2 screen since CTA-74** — the Analysis Board's composition (`usePlayGame`: the core, the engine module, the shared Play toggle `usePlayToggle`, the variations explorer) with **Play on from the start**: the engine plays the side not at the bottom, paused by a step back or a change of side (the flip, or the header's White / Black toggle). The header also carries **Replay** (start over, the saved progress discarded) and **Resign** (the reader's side loses; the board then takes no more moves), both asked first. A game is a **tree** — a move by hand from an earlier position is a side line. Tabs Moves · Map · Engine (`EngineSettings`: strength and limits). The screen is `PlayScreen`, shared with Masked Pieces; a masked game's `?saved=` is sent there. **Autosaved** on every move to `lib/playedGameStore.ts` (the URL becomes `?saved=<id>`); takes `?fen=` and `?saved=`. `options.id` is `play-with-engine` |
+| `/engine/games` | [`views/engine/games/PlayedGames.tsx`](../../src/views/engine/games/PlayedGames.tsx) | (composed) | Saved games (CTA-74): the games above and Masked Pieces' (a *Masked* chip, Continue on `/engine/masked` — CTA-79), flat and newest first, each titled by its pairing ("Human - Stockfish level 10") with its PGN result — Continue (`?saved=<id>`), Analysis (`?game=play/games/<id>`), delete (asked first). No board. (The pre-CTA-74 `/engine/saved` list and its folders were deleted.) |
+| `/engine/masked` | [`views/engine/masked/MaskedPlay.tsx`](../../src/views/engine/masked/MaskedPlay.tsx) | `Pieces` | **Masked Pieces — a v2 screen since CTA-79**: Play with Engine's own screen (`PlayScreen`, the session `usePlayGame`) with a costume and nothing else — `options.pieces` built from a `PieceMask` (`lib/pieceMask.ts`), the captured strips in costume and the material diff hidden, and, while its notation switch is on, every printed move (list, side lines, map, next moves, menu, comment block, engine lines) in coordinates for a hidden piece. A fourth tab, **Masking** (presets, the twelve selects, the notation switch, and the **engine lines** switch — off by default). Its games autosave with the engine games, the costume on the record; `?saved=` resumes one in the same disguise, `?fen=` as on Play with Engine. `options.id` is `masked-play`. **Everything else is in [`masked-pieces.md`](./masked-pieces.md)** |
+| `/tools/analysis` | [`views/tools/analysis/AnalysisBoard.tsx`](../../src/views/tools/analysis/AnalysisBoard.tsx) | (composed) | **A v2 screen since CTA-73** — the core, the engine module (its best move played for the opponent's side only while the header's **Play** toggle is on — disabled while the engine is off, paused by a step back) and the shared **variations explorer** ([`tree-views.md`](./tree-views.md); editing on, *Play chances…* off): a **variation tree** (`lib/gameTree.ts`), both colours movable from any node, the engine and the eval bar switched independently. Tabs Moves · Map · Load · Export · Engine: Load takes a PGN (one game; several merged onto the board or split into a folder of saved analyses) or a FEN, Export copies the FEN and copies or downloads the PGN with or without comments, NAGs and side lines. **Saved explicitly** — the header's Save opens the changes strip (Update / Save as copy / Discard) over a record, or a name-and-folder dialog for a new board. Takes `?fen=`, `?game=`+`?move=`, `?analysis=`, a whole tree handed over in the location state by the Openings explorer (CTA-78, `lib/analysisHandOff.ts` — a new unsaved board; [`openings-explorer.md`](./openings-explorer.md) §5), and writes `?at=` back — an arrival naming a saved analysis (`?analysis=`, `?game=analysis/…`) waits for the IndexedDB store's first read (CTA-77). `options.id` is `analysis` |
+| `/tools/analysis/saved` | [`views/tools/analysis/saved/SavedAnalyses.tsx`](../../src/views/tools/analysis/saved/SavedAnalyses.tsx) | (composed) | The analyses saved above, kept in **IndexedDB** since CTA-77 (`lib/idbRecordStore.ts`; up to 20,000 of them — a Library batch lands here), newest first, filed into a nested tree of folders (CTA-73; `?folder=<id>`) — **48 a page**, only the page on screen parsed, and a "reading" line until the store's first read lands — as rows, or as read-only preview boards at either card size, each showing the position and the side the reader **was standing on**. Each links to its settings screen (`/tools/analysis/saved/<id>/settings`: title, description, side, next-move arrows, folder) and is filed from its row or card; folders are created, renamed, moved (never into their own subtree), deleted keeping their contents and downloaded as one `.pgn`. Laid out as the Repertoires list without its Games menu: an Open button (on a card, the board), the settings gear and a checkbox on every row and card, deleting in bulk; `?analysis=<id>` is the one destination (the `?game=analysis/saved/<id>` reference still resolves). See the root `CLAUDE.md` |
+| `/openings` | [`views/openings/OpeningsBoard.tsx`](../../src/views/openings/OpeningsBoard.tsx) | (composed) | **The Openings explorer — a v2 screen since CTA-78**, composed like the Library's game board with no behaviour hook of its own: `useAnalysisSession` (the core, the engine, Play), `useOpeningBookModule` and the variations explorer ([`tree-views.md`](./tree-views.md); editing on, *Play chances…* off). Tabs **Book** (eco.json's continuations from the position on screen — a click plays one, from any node, branching at an earlier one) · Moves · Map · Load · Export · Engine; the book's arrows joined with the tree's next-move arrows into one set (`openingArrows.ts`). **Nothing is saved** (no Save, no strip, no folders; Load merges but never splits). The header's **Analysis** button hands the whole tree, the position and the orientation to `/tools/analysis` as a new unsaved board (`lib/analysisHandOff.ts`, router location state beside `?at=`); **Play from here** hands `?fen=` to Play with Engine. Takes `?fen=` (turns the board) and `?at=` (replayed), and writes `?at=` back. `options.id` is `openings`. **Everything else is in [`openings-explorer.md`](./openings-explorer.md)** |
+| `/library` · `/library/<collection>` · `/library/new` | [`views/library/LibraryHome.tsx`](../../src/views/library/LibraryHome.tsx), [`CollectionScreen.tsx`](../../src/views/library/CollectionScreen.tsx), [`LibraryUpload.tsx`](../../src/views/library/LibraryUpload.tsx) | (composed) | **The Library** (CTA-75/76/77): no game board. The collections list, a collection's games as a sortable, filterable table read off its index, with a small **opening-moves board** in its filters (`OpeningFilterBoard.tsx`, `options.id` `library-filter-board`, pinned LTR, drawn with `nextMoveArrowsOf`), and uploads checked in a Web Worker. **Everything else is in [`game-collections.md`](./game-collections.md)** |
+| `/library/<collection>/<game>` | [`views/library/LibraryGameBoard.tsx`](../../src/views/library/LibraryGameBoard.tsx), behind [`LibraryGameScreen.tsx`](../../src/views/library/LibraryGameScreen.tsx) | (composed) | **A v2 screen from the start** (CTA-75): a collection's game on a full analysis board, composed from the Analysis Board's session (`useAnalysisSession`) and the variations explorer, with no behaviour hook of its own. Saved explicitly (an upload's game is updated in place or copied after itself; a shipped game is read-only and its copy goes to Saved analyses). Writes `?at=` back. `options.id` is `library-game`. Details in [`game-collections.md`](./game-collections.md) §6.6 |
 | `/tools/editor` | [`views/tools/editor/BoardEditor.tsx`](../../src/views/tools/editor/BoardEditor.tsx) | `SparePieces` | Position editing: `ChessboardProvider` + spare-piece palettes, `{ skipValidation: true }`, illegal positions reported rather than refused, hand-off to either of the two screens above. Takes a `?fen=` starting position, and offers a reset back to it |
 | `/repertoires/<id>` | [`views/repertoires/RepertoireBoard.tsx`](../../src/views/repertoires/RepertoireBoard.tsx) | (composed) | **The first shipped board built from the v2 core** — since CTA-63 the **player** ([`RepertoirePlayer.tsx`](../../src/views/repertoires/RepertoirePlayer.tsx), behind this route file) ([`chessboard-v2.md`](./chessboard-v2.md)) — one of the reader's own repertoires (CTA-61) — **one game**, a mainline with its side lines (Moves · Engine; a text of several games is merged into one tree or split into many on the way in). Its tree is parsed behind a `setTimeout(0)`, because the 7,859-node one-tree example takes about a second. `/repertoires` lists them over the saved-list machinery (preview board `repertoires-preview-<id>`), filed into one level of folders (`?folder=<id>`; a split lands in a folder of its own; a repertoire moves between them from its settings, and the list deletes in bulk over checkboxes on every row and card — CTA-68); `/repertoires/new` brings one in from a file or a paste; `/repertoires/<id>/settings` edits its title, description and main color — the board opens facing that color (`useBoardCore`'s `orientation`, read once), and so does the preview card |
-| `/repertoires/<id>` (the player) and `/repertoires/<id>/games/<game>` | [`views/repertoires/RepertoirePlayer.tsx`](../../src/views/repertoires/RepertoirePlayer.tsx), behind [`RepertoireBoard.tsx`](../../src/views/repertoires/RepertoireBoard.tsx) / [`RepertoireGame.tsx`](../../src/views/repertoires/RepertoireGame.tsx) | (composed) | **One screen, a repertoire read, drilled and played** (CTA-63). `useTrainerModule` ([`chessboard-v2.md`](./chessboard-v2.md) §2.5) is the opponent: it answers only from the file, by the lichess-tools **play chances** (`prc:N` in a move's comment, else the move with more lines in the next 8 plies more often — `lib/playChance.ts`; set per branch from the move menu's *Play chances…*, CTA-69), and only after the reader has moved (stepping back never triggers it) — in the player behind **Autoplay** (off by default), always in a game. A move the file does not have is added under the node on screen and tinted in the move list. A header **Play** button toggles Autoplay beside the Settings switch (CTA-65; the player only). Tabs Moves · (Score) · Settings · Engine; the Moves tab is the **variations explorer** (the shared move list with every side line hung under its move), and in the player a right-click on a move opens its menu — promote variation, make main line, delete from here (asking first, with the count of moves and lines), copy variation PGN (CTA-64; pure edits in `lib/gameTree.ts`, applied through the core's `replaceTree`, which keeps the reader where they stand; a game has no menu); Settings holds the side, Autoplay, the arrows (off by default; mainline and side lines in two colours, `nextMoveArrowsOf`) and the engine's switch (off by default — the Engine tab is disabled until then; the engine never moves a piece). The **games** (`lib/repertoireGames.ts`): **Get to the end** and **Backtracking** — the reader's moves judged before they are made (a wrong one taken back, one verdict per position), a Score tab, and for Backtracking the coverage of every line, a required move marked with a purple arrow, a return to the deepest position with a line left, and a **Map** tab — the repertoire as an SVG tree, covered lines and the reader's position on it (`lib/repertoireMap.ts`), zoomed by the wheel and panned by dragging — in the tab and in a full-screen view alike — with each move written above its dot (Show moves, on by default). The player has the Map too, without coverage, drawn from the session's tree so moves the reader adds appear on it as they are played, in the extension colour; there a written move's dot is a link to its position, in the tab and full screen, and a right-click on it opens the same move menu as the Moves tab (CTA-67) — the edit redrawn on the map at once, the view left where it was, the full-screen view left open. Dots are white or black by the side that moved. The player's position travels as `?at=<SANs from the start>` (`lib/repertoireLink.ts`), read on arrival and written back with history replace, so its URL is always a permanent link. No autosave: while the session differs from the record, the header's Save button lights up and opens a strip that offers **Update repertoire** (the record takes the session's tree — unless the repertoire is **protected**, its settings' default, when the strip says so and links to its settings in Update's place), **Save as copy** (a new record, opened at the position on screen, the original untouched) or **Discard**; the header's download writes the tree out; a game never writes. `options.id` is `repertoire-board` (the player) or `repertoire-game` |
+| `/repertoires/<id>` (the player) and `/repertoires/<id>/games/<game>` | [`views/repertoires/RepertoirePlayer.tsx`](../../src/views/repertoires/RepertoirePlayer.tsx), behind [`RepertoireBoard.tsx`](../../src/views/repertoires/RepertoireBoard.tsx) / [`RepertoireGame.tsx`](../../src/views/repertoires/RepertoireGame.tsx) | (composed) | **One screen, a repertoire read, drilled and played** (CTA-63). `useTrainerModule` ([`chessboard-v2.md`](./chessboard-v2.md) §2.5) is the opponent: it answers only from the file, by the lichess-tools **play chances** (`prc:N` in a move's comment, else the move with more lines in the next 8 plies more often — `lib/playChance.ts`; set per branch from the move menu's *Play chances…*, CTA-69), and only after the reader has moved (stepping back never triggers it) — in the player behind **Autoplay** (off by default), always in a game. A move the file does not have is added under the node on screen and tinted in the move list. A header **Play** button toggles Autoplay beside the Settings switch (CTA-65; the player only). Tabs Moves · (Score) · Settings · Engine; the Moves tab is the **variations explorer** (the shared move list with every side line hung under its move), and in the player a right-click on a move opens its menu — promote variation, make main line, delete from here (asking first, with the count of moves and lines), copy variation PGN (CTA-64; pure edits in `lib/gameTree.ts`, applied through the core's `replaceTree`, which keeps the reader where they stand; a game has no menu); Settings holds the side, Autoplay, the arrows (off by default; mainline and side lines in two colours, `nextMoveArrowsOf`) and the engine's switch (off by default — the Engine tab is disabled until then; the engine never moves a piece). The **games** (`lib/repertoireGames.ts`): **Get to the end** and **Backtracking** — the reader's moves judged before they are made (a wrong one taken back, one verdict per position), a Score tab, and for Backtracking the coverage of every line, a required move marked with a purple arrow, a return to the deepest position with a line left, and a **Map** tab — the repertoire as an SVG tree, covered lines and the reader's position on it (`lib/treeMap.ts`, drawn by the shared explorer's `TreeMap.tsx`), zoomed by the wheel and panned by dragging — in the tab and in a full-screen view alike — with each move written above its dot (Show moves, on by default). The player has the Map too, without coverage, drawn from the session's tree so moves the reader adds appear on it as they are played, in the extension colour; there a written move's dot is a link to its position, in the tab and full screen, and a right-click on it opens the same move menu as the Moves tab (CTA-67) — the edit redrawn on the map at once, the view left where it was, the full-screen view left open. Dots are white or black by the side that moved. The player's position travels as `?at=<SANs from the start>` (`lib/repertoireLink.ts`), read on arrival and written back with history replace, so its URL is always a permanent link. No autosave: while the session differs from the record, the header's Save button lights up and opens a strip that offers **Update repertoire** (the record takes the session's tree — unless the repertoire is **protected**, its settings' default, when the strip says so and links to its settings in Update's place), **Save as copy** (a new record, opened at the position on screen, the original untouched) or **Discard**; the header's download writes the tree out; a game never writes. `options.id` is `repertoire-board` (the player) or `repertoire-game` |
 
 The `Main.tsx` file next to each board is a layout-only wrapper (an MUI `Box`
 with a `data-testid`); the board component is the unit of interest. Each
@@ -373,21 +406,17 @@ landing page. The vendored Storybook examples under
 `docs/vendor/react-chessboard/stories/` still carry those minimal patterns when
 you need the smallest version of one.
 
-**Four rules the Play with Engine screen is built on, worth reusing:**
+**Three rules the engine-play screens keep** (Play with Engine and Masked
+Pieces — first written for the pre-v2 play hook, `usePlayWithEngine`, which
+went with the old Masked Pieces in CTA-79)**, worth reusing:**
 
-- **Search the position on screen, not the live one.** The player can step back
-  at any time. Everything shown — evaluation, variations, depth — describes the
-  ply being looked at, so that is what gets searched; the engine's move is played
-  only when the search that produced it was for the live position. Dragging is
-  disabled off the live position, because a drag there would apply to a position
-  nobody is looking at.
-- **The game is written down as it is played, and only here.** An effect in
-  `usePlayWithEngine` saves the `Game` plus the `EngineSettings` on every move
-  (`lib/savedGames.ts`), gated on a `persist` flag this screen passes and Masked
-  Pieces does not. Resuming is `?saved=<id>`, seeded as *initial* state exactly
-  as `?fen=` is — including the ply, which for a resumed game is the **last**
-  one, because that is the live position it can be played on from. See the root
-  `CLAUDE.md`.
+- **Search the position on screen, not the live one.** The reader can step
+  back at any time. Everything shown — evaluation, variations, depth —
+  describes the position being looked at, so that is what gets searched
+  (`useEngineModule`'s `fen` is `core.fen`); the engine's move is played only
+  when the search that produced it was for the position on screen, and only
+  while Play is on (`usePlayToggle`). A move by hand from an earlier position
+  is a side line.
 - **Anything sharing the board square with the board takes width out of it.** The
   shell hands the screen a square and knows nothing about an eval bar
   (`Layout.tsx` is not changed for one). Bar width + gap must come to exactly the
@@ -395,8 +424,8 @@ you need the smallest version of one.
   `flexShrink: 0`, or flex shaves the difference off and the board stops being
   square. That rule now lives in exactly one file —
   [`views/shared/EngineBoardSquare.tsx`](../../src/views/shared/EngineBoardSquare.tsx),
-  which both engine-play screens render. **A third screen with an eval bar
-  renders that, rather than copying the `calc()`.**
+  which every v2 board renders through `BoardShell`. **A new screen with an
+  eval bar renders that, rather than copying the `calc()`.**
 - **The captured-pieces strips are that arithmetic for height.** Two 20px strips
   sit on the board's top and bottom edges, outside it, and the board gives up
   their height — the eval bar's width discipline turned 90°. The strips' height
@@ -405,26 +434,25 @@ you need the smallest version of one.
   width and height — one percentage base, so it stays square — and nothing
   shrinks. The one-strip component and every constant live in
   [`views/shared/CapturedPieces.tsx`](../../src/views/shared/CapturedPieces.tsx);
-  `EngineBoardSquare` composes the strips for the two engine screens, and every
-  other play/analysis board wraps its own two around its board. **A strip with
+  `EngineBoardSquare` composes the strips for every v2 board (`BoardShell`
+  computes the summary from the core's line). **A strip with
   nothing in it still renders** — empty strips hold the board's size steady, so
   a board does not resize when the first capture lands. The Board Editor and
   the preview boards carry none: pieces are put and removed there, never
   captured.
 
-**And three the library section adds:**
+**And three the list screens add:**
 
 - **A read-only board is a board, and it still takes an `options.id` that is
   unique on the page.** A list screen renders one per card, so the id is the
-  item's id (`LibraryList`'s `previewOptions`), never a constant. The Saved
-  games and Saved analyses screens' board views are the same rule outside the
-  library section — `saved-games-preview-<id>`,
-  `saved-analyses-preview-<id>`.
+  item's, never a constant — `saved-analyses-preview-<id>`,
+  `repertoires-preview-<id>`.
 - **A screen that scrolls inside the board square divides that square up
   itself, and a grid of `auto` rows will not scroll.** The shell hands the
-  screen a fixed-height box and scrolls nothing in it, so `LibraryList` is a
+  screen a fixed-height box and scrolls nothing in it, so a list screen is a
   flex column — a `flexShrink: 0` top bar over a `flex: 1; minHeight: 0;
-  overflowY: auto` region. That much is the usual pattern; the trap is the
+  overflowY: auto` region (the Library's table: a `TableContainer` that
+  scrolls both ways, a sticky header, the pagination pinned under it). That much is the usual pattern; the trap is the
   next line. An `auto` grid row inside a box whose height is *definite* is
   stretched to share that height out — `alignContent: "start"` does not stop it
   — so the cards were squashed to a quarter of their height, clipped by `Card`'s
@@ -432,12 +460,12 @@ you need the smallest version of one.
   **`gridAutoRows: "max-content"` is what makes a row as tall as the card in
   it**, and therefore what makes the region scroll at all. Any board screen that
   grids content inside the square needs the same.
-- **A position turns the board; a game does not.** `LibraryPositionDetail` faces
-  the side to move, because that is what `/engine/play` will do with the same FEN
-  a click later and the board must not turn under the reader on the way over.
-  `LibraryGameDetail` opens at ply 0 facing White and offers the flip control,
-  because a PGN's side to move at ply 0 says nothing about which side is being
-  studied. The same rule the root `CLAUDE.md` states for the board screens.
+- **A position turns the board; a game does not.** A `?fen=` arrival faces the
+  side to move, because that is the side about to answer. A game — a Library
+  game, a `?game=` arrival — opens at its start facing White with the flip
+  control offered, because a PGN's side to move at ply 0 says nothing about
+  which side is being studied. The rule the root `CLAUDE.md` states for the
+  board screens.
 
 **And one the Masked Pieces screen adds:**
 
@@ -447,29 +475,39 @@ you need the smallest version of one.
   library's `defaultPieces` so a masked rook is *pixel-identical* to a real pawn
   rather than merely similar. The board goes on reporting the real source and
   target squares, so `onPieceDrop`, legality and promotion never learn anything
-  happened — which is what keeps the screen ordinary chess and lets it reuse
-  `usePlayWithEngine` with no edits at all. Never reach for `squareRenderer`,
-  a doctored `position`, or anything that would change what `chess.js` is holding.
+  happened — which is what keeps the screen ordinary chess and lets it be Play
+  with Engine's own screen with a costume (CTA-79). Never reach for
+  `squareRenderer`, a doctored `position`, or anything that would change what
+  `chess.js` is holding. The other surfaces the mask reaches — the notation,
+  the captured strips, the material diff — are listed in
+  [`masked-pieces.md`](./masked-pieces.md) §4.
 
-**And two the Analysis Board adds:**
+**And three the Analysis Board adds:**
 
-- **An analysis board never moves a piece by itself.** It reads `info` lines and
-  ignores `bestmove` entirely — the branch that plays one does not exist in
-  `useAnalysisBoard`. That is why it is a separate hook rather than
-  `usePlayWithEngine` with a mode flag: the two differ on whether the engine
-  moves and whether both colours are draggable — since CTA-50 both engines are
-  switchable (`engineOn` gates searching and, on the play screen, the reply),
-  so searching is no longer a difference. That is all of the behaviour there
-  is.
+- **An analysis board moves a piece only when the reader presses Play**
+  (CTA-73), and then only **the opponent's**: the reader plays the side at the
+  bottom of the board, and `onBestMove` plays a finished search's best move at
+  the node on screen only while the header's Play toggle is on (and the engine
+  is) and it is the other side to move; off, a `bestmove` is ignored. Any step
+  that is not one move forward (back, Home, an earlier move, another line, a
+  load) pauses it, and the reader goes on by hand until pressing Play again.
+  Play is disabled while the engine is off, and pauses itself when the
+  position is over. While Play is on, a status line in the footer
+  (`EngineThinking.tsx`) says the engine is thinking — a spinner, moving dots
+  and the depth reached — or that it is the reader's move, and a ring spins
+  round the Play button while it thinks. The play screen's reply is different in kind — it
+  answers the live position, for one side, always — and whether both colours
+  are draggable (`canMoveAt`) is the rest of the difference; no mode flag.
 - **A screen that can branch navigates by node, not by ply.** See the root
   `CLAUDE.md` on the tree; the shared `BoardControls` still take a ply, and
   `useTreeNavigation` derives one from the line the reader is standing on.
-- **The board is written down as it is worked on, and so is where you are
-  standing.** An effect in `useAnalysisBoard` saves the tree, the settings, the
-  orientation and the SAN path to the current node (`lib/savedAnalyses.ts`),
-  gated on `persist` and on the reader having actually changed something —
-  merely opening a library game here writes nothing. Reopening is `?analysis=`.
-  See the root `CLAUDE.md`.
+- **The board is written down when the reader says so, and so is where they
+  are standing** (CTA-73 — it used to autosave). `useAnalysisBoard` holds the
+  saved record and a baseline tree; `tree !== baseline` lights the Save button,
+  and Update / Save as copy / a new board's Save write the tree, the settings,
+  the orientation and the SAN path to the current node (`lib/savedAnalyses.ts`),
+  with the reader's name and folder. Reopening is `?analysis=`. See the root
+  `CLAUDE.md`.
 
 **And two the Board Editor adds:**
 
@@ -555,8 +593,9 @@ vi.mock('react-chessboard', () => ({
 The type-only `import type { ChessboardOptions }` in the component under test is
 erased at compile time, so the mock does not have to provide it. Anything that
 depends on the board actually rendering — sizing, drag, arrows — belongs in a
-browser check, not in jsdom. `views/games/load_pgn/LoadPgn.test.tsx` is the
-worked example.
+browser check, not in jsdom. `views/tools/editor/BoardEditor.test.tsx` is a
+worked example; the v2 boards share one stub, `reactChessboardMock` in
+`views/dev/devTestHarness.tsx`.
 
 **Stub whatever the screen actually imports.** A spare-piece screen reaches for
 three exports, not one: the options go to `ChessboardProvider`, the palettes are
@@ -565,8 +604,8 @@ from the *provider* and the board renders what it finds there.
 `views/tools/editor/BoardEditor.test.tsx` is that version. A screen with the
 captured-pieces strips reaches for one more: `defaultPieces`, which the strips
 draw their icons with — provide it in the mock (any renderer keyed by the
-twelve piece types; `views/games/load_pgn/LoadPgn.test.tsx` is the worked
-example).
+twelve piece types; `reactChessboardMock` in `views/dev/devTestHarness.tsx`
+is the worked example).
 
 jsdom's CSS parser also drops properties it does not implement — `aspect-ratio`
 among them — so a `toHaveStyle` assertion on one silently fails. Assert the

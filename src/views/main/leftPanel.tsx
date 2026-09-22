@@ -3,9 +3,10 @@
  *
  * `Layout.tsx` renders one fixed-width box at the start of its body row,
  * holding the nav-tree `<SideBar/>`. This module turns that box into a slot a
- * route can claim with its own content — a sibling-item list, while browsing a
- * library detail screen — while every route that claims nothing keeps seeing
- * the ordinary sidebar.
+ * route can claim with its own content — a list of sibling items, say — while
+ * every route that claims nothing keeps seeing the ordinary sidebar. No shipped
+ * screen claims it today (the old Library's detail screens did, until CTA-75);
+ * `Layout.test.tsx` keeps the slot working.
  *
  * It is `rightPanel.tsx`'s trio, verbatim, aimed at the other side of the
  * shell: `LeftPanelProvider` (the shell, above the router `<Outlet />`),
@@ -17,7 +18,7 @@
  * ```tsx
  * import { LeftPanel } from '../main/leftPanel';
  *
- * function LibraryPositionDetail() {
+ * function SomeDetailScreen() {
  *   return (
  *     <>
  *       <Chessboard options={…} />

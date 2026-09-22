@@ -12,7 +12,7 @@ import OptionSlider from "../../shared/OptionSlider";
 import {
   ANALYSIS_UCI_OPTION,
   type AnalysisSettings as AnalysisSettingsValues,
-} from "./useAnalysisBoard";
+} from "../../../lib/analysisSettings";
 
 /**
  * The Engine tab: how hard, how many lines, whether to show the bar, and a way
@@ -40,7 +40,8 @@ type AnalysisSettingsProps = {
   engineOn: boolean;
   showEvalBar: boolean;
   onShowEvalBarChange: (next: boolean) => void;
-  onClear: () => void;
+  /** The Clear button — absent, no button (a Library game is not cleared). */
+  onClear?: () => void;
 };
 
 function AnalysisSettings({
@@ -166,14 +167,16 @@ function AnalysisSettings({
         label={t("analysis.settings.evalBar")}
       />
 
-      <Button
-        variant="outlined"
-        startIcon={<RestartAltRoundedIcon />}
-        data-testid="analysis-clear"
-        onClick={onClear}
-      >
-        {t("analysis.settings.clear")}
-      </Button>
+      {onClear !== undefined && (
+        <Button
+          variant="outlined"
+          startIcon={<RestartAltRoundedIcon />}
+          data-testid="analysis-clear"
+          onClick={onClear}
+        >
+          {t("analysis.settings.clear")}
+        </Button>
+      )}
     </Box>
   );
 }

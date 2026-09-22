@@ -19,9 +19,9 @@ import { moveSx, sanTokenSx } from "./moveTokenSx";
 /**
  * The top lines the engine is considering for the position on screen, each with
  * its score and its principal variation in SAN, under the depth the search has
- * reached. Play with Engine and Masked Pieces show this as their Variations
- * tab; the Analysis Board pins it above its tabs (CTA-55), where a line is
- * also something the reader plays — see `onSelectMove`.
+ * reached. Every v2 board pins it above its tabs (`BoardPanel`, CTA-55), where
+ * a line is also something the reader plays — see `onSelectMove`; Masked
+ * Pieces keeps it behind a switch, off by default, and masks it (CTA-79).
  *
  * Presentational — it takes the analysis the screen collected and renders it, so
  * it can be driven straight from a fixture. Lines arrive one rank at a time and

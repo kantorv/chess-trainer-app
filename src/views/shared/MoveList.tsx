@@ -67,9 +67,8 @@ type MoveListProps = {
   mask?: PieceMask;
   /**
    * Plies that carry an annotation in the PGN, so the list can flag them with a
-   * small comment marker beside the move. Only the User PGNs game detail passes
-   * this — its Description tab is the list of those comments — and every other
-   * screen passes nothing and renders exactly as before.
+   * small comment marker beside the move. The variations explorer passes it
+   * (`TreeMoveList`); a screen that passes nothing renders no markers.
    */
   annotatedPlies?: ReadonlySet<number>;
   /**
@@ -431,6 +430,7 @@ function MoveList({
           groupLabel={t("moveList.variation")}
           markComments={markCommentedNodes}
           showEvals={!mainlineEvalsOnly}
+          mask={mask}
         />
       ));
 
@@ -515,6 +515,7 @@ function MoveList({
   }, [
     rows,
     maskedSan,
+    mask,
     branches,
     startFen,
     onSelectNode,

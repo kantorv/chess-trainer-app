@@ -31,8 +31,15 @@ describe("translation catalogs", () => {
       "language.en",
       "language.he",
       "gamePanel.info.eco",
+      // The Library table's headers: a number sign, and two initialisms.
+      "library.table.columns.number",
+      "library.table.columns.whiteElo",
+      "library.table.columns.blackElo",
+      "library.table.columns.eco",
       "editor.tabs.fen",
       "editor.tabs.pgn",
+      // A pairing, "White - Black": only the two names inside it translate.
+      "playedGames.players",
     ]);
 
     const untranslated = leafKeys(en).filter(

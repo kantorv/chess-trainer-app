@@ -82,7 +82,7 @@ function RepertoireUpload() {
     setBusy(true);
     setProblem(null);
     setChoice(null);
-    pending.current = setTimeout(() => {
+    pending.current = setTimeout(async () => {
       pending.current = null;
       const reading = readRepertoireText(text);
       if (!reading.ok) {
@@ -104,7 +104,7 @@ function RepertoireUpload() {
         name,
         reading.name,
       );
-      if (saveRepertoire(record) !== undefined) {
+      if ((await saveRepertoire(record)) !== undefined) {
         setBusy(false);
         setProblem({ kind: "storage" });
         return;

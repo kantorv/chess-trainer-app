@@ -17,9 +17,7 @@ import { type SavedListView } from "./savedList";
  * to be showing *something*, so that is a no-op here, and a caller never sees
  * it. What a real change drops is the caller's: the selection lives beside the
  * checkboxes only the list view has, so each screen's handler drops it —
- * a count for rows nobody can see is a trap. (The Saved openings screen's
- * handler is the same call; its picks persist across *folder* navigation, not
- * across a view switch.)
+ * a count for rows nobody can see is a trap.
  *
  * The labels are each screen's own: `labelKey` names the screen's catalog
  * block (`"savedGames"` and its siblings), and the four keys under

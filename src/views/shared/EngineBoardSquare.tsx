@@ -1,6 +1,6 @@
 import Box from "@mui/material/Box";
 import { useTranslation } from "react-i18next";
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import {
   Chessboard,
   type ChessboardOptions,
@@ -20,11 +20,11 @@ import CapturedPieces, {
  * The board square of a screen that plays a game against the engine: the
  * evaluation bar, the board, and the promotion picker overlaid on it.
  *
- * Extracted from `PlayWithEngine.tsx` when a second screen — Masked Pieces —
- * came to need exactly the same square. Both render this; the only thing they
- * differ by is what is passed in, which for the masked screen is a `pieces`
- * renderer (see `lib/pieceMask.ts`). Forking it would have put the width
- * discipline below in two files, to drift apart.
+ * Extracted from Play with Engine when a second screen — Masked Pieces — came
+ * to need exactly the same square; every v2 board renders it now, through
+ * `BoardShell`. What a board differs by is what is passed in, which for
+ * Masked Pieces is a `pieces` renderer (see `lib/pieceMask.ts`). Forking it
+ * would have put the width discipline below in two files, to drift apart.
  *
  * Presentational, like everything else in `views/shared/`: it takes props and
  * knows nothing about which screen is rendering it, so neither screen's hook is
@@ -69,6 +69,14 @@ type EngineBoardSquareProps = {
    */
   boardOptions?: ChessboardOptions;
 
+  /**
+   * Drawn over the board, inside its relative box — a screen's own overlay
+   * layer, positioned by itself (`ChanceArrows.tsx` is the user; the
+   * promotion picker below is the precedent). Rendered beneath the picker,
+   * so that stays on top.
+   */
+  overlay?: ReactNode;
+
   showEvalBar: boolean;
   /** Already normalised to White's perspective (`lib/engineAnalysis.ts`). */
   score: Score | null;
@@ -96,6 +104,7 @@ function EngineBoardSquare({
   allowDragging,
   onPieceDrop,
   boardOptions,
+  overlay,
   showEvalBar,
   score,
   captured,
@@ -199,6 +208,11 @@ function EngineBoardSquare({
           }}
         >
           <Chessboard options={chessboardOptions} />
+          {/*
+            The screen's own overlay — before the promotion picker, so the
+            picker, which asks a question, stays above it.
+          */}
+          {overlay}
 
           {promotion && (
             <PromotionPicker

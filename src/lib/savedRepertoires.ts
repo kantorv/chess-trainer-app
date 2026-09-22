@@ -9,8 +9,7 @@ import {
   type VariationNode,
 } from "./gameTree";
 import { PgnParseError, parsePgnTree, readPgnTags, splitPgnGames } from "./pgn";
-import { chapterPrefix } from "./pgnLibrary";
-import { MAX_UPLOAD_CHARS } from "./pgnUploads";
+import { chapterPrefix, MAX_UPLOAD_CHARS } from "./pgnText";
 import {
   DEFAULT_REPERTOIRE_SETTINGS,
   repertoireSettingsFrom,
@@ -23,7 +22,7 @@ import {
  * repertoires (CTA-61).
  *
  * The three-way split every record in `src/lib/` has: the pure model here, the
- * `localStorage` half in [`savedRepertoireStore.ts`](./savedRepertoireStore.ts),
+ * IndexedDB half in [`savedRepertoireStore.ts`](./savedRepertoireStore.ts),
  * the `useSyncExternalStore` binding in `views/repertoires/useSavedRepertoires.ts`.
  *
  * ## A repertoire is one game
@@ -115,7 +114,7 @@ export type SavedRepertoire = {
  * A fresh id — the same minter the other stores use, in `[0-9a-z]` because
  * the value travels in a URL.
  */
-export { newSavedGameId as newSavedRepertoireId } from "./savedGames";
+export { newRecordId as newSavedRepertoireId } from "./recordId";
 
 /**
  * The text as it is stored: `\r\n` and `\r` read as `\n`, and the whitespace

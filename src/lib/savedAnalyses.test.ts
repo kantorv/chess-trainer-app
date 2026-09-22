@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { Chess, DEFAULT_POSITION } from "chess.js";
 
 import { DEFAULT_ANALYSIS_SETTINGS } from "./analysisSettings";
+import { parsePgnTree } from "./pgn";
 import {
   addMove,
   emptyTree,
@@ -21,6 +22,8 @@ import {
   savedAnalysisOf,
   savedAnalysisSummary,
   savedAnalysisToTree,
+  splitAnalysesOf,
+  batchAnalysesOf,
   type SavedAnalysis,
 } from "./savedAnalyses";
 
@@ -250,17 +253,14 @@ describe("savedAnalysisSummary — what a row says without opening it", () => {
 });
 
 describe("savedAnalysisCatalogOf — so ?game= already worked", () => {
-  it("presents each readable record as a game under one category", () => {
+  it("presents each readable record as a game under one path", () => {
     const catalog = savedAnalysisCatalogOf([
       save(grow([[[], ["e4", "e5"]]]), [], { id: "a1" }),
       save(grow([[[], ["d4"]]]), [], { id: "a2" }),
     ]);
 
-    expect(catalog.categories.map((category) => category.path)).toEqual([
-      SAVED_ANALYSES_PATH,
-    ]);
-    expect(catalog.items.map((item) => item.id)).toEqual(["a1", "a2"]);
-    expect(catalog.items.every((item) => item.kind === "game")).toBe(true);
+    expect(catalog.path).toBe(SAVED_ANALYSES_PATH);
+    expect(catalog.games.map((entry) => entry.id)).toEqual(["a1", "a2"]);
   });
 
   it("leaves a record that will not parse out, rather than failing the lot", () => {
@@ -269,6 +269,90 @@ describe("savedAnalysisCatalogOf — so ?game= already worked", () => {
       save(grow([[[], ["d4"]]]), [], { id: "a2" }),
     ]);
 
-    expect(catalog.items.map((item) => item.id)).toEqual(["a2"]);
+    expect(catalog.games.map((entry) => entry.id)).toEqual(["a2"]);
+  });
+});
+
+describe("a saved analysis' name and folder (CTA-73)", () => {
+  const tree = parsePgnTree('[White "Tal"]\n[Black "Botvinnik"]\n\n1. e4 e5 *');
+
+  it("is named by its players and Unfiled when written", () => {
+    const saved = savedAnalysisOf("a", tree, [], DEFAULT_ANALYSIS_SETTINGS, "white");
+    expect(saved.name).toBe("Tal – Botvinnik");
+    expect(saved.folderId).toBeNull();
+  });
+
+  it("names a board of its own by nothing — the screen's generic", () => {
+    const saved = savedAnalysisOf("a", emptyTree(), [], DEFAULT_ANALYSIS_SETTINGS, "white");
+    expect(saved.name).toBe("");
+  });
+
+  it("reads a record from before names and folders as named by its tags, and Unfiled", () => {
+    const written = savedAnalysisOf("a", tree, [], DEFAULT_ANALYSIS_SETTINGS, "white");
+    const legacy: Record<string, unknown> = { ...written };
+    delete legacy.name;
+    delete legacy.folderId;
+    expect(savedAnalysisFrom(legacy)).toMatchObject({
+      name: "Tal – Botvinnik",
+      folderId: null,
+    });
+    expect(savedAnalysisFrom({ ...legacy, name: "Mine", folderId: 7 })).toMatchObject({
+      name: "Mine",
+      folderId: null,
+    });
+  });
+
+  it("names a catalog entry by the record's name", () => {
+    const saved = {
+      ...savedAnalysisOf("a", tree, [], DEFAULT_ANALYSIS_SETTINGS, "white"),
+      name: "Immortal",
+    };
+    expect(savedAnalysisCatalogOf([saved]).games[0].name).toBe("Immortal");
+  });
+
+  it("splits games into one record each, named by the game and filed together", () => {
+    let next = 0;
+    const records = splitAnalysesOf(
+      () => `id${(next += 1)}`,
+      [
+        { name: "Line 1", tree },
+        { name: "Line 2", tree: parsePgnTree("1. d4 d5 *") },
+      ],
+      "folder",
+      DEFAULT_ANALYSIS_SETTINGS,
+    );
+    expect(records.map((record) => [record.id, record.name, record.folderId])).toEqual([
+      ["id1", "Line 1", "folder"],
+      ["id2", "Line 2", "folder"],
+    ]);
+    expect(savedAnalysisToTree(records[1])?.moves[0].san).toBe("d4");
+  });
+});
+
+describe("batchAnalysesOf — the Library's picked games (CTA-77)", () => {
+  it("keeps each game's PGN as it is, side lines and comments too, opened at the start facing White", () => {
+    let next = 0;
+    const game = '[White "Carlsen, Magnus"]\n[Black "Nepomniachtchi, Ian"]\n\n1. e4 {Best by test.} e5 (1... c5) 1-0\n';
+    const records = batchAnalysesOf(
+      () => `id${(next += 1)}`,
+      [
+        { name: "Carlsen, Magnus – Nepomniachtchi, Ian", pgn: game },
+        { name: "Two", pgn: "1. d4 d5 *" },
+      ],
+      "folder",
+      DEFAULT_ANALYSIS_SETTINGS,
+      new Date("2026-09-22T10:00:00.000Z"),
+    );
+    expect(records.map((record) => [record.id, record.name, record.folderId])).toEqual([
+      ["id1", "Carlsen, Magnus – Nepomniachtchi, Ian", "folder"],
+      ["id2", "Two", "folder"],
+    ]);
+    expect(records[0]).toMatchObject({ path: [], orientation: "white", showArrows: true, description: "" });
+    expect(records[0].pgn).toBe(game.trim());
+    const tree = savedAnalysisToTree(records[0])!;
+    expect(tree.moves[0].comments).toEqual(["Best by test."]);
+    expect(tree.moves[0].children.map((node) => node.san)).toEqual(["e5", "c5"]);
+    // A record the store would read back as it was written.
+    expect(savedAnalysisFrom(records[0])).toEqual(records[0]);
   });
 });

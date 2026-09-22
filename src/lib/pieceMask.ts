@@ -15,7 +15,9 @@ import { defaultPieces, type PieceRenderObject } from "react-chessboard";
  * - **§13 — keep the true game state authoritative and separate from the
  *   rendering layer**, and give away no identity through "piece silhouette,
  *   colour, animation, notation, move hints, or engine overlays". The silhouette
- *   is {@link maskedPieces}; the notation is {@link maskSan}.
+ *   is {@link maskedPieces}; the notation is {@link maskSan} (and, for a
+ *   tree's move, {@link maskNodeSan}). Where each is applied, and why:
+ *   `.claude/rules/masked-pieces.md`.
  *
  * ## Why the mask is keyed on the *type*, not on the piece
  *
@@ -90,10 +92,10 @@ const maskOf = (
 export const IDENTITY_MASK: PieceMask = maskOf((letter) => letter);
 
 /**
- * The three masking policies of the doc's variants table (§8) that this screen
- * ships, weakest first. The adaptive ones — progressive, temporary, random — and
- * the reveal modes (§9) build on this same {@link PieceMask} and are follow-up
- * work.
+ * The three masking policies of the doc's variants table (§8) that Masked
+ * Pieces (`views/engine/masked/`) ships, weakest first. The adaptive ones —
+ * progressive, temporary, random — and the reveal modes (§9) build on this
+ * same {@link PieceMask} and are follow-up work.
  */
 export const MASK_PRESETS = {
   /** "Normal chess" — the baseline, and the way to switch masking off. */
@@ -163,6 +165,32 @@ export const isMasked = (mask: PieceMask, type: MaskPieceType): boolean =>
 export const isAnyMasked = (mask: PieceMask): boolean =>
   MASK_PIECE_TYPES.some((type) => isMasked(mask, type));
 
+/** Whether two masks draw every type alike — compared entry by entry. */
+export const samePieceMask = (a: PieceMask, b: PieceMask): boolean =>
+  MASK_PIECE_TYPES.every((type) => a[type] === b[type]);
+
+const isMaskPieceType = (value: unknown): value is MaskPieceType =>
+  typeof value === "string" && (MASK_PIECE_TYPES as readonly string[]).includes(value);
+
+/**
+ * A mask read back out of storage (a played game's record, CTA-79), or
+ * `undefined` for anything that is not one. Non-throwing, and strict: all
+ * twelve entries, each a piece type **of its own colour** — the invariant the
+ * editor keeps, so a hand-edited record cannot draw a white rook as a black
+ * pawn.
+ */
+export const pieceMaskFrom = (value: unknown): PieceMask | undefined => {
+  if (typeof value !== "object" || value === null) return undefined;
+  const row = value as Record<string, unknown>;
+  const mask: Partial<Record<MaskPieceType, MaskPieceType>> = {};
+  for (const type of MASK_PIECE_TYPES) {
+    const drawn = row[type];
+    if (!isMaskPieceType(drawn) || drawn[0] !== type[0]) return undefined;
+    mask[type] = drawn;
+  }
+  return mask as PieceMask;
+};
+
 /** The same mask with one entry replaced. */
 export const withMaskEntry = (
   mask: PieceMask,
@@ -221,7 +249,7 @@ export type MaskableMove = {
 };
 
 /**
- * One move as the masked screen prints it: its SAN when nothing about it is
+ * One move as Masked Pieces prints it: its SAN when nothing about it is
  * hidden, and plain coordinates — `"g1f3"`, `"e7e8q"` — when something is.
  *
  * SAN names the piece, and the move list sits right beside the board, so
@@ -254,6 +282,30 @@ export const maskSan = (mask: PieceMask, move: MaskableMove): string => {
   const promotion = promoted === undefined ? "" : promoted[1].toLowerCase();
   const mark = /[+#]$/.exec(move.san)?.[0] ?? "";
   return `${move.from}${move.to}${promotion}${mark}`;
+};
+
+/** A move of a tree as {@link maskNodeSan} reads it — a `VariationNode` fits. */
+export type MaskableNode = {
+  san: string;
+  from: string;
+  to: string;
+  /** The position *after* the move — whose turn it is there says who moved. */
+  fen: string;
+};
+
+/**
+ * One move of a game tree as a masked board prints it — {@link maskSan} for a
+ * node, which carries its squares already, so nothing is replayed. The side
+ * that moved is the one *not* to move in the position after it. No mask
+ * (`undefined`) prints the SAN: every surface that takes one takes it
+ * optionally, and this is how "no mask" stays one line at each of them
+ * (CTA-79 — the side lines, the next-moves bar, the map's labels, the move
+ * menu and the comment block of the variations explorer).
+ */
+export const maskNodeSan = (mask: PieceMask | undefined, node: MaskableNode): string => {
+  if (mask === undefined) return node.san;
+  const color: Color = node.fen.split(" ")[1] === "w" ? "b" : "w";
+  return maskSan(mask, { san: node.san, from: node.from, to: node.to, color });
 };
 
 /**

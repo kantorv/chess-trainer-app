@@ -4,20 +4,20 @@ import LibraryAddRoundedIcon from "@mui/icons-material/LibraryAddRounded";
 import MenuBookRoundedIcon from "@mui/icons-material/MenuBookRounded";
 import SportsEsportsRoundedIcon from "@mui/icons-material/SportsEsportsRounded";
 import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
+import ViewListRoundedIcon from "@mui/icons-material/ViewListRounded";
+import TravelExploreRoundedIcon from "@mui/icons-material/TravelExploreRounded";
 import DashboardCustomizeRoundedIcon from "@mui/icons-material/DashboardCustomizeRounded";
 import VisibilityOffRoundedIcon from "@mui/icons-material/VisibilityOffRounded";
 
-import type { LocalizedText } from "../../lib/libraryCatalog";
-import { devNavItems } from "../dev/devNav";
+import type { LocalizedText } from "../../lib/localizedText";
 import type { NavFolderId } from "./navFolders";
-import { userPgnsNavItems } from "./navFromLibrary";
 
 export type NavItem = {
   /** Route path, matched against `useLocation().pathname` for the active state. */
   to: string;
   /** i18n key — for an authored screen, whose name is chrome the app ships. */
   labelKey?: string;
-  /** Per-language name — for a screen generated from a data catalog. */
+  /** Per-language name — for a screen whose name is data, not chrome. */
   label?: LocalizedText;
   icon: SvgIconComponent;
   /** The folder this screen hangs under in the sidebar — an id from `navFolders`. */
@@ -29,15 +29,8 @@ export type NavItem = {
  * repeating a list item per route, so adding a screen is one entry here plus
  * the route in `App.tsx` and a string in both catalogs.
  *
- * The exception, and the reason `label` exists above, is the one generated
- * section: the User PGNs list screens come from the `.pgn` files under
- * `src/data/pgn/` (`navFromLibrary.ts`), one per category at any depth, named
- * from their data. They are served by a single splat route, so a new PGN file
- * needs no entry here and no route either.
- *
- * A **function**, for the reason `navFolders` is one: a `.pgn` the reader
- * uploads adds a screen while the app is running, so the list is built when it
- * is asked for rather than when this module is imported.
+ * A **function**, for the reason `navFolders` is one: a dev-only entry is a
+ * spread gated on `import.meta.env.DEV` (none today — `chessboard-v2.md` §5).
  */
 export const navItems = (): readonly NavItem[] => [
   {
@@ -46,25 +39,37 @@ export const navItems = (): readonly NavItem[] => [
     icon: SportsEsportsRoundedIcon,
     folder: "engine",
   },
+  // Play with Engine v2's games (CTA-74) — the list the nav calls Saved games.
   {
-    to: "/engine/saved",
+    to: "/engine/games",
     labelKey: "nav.savedGames",
     icon: HistoryRoundedIcon,
     folder: "engine",
   },
+  // Masked Pieces (CTA-79) — Play with Engine in a costume, beside it.
   {
-    to: "/masked/play",
+    to: "/engine/masked",
     labelKey: "nav.maskedPlay",
     icon: VisibilityOffRoundedIcon,
-    folder: "masked-pieces",
+    folder: "engine",
+  },
+  /*
+    The Library (CTA-75): the collections, and the screen one is brought in
+    on. A collection's table and a game's board are reached from the list —
+    routes, not nav entries.
+  */
+  {
+    to: "/library",
+    labelKey: "nav.libraryCollections",
+    icon: ViewListRoundedIcon,
+    folder: "library",
   },
   {
-    to: "/games/load-pgn",
-    labelKey: "nav.loadPgn",
+    to: "/library/new",
+    labelKey: "nav.addCollection",
     icon: UploadFileRoundedIcon,
-    folder: "games",
+    folder: "library",
   },
-  ...userPgnsNavItems(),
   {
     to: "/tools/editor",
     labelKey: "nav.boardEditor",
@@ -85,15 +90,14 @@ export const navItems = (): readonly NavItem[] => [
     folder: "analysis",
   },
   /*
-    The Openings board has no nav entry (CTA-42): the top-level Openings folder
-    is a single entry (`navFolders.ts`) that renders as the screen below, and
-    the board is reached from the saved list's New button. The `/openings`
-    route stays — it is where a Continue hand-off and the ECO chip land.
+    The Openings explorer (CTA-78) — the board itself, since nothing on it is
+    saved: the top-level Openings folder is a single entry (`navFolders.ts`)
+    that renders as this screen.
   */
   {
-    to: "/openings/saved",
-    labelKey: "nav.savedOpenings",
-    icon: HistoryRoundedIcon,
+    to: "/openings",
+    labelKey: "nav.openings",
+    icon: TravelExploreRoundedIcon,
     folder: "openings",
   },
   {
@@ -108,13 +112,6 @@ export const navItems = (): readonly NavItem[] => [
     icon: LibraryAddRoundedIcon,
     folder: "repertoires",
   },
-  /*
-    The Development section's five boards (CTA-60) — the same `import.meta.env.DEV`
-    gate the folder and the routes carry, and for the same reason: in a
-    production build the spread is dead code and rollup drops the module behind
-    it. See `views/dev/devNav.ts`.
-  */
-  ...(import.meta.env.DEV ? devNavItems() : []),
 ];
 
 /** The screens filed under one folder, in registration order. */

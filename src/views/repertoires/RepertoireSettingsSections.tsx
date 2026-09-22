@@ -177,6 +177,14 @@ export function BoardSection({ draft, onChange }: RepertoireSettingsSectionProps
         help={t("repertoires.settings.showArrowsHelp")}
         testId="repertoire-settings-show-arrows"
       />
+      {/* Beside the arrows it colours — off until the reader asks for it. */}
+      <SwitchOption
+        checked={draft.settings.chanceArrows}
+        onChange={(next) => onChange({ settings: { chanceArrows: next } })}
+        label={t("repertoires.settings.chanceArrows")}
+        help={t("repertoires.settings.chanceArrowsHelp")}
+        testId="repertoire-settings-chance-arrows"
+      />
     </Box>
   );
 }
@@ -188,7 +196,7 @@ export function BoardSection({ draft, onChange }: RepertoireSettingsSectionProps
  */
 export function FolderSection({ draft, onChange }: RepertoireSettingsSectionProps) {
   const { t } = useTranslation();
-  const folders = sortedRepertoireFolders(useRepertoireFolders());
+  const folders = sortedRepertoireFolders(useRepertoireFolders() ?? []);
 
   const item = (folderId: string | null, label: string, depth: number) => {
     const selected = draft.folderId === folderId;

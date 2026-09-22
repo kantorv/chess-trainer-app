@@ -25,8 +25,8 @@ import { turnOf, type BoardCore } from "./useBoardCore";
  *
  * The reply goes through the core's `playVariation` — `addMove` under the node
  * the reader is standing on, so a move the repertoire has is *followed*, not
- * duplicated. Not `appendMove`, which is Play v2's engine reply and goes to the
- * end of the mainline: a repertoire is drilled line by line, anywhere in it.
+ * duplicated. Not `appendMove`, which adds at the end of the mainline (a
+ * linear board's engine reply): a repertoire is drilled line by line, anywhere in it.
  * The module never touches `chess.js`; only the core calls `.move()`.
  *
  * ## It replies to a move, never to a position

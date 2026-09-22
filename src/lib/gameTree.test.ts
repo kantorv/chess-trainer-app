@@ -444,3 +444,51 @@ describe("mergeTrees", () => {
   });
 });
 
+
+describe("treeToPgn's export options (CTA-73)", () => {
+  const annotated = parsePgnTree(
+    '[Event "Study"]\n\n{Intro.} 1. e4 $1 {Best by test.} e5 (1... c5 {The Sicilian.}) 2. Nf3 *',
+  );
+
+  it("writes everything with no options, and with every option on", () => {
+    const all = treeToPgn(annotated);
+    expect(treeToPgn(annotated, {})).toBe(all);
+    expect(treeToPgn(annotated, { comments: true, nags: true, variations: true })).toBe(all);
+    expect(all).toContain("{ Intro. }");
+    expect(all).toContain("$1");
+    expect(all).toContain("(1... c5");
+  });
+
+  it("drops every comment, the game's own and the side lines' included", () => {
+    const pgn = treeToPgn(annotated, { comments: false });
+    expect(pgn).not.toContain("{");
+    expect(pgn).toContain("$1");
+    expect(pgn).toContain("(1... c5)");
+  });
+
+  it("drops the NAGs", () => {
+    const pgn = treeToPgn(annotated, { nags: false });
+    expect(pgn).not.toContain("$");
+    expect(pgn).toContain("{ Best by test. }");
+  });
+
+  it("drops the side lines, keeping the mainline and its comments", () => {
+    const pgn = treeToPgn(annotated, { variations: false });
+    expect(pgn).not.toContain("(");
+    expect(pgn).not.toContain("Sicilian");
+    expect(pgn).toContain("1. e4 $1 { Best by test. } 1... e5 2. Nf3 *");
+  });
+
+  it("round-trips what it keeps through the parser", () => {
+    const bare = parsePgnTree(
+      treeToPgn(annotated, { comments: false, nags: false, variations: false }),
+    );
+    expect(mainline(bare).map((node) => node.san)).toEqual(["e4", "e5", "Nf3"]);
+    expect(countVariations(bare)).toBe(0);
+  });
+
+  it("is pure: the tree it was given keeps every annotation", () => {
+    treeToPgn(annotated, { comments: false, nags: false, variations: false });
+    expect(treeToPgn(annotated)).toContain("{ The Sicilian. }");
+  });
+});

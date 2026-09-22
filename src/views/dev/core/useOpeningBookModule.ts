@@ -19,7 +19,8 @@ import {
  *
  * The eco.json lookup for the position on screen, its known continuations, and
  * their arrows. A board composes this when it lists book continuations;
- * Openings v2 is the one that does.
+ * the Openings explorer (`views/openings/`, CTA-78) is the one that does
+ * ([`.claude/rules/openings-explorer.md`](../../../../.claude/rules/openings-explorer.md)).
  *
  * Two things worth knowing:
  *

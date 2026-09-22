@@ -163,7 +163,7 @@ function BoardEditor() {
     event.target.value = "";
   };
 
-  const onLoadPgn = (event: FormEvent) => {
+  const onSubmitPgn = (event: FormEvent) => {
     event.preventDefault();
     loadPgnText(pgnText);
   };
@@ -198,7 +198,7 @@ function BoardEditor() {
    * is in the URL, so the position can be bookmarked, shared and reloaded, where
    * router state would be gone on the first refresh. Both destinations read it
    * once as their initial position — see the notes on `useAnalysisBoard` and
-   * `usePlayWithEngine` — so this is the whole of the interface between them.
+   * `usePlayGame` — so this is the whole of the interface between them.
    */
   const handOffTo = (pathname: string) => () =>
     navigate({
@@ -341,7 +341,7 @@ function BoardEditor() {
                 error={pgnError}
                 pgnText={pgnText}
                 onPgnTextChange={setPgnText}
-                onLoadPgn={onLoadPgn}
+                onSubmitPgn={onSubmitPgn}
                 onFileChosen={onFileChosen}
               />
             }

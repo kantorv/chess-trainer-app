@@ -9,10 +9,14 @@ import {
   maskPresetOf,
   maskSan,
   maskSanLine,
+  maskNodeSan,
   maskedPieces,
+  pieceMaskFrom,
+  samePieceMask,
   withMaskEntry,
   type PieceMask,
 } from "./pieceMask";
+import { parsePgnTree } from "./pgn";
 
 /** A move as `maskSan` wants one. */
 const move = (san: string, from: string, to: string, color: "w" | "b" = "w") => ({
@@ -234,5 +238,50 @@ describe("maskSanLine — a game or a variation", () => {
     expect(maskSanLine(MASK_PRESETS.nonPawns, fen, ["e8=Q+"])).toEqual([
       "e7e8q+",
     ]);
+  });
+});
+
+describe("maskNodeSan — a tree's move, as a masked board prints it (CTA-79)", () => {
+  const tree = parsePgnTree("1. Nf3 Nf6 2. e4 *");
+  const [nf3] = tree.moves;
+  const nf6 = nf3.children[0];
+  const e4 = nf6.children[0];
+
+  it("prints the SAN with no mask at all", () => {
+    expect(maskNodeSan(undefined, nf3)).toBe("Nf3");
+  });
+
+  it("reads the side that moved off the position after it", () => {
+    expect(maskNodeSan(MASK_PRESETS.nonPawns, nf3)).toBe("g1f3");
+    expect(maskNodeSan(MASK_PRESETS.nonPawns, nf6)).toBe("g8f6");
+    // Masking only White's knights leaves Black's knight move as SAN.
+    const whiteKnights = withMaskEntry(IDENTITY_MASK, "wN", "wP");
+    expect(maskNodeSan(whiteKnights, nf6)).toBe("Nf6");
+    expect(maskNodeSan(whiteKnights, nf3)).toBe("g1f3");
+    // The pawn is hidden too, being what the knight is drawn as.
+    expect(maskNodeSan(whiteKnights, e4)).toBe("e2e4");
+  });
+});
+
+describe("pieceMaskFrom — a stored mask, read back (CTA-79)", () => {
+  it("round-trips every preset", () => {
+    for (const mask of Object.values(MASK_PRESETS)) {
+      const read = pieceMaskFrom(JSON.parse(JSON.stringify(mask)));
+      expect(read).toBeDefined();
+      expect(samePieceMask(read!, mask)).toBe(true);
+    }
+  });
+
+  it("refuses anything short of twelve same-colour entries", () => {
+    expect(pieceMaskFrom(undefined)).toBeUndefined();
+    expect(pieceMaskFrom("nonPawns")).toBeUndefined();
+    expect(pieceMaskFrom({ wK: "wK" })).toBeUndefined();
+    expect(pieceMaskFrom({ ...MASK_PRESETS.nonPawns, bQ: "wP" })).toBeUndefined();
+    expect(pieceMaskFrom({ ...MASK_PRESETS.nonPawns, bQ: "bX" })).toBeUndefined();
+  });
+
+  it("compares masks entry by entry", () => {
+    expect(samePieceMask(MASK_PRESETS.identity, IDENTITY_MASK)).toBe(true);
+    expect(samePieceMask(MASK_PRESETS.identity, MASK_PRESETS.nonPawns)).toBe(false);
   });
 });

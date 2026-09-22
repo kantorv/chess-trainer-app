@@ -10,7 +10,7 @@ import {
   approximateElo,
   DEFAULT_ENGINE_SETTINGS,
   type EngineSettings as EngineSettingsValues,
-} from "./usePlayWithEngine";
+} from "../../../lib/engineSettings";
 
 /*
   The tab is presentational, so nothing here builds an `Engine` — the map of
@@ -45,7 +45,6 @@ const renderSettings = (
 ) => {
   const onChange = vi.fn();
   const onShowEvalBarChange = vi.fn();
-  const onNewGame = vi.fn();
 
   render(
     <AppThemeWithLang>
@@ -55,12 +54,11 @@ const renderSettings = (
         engineOptions={overrides.engineOptions ?? SHIPPED_OPTIONS}
         showEvalBar={overrides.showEvalBar ?? true}
         onShowEvalBarChange={onShowEvalBarChange}
-        onNewGame={onNewGame}
       />
     </AppThemeWithLang>,
   );
 
-  return { onChange, onShowEvalBarChange, onNewGame };
+  return { onChange, onShowEvalBarChange };
 };
 
 beforeEach(async () => {
@@ -78,12 +76,14 @@ describe("the engine settings tab", () => {
       "engine-setting-movetime",
       "engine-setting-threads",
       "engine-setting-hash",
-      "engine-setting-playas",
       "engine-setting-evalbar",
-      "engine-new-game",
     ]) {
       expect(screen.getByTestId(testId)).toBeInTheDocument();
     }
+    // The side and a new game are the screens' headers' (the side toggle,
+    // Replay) — not this tab's.
+    expect(screen.queryByTestId("engine-setting-playas")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("engine-new-game")).not.toBeInTheDocument();
   });
 
   /*
@@ -224,14 +224,6 @@ describe("the engine settings tab", () => {
     ).toHaveTextContent("No limit");
   });
 
-  it("reports a colour change", async () => {
-    const { onChange } = renderSettings();
-
-    await userEvent.click(screen.getByTestId("engine-setting-playas-black"));
-
-    expect(onChange).toHaveBeenCalledWith({ playAs: "black" });
-  });
-
   it("toggles the evaluation bar", async () => {
     const { onShowEvalBarChange } = renderSettings({ showEvalBar: true });
 
@@ -240,14 +232,6 @@ describe("the engine settings tab", () => {
     );
 
     expect(onShowEvalBarChange).toHaveBeenCalledWith(false);
-  });
-
-  it("starts a new game", async () => {
-    const { onNewGame } = renderSettings();
-
-    await userEvent.click(screen.getByTestId("engine-new-game"));
-
-    expect(onNewGame).toHaveBeenCalledTimes(1);
   });
 });
 

@@ -1,112 +1,115 @@
+import { findCatalogGame, type CatalogGame } from "./gameCatalog";
 import {
-  resolveLibraryPath,
-  type LibraryCatalog,
-  type LibraryGame,
-} from "./libraryCatalog";
-import { userPgnsLibrary } from "./pgnCatalog";
-import { savedAnalysesCatalog } from "./savedAnalysisStore";
-import { savedGamesCatalog } from "./savedGameStore";
+  findLibraryGame,
+  libraryReferencePathOf,
+  libraryReferenceRead,
+  loadLibraryReferenceGames,
+} from "./libraryGameCatalog";
+import { loadPlayedGames, playedGamesCatalog, playedGamesSnapshot } from "./playedGameStore";
+import { findSavedAnalysisGame } from "./savedAnalysisStore";
 
 /**
- * How a **whole game** crosses between screens: `?game=library/<category path>/<id>`
- * (the section key was `pgn` before CTA-38; that spelling still resolves).
+ * How a **whole game** crosses to the Analysis Board: `?game=<key>/<path>/<id>`.
  *
- * The Board Editor's hand-off carries a position, and a FEN is short enough to
- * put in a URL. A game is not: a chess.com export runs to a couple of kilobytes
- * and a study chapter carries its comments with it, so what travels is a
- * *reference into the catalog* — the section key, the category path and the item
- * id — and the destination looks the game up for itself.
- *
- * Everything the `?fen=` hand-off is good for, this keeps:
+ * A FEN is short enough to put in a URL; a game is not — a played game
+ * carries its side lines, an analysis its comments — so what travels is a
+ * *reference into a store's catalog* (`lib/gameCatalog.ts`), and the
+ * destination looks the game up for itself. It keeps everything the `?fen=`
+ * hand-off is good for:
  *
  * - it is a **query parameter**, so the link survives being bookmarked, shared
  *   and reloaded, where router state would not;
  * - the destination **validates** it (an unknown reference resolves to
  *   `undefined` and is ignored, exactly as an unparsable FEN is) and takes the
  *   result as *initial* state, because arriving at the URL mounts the screen;
- * - it is **additive**. `?fen=` is untouched and still works from a game's
- *   detail page, which hands over the position at the ply on screen.
+ * - it is **additive**: `?fen=` is untouched.
  *
- * A reference names a *game*, so it resolves only against a catalog that has
- * some, and the registry below is the single place that mapping lives. There
- * are three: the User PGNs library, the reader's own saved engine games
- * (`lib/savedGames.ts`) and their saved analysis boards
- * (`lib/savedAnalyses.ts`) — the last two presented as catalogs for exactly this
- * reason. A saved game or analysis reaches the Analysis Board and Load PGN
- * through the hand-off those screens already have, and neither learns that
- * either exists. **This registry is the whole cost of a new producer of games.**
- */
-
-/**
- * The section key the Library's references carry.
+ * The registry below is the single place a key meets its store, and it has
+ * three entries: the reader's saved analyses (`lib/savedAnalyses.ts`), their
+ * games against the engine (`lib/playedGames.ts`, CTA-74) and a Library
+ * collection's games (`lib/libraryGameCatalog.ts`, `library/<collection>/<n>`
+ * — the Export tab's hand-off on a Library game's board, CTA-77). **A line in
+ * it is the whole cost of a new producer of games.**
  *
- * Renamed from `"pgn"` when the section became "Library" (CTA-38). The old
- * value is still accepted on the way *in* — see {@link LEGACY_PGN_REFERENCE_KEY}
- * and `catalogsByKey` — so a `?game=pgn/<path>/<id>` link someone bookmarked or
- * shared before the rename still resolves.
+ * The pre-CTA-75 `pgn/…` key went with the old Library, and its
+ * `library/<folder>/<id>` links name no collection and number now; such a
+ * link resolves to nothing, and the board opens as if `?game=` were not there.
  */
-export const LIBRARY_REFERENCE_KEY = "library";
-
-/**
- * The pre-CTA-38 section key. Kept only as a resolvable alias for old links;
- * nothing should *write* it. Exported under its historical name so external
- * callers that imported `PGN_REFERENCE_KEY` keep compiling.
- */
-export const LEGACY_PGN_REFERENCE_KEY = "pgn";
-
-/** @deprecated Use {@link LIBRARY_REFERENCE_KEY}. Retained for back-compat. */
-export const PGN_REFERENCE_KEY = LIBRARY_REFERENCE_KEY;
-
-/** The section key the reader's saved engine games carry. */
-export const ENGINE_REFERENCE_KEY = "engine";
 
 /** The section key the reader's saved analysis boards carry. */
 export const ANALYSIS_REFERENCE_KEY = "analysis";
 
+/** The section key Play with Engine's games carry (CTA-74). */
+export const PLAY_REFERENCE_KEY = "play";
+
+/** The section key a Library collection's games carry (CTA-77). */
+export const LIBRARY_REFERENCE_KEY = "library";
+
+/** The reference to game `number` (1-based) of a Library collection. */
+export const libraryGameReference = (collectionId: string, number: number): string =>
+  `${LIBRARY_REFERENCE_KEY}/${libraryReferencePathOf(collectionId, number)}`;
+
 /**
- * Which catalog a reference's first segment names. Read at call time rather
- * than passed in, so a destination screen needs no more than the string out of
- * the URL — and *called* rather than held, because the User PGNs library grows
- * a folder when the reader uploads a file, and a game they just uploaded has to
- * be as referenceable as one that shipped.
+ * Which store a reference's first segment names, as the resolver of the rest
+ * of it (`<path>/<id>`). *Called* rather than held, because the stores change
+ * while the app runs and a game saved a moment ago has to be as referenceable
+ * as an old one. Every store here is read asynchronously, and each resolves
+ * out of what has been read — so the Analysis Board waits for that read
+ * before it resolves a reference. The played games memoise their whole
+ * catalog on their snapshot; the saved analyses — thousands of records since CTA-77, in
+ * IndexedDB — parse only the one named, out of what has been read (so the
+ * Analysis Board waits for that read before it resolves one).
  */
-const catalogsByKey: Record<string, () => LibraryCatalog> = {
-  [LIBRARY_REFERENCE_KEY]: userPgnsLibrary,
-  // The pre-rename alias: old `?game=pgn/…` links still resolve.
-  [LEGACY_PGN_REFERENCE_KEY]: userPgnsLibrary,
-  [ENGINE_REFERENCE_KEY]: savedGamesCatalog,
-  [ANALYSIS_REFERENCE_KEY]: savedAnalysesCatalog,
+const catalogsByKey: Record<string, (segments: readonly string[]) => CatalogGame | undefined> = {
+  [ANALYSIS_REFERENCE_KEY]: findSavedAnalysisGame,
+  [PLAY_REFERENCE_KEY]: (segments) => findCatalogGame(segments, playedGamesCatalog()),
+  [LIBRARY_REFERENCE_KEY]: findLibraryGame,
 };
 
-/** The reference for one game — what a detail page puts in the link. */
-export const gameReferenceOf = (
-  sectionKey: string,
-  item: LibraryGame,
-): string => `${sectionKey}/${item.category}/${item.id}`;
+const referenceSegments = (reference: string): string[] =>
+  reference.split("/").filter(Boolean);
 
 /**
- * The game a reference names, or `undefined` for anything that does not resolve
- * — an unknown section, a category the data no longer has, an id that is a
- * position rather than a game.
- *
- * The category path is not split by counting segments: the leftover is handed to
- * `resolveLibraryPath`, the same longest-prefix match the splat route uses, so a
- * reference into a library nested three deep needs no more work here than a flat
- * one.
+ * Whether a reference names the saved analyses — the one store read
+ * asynchronously, which a screen resolving it has to wait for.
+ */
+export const isAnalysisReference = (reference: string | null | undefined): boolean =>
+  reference !== null &&
+  reference !== undefined &&
+  referenceSegments(reference)[0] === ANALYSIS_REFERENCE_KEY;
+
+/**
+ * Whether what a `play` or Library reference names has been read — the
+ * played games (IndexedDB) and a Library collection's games are read
+ * asynchronously, like the saved analyses. Anything else is ready at once.
+ */
+export const isReferenceRead = (reference: string | null | undefined): boolean => {
+  if (reference === null || reference === undefined) return true;
+  const [sectionKey, ...rest] = referenceSegments(reference);
+  if (sectionKey === PLAY_REFERENCE_KEY) return playedGamesSnapshot() !== undefined;
+  return sectionKey !== LIBRARY_REFERENCE_KEY || libraryReferenceRead(rest);
+};
+
+/** Read what a `play` or Library reference names (a no-op for any other). Never rejects. */
+export const loadReferencedGames = async (reference: string | null | undefined): Promise<void> => {
+  if (reference === null || reference === undefined) return;
+  const [sectionKey, ...rest] = referenceSegments(reference);
+  if (sectionKey === PLAY_REFERENCE_KEY) await loadPlayedGames();
+  if (sectionKey === LIBRARY_REFERENCE_KEY) await loadLibraryReferenceGames(rest);
+};
+
+/**
+ * The game a reference names, or `undefined` for anything that does not
+ * resolve — an unknown key, a path the store does not have, a missing id.
  */
 export const resolveGameReference = (
   reference: string | null | undefined,
-): LibraryGame | undefined => {
+): CatalogGame | undefined => {
   if (reference === null || reference === undefined) return undefined;
 
-  const [sectionKey, ...rest] = reference.split("/").filter(Boolean);
+  const [sectionKey, ...rest] = referenceSegments(reference);
   if (sectionKey === undefined || rest.length === 0) return undefined;
 
-  const catalogOf = catalogsByKey[sectionKey];
-  if (catalogOf === undefined) return undefined;
-
-  const location = resolveLibraryPath(rest, catalogOf());
-  return location.kind === "item" && location.item.kind === "game"
-    ? location.item
-    : undefined;
+  const resolve = catalogsByKey[sectionKey];
+  return resolve === undefined ? undefined : resolve(rest);
 };

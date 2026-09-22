@@ -11,8 +11,9 @@ import {
   MAX_REPERTOIRE_FOLDERS,
   removeRepertoireFolder,
   renameRepertoireFolder,
-  REPERTOIRE_FOLDERS_STORAGE_KEY,
   repertoireFoldersSnapshot,
+  loadRepertoireFolders,
+  resetRepertoireFolderStore,
 } from "./savedRepertoireFolderStore";
 import { readRepertoireText, savedRepertoireOf } from "./savedRepertoires";
 import {
@@ -64,37 +65,39 @@ describe("repertoire folders — the pure half", () => {
 });
 
 describe("repertoire folders — the store", () => {
-  it("creates a folder and hands it back, and refuses an empty name", () => {
-    const made = createRepertoireFolder("  Caro  ");
+  it("creates a folder and hands it back, and refuses an empty name", async () => {
+    const made = await createRepertoireFolder("  Caro  ");
     expect(made?.name).toBe("Caro");
     expect(repertoireFoldersSnapshot()).toEqual([made]);
-    expect(localStorage.getItem(REPERTOIRE_FOLDERS_STORAGE_KEY)).toContain('"Caro"');
+    expect(localStorage.length).toBe(0);
+    resetRepertoireFolderStore();
+    expect(await loadRepertoireFolders()).toEqual([made]);
 
-    expect(createRepertoireFolder("   ")).toBeUndefined();
+    expect(await createRepertoireFolder("   ")).toBeUndefined();
     expect(repertoireFoldersSnapshot()).toHaveLength(1);
   });
 
-  it("stops at the cap", () => {
-    for (let i = 0; i < MAX_REPERTOIRE_FOLDERS; i += 1) createRepertoireFolder(`f${i}`);
-    expect(createRepertoireFolder("one more")).toBeUndefined();
+  it("stops at the cap", async () => {
+    for (let i = 0; i < MAX_REPERTOIRE_FOLDERS; i += 1) await createRepertoireFolder(`f${i}`);
+    expect(await createRepertoireFolder("one more")).toBeUndefined();
     expect(repertoireFoldersSnapshot()).toHaveLength(MAX_REPERTOIRE_FOLDERS);
   });
 
-  it("renames in place, and ignores an empty name", () => {
-    const made = createRepertoireFolder("Caro")!;
-    renameRepertoireFolder(made.id, "Caro-Kann");
-    renameRepertoireFolder(made.id, "  ");
-    expect(repertoireFoldersSnapshot()[0].name).toBe("Caro-Kann");
+  it("renames in place, and ignores an empty name", async () => {
+    const made = (await createRepertoireFolder("Caro"))!;
+    await renameRepertoireFolder(made.id, "Caro-Kann");
+    await renameRepertoireFolder(made.id, "  ");
+    expect(repertoireFoldersSnapshot()?.[0].name).toBe("Caro-Kann");
   });
 
-  it("deletes a folder and keeps its repertoires, back in Unfiled", () => {
-    const made = createRepertoireFolder("Caro")!;
-    saveRepertoire(repertoire("a", made.id));
-    saveRepertoire(repertoire("b"));
+  it("deletes a folder and keeps its repertoires, back in Unfiled", async () => {
+    const made = (await createRepertoireFolder("Caro"))!;
+    await saveRepertoire(repertoire("a", made.id));
+    await saveRepertoire(repertoire("b"));
 
-    expect(removeRepertoireFolder(made.id)).toBeUndefined();
+    expect(await removeRepertoireFolder(made.id)).toBeUndefined();
     expect(repertoireFoldersSnapshot()).toEqual([]);
-    expect(savedRepertoiresSnapshot().map((row) => [row.id, row.folderId])).toEqual([
+    expect(savedRepertoiresSnapshot()?.map((row) => [row.id, row.folderId])).toEqual([
       ["b", null],
       ["a", null],
     ]);
@@ -102,21 +105,21 @@ describe("repertoire folders — the store", () => {
 });
 
 describe("filing a repertoire", () => {
-  it("moves it in place, keeping the list order, and a no-op move writes nothing", () => {
-    const made = createRepertoireFolder("Caro")!;
-    saveRepertoire(repertoire("a"));
-    saveRepertoire(repertoire("b"));
+  it("moves it in place, keeping the list order, and a no-op move writes nothing", async () => {
+    const made = (await createRepertoireFolder("Caro"))!;
+    await saveRepertoire(repertoire("a"));
+    await saveRepertoire(repertoire("b"));
 
-    fileRepertoire("a", made.id);
-    expect(savedRepertoiresSnapshot().map((row) => [row.id, row.folderId])).toEqual([
+    await fileRepertoire("a", made.id);
+    expect(savedRepertoiresSnapshot()?.map((row) => [row.id, row.folderId])).toEqual([
       ["b", null],
       ["a", made.id],
     ]);
 
     const listener = vi.fn();
     const unsubscribe = subscribeSavedRepertoires(listener);
-    fileRepertoire("a", made.id);
-    fileRepertoire("nope", null);
+    await fileRepertoire("a", made.id);
+    await fileRepertoire("nope", null);
     expect(listener).not.toHaveBeenCalled();
     unsubscribe();
   });

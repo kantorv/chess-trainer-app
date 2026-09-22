@@ -1,26 +1,30 @@
-import { recordStore } from "./recordStore";
+import { idbRecordStore } from "./idbRecordStore";
+import { newRecordId as newRepertoireFolderId } from "./recordId";
+import {
+  REPERTOIRE_CHANNEL,
+  REPERTOIRE_FOLDERS_STORE,
+  openRepertoireDb,
+} from "./savedRepertoireDb";
 import {
   repertoireFolderFrom,
   type RepertoireFolder,
 } from "./savedRepertoireFolders";
 import { unfileRepertoiresIn } from "./savedRepertoireStore";
-import { newSavedGameId as newRepertoireFolderId } from "./savedGames";
 
 /**
- * Where the reader's repertoire folders are kept: one `localStorage` key,
- * holding a JSON array of {@link RepertoireFolder}.
+ * Where the reader's repertoire folders are kept: **IndexedDB** — the
+ * `folders` object store beside the repertoires in `chessapp.repertoires`
+ * (`lib/savedRepertoireDb.ts`), over the shared
+ * [`idbRecordStore.ts`](./idbRecordStore.ts).
  *
- * `savedGameFolderStore.ts` again over the shared `recordStore.ts`, minus
- * everything a tree needs and a flat list does not — no parent to check, no
- * subtree to refuse, no sub-folders to re-parent (see
- * [`savedRepertoireFolders.ts`](./savedRepertoireFolders.ts)). The CRUD lives
- * here so every caller means the same thing by it, and the one rule it keeps
- * is the one every folder in the app keeps: **deleting a folder keeps its
- * contents** — its repertoires go back to Unfiled in the same operation.
+ * The analyses' folder store again, minus everything a tree needs and a flat
+ * list does not — no parent to check, no subtree to refuse, no sub-folders to
+ * re-parent (see [`savedRepertoireFolders.ts`](./savedRepertoireFolders.ts)).
+ * The CRUD lives here so every caller means the same thing by it, and the one
+ * rule it keeps is the one every folder in the app keeps: **deleting a folder
+ * keeps its contents** — its repertoires go back to Unfiled in the same
+ * operation. Every write is a promise; nothing throws.
  */
-
-/** The `localStorage` key. Versioned, so a future shape change is a new key. */
-export const REPERTOIRE_FOLDERS_STORAGE_KEY = "chessapp.savedRepertoireFolders.v1";
 
 /** How many folders are kept — generous, but a bound. */
 export const MAX_REPERTOIRE_FOLDERS = 100;
@@ -31,16 +35,28 @@ export const MAX_REPERTOIRE_FOLDER_NAME = 100;
 /** What went wrong with a write. One case, but named rather than boolean. */
 export type RepertoireFolderProblem = "storage";
 
-const folders = recordStore<RepertoireFolder>(
-  REPERTOIRE_FOLDERS_STORAGE_KEY,
-  repertoireFolderFrom,
-);
+const folders = idbRecordStore<RepertoireFolder>({
+  db: openRepertoireDb,
+  store: REPERTOIRE_FOLDERS_STORE,
+  normalise: repertoireFolderFrom,
+  order: "oldest-first",
+  channel: REPERTOIRE_CHANNEL,
+});
 
-/** The folders, in storage order. Stable between changes. */
+/** The folders, oldest first — `undefined` until the first read lands. Stable between changes. */
 export const repertoireFoldersSnapshot = folders.snapshot;
 
-/** Subscribe to changes — this tab's writes, and other tabs' through `storage`. */
+/** Subscribe to changes — this tab's writes, and other tabs'. The first subscriber starts the read. */
 export const subscribeRepertoireFolders = folders.subscribe;
+
+/** The folders, read now if they have not been. */
+export const loadRepertoireFolders = folders.load;
+
+/** Resolves once every write issued so far has landed — what a test waits on before it resets. */
+export const settledRepertoireFolders = folders.settled;
+
+/** **For tests**: forget what was read (the database is `deleteRepertoireDb`'s). */
+export const resetRepertoireFolderStore = folders.reset;
 
 const write = folders.write;
 
@@ -48,13 +64,13 @@ const write = folders.write;
 const normaliseName = (name: string): string =>
   name.trim().slice(0, MAX_REPERTOIRE_FOLDER_NAME);
 
-/** One folder by id, or `undefined`. */
+/** One folder by id, out of what has been read, or `undefined`. */
 export const findRepertoireFolder = (
   id: string | null | undefined,
 ): RepertoireFolder | undefined =>
   id === null || id === undefined
     ? undefined
-    : repertoireFoldersSnapshot().find((folder) => folder.id === id);
+    : repertoireFoldersSnapshot()?.find((folder) => folder.id === id);
 
 /**
  * Create a folder, and hand it back — `undefined` when nothing was created: a
@@ -62,15 +78,12 @@ export const findRepertoireFolder = (
  * because every caller goes on to use it: the list opens it, a split files
  * its repertoires into it.
  */
-export const createRepertoireFolder = (
+export const createRepertoireFolder = async (
   name: string,
   now: Date = new Date(),
-): RepertoireFolder | undefined => {
+): Promise<RepertoireFolder | undefined> => {
   const trimmed = normaliseName(name);
   if (trimmed === "") return undefined;
-
-  const current = repertoireFoldersSnapshot();
-  if (current.length >= MAX_REPERTOIRE_FOLDERS) return undefined;
 
   const folder: RepertoireFolder = {
     id: newRepertoireFolderId(now),
@@ -78,7 +91,13 @@ export const createRepertoireFolder = (
     savedAt: now.toISOString(),
     updatedAt: now.toISOString(),
   };
-  return write([...current, folder]) === undefined ? folder : undefined;
+  let made = false;
+  const problem = await write((current) => {
+    if (current.length >= MAX_REPERTOIRE_FOLDERS) return current;
+    made = true;
+    return [...current, folder];
+  });
+  return made && problem === undefined ? folder : undefined;
 };
 
 /**
@@ -89,19 +108,17 @@ export const renameRepertoireFolder = (
   id: string,
   name: string,
   now: Date = new Date(),
-): RepertoireFolderProblem | undefined => {
+): Promise<RepertoireFolderProblem | undefined> => {
   const trimmed = normaliseName(name);
-  if (trimmed === "") return undefined;
+  if (trimmed === "") return Promise.resolve(undefined);
 
-  const current = repertoireFoldersSnapshot();
-  const existing = current.find((folder) => folder.id === id);
-  if (existing === undefined || existing.name === trimmed) return undefined;
-
-  return write(
-    current.map((folder) =>
+  return write((current) => {
+    const existing = current.find((folder) => folder.id === id);
+    if (existing === undefined || existing.name === trimmed) return current;
+    return current.map((folder) =>
       folder.id === id ? { ...folder, name: trimmed, updatedAt: now.toISOString() } : folder,
-    ),
-  );
+    );
+  });
 };
 
 /**
@@ -111,12 +128,15 @@ export const renameRepertoireFolder = (
  * better than repertoires naming one that is gone, and the list reads such a
  * `folderId` as Unfiled anyway. An unknown id is a no-op.
  */
-export const removeRepertoireFolder = (
+export const removeRepertoireFolder = async (
   id: string,
-): RepertoireFolderProblem | undefined => {
-  const current = repertoireFoldersSnapshot();
-  if (!current.some((folder) => folder.id === id)) return undefined;
-  const problem = write(current.filter((folder) => folder.id !== id));
-  unfileRepertoiresIn(id);
+): Promise<RepertoireFolderProblem | undefined> => {
+  let found = false;
+  const problem = await write((current) => {
+    if (!current.some((folder) => folder.id === id)) return current;
+    found = true;
+    return current.filter((folder) => folder.id !== id);
+  });
+  if (found) await unfileRepertoiresIn(id);
   return problem;
 };

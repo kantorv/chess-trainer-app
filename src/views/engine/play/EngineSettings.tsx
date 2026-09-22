@@ -1,12 +1,8 @@
 import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import Slider from "@mui/material/Slider";
 import Switch from "@mui/material/Switch";
-import ToggleButton from "@mui/material/ToggleButton";
-import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import Typography from "@mui/material/Typography";
-import RestartAltRoundedIcon from "@mui/icons-material/RestartAltRounded";
 import { useTranslation } from "react-i18next";
 import type { EngineOption } from "../../../lib/engine";
 import OptionSlider from "../../shared/OptionSlider";
@@ -15,11 +11,13 @@ import {
   approximateElo,
   SETTING_UCI_OPTION,
   type EngineSettings as EngineSettingsValues,
-} from "./usePlayWithEngine";
+} from "../../../lib/engineSettings";
 
 /**
  * The Engine tab: strength, search limits, how many lines to report, the two
- * resource knobs, which colour the human plays, and a new game.
+ * resource knobs and the eval bar. (Which colour the reader plays, and a new
+ * game, are the header's — the side toggle and Replay — on both screens that
+ * render this tab, Play with Engine and Masked Pieces.)
  *
  * Every option-backed control is a `<OptionSlider>` (`views/shared/`), which
  * renders it from what the running worker declared — present, pinned, or absent.
@@ -42,7 +40,6 @@ type EngineSettingsProps = {
   engineOptions: ReadonlyMap<string, EngineOption>;
   showEvalBar: boolean;
   onShowEvalBarChange: (next: boolean) => void;
-  onNewGame: () => void;
 };
 
 function EngineSettings({
@@ -51,7 +48,6 @@ function EngineSettings({
   engineOptions,
   showEvalBar,
   onShowEvalBarChange,
-  onNewGame,
 }: EngineSettingsProps) {
   const { t } = useTranslation();
 
@@ -183,30 +179,6 @@ function EngineSettings({
         onChange={(hashMb) => onChange({ hashMb })}
       />
 
-      <Box>
-        <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
-          {t("playEngine.settings.playAs")}
-        </Typography>
-        <ToggleButtonGroup
-          exclusive
-          size="small"
-          fullWidth
-          value={settings.playAs}
-          data-testid="engine-setting-playas"
-          onChange={(_event, next: "white" | "black" | null) => {
-            // A group can deselect its active button; keep a colour selected.
-            if (next) onChange({ playAs: next });
-          }}
-        >
-          <ToggleButton value="white" data-testid="engine-setting-playas-white">
-            {t("playEngine.settings.white")}
-          </ToggleButton>
-          <ToggleButton value="black" data-testid="engine-setting-playas-black">
-            {t("playEngine.settings.black")}
-          </ToggleButton>
-        </ToggleButtonGroup>
-      </Box>
-
       <FormControlLabel
         control={
           <Switch
@@ -218,14 +190,6 @@ function EngineSettings({
         label={t("playEngine.settings.evalBar")}
       />
 
-      <Button
-        variant="outlined"
-        startIcon={<RestartAltRoundedIcon />}
-        data-testid="engine-new-game"
-        onClick={onNewGame}
-      >
-        {t("playEngine.settings.newGame")}
-      </Button>
     </Box>
   );
 }
