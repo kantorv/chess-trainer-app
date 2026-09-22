@@ -19,7 +19,6 @@ const he: typeof en = {
     savedAnalyses: "ניתוחים שמורים",
     openings: "סייר הפתיחות",
     repertoires: "הרפרטוארים שלי",
-    addRepertoire: "הוספת רפרטואר",
     libraryCollections: "אוספים",
     addCollection: "הוספת אוסף",
     folders: {

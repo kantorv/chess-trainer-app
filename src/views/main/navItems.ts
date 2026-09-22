@@ -1,6 +1,5 @@
 import type { SvgIconComponent } from "@mui/icons-material";
 import HistoryRoundedIcon from "@mui/icons-material/HistoryRounded";
-import LibraryAddRoundedIcon from "@mui/icons-material/LibraryAddRounded";
 import MenuBookRoundedIcon from "@mui/icons-material/MenuBookRounded";
 import SportsEsportsRoundedIcon from "@mui/icons-material/SportsEsportsRounded";
 import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
@@ -96,12 +95,6 @@ export const navItems = (): readonly NavItem[] => [
     to: "/repertoires",
     labelKey: "nav.repertoires",
     icon: MenuBookRoundedIcon,
-    folder: "repertoires",
-  },
-  {
-    to: "/repertoires/new",
-    labelKey: "nav.addRepertoire",
-    icon: LibraryAddRoundedIcon,
     folder: "repertoires",
   },
 ];
