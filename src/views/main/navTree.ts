@@ -108,7 +108,7 @@ export const buildNavTree = <Id extends string>(
  *   which is again two-or-more children.
  *
  * Applied **below the top level only**: the top-level rows are app-area
- * groupings (Engine, Library, Tools…), not categories. A top-level folder is
+ * groupings (Engine, Library, Repertoires…), not categories. A top-level folder is
  * folded only by the other rule — `foldSingleEntryFolders`, for a folder
  * marked as one destination — so every level is folded by exactly one of the
  * two.

@@ -5,7 +5,7 @@ import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { useTranslation } from "react-i18next";
-import CopyableValue from "../../shared/CopyableValue";
+import CopyableValue from "../CopyableValue";
 
 /**
  * The FEN tab: a position in, and the position on the board back out.
@@ -18,10 +18,12 @@ import CopyableValue from "../../shared/CopyableValue";
  * switched off while the position is broken, not the field.
  *
  * Presentational — the text, the error and the parsing all live in
- * `BoardEditor.tsx` and `lib/fen.ts`.
+ * `PositionEditor.tsx` and `lib/fen.ts`.
  */
 
 type FenSetupProps = {
+  /** The editor's test-id prefix. */
+  testId: string;
   fenText: string;
   onFenTextChange: (text: string) => void;
   onLoadFen: (event: FormEvent) => void;
@@ -33,6 +35,7 @@ type FenSetupProps = {
 };
 
 function FenSetup({
+  testId,
   fenText,
   onFenTextChange,
   onLoadFen,
@@ -44,46 +47,46 @@ function FenSetup({
 
   return (
     <Box
-      data-testid="editor-fen-setup"
+      data-testid={`${testId}-fen-setup`}
       sx={{ display: "flex", flexDirection: "column", gap: 2 }}
     >
       <Box>
         <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
-          {t("editor.fen.title")}
+          {t("positionEditor.fen.title")}
         </Typography>
         <Box component="form" onSubmit={onLoadFen}>
           <TextField
             fullWidth
             size="small"
-            label={t("editor.fen.label")}
+            label={t("positionEditor.fen.label")}
             value={fenText}
             onChange={(event) => onFenTextChange(event.target.value)}
             slotProps={{
-              htmlInput: { dir: "ltr", "data-testid": "editor-fen-input" },
+              htmlInput: { dir: "ltr", "data-testid": `${testId}-fen-input` },
             }}
           />
           <Button type="submit" size="small" variant="outlined" sx={{ mt: 1 }}>
-            {t("editor.fen.load")}
+            {t("positionEditor.fen.load")}
           </Button>
         </Box>
       </Box>
 
       {error !== null && (
-        <Alert severity="error" data-testid="editor-fen-error">
+        <Alert severity="error" data-testid={`${testId}-fen-error`}>
           {error}
         </Alert>
       )}
 
       <Box sx={{ display: "grid", gap: 1.5 }}>
         <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-          {t("editor.fen.currentTitle")}
+          {t("positionEditor.fen.currentTitle")}
         </Typography>
         <CopyableValue
-          label={t("editor.fen.currentFen")}
+          label={t("positionEditor.fen.currentFen")}
           value={currentFen}
-          testId="editor-current-fen"
+          testId={`${testId}-current-fen`}
           disabled={!canCopy}
-          disabledHint={t("editor.problems.blocked")}
+          disabledHint={t("positionEditor.problems.blocked")}
         />
       </Box>
     </Box>

@@ -21,14 +21,14 @@ import {
  *
  * The board answers field 1 and these answer the rest, which is what makes the
  * FEN the screen shows a whole position rather than a diagram. Each control
- * writes straight into `useBoardEditor`'s fields and reads back out of them, so
+ * writes straight into `usePositionEditor`'s fields and reads back out of them, so
  * a FEN pasted in shows up here and a box ticked here shows up in the FEN —
  * that round trip is the tab's whole contract.
  *
  * Presentational: no state of its own, so it renders against a fixture.
  *
  * Changing the side to move here does **not** turn the board, though loading a
- * position does (`useBoardEditor`'s `applyFen`). Arranging a position is not the
+ * position does (`usePositionEditor`'s `applyFen`). Arranging a position is not the
  * same as being handed one: you may well be setting Black's move up while
  * looking from White, and the flip control is a click away.
  *
@@ -40,6 +40,8 @@ import {
  */
 
 type PositionFieldsProps = {
+  /** The editor's test-id prefix. */
+  testId: string;
   fields: Fields;
   onTurnChange: (turn: "w" | "b") => void;
   onCastlingChange: (flag: CastlingFlag, allowed: boolean) => void;
@@ -48,13 +50,14 @@ type PositionFieldsProps = {
 
 /** The four flags, with the label each one is shown under. */
 const CASTLING_CONTROLS = [
-  { flag: "K", labelKey: "editor.fields.whiteKingside" },
-  { flag: "Q", labelKey: "editor.fields.whiteQueenside" },
-  { flag: "k", labelKey: "editor.fields.blackKingside" },
-  { flag: "q", labelKey: "editor.fields.blackQueenside" },
+  { flag: "K", labelKey: "positionEditor.fields.whiteKingside" },
+  { flag: "Q", labelKey: "positionEditor.fields.whiteQueenside" },
+  { flag: "k", labelKey: "positionEditor.fields.blackKingside" },
+  { flag: "q", labelKey: "positionEditor.fields.blackQueenside" },
 ] as const;
 
 function PositionFields({
+  testId,
   fields,
   onTurnChange,
   onCastlingChange,
@@ -64,12 +67,12 @@ function PositionFields({
 
   return (
     <Box
-      data-testid="editor-position-fields"
+      data-testid={`${testId}-position-fields`}
       sx={{ display: "flex", flexDirection: "column", gap: 2 }}
     >
       <Box>
         <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
-          {t("editor.fields.turn")}
+          {t("positionEditor.fields.turn")}
         </Typography>
         <ToggleButtonGroup
           exclusive
@@ -80,20 +83,20 @@ function PositionFields({
           onChange={(_event, next: "w" | "b" | null) =>
             next !== null && onTurnChange(next)
           }
-          aria-label={t("editor.fields.turn")}
+          aria-label={t("positionEditor.fields.turn")}
         >
-          <ToggleButton value="w" data-testid="editor-turn-w">
-            {t("editor.fields.white")}
+          <ToggleButton value="w" data-testid={`${testId}-turn-w`}>
+            {t("positionEditor.fields.white")}
           </ToggleButton>
-          <ToggleButton value="b" data-testid="editor-turn-b">
-            {t("editor.fields.black")}
+          <ToggleButton value="b" data-testid={`${testId}-turn-b`}>
+            {t("positionEditor.fields.black")}
           </ToggleButton>
         </ToggleButtonGroup>
       </Box>
 
       <FormControl component="fieldset" variant="standard">
         <FormLabel component="legend" sx={{ typography: "subtitle2", fontWeight: 700 }}>
-          {t("editor.fields.castling")}
+          {t("positionEditor.fields.castling")}
         </FormLabel>
         <FormGroup>
           {CASTLING_CONTROLS.map(({ flag, labelKey }) => (
@@ -105,7 +108,7 @@ function PositionFields({
                   checked={fields.castling[flag]}
                   // On the control, as the other screens' switches carry theirs
                   // — it lands on the root, and the input is inside it.
-                  data-testid={`editor-castling-${flag}`}
+                  data-testid={`${testId}-castling-${flag}`}
                   onChange={(event) =>
                     onCastlingChange(flag, event.target.checked)
                   }
@@ -122,7 +125,7 @@ function PositionFields({
       <TextField
         select
         size="small"
-        label={t("editor.fields.enPassant")}
+        label={t("positionEditor.fields.enPassant")}
         value={fields.enPassant}
         onChange={(event) => onEnPassantChange(event.target.value)}
         slotProps={{
@@ -130,14 +133,14 @@ function PositionFields({
             // The rendered value, not the input — a `select` TextField has no
             // text input for a testid to land on.
             SelectDisplayProps: {
-              "data-testid": "editor-en-passant",
+              "data-testid": `${testId}-en-passant`,
             } as React.HTMLAttributes<HTMLDivElement>,
           },
         }}
       >
         {enPassantOptions(fields.turn).map((square) => (
           <MenuItem key={square} value={square} dir="ltr">
-            {square === "-" ? t("editor.fields.enPassantNone") : square}
+            {square === "-" ? t("positionEditor.fields.enPassantNone") : square}
           </MenuItem>
         ))}
       </TextField>

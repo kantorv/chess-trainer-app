@@ -1,32 +1,22 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import {
-  MemoryRouter,
-  Route,
-  Routes,
-  useSearchParams,
-} from "react-router";
 import i18n from "../../../i18n";
 import AppThemeWithLang from "../../../theme/AppThemeWithLang";
-import { RightPanelOutlet, RightPanelProvider } from "../../main/rightPanel";
-import BoardEditor from "./BoardEditor";
+import PositionEditor from "./PositionEditor";
+import { usePositionEditor } from "./usePositionEditor";
 
 /*
+  The shared position editor (CTA-83), mounted in a bare host: no router, no
+  right-hand panel, no screen — which is the contract under test. The host
+  owns the state (`usePositionEditor`) and prints what it reads off it, the way
+  the Lobby reads the FEN and the problems for its Start button.
+
   `<Chessboard>` measures its own square on mount and throws "Square width not
   found" where there is no layout engine (`.claude/rules/chessboard.md` §8), so
-  it is stubbed — and on this screen the stub has to cover the whole spare-piece
-  trio, not just the board: the options go to `ChessboardProvider` and the
-  palettes are `SparePiece`s. The provider keeps hold of the options it was
-  handed, which is how a test drags a piece.
-
-  No `Engine` stand-in here, and that is the point: an editor never analyses, so
-  a worker jsdom cannot build is never asked for.
-
-  The screen does need a **router**, though: both hand-offs navigate, and the
-  whole of their interface with the other two screens is the FEN in the URL. The
-  routes below stand in for those screens and record what arrived, which is how
-  a test asserts on a hand-off without mounting an engine board.
+  it is stubbed — the whole spare-piece trio, not just the board: the options
+  go to `ChessboardProvider` and the palettes are `SparePiece`s. The provider
+  keeps hold of the options it was handed, which is how a test drags a piece.
 */
 
 const harness = vi.hoisted(() => {
@@ -49,12 +39,14 @@ vi.mock("react-chessboard", () => ({
   // knows came in through the provider above.
   Chessboard: () => {
     const options = harness.board.options as {
+      id?: string;
       position?: string;
       boardOrientation?: string;
     } | null;
     return (
       <div
         data-testid="board"
+        data-board-id={options?.id}
         data-position={options?.position}
         data-orientation={options?.boardOrientation}
       />
@@ -104,39 +96,26 @@ const dropSpare = (pieceType: string, to: string | null) => {
   return accepted;
 };
 
-/** Where a hand-off lands: the route it opened, and the FEN it carried. */
-const Arrival = ({ name }: { name: string }) => {
-  const [params] = useSearchParams();
-  return <div data-testid={`${name}-arrival`} data-fen={params.get("fen")} />;
-};
+/** A host: owns the state, renders the editor, and prints what it reads. */
+function Host({ initialFen }: { initialFen?: string }) {
+  const editor = usePositionEditor(initialFen);
+  return (
+    <>
+      <PositionEditor editor={editor} testId="editor" />
+      <div
+        data-testid="host"
+        data-fen={editor.fen}
+        data-valid={String(editor.isValid)}
+        data-problems={editor.problems.join(",")}
+      />
+    </>
+  );
+}
 
-/**
- * The screen at `/tools/editor`, optionally with a query string — which is the
- * whole of the arrival, so a test asks for one by rendering at the URL.
- */
-const renderScreen = (entry = "/tools/editor") =>
+const renderEditor = (initialFen?: string) =>
   render(
     <AppThemeWithLang>
-      <MemoryRouter initialEntries={[entry]}>
-        <RightPanelProvider>
-          <Routes>
-            <Route
-              path="/tools/editor"
-              element={
-                <>
-                  <BoardEditor />
-                  <RightPanelOutlet />
-                </>
-              }
-            />
-            <Route
-              path="/tools/analysis"
-              element={<Arrival name="analysis" />}
-            />
-            <Route path="/engine/play" element={<Arrival name="play" />} />
-          </Routes>
-        </RightPanelProvider>
-      </MemoryRouter>
+      <Host initialFen={initialFen} />
     </AppThemeWithLang>,
   );
 
@@ -146,7 +125,7 @@ const orientation = () =>
   screen.getByTestId("board").getAttribute("data-orientation");
 
 const openTab = (tab: "position" | "fen" | "pgn") =>
-  userEvent.click(screen.getByTestId(`editor-panel-tab-${tab}`));
+  userEvent.click(screen.getByTestId(`editor-tab-${tab}`));
 
 /*
   Pasted rather than typed. `userEvent.type` reads `{` and `[` as key
@@ -175,9 +154,9 @@ beforeEach(async () => {
   await i18n.changeLanguage("en");
 });
 
-describe("Board Editor — the palettes", () => {
+describe("PositionEditor — the palettes", () => {
   it("opens on the starting position with a palette on each side", () => {
-    renderScreen();
+    renderEditor();
 
     expect(position()).toMatch(/^rnbqkbnr\/pppppppp/);
 
@@ -191,7 +170,7 @@ describe("Board Editor — the palettes", () => {
   });
 
   it("places a spare piece on a square", async () => {
-    renderScreen();
+    renderEditor();
     await setUpFen("4k3/8/8/8/8/8/8/4K3 w - - 0 1");
 
     expect(dropSpare("wQ", "d4")).toBe(true);
@@ -199,21 +178,21 @@ describe("Board Editor — the palettes", () => {
   });
 
   it("removes a piece dragged off the board", () => {
-    renderScreen();
+    renderEditor();
 
     expect(drag("wP", "e2", null)).toBe(true);
     expect(placement()).toBe("rnbqkbnr/pppppppp/8/8/8/8/PPPP1PPP/RNBQKBNR");
   });
 
   it("moves a piece between squares", () => {
-    renderScreen();
+    renderEditor();
 
     expect(drag("wP", "e2", "e4")).toBe(true);
     expect(placement()).toBe("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR");
   });
 
   it("leaves the board alone when a spare is dragged into space", () => {
-    renderScreen();
+    renderEditor();
     const before = position();
 
     expect(dropSpare("wQ", null)).toBe(false);
@@ -221,7 +200,7 @@ describe("Board Editor — the palettes", () => {
   });
 
   it("refuses a second king of one colour", async () => {
-    renderScreen();
+    renderEditor();
     await setUpFen("4k3/8/8/8/8/8/8/4K3 w - - 0 1");
 
     // `chess.js` will not hold two white kings, and a refused drop must leave
@@ -231,7 +210,7 @@ describe("Board Editor — the palettes", () => {
   });
 
   it("replaces whatever was standing on the target square", () => {
-    renderScreen();
+    renderEditor();
 
     // The queen takes the pawn's square; nothing here is a capture, because
     // nothing here is a move.
@@ -240,7 +219,7 @@ describe("Board Editor — the palettes", () => {
   });
 
   it("empties one colour off the board from that palette's trash", async () => {
-    renderScreen();
+    renderEditor();
 
     await userEvent.click(screen.getByTestId("editor-trash-b"));
 
@@ -248,24 +227,20 @@ describe("Board Editor — the palettes", () => {
     expect(screen.getByTestId("editor-problem-noBlackKing")).toBeInTheDocument();
   });
 
-  it("keeps the board square, with the palettes taking the difference", () => {
-    renderScreen();
+  it("gives the board a unique id from its test id, pinned LTR", async () => {
+    await i18n.changeLanguage("he");
+    renderEditor();
 
-    /*
-      2 × (44 palette + 8 gap) comes out of the board's side, exactly. Only the
-      width is asserted: jsdom has no layout engine, and its CSS parser drops
-      `aspect-ratio` outright — what the square *becomes* from that width is a
-      browser check, not a jsdom one.
-    */
-    expect(screen.getByTestId("editor-board-square")).toHaveStyle({
-      width: "calc(100% - 104px)",
-    });
+    expect(screen.getByTestId("board")).toHaveAttribute("data-board-id", "editor-board");
+    // The host's panel is not under the board area's ForceLTR: the editor
+    // pins its own board and palettes, whatever the language.
+    expect(screen.getByTestId("editor-board-square").closest('[dir="ltr"]')).not.toBeNull();
   });
 });
 
-describe("Board Editor — the position fields", () => {
+describe("PositionEditor — the position fields", () => {
   it("writes the side to move into the FEN", async () => {
-    renderScreen();
+    renderEditor();
     expect(position()).toContain(" w ");
 
     await userEvent.click(screen.getByTestId("editor-turn-b"));
@@ -274,7 +249,7 @@ describe("Board Editor — the position fields", () => {
   });
 
   it("writes the castling rights into the FEN", async () => {
-    renderScreen();
+    renderEditor();
     expect(position()).toContain(" KQkq ");
 
     await userEvent.click(checkbox("K"));
@@ -286,7 +261,7 @@ describe("Board Editor — the position fields", () => {
   });
 
   it("writes an en passant target, on the rank the side to move allows", async () => {
-    renderScreen();
+    renderEditor();
 
     await userEvent.click(screen.getByTestId("editor-en-passant"));
     // White to move, so a target can only be on the sixth rank.
@@ -297,7 +272,7 @@ describe("Board Editor — the position fields", () => {
   });
 
   it("drops the en passant target when the side to move changes", async () => {
-    renderScreen();
+    renderEditor();
 
     await userEvent.click(screen.getByTestId("editor-en-passant"));
     await userEvent.click(screen.getByRole("option", { name: "e6" }));
@@ -308,7 +283,7 @@ describe("Board Editor — the position fields", () => {
   });
 
   it("reads the fields back out of a pasted FEN", async () => {
-    renderScreen();
+    renderEditor();
     const fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b Kq - 0 3";
 
     await setUpFen(fen);
@@ -328,12 +303,12 @@ describe("Board Editor — the position fields", () => {
   });
 });
 
-describe("Board Editor — which way the board faces", () => {
+describe("PositionEditor — which way the board faces", () => {
   // A real position, Black to move.
   const blackToMove = "2b2rk1/3n1ppp/3Rp3/6B1/1q2N3/1P4Q1/r1P2PPP/2KR4 b - - 0 1";
 
   it("turns to Black when a Black-to-move position is pasted", async () => {
-    renderScreen();
+    renderEditor();
     expect(orientation()).toBe("white");
 
     await setUpFen(blackToMove);
@@ -345,7 +320,7 @@ describe("Board Editor — which way the board faces", () => {
   });
 
   it("turns back to White when a White-to-move position is pasted", async () => {
-    renderScreen();
+    renderEditor();
     await setUpFen(blackToMove);
 
     await setUpFen("7k/8/8/8/8/8/8/K7 w - - 0 1");
@@ -354,7 +329,7 @@ describe("Board Editor — which way the board faces", () => {
   });
 
   it("faces the side to move in a loaded game's final position", async () => {
-    renderScreen();
+    renderEditor();
     await openTab("pgn");
 
     // 1. e4 leaves Black to move.
@@ -365,7 +340,7 @@ describe("Board Editor — which way the board faces", () => {
   });
 
   it("leaves the reader's own viewpoint alone when the board is reset", async () => {
-    renderScreen();
+    renderEditor();
     await userEvent.click(screen.getByTestId("editor-reset-flip"));
     expect(orientation()).toBe("black");
 
@@ -379,7 +354,7 @@ describe("Board Editor — which way the board faces", () => {
   });
 
   it("does not turn the board when the side-to-move field is edited", async () => {
-    renderScreen();
+    renderEditor();
 
     await userEvent.click(screen.getByTestId("editor-turn-b"));
 
@@ -389,9 +364,9 @@ describe("Board Editor — which way the board faces", () => {
   });
 });
 
-describe("Board Editor — resets", () => {
+describe("PositionEditor — resets", () => {
   it("goes back to the starting position", async () => {
-    renderScreen();
+    renderEditor();
     drag("wP", "e2", "e4");
 
     await userEvent.click(screen.getByTestId("editor-reset-start"));
@@ -402,7 +377,7 @@ describe("Board Editor — resets", () => {
   });
 
   it("clears the board", async () => {
-    renderScreen();
+    renderEditor();
 
     await userEvent.click(screen.getByTestId("editor-reset-clear"));
 
@@ -410,7 +385,7 @@ describe("Board Editor — resets", () => {
   });
 
   it("flips the board without touching the position", async () => {
-    renderScreen();
+    renderEditor();
     const before = position();
 
     await userEvent.click(screen.getByTestId("editor-reset-flip"));
@@ -423,22 +398,19 @@ describe("Board Editor — resets", () => {
   });
 });
 
-describe("Board Editor — arriving with ?fen=", () => {
+describe("PositionEditor — an initial position", () => {
   /*
     A position with something in every field: Black to move, all four castling
     rights, an en passant target and move counters that are not the start's — so
     "the whole FEN arrived" is an assertion rather than a coincidence.
   */
-  const arrival = "r3k2r/ppppp1pp/8/8/4Pp2/8/PPPP1PPP/R3K2R b KQkq e3 0 5";
+  const initial = "r3k2r/ppppp1pp/8/8/4Pp2/8/PPPP1PPP/R3K2R b KQkq e3 0 5";
   const START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
-  const editorAt = (fen: string) =>
-    `/tools/editor?${new URLSearchParams({ fen }).toString()}`;
+  it("opens on it, all six fields", async () => {
+    renderEditor(initial);
 
-  it("opens on the handed-over position, all six fields", async () => {
-    renderScreen(editorAt(arrival));
-
-    expect(position()).toBe(arrival);
+    expect(position()).toBe(initial);
 
     // Fields 2-4 are panel controls, so they have to read the same way the FEN
     // does — and fields 5-6 are carried, which is what makes it round-trip.
@@ -453,68 +425,44 @@ describe("Board Editor — arriving with ?fen=", () => {
     expect(screen.getByTestId("editor-en-passant")).toHaveTextContent("e3");
   });
 
-  it("faces the side to move on such an arrival", () => {
-    // A position is something you are about to answer — the same rule the two
-    // loads follow, and what `/engine/play` does with the very same FEN.
-    renderScreen(editorAt(arrival));
+  it("faces the side to move in it", () => {
+    // A position is something you are about to answer.
+    renderEditor(initial);
 
     expect(orientation()).toBe("black");
   });
 
-  it("opens on the starting position when the parameter will not parse", () => {
-    renderScreen("/tools/editor?fen=not-a-position");
+  it("opens on the starting position without one, and offers no extra reset", () => {
+    renderEditor();
 
     expect(position()).toBe(START);
     expect(orientation()).toBe("white");
-    // A link nobody can read is ignored, not reported: the reader who followed
-    // it did not type it.
-    expect(screen.queryByTestId("editor-fen-error")).not.toBeInTheDocument();
-  });
-
-  it("opens on the starting position with no parameter at all", () => {
-    renderScreen();
-
-    expect(position()).toBe(START);
-    expect(screen.queryByTestId("editor-fen-error")).not.toBeInTheDocument();
-  });
-
-  it("offers the extra reset only when a readable position arrived", () => {
-    renderScreen();
-    expect(screen.queryByTestId("editor-reset-arrival")).toBeNull();
-
+    expect(screen.queryByTestId("editor-reset-initial")).toBeNull();
     screen.getByTestId("editor-reset-start"); // the other two are always there
     screen.getByTestId("editor-reset-clear");
   });
 
-  it("offers no extra reset for a parameter that will not parse", () => {
-    // There would be nothing behind the button: the screen opened on the
-    // standard start, exactly as if the link had carried no position.
-    renderScreen("/tools/editor?fen=not-a-position");
-
-    expect(screen.queryByTestId("editor-reset-arrival")).toBeNull();
-  });
-
-  it("restores the position it opened with, after arbitrary edits", async () => {
-    renderScreen(editorAt(arrival));
+  it("restores it after arbitrary edits", async () => {
+    renderEditor(initial);
 
     drag("wP", "e4", "e5");
     dropSpare("wQ", "d4");
     await userEvent.click(screen.getByTestId("editor-turn-w"));
     await userEvent.click(checkbox("K"));
     await userEvent.click(screen.getByTestId("editor-reset-flip"));
-    expect(position()).not.toBe(arrival);
+    expect(position()).not.toBe(initial);
 
-    await userEvent.click(screen.getByTestId("editor-reset-arrival"));
+    await userEvent.click(screen.getByTestId("editor-reset-initial"));
 
     // Placement and all six fields, and the board turned back to the side that
     // has to answer it — this control re-hands the reader the position rather
     // than rearranging the pieces.
-    expect(position()).toBe(arrival);
+    expect(position()).toBe(initial);
     expect(orientation()).toBe("black");
   });
 
   it("keeps 'New board' meaning the standard start", async () => {
-    renderScreen(editorAt(arrival));
+    renderEditor(initial);
 
     await userEvent.click(screen.getByTestId("editor-reset-start"));
 
@@ -524,10 +472,10 @@ describe("Board Editor — arriving with ?fen=", () => {
   });
 });
 
-describe("Board Editor — FEN in and out", () => {
+describe("PositionEditor — FEN in and out", () => {
   it("sets a position up from a pasted FEN", async () => {
     const fen = "7k/8/8/8/8/8/8/K7 w - - 0 1";
-    renderScreen();
+    renderEditor();
 
     await setUpFen(fen);
 
@@ -536,7 +484,7 @@ describe("Board Editor — FEN in and out", () => {
   });
 
   it("reports a FEN it cannot read, and leaves the board alone", async () => {
-    renderScreen();
+    renderEditor();
     const before = position();
 
     await setUpFen("not a fen");
@@ -549,7 +497,7 @@ describe("Board Editor — FEN in and out", () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     vi.stubGlobal("navigator", { ...navigator, clipboard: { writeText } });
 
-    renderScreen();
+    renderEditor();
     drag("wP", "e2", "e4");
     await openTab("fen");
 
@@ -564,9 +512,9 @@ describe("Board Editor — FEN in and out", () => {
   });
 });
 
-describe("Board Editor — PGN in", () => {
+describe("PositionEditor — PGN in", () => {
   it("loads a game's final position, not its first", async () => {
-    renderScreen();
+    renderEditor();
     await openTab("pgn");
 
     await pasteInto("editor-pgn-input", "1. e4 e5 2. Nf3 Nc6");
@@ -578,7 +526,7 @@ describe("Board Editor — PGN in", () => {
   });
 
   it("offers a picker for a multi-game file", async () => {
-    renderScreen();
+    renderEditor();
     await openTab("pgn");
 
     await pasteInto(
@@ -609,7 +557,7 @@ describe("Board Editor — PGN in", () => {
   });
 
   it("reports a PGN it cannot read", async () => {
-    renderScreen();
+    renderEditor();
     await openTab("pgn");
 
     await pasteInto("editor-pgn-input", "1. d4 Ke7");
@@ -619,9 +567,9 @@ describe("Board Editor — PGN in", () => {
   });
 });
 
-describe("Board Editor — illegal positions", () => {
+describe("PositionEditor — illegal positions", () => {
   it("allows the edit, and says what is wrong", async () => {
-    renderScreen();
+    renderEditor();
 
     // Taking a king off is a step towards a different king, not a mistake.
     expect(drag("wK", "e1", null)).toBe(true);
@@ -631,7 +579,7 @@ describe("Board Editor — illegal positions", () => {
   });
 
   it("reports a pawn on the last rank, and the waiting side in check", async () => {
-    renderScreen();
+    renderEditor();
     await setUpFen("7k/8/8/8/8/8/8/K7 w - - 0 1");
 
     dropSpare("wP", "a8");
@@ -645,11 +593,9 @@ describe("Board Editor — illegal positions", () => {
     ).toBeInTheDocument();
   });
 
-  it("switches off the copy button and the hand-off while it is illegal", async () => {
-    renderScreen();
+  it("switches off the copy button while it is illegal", async () => {
+    renderEditor();
     await userEvent.click(screen.getByTestId("editor-reset-clear"));
-
-    expect(screen.getByTestId("editor-continue-analysis")).toBeDisabled();
 
     await openTab("fen");
     expect(screen.getByTestId("editor-current-fen-copy")).toBeDisabled();
@@ -657,54 +603,59 @@ describe("Board Editor — illegal positions", () => {
     expect(screen.getByTestId("editor-current-fen")).toHaveValue(position());
   });
 
-  it("switches them back on once the position is playable", async () => {
-    renderScreen();
+  it("switches it back on once the position is playable", async () => {
+    renderEditor();
     await userEvent.click(screen.getByTestId("editor-reset-clear"));
 
     dropSpare("wK", "e1");
     dropSpare("bK", "e8");
 
-    expect(screen.getByTestId("editor-continue-analysis")).toBeEnabled();
     await openTab("fen");
     expect(screen.getByTestId("editor-current-fen-copy")).toBeEnabled();
   });
 });
 
-describe("Board Editor — the hand-offs", () => {
-  it("opens the Analysis Board on the edited position", async () => {
-    renderScreen();
+describe("PositionEditor — what the host reads", () => {
+  it("hands the host the position and its problems, and nothing else", () => {
+    renderEditor();
+    const host = () => screen.getByTestId("host");
+    expect(host()).toHaveAttribute("data-valid", "true");
+
+    drag("wP", "e2", "e4");
+    expect(host()).toHaveAttribute("data-fen", position());
+
+    drag("wK", "e1", null);
+    // The host decides what an illegal position switches off (the Lobby's
+    // Start); the editor only reports it.
+    expect(host()).toHaveAttribute("data-valid", "false");
+    expect(host()).toHaveAttribute("data-problems", "noWhiteKing");
+  });
+
+  it("keeps the position across an unmount — the state is the host's", () => {
+    function Toggle() {
+      const editor = usePositionEditor();
+      return (
+        <>
+          <button data-testid="toggle" onClick={() => editor.flipBoard()} />
+          <div data-testid="host" data-fen={editor.fen} />
+          {editor.orientation === "white" && (
+            <PositionEditor editor={editor} testId="editor" />
+          )}
+        </>
+      );
+    }
+    render(
+      <AppThemeWithLang>
+        <Toggle />
+      </AppThemeWithLang>,
+    );
     drag("wP", "e2", "e4");
     const edited = position();
 
-    await userEvent.click(screen.getByTestId("editor-continue-analysis"));
+    act(() => screen.getByTestId("toggle").click());
+    expect(screen.queryByTestId("editor")).toBeNull();
+    act(() => screen.getByTestId("toggle").click());
 
-    // The FEN crosses the route boundary in the URL, so the link survives a
-    // reload — and it arrives intact, spaces and slashes included.
-    expect(screen.getByTestId("analysis-arrival")).toHaveAttribute(
-      "data-fen",
-      edited,
-    );
-  });
-
-  it("starts a game against the engine from the edited position", async () => {
-    renderScreen();
-    drag("wP", "e2", "e4");
-    const edited = position();
-
-    await userEvent.click(screen.getByTestId("editor-play-from-here"));
-
-    // The same carrier, the other destination — one interface, two screens.
-    expect(screen.getByTestId("play-arrival")).toHaveAttribute(
-      "data-fen",
-      edited,
-    );
-  });
-
-  it("switches both hand-offs off together while the position is illegal", async () => {
-    renderScreen();
-    await userEvent.click(screen.getByTestId("editor-reset-clear"));
-
-    expect(screen.getByTestId("editor-continue-analysis")).toBeDisabled();
-    expect(screen.getByTestId("editor-play-from-here")).toBeDisabled();
+    expect(position()).toBe(edited);
   });
 });

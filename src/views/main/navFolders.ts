@@ -1,6 +1,5 @@
 import type { SvgIconComponent } from "@mui/icons-material";
 import AccountTreeRoundedIcon from "@mui/icons-material/AccountTreeRounded";
-import HandymanRoundedIcon from "@mui/icons-material/HandymanRounded";
 import MenuBookRoundedIcon from "@mui/icons-material/MenuBookRounded";
 import MemoryRoundedIcon from "@mui/icons-material/MemoryRounded";
 import SnippetFolderRoundedIcon from "@mui/icons-material/SnippetFolderRounded";
@@ -76,11 +75,6 @@ export const navFolders = (): readonly NavFolder[] => [
     id: "library",
     labelKey: "nav.folders.library",
     icon: SnippetFolderRoundedIcon,
-  },
-  {
-    id: "tools",
-    labelKey: "nav.folders.tools",
-    icon: HandymanRoundedIcon,
   },
   {
     id: "analysis",

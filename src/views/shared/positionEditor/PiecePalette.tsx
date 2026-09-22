@@ -10,7 +10,7 @@ import { SparePiece } from "react-chessboard";
  * lichess — with the trash at its trailing end.
  *
  * `SparePiece` only works inside a `ChessboardProvider`, which is why the
- * screen wraps the palettes and the board together rather than rendering a
+ * editor wraps the palettes and the board together rather than rendering a
  * plain `<Chessboard>` (`.claude/rules/chessboard.md` §2). Dragging one onto a
  * square places it; the board reports that through the same `onPieceDrop` a
  * board-to-board drag uses, with `isSparePiece` telling the two apart.
@@ -23,53 +23,54 @@ import { SparePiece } from "react-chessboard";
  * Clicking it takes that whole colour off the board, which is the only way to
  * empty one side without dragging sixteen pieces into the margin.
  *
- * ### Why this file owns the height
+ * ### Sized by the width it is given
  *
- * The palettes sit inside the board square the shell hands the screen, so they
- * take their height out of the board exactly as the eval bar takes its width
- * (`.claude/rules/chessboard.md` §5). `PALETTES_TOTAL_PX` is what the board's
- * side gives up, and it is defined here beside the two numbers it is the sum of
- * — the screen subtracts the constant rather than re-deriving it.
+ * The editor lives in whatever column its host gives it — the Lobby's
+ * right-hand panel is 320px at its narrowest — so a piece square shares the
+ * row's width, up to `PALETTE_SQUARE_MAX_PX`, and is squared by its aspect
+ * ratio. The editor is a natural-height column, so nothing has to add the
+ * palettes' height up against the board's.
  *
- * It does not mirror under Hebrew: the whole board square is wrapped in
- * `ForceLTR` by `Layout.tsx`, and a palette that jumped to the other side while
- * the board stayed put would be reading as a different board's palette.
+ * It does not mirror under Hebrew: the editor pins the board and the palettes
+ * LTR (`ForceLTR`), and a palette that jumped to the other side while the
+ * board stayed put would be reading as a different board's palette.
  */
 
-/** The side of one palette square, and the gap above and below the board. */
-export const PALETTE_SQUARE_PX = 44;
-export const PALETTE_GAP_PX = 8;
-/** What the two palettes and their two gaps take out of the board's side. */
-export const PALETTES_TOTAL_PX = 2 * (PALETTE_SQUARE_PX + PALETTE_GAP_PX);
+/** The largest a palette square grows — the size it had beside the old full-size board. */
+export const PALETTE_SQUARE_MAX_PX = 44;
 
 /** King first, pawn last — the order a piece box is read in. */
 const PIECES = ["K", "Q", "R", "B", "N", "P"] as const;
 
 type PiecePaletteProps = {
+  /** The editor's test-id prefix. */
+  testId: string;
   color: "w" | "b";
   /** Empty this colour off the board — the trash's click. */
   onClear: () => void;
 };
 
-function PiecePalette({ color, onClear }: PiecePaletteProps) {
+function PiecePalette({ testId, color, onClear }: PiecePaletteProps) {
   const { t } = useTranslation();
 
   const colorName = t(
-    color === "w" ? "editor.palette.colors.white" : "editor.palette.colors.black",
+    color === "w"
+      ? "positionEditor.palette.colors.white"
+      : "positionEditor.palette.colors.black",
   );
-  const clearLabel = t("editor.palette.clear", { color: colorName });
+  const clearLabel = t("positionEditor.palette.clear", { color: colorName });
 
   return (
     <Box
-      data-testid={`editor-palette-${color}`}
+      data-testid={`${testId}-palette-${color}`}
       role="group"
       aria-label={t(
-        color === "w" ? "editor.palette.white" : "editor.palette.black",
+        color === "w"
+          ? "positionEditor.palette.white"
+          : "positionEditor.palette.black",
       )}
       sx={{
-        // The height is the contract with the board's side; never let flex
-        // stretch or shrink it.
-        height: `${PALETTE_SQUARE_PX}px`,
+        width: "100%",
         flexShrink: 0,
         display: "flex",
         alignItems: "center",
@@ -82,10 +83,12 @@ function PiecePalette({ color, onClear }: PiecePaletteProps) {
         return (
           <Box
             key={pieceType}
-            data-testid={`editor-spare-${pieceType}`}
+            data-testid={`${testId}-spare-${pieceType}`}
             sx={{
-              width: `${PALETTE_SQUARE_PX}px`,
-              height: `${PALETTE_SQUARE_PX}px`,
+              flex: "1 1 0",
+              minWidth: 0,
+              maxWidth: `${PALETTE_SQUARE_MAX_PX}px`,
+              aspectRatio: "1 / 1",
             }}
           >
             <SparePiece pieceType={pieceType} />
@@ -97,11 +100,11 @@ function PiecePalette({ color, onClear }: PiecePaletteProps) {
         <IconButton
           size="small"
           aria-label={clearLabel}
-          data-testid={`editor-trash-${color}`}
+          data-testid={`${testId}-trash-${color}`}
           onClick={onClear}
           // Set off from the pieces: everything to its left is something to
           // add, and it is the one thing that takes away.
-          sx={{ marginInlineStart: 1 }}
+          sx={{ marginInlineStart: 1, flexShrink: 0 }}
         >
           <DeleteOutlineRoundedIcon fontSize="small" />
         </IconButton>

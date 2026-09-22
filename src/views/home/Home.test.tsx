@@ -63,7 +63,6 @@ describe("the landing page", () => {
     // Start button (CTA-82), and has no card.
     expect(cards).toContain("/engine/games");
     expect(cards).not.toContain("/engine/play");
-    expect(cards).toContain("/tools/editor");
     expect(cards).toContain("/library");
   });
 });

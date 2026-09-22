@@ -22,7 +22,6 @@ const en = {
     maskedPlay: "Masked Pieces",
     analysisBoard: "Analysis Board",
     savedAnalyses: "Saved analyses",
-    boardEditor: "Board Editor",
     /** The Openings explorer (CTA-78) — shown under the folder's own name, a single entry. */
     openings: "Openings explorer",
     /** The reader's own repertoires (CTA-61), and the screen they come in on. */
@@ -34,7 +33,6 @@ const en = {
     /** Sidebar folders — groupings over the routes, never routes themselves. */
     folders: {
       engine: "Engine",
-      tools: "Tools",
       analysisBoard: "Analysis Board",
       openings: "Openings",
       repertoires: "Repertoires",
@@ -371,6 +369,17 @@ const en = {
       black: "Black",
       random: "Random",
       start: "Start",
+      /** The form's two tabs (CTA-83). */
+      tabs: {
+        game: "Game",
+        editor: "Board editor",
+      },
+      /** On the Game tab while the Board editor holds a position other than the standard start. */
+      customPosition: "The game starts from a custom position.",
+      customPositionEdit: "Edit",
+      customPositionReset: "Use the standard start",
+      /** Above Start while the edited position cannot be played from. */
+      illegal: "Start is off until the position in the Board editor can be played from.",
     },
     loading: "Reading your saved games…",
     empty: "No saved games yet. Play a game against the engine and it appears here on its own.",
@@ -646,10 +655,11 @@ const en = {
     },
   },
   /**
-   * The Board Editor. Chrome only: the FEN, the PGN and the square names are
-   * notation and stay language-independent.
+   * The shared position editor (CTA-83, `views/shared/positionEditor/`) — top
+   * level, like the other shared pieces' keys. Chrome only: the FEN, the PGN
+   * and the square names are notation and stay language-independent.
    */
-  editor: {
+  positionEditor: {
     tabs: {
       position: "Position",
       fen: "FEN",
@@ -683,16 +693,12 @@ const en = {
       /** The standard chess start — a board to begin arranging from. */
       startingPosition: "New board",
       /**
-       * Back to the position the screen was opened on — shown only when it was
-       * opened with one, so it never offers a position that does not exist.
+       * Back to the editor's initial position — shown only when its host gave
+       * one, so it never offers a position that does not exist.
        */
-      arrivalPosition: "Reset",
+      initialPosition: "Reset",
       clearBoard: "Clear board",
       flip: "Flip board",
-      /** The three hand-offs: each opens another screen on the position being edited. */
-      analysis: "Continue on the Analysis Board",
-      play: "Play from here",
-      openings: "Open in Openings",
     },
     problems: {
       title: "This position cannot be played from yet:",
@@ -701,7 +707,7 @@ const en = {
       extraKing: "One side has more than one king.",
       pawnOnBackRank: "A pawn is standing on the first or the last rank.",
       opponentInCheck: "The side not to move is already in check.",
-      /** Under each of the three controls an illegal position switches off. */
+      /** Under the FEN copy button, which an illegal position switches off. */
       blocked: "Fix the position to use this.",
     },
     fen: {
@@ -763,7 +769,7 @@ const en = {
     },
     engineSwitch: "Engine",
     controls: {
-      /** Hand this position off to Play with Engine — the Board Editor's wording. */
+      /** Hand this position off to Play with Engine as `?fen=`. */
       playFromHere: "Play from here",
       /** Hand the whole explored tree to the Analysis Board, as a new board. */
       analysis: "Open on the Analysis Board — everything explored here, as a new unsaved board",

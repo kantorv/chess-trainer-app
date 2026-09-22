@@ -52,8 +52,7 @@ import { openingArrowsOf } from "./openingArrows";
  * router's location state, beside `?at=`). "Play from here" hands the
  * position on screen to Play with Engine as `?fen=`.
  *
- * **Arrivals, read once**: `?fen=` (the Board Editor's "Open in Openings",
- * `CurrentOpening`'s ECO chip — validated with `parseFen`; a position turns
+ * **Arrivals, read once**: `?fen=` (`CurrentOpening`'s ECO chip — validated with `parseFen`; a position turns
  * the board to the side to move) and **`?at=`** — the moves from that start as
  * SAN. The URL is written back with history replace on every step — `?fen=`
  * when the tree does not start at the standard position, `?at=` where the

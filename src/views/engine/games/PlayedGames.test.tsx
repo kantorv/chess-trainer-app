@@ -26,6 +26,36 @@ vi.mock("../../../lib/engine", async () => ({
 }));
 
 /*
+  The Board editor tab's board (CTA-83): the spare-piece trio, with the
+  provider keeping the options it was handed — how a test drags a piece.
+*/
+const editorBoard = vi.hoisted(() => ({ options: null as Record<string, unknown> | null }));
+vi.mock("react-chessboard", () => ({
+  ChessboardProvider: ({
+    options,
+    children,
+  }: {
+    options: Record<string, unknown>;
+    children: React.ReactNode;
+  }) => {
+    editorBoard.options = options;
+    return <div>{children}</div>;
+  },
+  Chessboard: () => (
+    <div data-testid="board" data-position={String(editorBoard.options?.position)} />
+  ),
+  SparePiece: ({ pieceType }: { pieceType: string }) => <div data-testid={`spare-${pieceType}`} />,
+}));
+const editorDrag = (pieceType: string, from: string, to: string | null) =>
+  act(() => {
+    (editorBoard.options!.onPieceDrop as (args: unknown) => boolean)({
+      piece: { pieceType, isSparePiece: false, position: from },
+      sourceSquare: from,
+      targetSquare: to,
+    });
+  });
+
+/*
   A two-entry book, handed over when the test says so — so "until the book
   lands" is a state a test can stand in.
 */
@@ -294,5 +324,72 @@ describe("Lobby — the new-game form (CTA-82)", () => {
     expect(params.get("side")).toBe("random");
     expect(params.get("evalbar")).toBe("0");
     expect(params.get("depth")).toBe("9");
+  });
+});
+
+describe("Lobby — the new-game form's Board editor (CTA-83)", () => {
+  const START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+  const AFTER_E4 = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 1";
+  const startParams = () =>
+    new URLSearchParams(
+      screen.getByTestId("new-game-start").getAttribute("href")!.split("?")[1],
+    );
+
+  it("has a Game and a Board editor tab, with Start and the note on both", () => {
+    mount();
+    expect(screen.getByTestId("new-game-tab-game")).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByTestId("new-game-side")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("new-game-tab-editor"));
+    expect(screen.getByTestId("new-game-editor")).toBeInTheDocument();
+    expect(screen.queryByTestId("new-game-side")).toBeNull();
+    expect(screen.getByTestId("board")).toHaveAttribute("data-position", START);
+    expect(screen.getByTestId("new-game-start")).toBeInTheDocument();
+    expect(screen.getByTestId("played-games-storage-note")).toBeInTheDocument();
+    // The standard start sends no position.
+    expect(startParams().has("fen")).toBe(false);
+  });
+
+  it("sends an edited position as ?fen=, beside the Game tab's options, from either tab", () => {
+    mount();
+    fireEvent.click(screen.getByTestId("new-game-side-black"));
+    fireEvent.click(screen.getByTestId("new-game-tab-editor"));
+    editorDrag("wP", "e2", "e4");
+
+    expect(startParams().get("fen")).toBe(AFTER_E4);
+    expect(startParams().get("side")).toBe("black");
+
+    fireEvent.click(screen.getByTestId("new-game-tab-game"));
+    expect(startParams().get("fen")).toBe(AFTER_E4);
+  });
+
+  it("says on the Game tab that the position is custom, and resets it", () => {
+    mount();
+    expect(screen.queryByTestId("new-game-custom-position")).toBeNull();
+    fireEvent.click(screen.getByTestId("new-game-tab-editor"));
+    editorDrag("wP", "e2", "e4");
+    fireEvent.click(screen.getByTestId("new-game-tab-game"));
+
+    expect(screen.getByTestId("new-game-custom-position")).toHaveTextContent(AFTER_E4);
+    fireEvent.click(screen.getByTestId("new-game-custom-position-reset"));
+
+    expect(screen.queryByTestId("new-game-custom-position")).toBeNull();
+    expect(startParams().has("fen")).toBe(false);
+  });
+
+  it("switches Start off, and says why, while the position is illegal", () => {
+    mount();
+    fireEvent.click(screen.getByTestId("new-game-tab-editor"));
+    editorDrag("wK", "e1", null);
+
+    const start = screen.getByTestId("new-game-start");
+    expect(start).toBeDisabled();
+    expect(start).not.toHaveAttribute("href");
+    expect(screen.getByTestId("new-game-illegal")).toHaveTextContent("White has no king.");
+
+    // Visible from the Game tab too.
+    fireEvent.click(screen.getByTestId("new-game-tab-game"));
+    expect(screen.getByTestId("new-game-illegal")).toBeInTheDocument();
+    expect(screen.getByTestId("new-game-start")).toBeDisabled();
   });
 });

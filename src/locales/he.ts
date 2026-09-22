@@ -17,7 +17,6 @@ const he: typeof en = {
     maskedPlay: "כלים מוסווים",
     analysisBoard: "לוח ניתוח",
     savedAnalyses: "ניתוחים שמורים",
-    boardEditor: "עורך העמדות",
     openings: "סייר הפתיחות",
     repertoires: "הרפרטוארים שלי",
     addRepertoire: "הוספת רפרטואר",
@@ -25,7 +24,6 @@ const he: typeof en = {
     addCollection: "הוספת אוסף",
     folders: {
       engine: "מנוע",
-      tools: "כלים",
       library: "ספרייה",
       analysisBoard: "לוח ניתוח",
       openings: "פתיחות",
@@ -276,6 +274,14 @@ const he: typeof en = {
       black: "שחור",
       random: "אקראי",
       start: "התחל",
+      tabs: {
+        game: "משחק",
+        editor: "עורך העמדות",
+      },
+      customPosition: "המשחק מתחיל מעמדה מותאמת אישית.",
+      customPositionEdit: "עריכה",
+      customPositionReset: "חזרה לעמדת הפתיחה הרגילה",
+      illegal: "ההתחלה כבויה עד שאפשר יהיה לשחק מהעמדה שבעורך העמדות.",
     },
     loading: "קורא את המשחקים השמורים שלך…",
     empty: "אין עדיין משחקים שמורים. שחקו מול המנוע והמשחק יופיע כאן מעצמו.",
@@ -491,7 +497,7 @@ const he: typeof en = {
       },
     },
   },
-  editor: {
+  positionEditor: {
     tabs: {
       position: "עמדה",
       fen: "FEN",
@@ -521,12 +527,9 @@ const he: typeof en = {
     },
     controls: {
       startingPosition: "לוח חדש",
-      arrivalPosition: "איפוס",
+      initialPosition: "איפוס",
       clearBoard: "ניקוי הלוח",
       flip: "היפוך הלוח",
-      analysis: "המשך בלוח הניתוח",
-      play: "שחקו מכאן",
-      openings: "פתיחה במסך הפתיחות",
     },
     problems: {
       title: "לא ניתן לשחק מהעמדה הזו עדיין:",

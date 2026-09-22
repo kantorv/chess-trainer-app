@@ -27,8 +27,11 @@ const topLevelScreenCount = () =>
   navTree().filter((node) => node.kind === "screen").length;
 
 /** A shipped folder with more than one screen, by its translated name. Folders are buttons, not links. */
-const toolsFolder = () =>
-  screen.getByRole("button", { name: i18n.t("nav.folders.tools") });
+const libraryFolder = () =>
+  screen.getByRole("button", { name: i18n.t("nav.folders.library") });
+
+/** A screen inside it that is not the folder's first — `/library` is a prefix of it. */
+const ADD_COLLECTION = "/library/new";
 
 /**
  * The name a row renders, for a folder or a screen — through `navLabel`, the
@@ -57,13 +60,13 @@ beforeEach(async () => {
 
 describe("sidebar navigation", () => {
   it("renders one link per screen of the open folder, and no more", async () => {
-    renderAt("/tools/editor");
+    renderAt(ADD_COLLECTION);
     // Only the active folder is open, so only its screens are links; the folder
     // row is a toggle and adds nothing to the count either way. The one
     // exception is a top-level screen row — a single-entry folder's screen,
     // always visible, never inside a folder's `Collapse`.
     expect(screen.getAllByRole("link")).toHaveLength(
-      navItemsInFolder("tools").length + topLevelScreenCount(),
+      navItemsInFolder("library").length + topLevelScreenCount(),
     );
 
     // Every screen is reachable — one folder at a time.
@@ -146,32 +149,34 @@ describe("sidebar navigation", () => {
 
   it("matches a route exactly rather than by prefix", () => {
     // `startsWith` here would light up every screen whose path is nested under
-    // another — `/tools/editor` and the folded Analysis entry's route
-    // (`/tools/analysis/saved`) share a `/tools/` prefix.
-    renderAt("/tools/editor");
+    // another — `/library` is a prefix of `/library/new`.
+    renderAt(ADD_COLLECTION);
     expect(
-      screen.getByRole("link", { name: i18n.t("nav.folders.analysisBoard") }),
+      screen.getByRole("link", { name: i18n.t("nav.libraryCollections") }),
     ).not.toHaveAttribute("aria-current");
+    expect(
+      screen.getByRole("link", { name: i18n.t("nav.addCollection") }),
+    ).toHaveAttribute("aria-current", "page");
   });
 
   it("translates every label rather than hardcoding English", async () => {
-    // A route inside the Tools folder, so its screens are the open ones.
-    const english = renderAt("/tools/editor");
+    // A route inside the Library folder, so its screens are the open ones.
+    const english = renderAt(ADD_COLLECTION);
     expect(
-      screen.getByRole("link", { name: "Board Editor" }),
+      screen.getByRole("link", { name: "Add collection" }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Tools" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Library" })).toBeInTheDocument();
     english.unmount();
 
     await i18n.changeLanguage("he");
-    renderAt("/tools/editor");
+    renderAt(ADD_COLLECTION);
     expect(
-      screen.getByRole("link", { name: i18n.t("nav.boardEditor") }),
+      screen.getByRole("link", { name: i18n.t("nav.addCollection") }),
     ).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Board Editor" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Add collection" })).toBeNull();
     // The folder name is a catalog key too, not a hardcoded English string.
-    expect(toolsFolder()).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Tools" })).toBeNull();
+    expect(libraryFolder()).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Library" })).toBeNull();
   });
 
   it("gives the nav an accessible name from the catalog", () => {
@@ -184,7 +189,7 @@ describe("sidebar navigation", () => {
 
 describe("the folder tree", () => {
   it("renders a row per folder, only the active screen's open", () => {
-    renderAt("/tools/editor");
+    renderAt(ADD_COLLECTION);
 
     // Top-level rows only: a sub-folder lives in its parent's `Collapse` body,
     // which is unmounted while that parent is shut. A single-entry folder is
@@ -192,10 +197,10 @@ describe("the folder tree", () => {
     expect(screen.getAllByRole("button")).toHaveLength(
       navFolders().filter((folder) => !folder.singleEntry).length,
     );
-    expect(toolsFolder()).toHaveAttribute("aria-expanded", "true");
+    expect(libraryFolder()).toHaveAttribute("aria-expanded", "true");
 
     for (const folder of screen.getAllByRole("button")) {
-      if (folder !== toolsFolder()) {
+      if (folder !== libraryFolder()) {
         expect(folder).toHaveAttribute("aria-expanded", "false");
       }
     }
@@ -203,7 +208,7 @@ describe("the folder tree", () => {
     // Only the open folder's screens are on screen, plus the single entry;
     // the rest are one click away.
     expect(screen.getAllByRole("link")).toHaveLength(
-      navItemsInFolder("tools").length + topLevelScreenCount(),
+      navItemsInFolder("library").length + topLevelScreenCount(),
     );
   });
 
@@ -234,52 +239,52 @@ describe("the folder tree", () => {
   });
 
   it("toggles its own body shut and open again", async () => {
-    renderAt("/tools/editor");
+    renderAt(ADD_COLLECTION);
     const user = userEvent.setup();
 
-    await user.click(toolsFolder());
-    expect(toolsFolder()).toHaveAttribute("aria-expanded", "false");
+    await user.click(libraryFolder());
+    expect(libraryFolder()).toHaveAttribute("aria-expanded", "false");
     // `Collapse` unmounts its body when the shut animation ends, not on click.
     // The single entry stays — a top-level row, not in the folder's body.
     await waitFor(() =>
       expect(screen.queryAllByRole("link")).toHaveLength(topLevelScreenCount()),
     );
 
-    await user.click(toolsFolder());
-    expect(toolsFolder()).toHaveAttribute("aria-expanded", "true");
+    await user.click(libraryFolder());
+    expect(libraryFolder()).toHaveAttribute("aria-expanded", "true");
     expect(screen.getAllByRole("link")).toHaveLength(
-      navItemsInFolder("tools").length + topLevelScreenCount(),
+      navItemsInFolder("library").length + topLevelScreenCount(),
     );
   });
 
   it("shuts the folder that was open when another one is opened", async () => {
-    renderAt("/tools/editor");
+    renderAt(ADD_COLLECTION);
     const user = userEvent.setup();
 
-    const library = () =>
-      screen.getByRole("button", { name: i18n.t("nav.folders.library") });
+    const engine = () =>
+      screen.getByRole("button", { name: i18n.t("nav.folders.engine") });
 
-    await user.click(library());
-    expect(library()).toHaveAttribute("aria-expanded", "true");
+    await user.click(engine());
+    expect(engine()).toHaveAttribute("aria-expanded", "true");
     // One chain at a time: opening a folder under a different parent shuts the
     // previous one rather than stacking a second open branch under it.
-    expect(toolsFolder()).toHaveAttribute("aria-expanded", "false");
+    expect(libraryFolder()).toHaveAttribute("aria-expanded", "false");
     await waitFor(() =>
       expect(screen.queryAllByRole("link")).toHaveLength(
-        navItemsInFolder("library").length + topLevelScreenCount(),
+        navItemsInFolder("engine").length + topLevelScreenCount(),
       ),
     );
   });
 
   it("swaps the chevron between more and less", async () => {
-    const { container } = renderAt("/tools/editor");
+    const { container } = renderAt(ADD_COLLECTION);
     const user = userEvent.setup();
 
     expect(
       container.querySelector('[data-testid="ExpandLessRoundedIcon"]'),
     ).toBeInTheDocument();
 
-    await user.click(toolsFolder());
+    await user.click(libraryFolder());
     expect(
       container.querySelector('[data-testid="ExpandLessRoundedIcon"]'),
     ).toBeNull();
@@ -297,8 +302,8 @@ describe("the folder tree", () => {
     const getItem = vi.spyOn(Storage.prototype, "getItem");
     const setItem = vi.spyOn(Storage.prototype, "setItem");
 
-    await user.click(toolsFolder());
-    await user.click(toolsFolder());
+    await user.click(libraryFolder());
+    await user.click(libraryFolder());
 
     expect(setItem).not.toHaveBeenCalled();
     expect(getItem).not.toHaveBeenCalled();
@@ -308,13 +313,13 @@ describe("the folder tree", () => {
   it("forgets what was opened by hand on the next mount", async () => {
     const user = userEvent.setup();
     const first = renderAt("/");
-    await user.click(toolsFolder());
-    expect(toolsFolder()).toHaveAttribute("aria-expanded", "true");
+    await user.click(libraryFolder());
+    expect(libraryFolder()).toHaveAttribute("aria-expanded", "true");
     first.unmount();
 
     // The route decides, every time: the session-only state is deliberate.
     renderAt("/");
-    expect(toolsFolder()).toHaveAttribute("aria-expanded", "false");
+    expect(libraryFolder()).toHaveAttribute("aria-expanded", "false");
   });
 
   it("opens the folder holding the screen navigated to", async () => {
@@ -323,20 +328,20 @@ describe("the folder tree", () => {
         <MemoryRouter initialEntries={["/"]}>
           {/* A link outside the sidebar, so the route can change while every
               folder is shut — otherwise there is nothing left to click. */}
-          <Link to="/tools/editor">go to editor</Link>
+          <Link to={ADD_COLLECTION}>go to add a collection</Link>
           <SideBar />
         </MemoryRouter>
       </AppThemeWithLang>,
     );
     const user = userEvent.setup();
 
-    expect(toolsFolder()).toHaveAttribute("aria-expanded", "false");
+    expect(libraryFolder()).toHaveAttribute("aria-expanded", "false");
 
-    await user.click(screen.getByRole("link", { name: "go to editor" }));
+    await user.click(screen.getByRole("link", { name: "go to add a collection" }));
 
-    expect(toolsFolder()).toHaveAttribute("aria-expanded", "true");
+    expect(libraryFolder()).toHaveAttribute("aria-expanded", "true");
     expect(
-      screen.getByRole("link", { name: i18n.t("nav.boardEditor") }),
+      screen.getByRole("link", { name: i18n.t("nav.addCollection") }),
     ).toHaveAttribute("aria-current", "page");
   });
 
@@ -382,7 +387,7 @@ describe("the tree nests folders to any depth", () => {
     {
       kind: "folder",
       id: "outer",
-      labelKey: "nav.folders.tools",
+      labelKey: "nav.folders.library",
       icon: GridViewRoundedIcon,
       children: [
         {
@@ -402,17 +407,17 @@ describe("the tree nests folders to any depth", () => {
         },
         {
           kind: "screen",
-          id: "/tools/editor",
-          labelKey: "nav.boardEditor",
+          id: ADD_COLLECTION,
+          labelKey: "nav.addCollection",
           icon: GridViewRoundedIcon,
-          to: "/tools/editor",
+          to: ADD_COLLECTION,
         },
       ],
     },
   ];
 
   const outer = () =>
-    screen.getByRole("button", { name: i18n.t("nav.folders.tools") });
+    screen.getByRole("button", { name: i18n.t("nav.folders.library") });
   const inner = () =>
     screen.getByRole("button", { name: i18n.t("nav.folders.engine") });
 
@@ -450,7 +455,7 @@ describe("the tree nests folders to any depth", () => {
       ).toBeNull(),
     );
     expect(
-      screen.getByRole("link", { name: i18n.t("nav.boardEditor") }),
+      screen.getByRole("link", { name: i18n.t("nav.addCollection") }),
     ).toBeInTheDocument();
   });
 
@@ -512,12 +517,12 @@ describe("the sidebar mirrors under RTL", () => {
 
   it("indents by depth with a direction-relative inset in Hebrew", async () => {
     await i18n.changeLanguage("he");
-    // Inside the Tools folder, so there is a screen row to measure against.
-    renderAt("/tools/editor");
+    // Inside the Library folder, so there is a screen row to measure against.
+    renderAt(ADD_COLLECTION);
 
-    const folder = ownRule(toolsFolder());
+    const folder = ownRule(libraryFolder());
     const screenRow = ownRule(
-      screen.getByRole("link", { name: i18n.t("nav.boardEditor") }),
+      screen.getByRole("link", { name: i18n.t("nav.addCollection") }),
     );
 
     // The sidebar is not the board: it goes through the mirrored cache rather
@@ -535,10 +540,10 @@ describe("the sidebar mirrors under RTL", () => {
   });
 
   it("uses the same logical inset, through the plain cache, in English", async () => {
-    renderAt("/tools/editor");
+    renderAt(ADD_COLLECTION);
 
     const screenRow = ownRule(
-      screen.getByRole("link", { name: i18n.t("nav.boardEditor") }),
+      screen.getByRole("link", { name: i18n.t("nav.addCollection") }),
     );
     expect(screenRow.cache).toBe("muiltr");
     expect(indent(screenRow.css)).toBeGreaterThan(0);

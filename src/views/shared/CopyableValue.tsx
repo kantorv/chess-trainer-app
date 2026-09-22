@@ -11,7 +11,7 @@ import { useTranslation } from "react-i18next";
  * A read-only notation field with a copy button — the way a FEN or a PGN comes
  * back *out* of a screen.
  *
- * Shared between the Analysis Board's Position tab and the Board Editor's FEN
+ * Shared between the Analysis Board's Export tab and the position editor's FEN
  * tab, so its catalog keys are top-level (`copyable.*`) rather than under either
  * screen's, like the rest of `views/shared/`.
  *
@@ -28,7 +28,7 @@ type CopyableValueProps = {
   /** Prefix for this field's `data-testid`s, so a screen can hold two of them. */
   testId: string;
   /**
-   * Gate the copy button. The Board Editor sets this while the position is
+   * Gate the copy button. The position editor sets this while the position is
    * illegal: the FEN is still shown — you have to see what you are fixing — but
    * handing a broken one to the clipboard is how it ends up pasted elsewhere.
    */
