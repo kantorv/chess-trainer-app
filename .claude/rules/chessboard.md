@@ -62,6 +62,12 @@ Engine's screen in a costume — the mask (`lib/pieceMask.ts`), every surface it
 is applied on and why, the costume on the played game's record, the
 invariants, tests and recipes. It loads when you work on those paths.
 
+**And, for where the reader's data is kept** —
+[`database.md`](./database.md): every store (IndexedDB, one database per
+module), the connection helper and the record-store factory, screens waiting
+for a store's first read, testing and extending it, and when Dexie would be
+worth adding. It loads when you work on the stores.
+
 **On disk, read on demand** — [`docs/vendor/react-chessboard/`](../../docs/vendor/react-chessboard/),
 routed by its [`INDEX.md`](../../docs/vendor/react-chessboard/INDEX.md):
 

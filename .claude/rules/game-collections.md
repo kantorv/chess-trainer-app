@@ -240,9 +240,11 @@ files. Malformed, duplicate or file-less entries are left out.
 
 A 10,000-game collection is about 10 million characters. `localStorage` holds
 about 5 million for the **whole origin**, shared with every other store.
-IndexedDB's quota is a share of the disk. The Library (`chessapp.library`) and
-the saved analyses (`chessapp.analyses`, CTA-77) are the only two stores in
-the app that are not `localStorage`.
+IndexedDB's quota is a share of the disk. Every store of the reader's data is
+IndexedDB now — the Library (`chessapp.library`), the saved analyses
+(`chessapp.analyses`, CTA-77), the engine games and the repertoires; the whole
+map is [`database.md`](./database.md). The connection is opened through the
+shared `lib/idb.ts`.
 
 ### 4.2 Schema — three object stores, one record each per collection
 
