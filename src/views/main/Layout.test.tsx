@@ -145,10 +145,11 @@ describe("board square reflow on window resize", () => {
     renderShell();
     const square = screen.getByTestId("layout-board-square-body");
 
-    // min(800 - 320 - 32, 600 - 32): the fixed 320px panel comes off the width
-    // before squaring, and the p:2 inset off both edges (2 * 16px).
+    // min(800 - 320 - 16 - 32, 600 - 32): the fixed 320px panel and the 16px
+    // gap before it come off the width before squaring, and the p:2 inset off
+    // both edges (2 * 16px).
     await waitFor(() =>
-      expect(square).toHaveStyle({ width: "448px", height: "448px" }),
+      expect(square).toHaveStyle({ width: "432px", height: "432px" }),
     );
 
     grbc.mockReturnValue(rect(500, 400));
@@ -156,10 +157,17 @@ describe("board square reflow on window resize", () => {
       window.dispatchEvent(new Event("resize"));
     });
 
-    // min(500 - 320 - 32, 400 - 32) — width-bound at this size.
+    // min(500 - 320 - 16 - 32, 400 - 32) — width-bound at this size.
     await waitFor(() =>
-      expect(square).toHaveStyle({ width: "148px", height: "148px" }),
+      expect(square).toHaveStyle({ width: "132px", height: "132px" }),
     );
+  });
+
+  it("keeps a gap between the square and the panel (CTA-82)", () => {
+    renderShell();
+    // A flex gap is logical, so it holds on either side under RTL; the width
+    // it takes is subtracted from the square above.
+    expect(screen.getByTestId("layout-board-viewport")).toHaveStyle({ gap: "16px" });
   });
 
   it("never sizes the square below zero", async () => {
@@ -261,7 +269,7 @@ describe("route-driven right panel slot", () => {
     });
     await waitFor(() =>
       expect(screen.getByTestId("layout-board-square-body")).toHaveStyle({
-        width: "148px",
+        width: "132px",
       }),
     );
 
@@ -423,7 +431,7 @@ describe("fixed-width rails", () => {
 
   it("still squares the board against height when height is the binding side", async () => {
     const grbc = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect");
-    // Wide and short: the panel leaves 1200 - 320 - 32 = 848 of width, but only
+    // Wide and short: the panel leaves 1200 - 320 - 16 - 32 = 832 of width, but only
     // 400 - 32 = 368 of height, so the square is height-bound.
     grbc.mockReturnValue(rect(1200, 400));
 

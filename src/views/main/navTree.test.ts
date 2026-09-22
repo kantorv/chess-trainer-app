@@ -75,12 +75,16 @@ describe("the shipped nav tree", () => {
     }
   });
 
-  it("files Masked Pieces in the Engine folder, beside Play with Engine (CTA-79)", () => {
+  it("files the Lobby and Masked Pieces in the Engine folder (CTA-79, CTA-82)", () => {
     expect(navItemsInFolder("engine").map((item) => item.to)).toEqual([
-      "/engine/play",
       "/engine/games",
       "/engine/masked",
     ]);
+    expect(navItemsInFolder("engine")[0].labelKey).toBe("nav.lobby");
+    // Play with Engine has no entry: the Lobby's Start button reaches it, and
+    // its route is no screen of the tree, so it opens no chain of its own.
+    expect(navItems().map((item) => item.to)).not.toContain("/engine/play");
+    expect(folderPath("/engine/play")).toEqual([]);
     // Its old folder and route are gone, with no redirect.
     expect(navFolders().map((folder) => folder.id)).not.toContain("masked-pieces");
     expect(folderPath("/masked/play")).toEqual([]);

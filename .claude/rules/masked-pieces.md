@@ -53,7 +53,7 @@ variations explorer).
 | `src/views/engine/play/PlayWithEngine.tsx` | Play with Engine's route — `PlayScreen` without a costume, and the redirect of a **masked** `?saved=` here. |
 | `src/lib/pieceMask.ts` | **The mask**, pure (§3): `PieceMask`, `MASK_PRESETS`, `isMasked` / `isAnyMasked`, `maskedPieces` (the board's renderers), `maskSan` / `maskSanLine` / `maskNodeSan` (the notation), `pieceMaskFrom` / `samePieceMask` (storage). |
 | `src/lib/playedGames.ts` + `playedGameStore.ts` | **The record** (§5): `PlayedGame.mask` (`PlayedGameMask`), read back non-throwing; the store's idempotency compares it (`samePlayedGameMask`). |
-| `src/views/engine/games/PlayedGames.tsx` | **Saved games** — the *Masked* chip, and Continue to `/engine/masked` for a masked game. |
+| `src/views/engine/games/PlayedGames.tsx` | **The Lobby** (Saved games until CTA-82) — the *Masked* chip, and Continue to `/engine/masked` for a masked game. |
 | `src/views/explorer/useVariationsExplorer.tsx` and its parts | The notation surfaces (§4): the option `mask`, threaded to `TreeMoveList` → `MoveList` → `VariationLine`, `TreeMap`, `NextMovesBar`, `MoveContextMenu`, the comment block's label. |
 | `src/views/dev/core/BoardPanel.tsx` | The pinned engine lines: `mask` (masked notation) and `showVariations` (off on Masked Pieces until the switch). |
 | `src/views/dev/core/BoardShell.tsx` | `capturedPieces` (the strips' icons in costume) and `hideMaterialDiff`. |
@@ -61,7 +61,7 @@ variations explorer).
 
 Routes and nav: `App.tsx` routes `/engine/masked` to
 `views/engine/masked/Main`. The sidebar entry is in the **Engine** folder,
-after Play with Engine and Saved games (`navItems.ts`, `nav.maskedPlay` —
+after the Lobby (`navItems.ts`, `nav.maskedPlay` —
 "Masked Pieces"). The pre-CTA-79 route `/masked/play` and its root
 *Masked Pieces* folder are gone, with **no redirect**: the old URL no longer
 exists.

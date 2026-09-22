@@ -15,6 +15,8 @@
  * a *request*, and swapping the binary re-clamps it rather than breaking it.
  */
 
+import { MAX_VARIATIONS_OFFERED } from "./engineAnalysis";
+
 /** The engine knobs the settings tab drives. */
 export type EngineSettings = {
   /** UCI `Skill Level`, 0–20. The only strength control this build has. */
@@ -44,6 +46,23 @@ export const DEFAULT_ENGINE_SETTINGS: EngineSettings = {
 };
 
 /**
+ * The range each numeric setting is offered in **before** a running worker has
+ * said otherwise — the Engine tab's fallback bounds, and the bounds a new-game
+ * link (`lib/newGameLink.ts`) clamps its numbers into. Depth stops at 24
+ * because the wrapper clamps a search there; move time is 0 (no limit) to
+ * 10 s. An option the build declares is re-clamped to *its* bounds by the
+ * engine module, so these are never the last word on a UCI option.
+ */
+export const ENGINE_SETTING_BOUNDS = {
+  skillLevel: { min: 0, max: 20 },
+  depth: { min: 1, max: 24 },
+  moveTimeMs: { min: 0, max: 10000 },
+  multiPv: { min: 1, max: MAX_VARIATIONS_OFFERED },
+  threads: { min: 1, max: 4 },
+  hashMb: { min: 1, max: 256 },
+} as const satisfies Record<Exclude<keyof EngineSettings, "playAs">, { min: number; max: number }>;
+
+/**
  * Which UCI option each numeric setting drives. The names are the engine's, and
  * whether the running build *has* them is answered by `Engine.options` rather
  * than by this table.
@@ -54,6 +73,40 @@ export const SETTING_UCI_OPTION = {
   threads: "Threads",
   hashMb: "Hash",
 } as const satisfies Partial<Record<keyof EngineSettings, string>>;
+
+/** The option-backed settings as the engine module takes them — UCI name → requested value. */
+export const uciOptionsOf = (
+  settings: Pick<EngineSettings, keyof typeof SETTING_UCI_OPTION>,
+): Record<string, number> => ({
+  [SETTING_UCI_OPTION.skillLevel]: settings.skillLevel,
+  [SETTING_UCI_OPTION.multiPv]: settings.multiPv,
+  [SETTING_UCI_OPTION.threads]: settings.threads,
+  [SETTING_UCI_OPTION.hashMb]: settings.hashMb,
+});
+
+/**
+ * Settings with the values the running build clamped them to (the engine
+ * module's `onUciOptionsReady`) — **the same object** when nothing moved, so
+ * a caller's state setter re-runs nothing keyed on it.
+ */
+export const withClampedUciOptions = <T extends Pick<EngineSettings, keyof typeof SETTING_UCI_OPTION>>(
+  current: T,
+  clamped: Readonly<Record<string, number>>,
+): T => {
+  const next: T = {
+    ...current,
+    skillLevel: clamped[SETTING_UCI_OPTION.skillLevel] ?? current.skillLevel,
+    multiPv: clamped[SETTING_UCI_OPTION.multiPv] ?? current.multiPv,
+    threads: clamped[SETTING_UCI_OPTION.threads] ?? current.threads,
+    hashMb: clamped[SETTING_UCI_OPTION.hashMb] ?? current.hashMb,
+  };
+  return next.skillLevel === current.skillLevel &&
+    next.multiPv === current.multiPv &&
+    next.threads === current.threads &&
+    next.hashMb === current.hashMb
+    ? current
+    : next;
+};
 
 /**
  * A rough Elo for a `Skill Level`, for the label beside the strength slider.
