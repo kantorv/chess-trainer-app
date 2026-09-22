@@ -23,7 +23,7 @@ import { parsePgnGame, parsePgnTree, readPgnTags } from "./pgn";
  * The Analysis Board grows a {@link GameTree} move by move
  * (`lib/gameTree.ts`); this is the layer that lets that work outlive the tab.
  * It is [`savedGames.ts`](./savedGames.ts) again, in the same three-way split
- * (pure model here, `localStorage` in
+ * (pure model here, IndexedDB since CTA-77 in
  * [`savedAnalysisStore.ts`](./savedAnalysisStore.ts), a `useSyncExternalStore`
  * binding in `views/tools/analysis/saved/useSavedAnalyses.ts`) and for the same
  * reasons — so only what is **different** is written out below.

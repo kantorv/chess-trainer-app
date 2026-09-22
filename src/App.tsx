@@ -113,7 +113,7 @@ const routes = createBrowserRouter(
           path: "/tools/analysis",
           element: <AnalysisBoardScreen />
         },
-        // The reader's own analysis boards, kept in `localStorage`
+        // The reader's own analysis boards, kept in IndexedDB since CTA-77
         // (`lib/savedAnalysisStore.ts`). The Saved games screen's counterpart,
         // and a screen of its own for the same reason: these
         // are this app's own output, so there is no catalog to nest.
