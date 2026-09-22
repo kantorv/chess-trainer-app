@@ -3,6 +3,8 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
+  activeFilterSummary,
+  batchFolderNameOf,
   collectionIdOfStem,
   collectionNameOfStem,
   collectionRowOf,
@@ -237,5 +239,65 @@ describe("readCollectionText", () => {
       ok: false,
       problem: "too-large",
     });
+  });
+});
+
+describe("batchFolderNameOf — where the table's Analyse files a batch (CTA-77)", () => {
+  const labels = { games: "12 games", white: "white", black: "black" };
+  const none = { text: "", result: "" };
+
+  it("is the collection and the count when no filter is on", () => {
+    expect(batchFolderNameOf("World Cup 2023", none, labels, 100)).toBe("World Cup 2023 — 12 games");
+  });
+
+  it("adds the filters that are on, in a fixed order", () => {
+    expect(
+      batchFolderNameOf(
+        "World Cup 2023",
+        {
+          text: " najdorf ",
+          result: "1-0",
+          player: "Carlsen",
+          color: "white",
+          opening: "B90 Sicilian Defense: Najdorf Variation",
+          event: "FIDE World Cup 2023",
+          from: "2023-08-01",
+          to: "",
+          line: ["e4", "c5", "Nf3"],
+        },
+        labels,
+        200,
+      ),
+    ).toBe(
+      'World Cup 2023 — 12 games (Carlsen, white, B90, FIDE World Cup 2023, 2023-08-01–…, 1-0, 1.e4 c5 2.Nf3, "najdorf")',
+    );
+  });
+
+  it("names a side only with a player, and an opening typed without a code as typed", () => {
+    expect(activeFilterSummary({ ...none, color: "black", opening: "najdorf" }, labels)).toEqual([
+      "najdorf",
+    ]);
+    expect(activeFilterSummary({ ...none, player: "Nepo", color: "black" }, labels)).toEqual([
+      "Nepo",
+      "black",
+    ]);
+  });
+
+  it("cuts the filter summary, never the collection or the count, to fit", () => {
+    const filter = { ...none, player: "Carlsen", event: "A very long event name ".repeat(6).trim() };
+    const name = batchFolderNameOf("World Cup 2023", filter, labels, 100);
+    expect(name).toHaveLength(100);
+    expect(name.startsWith("World Cup 2023 — 12 games (Carlsen, A very long")).toBe(true);
+    expect(name.endsWith("…)")).toBe(true);
+  });
+
+  it("drops a summary there is no room left for, and cuts only a name too long on its own", () => {
+    const long = "A collection with a name that goes on for a long while";
+    expect(batchFolderNameOf(long, { ...none, player: "Carlsen" }, labels, 70)).toBe(
+      `${long} — 12 games`,
+    );
+    const cut = batchFolderNameOf("x".repeat(120), none, labels, 100);
+    expect(cut).toHaveLength(100);
+    expect(cut.endsWith("… — 12 games")).toBe(true);
   });
 });

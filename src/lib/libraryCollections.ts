@@ -352,6 +352,80 @@ export const openingLabelOf = (row: Pick<CollectionRow, "eco" | "opening">): str
   return label === "" ? undefined : label;
 };
 
+/** The words a batch's folder name is made of, in the reader's language — the name is theirs. */
+export type BatchNameLabels = {
+  /** "12 games" — the count, already worded. */
+  games: string;
+  /** The side a player filter is limited to. */
+  white: string;
+  black: string;
+};
+
+/**
+ * A SAN line as a reader writes it: `1.e4 c5 2.Nf3` — move numbers on White's
+ * moves (and on a line that starts with Black's, never here: the filter
+ * board starts at the standard start).
+ */
+const numberedLine = (line: readonly string[]): string =>
+  line.map((san, index) => (index % 2 === 0 ? `${index / 2 + 1}.${san}` : san)).join(" ");
+
+/**
+ * The filters that are on, as the short phrases a batch's folder name
+ * carries — the player and side, the opening (its ECO code when the filter
+ * names one, else what was typed), the event, the dates, the result, the
+ * opening moves and the words box — in that order. Empty when none is on.
+ */
+export const activeFilterSummary = (filter: RowFilter, labels: BatchNameLabels): string[] => {
+  const parts: string[] = [];
+  const player = filter.player?.trim() ?? "";
+  if (player !== "") parts.push(player);
+  if (player !== "" && (filter.color === "white" || filter.color === "black")) {
+    parts.push(labels[filter.color]);
+  }
+  const opening = filter.opening?.trim() ?? "";
+  if (opening !== "") parts.push(/^[A-E]\d\d\b/.exec(opening)?.[0] ?? opening);
+  if ((filter.event ?? "") !== "") parts.push(filter.event as string);
+  const from = filter.from ?? "";
+  const to = filter.to ?? "";
+  if (from !== "" || to !== "") parts.push(`${from || "…"}–${to || "…"}`);
+  if (filter.result !== "") parts.push(filter.result);
+  if ((filter.line ?? []).length > 0) parts.push(numberedLine(filter.line ?? []));
+  const words = filter.text.trim();
+  if (words !== "") parts.push(`"${words}"`);
+  return parts;
+};
+
+/**
+ * **The name of the analyses folder a batch of picked games goes into**
+ * (CTA-77, the table's Analyse): the collection's name, how many games, and —
+ * only when some are on — the filters, `World Cup 2023 — 12 games (Carlsen,
+ * White, B90, 1.e4 c5)`. Kept within `max` characters (the folder name's
+ * limit): the filter summary is cut first, with an ellipsis, and dropped
+ * when too little of it would be left to read; only a collection name too
+ * long on its own is cut, and never the count.
+ */
+export const batchFolderNameOf = (
+  collectionName: string,
+  filter: RowFilter,
+  labels: BatchNameLabels,
+  max: number,
+): string => {
+  const count = ` — ${labels.games}`;
+  let name = collectionName.trim();
+  if (name.length + count.length > max) {
+    name = `${name.slice(0, Math.max(0, max - count.length - 1)).trimEnd()}…`;
+  }
+  const base = `${name}${count}`;
+  const summary = activeFilterSummary(filter, labels).join(", ");
+  if (summary === "") return base;
+  const full = `${base} (${summary})`;
+  if (full.length <= max) return full;
+  // " (" + at least a few characters + "…)" — else not worth the room.
+  const room = max - base.length - 4;
+  if (room < 4) return base;
+  return `${base} (${summary.slice(0, room).trimEnd()}…)`;
+};
+
 /**
  * The days a PGN date could be, as `YYYY-MM-DD` bounds: `2023.07.30` is that
  * day; `1848` (its unknown parts already dropped) is the whole year; a month

@@ -903,6 +903,29 @@ const en = {
         selected: "{{count}} selected",
         download: "Download selected as one PGN",
         pick: "Select {{title}}",
+        /**
+         * The Analyse hand-off (CTA-77): the picked games saved to Saved
+         * analyses, one analysis each, in a new folder named after the
+         * collection, the count and the filters that are on.
+         */
+        analyse: "Analyse",
+        analyseHint: "Save the selected games to Saved analyses, each its own analysis, in a new folder",
+        analysing: "Saving the selected games to Saved analyses…",
+        /** The side a player filter names, as the folder name carries it. */
+        white: "white",
+        black: "black",
+        done_one: "{{count}} game added to Saved analyses, in “{{folder}}”.",
+        done_other: "{{count}} games added to Saved analyses, in “{{folder}}”.",
+        skipped_one: "{{count}} game could not be read and was left out.",
+        skipped_other: "{{count}} games could not be read and were left out.",
+        openFolder: "Open folder",
+        problem: {
+          read: "The games could not be read. Nothing was saved.",
+          none: "None of the selected games can be read. Nothing was saved.",
+          folder: "No new folder could be made — Saved analyses holds at most {{max}} folders. Nothing was saved.",
+          tooMany: "Saved analyses holds at most {{max}} analyses, and these would pass it. Nothing was saved.",
+          storage: "The browser refused to store the games — its storage may be full. Nothing was saved.",
+        },
       },
       /** The `#` cell's mark on a game the index could not parse. */
       unreadable: "This game could not be read — its moves have an error.",

@@ -430,9 +430,15 @@ function SavedAnalysesList({
   const foldersHere = analysisFolderChildren(folders, browseId);
   const crumbs =
     currentFolder === undefined ? [] : analysisFolderPath(folders, currentFolder.id);
+  // Keyed on what the URL asks for: the folder it resolves to is read off the same `folders`.
   const rowsHere = useMemo(
-    () => analysesHere(analyses, folders, browseId),
-    [analyses, folders, browseId],
+    () =>
+      analysesHere(
+        analyses,
+        folders,
+        folders.some((folder) => folder.id === requestedFolder) ? requestedFolder : null,
+      ),
+    [analyses, folders, requestedFolder],
   );
 
   /* The page on screen — back to the first whenever the reader changes folder. */

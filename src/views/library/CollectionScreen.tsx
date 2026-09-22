@@ -1,13 +1,16 @@
 import { useMemo, useState } from "react";
+import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Checkbox from "@mui/material/Checkbox";
+import CircularProgress from "@mui/material/CircularProgress";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogContentText from "@mui/material/DialogContentText";
 import DialogTitle from "@mui/material/DialogTitle";
 import IconButton from "@mui/material/IconButton";
+import Snackbar from "@mui/material/Snackbar";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
@@ -21,6 +24,7 @@ import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
+import ShareRoundedIcon from "@mui/icons-material/ShareRounded";
 import WarningAmberRoundedIcon from "@mui/icons-material/WarningAmberRounded";
 import {
   Link as RouterLink,
@@ -31,8 +35,10 @@ import {
 } from "react-router";
 import { useTranslation } from "react-i18next";
 
+import { DEFAULT_ANALYSIS_SETTINGS } from "../../lib/analysisSettings";
 import { removeCollection } from "../../lib/libraryCollectionStore";
 import {
+  batchFolderNameOf,
   COLLECTION_COLUMNS,
   COLLECTION_FILTER_PARAMS,
   collectionFacetsOf,
@@ -56,6 +62,15 @@ import {
 } from "../../lib/openingTree";
 import { downloadPgn } from "../../lib/pgnExport";
 import { slugify } from "../../lib/pgnText";
+import { batchAnalysesOf, newSavedAnalysisId } from "../../lib/savedAnalyses";
+import {
+  createAnalysisFolder,
+  MAX_ANALYSIS_FOLDER_NAME,
+  MAX_ANALYSIS_FOLDERS,
+  removeAnalysisFolder,
+} from "../../lib/savedAnalysisFolderStore";
+import { addAnalyses, MAX_SAVED_ANALYSES } from "../../lib/savedAnalysisStore";
+import { repertoireGameNamesOf } from "../../lib/savedRepertoires";
 import { RightPanel } from "../main/rightPanel";
 import SavedListExportBar from "../shared/SavedListExportBar";
 import CollectionFilters from "./CollectionFilters";
@@ -87,6 +102,18 @@ import { loadCollectionGames, useCollectionRows } from "./useLibraryCollections"
  * The download is one `.pgn` of the picked games, in collection order. Picks
  * are the screen's, not the URL's: a link carries the filter, not a hand-made
  * selection.
+ *
+ * **Analyse** (CTA-77), beside the export bar, hands the picks to **Saved
+ * analyses**: one new top-level folder, named after the collection, the
+ * count and the filters that are on (`batchFolderNameOf`), and every picked
+ * game saved into it as its own analysis, in collection order, all or
+ * nothing — the Analysis Board's split (`AnalysisLoad.tsx`) over games
+ * already read: the folder first, then the records (`batchAnalysesOf`, the
+ * stored PGN as it is), the folder taken back out if they cannot be written.
+ * A game the index marks unreadable is **left out, and the notice says how
+ * many** — it would open on no board — rather than refusing the whole batch.
+ * A snackbar says how many went where, with a link to the folder; the picks
+ * stay.
  *
  * **The rows are the collection's index** (`lib/collectionIndex.ts`), read
  * whole — no game is parsed, or even fetched, to draw the table: a shipped
@@ -184,6 +211,74 @@ function CollectionTable({
       if (!next.delete(number)) next.add(number);
       return next;
     });
+  const [analysing, setAnalysing] = useState(false);
+  const [notice, setNotice] = useState<
+    | { severity: "success"; message: string; folderId: string }
+    | { severity: "error"; message: string }
+    | null
+  >(null);
+
+  /** The picks into Saved analyses: a new folder, a record per readable game — or nothing. */
+  const analysePicked = async () => {
+    const failure = (message: string) => setNotice({ severity: "error", message });
+    setAnalysing(true);
+    try {
+      const games = await loadCollectionGames(collection);
+      if (games === null) return failure(t("library.table.picks.problem.read"));
+      const unreadable = new Set(rows.filter((row) => row.unreadable).map((row) => row.number));
+      const numbers = [...picked].sort((a, b) => a - b);
+      const kept = numbers.filter((number) => games[number - 1] !== undefined && !unreadable.has(number));
+      const skipped = numbers.length - kept.length;
+      if (kept.length === 0) return failure(t("library.table.picks.problem.none"));
+
+      const chunks = kept.map((number) => games[number - 1]);
+      const names = repertoireGameNamesOf(chunks);
+      const folderName = batchFolderNameOf(
+        collection.name,
+        { text, result, player, color, opening: openingName, event, from, to, line },
+        {
+          games: t("library.games", { count: kept.length }),
+          white: t("library.table.picks.white"),
+          black: t("library.table.picks.black"),
+        },
+        MAX_ANALYSIS_FOLDER_NAME,
+      );
+      const folder = await createAnalysisFolder(folderName, null);
+      if (folder === undefined) {
+        return failure(t("library.table.picks.problem.folder", { max: MAX_ANALYSIS_FOLDERS }));
+      }
+      const failed = await addAnalyses(
+        batchAnalysesOf(
+          newSavedAnalysisId,
+          chunks.map((pgn, index) => ({ pgn, name: names[index] })),
+          folder.id,
+          DEFAULT_ANALYSIS_SETTINGS,
+        ),
+      );
+      if (failed !== undefined) {
+        // All or nothing: no empty folder is left behind.
+        await removeAnalysisFolder(folder.id);
+        return failure(
+          failed === "too-many"
+            ? t("library.table.picks.problem.tooMany", { max: MAX_SAVED_ANALYSES })
+            : t("library.table.picks.problem.storage"),
+        );
+      }
+      setNotice({
+        severity: "success",
+        folderId: folder.id,
+        message: [
+          t("library.table.picks.done", { count: kept.length, folder: folder.name }),
+          skipped > 0 ? t("library.table.picks.skipped", { count: skipped }) : "",
+        ]
+          .filter(Boolean)
+          .join(" "),
+      });
+    } finally {
+      setAnalysing(false);
+    }
+  };
+
   const downloadPicked = async () => {
     const games = await loadCollectionGames(collection);
     if (games === null) return;
@@ -286,6 +381,24 @@ function CollectionTable({
             onClearSelected={() => setPicked(new Set())}
             onDownload={() => void downloadPicked()}
           />
+          <Tooltip title={t(analysing ? "library.table.picks.analysing" : "library.table.picks.analyseHint")}>
+            <span>
+              <Button
+                size="small"
+                variant="outlined"
+                disabled={picked.size === 0 || analysing}
+                onClick={() => void analysePicked()}
+                aria-busy={analysing}
+                startIcon={
+                  analysing ? <CircularProgress size={16} /> : <ShareRoundedIcon fontSize="small" />
+                }
+                data-testid="library-picks-analyse"
+                sx={{ flexShrink: 0 }}
+              >
+                {t("library.table.picks.analyse")}
+              </Button>
+            </span>
+          </Tooltip>
           {collection.source === "uploaded" && (
             <Tooltip title={t("library.table.delete")}>
               <IconButton
@@ -458,6 +571,39 @@ function CollectionTable({
           </Box>
         </Box>
       </RightPanel>
+      {notice !== null && (
+        <Snackbar
+          open
+          autoHideDuration={notice.severity === "success" ? 10_000 : null}
+          onClose={(_event, reason) => {
+            if (reason !== "clickaway") setNotice(null);
+          }}
+          anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        >
+          <Alert
+            severity={notice.severity}
+            variant="filled"
+            onClose={() => setNotice(null)}
+            data-testid="library-picks-analyse-notice"
+            action={
+              notice.severity === "success" ? (
+                <Button
+                  color="inherit"
+                  size="small"
+                  component={RouterLink}
+                  to={`/tools/analysis/saved?folder=${encodeURIComponent(notice.folderId)}`}
+                  data-testid="library-picks-analyse-open"
+                >
+                  {t("library.table.picks.openFolder")}
+                </Button>
+              ) : undefined
+            }
+            sx={{ alignItems: "center" }}
+          >
+            {notice.message}
+          </Alert>
+        </Snackbar>
+      )}
       <Dialog
         open={deleting}
         onClose={() => setDeleting(false)}

@@ -20,7 +20,16 @@ import {
   readCollectionText,
 } from "../../lib/libraryCollections";
 import { peekShippedGames, peekShippedRows, shippedCollections } from "../../lib/shippedCollections";
-import { findSavedAnalysis, savedAnalysesSnapshot } from "../../lib/savedAnalysisStore";
+import {
+  findSavedAnalysis,
+  loadSavedAnalyses,
+  savedAnalysesSnapshot,
+} from "../../lib/savedAnalysisStore";
+import {
+  createAnalysisFolder,
+  loadAnalysisFolders,
+  MAX_ANALYSIS_FOLDERS,
+} from "../../lib/savedAnalysisFolderStore";
 import { downloadPgn } from "../../lib/pgnExport";
 import AppThemeWithLang from "../../theme/AppThemeWithLang";
 import { boardOptions, FakeEngine } from "../dev/devTestHarness";
@@ -548,6 +557,109 @@ describe("picking games to download", () => {
     fireEvent.click(selectAll());
     fireEvent.click(screen.getByTestId("library-picks-download"));
     await waitFor(() => expect(downloadPgn).toHaveBeenCalledWith("rich-3-games", RICH));
+  });
+});
+
+describe("analysing the picks (CTA-77)", () => {
+  const analyse = () => screen.getByTestId("library-picks-analyse");
+  const pick = (number: number) =>
+    fireEvent.click(within(screen.getByTestId(`library-picks-row-${number}`)).getByRole("checkbox"));
+  const notice = () => screen.findByTestId("library-picks-analyse-notice");
+
+  it("is offered beside the export bar, and only once a game is picked", async () => {
+    const mine = await upload();
+    await mountTable(`/library/${mine.id}`);
+    expect(analyse()).toHaveTextContent("Analyse");
+    expect(analyse()).toBeDisabled();
+    pick(1);
+    expect(analyse()).toBeEnabled();
+  });
+
+  it("saves the picks into one new folder, in collection order, named for the collection and the filters", async () => {
+    const mine = await upload();
+    await mountTable(`/library/${mine.id}?player=Amy`);
+    pick(2);
+    pick(1);
+    fireEvent.click(analyse());
+    // Working: it cannot be clicked twice.
+    expect(analyse()).toBeDisabled();
+
+    expect(await notice()).toHaveTextContent("2 games added to Saved analyses, in “Club games — 2 games (Amy)”.");
+    const folders = await loadAnalysisFolders();
+    expect(folders).toHaveLength(1);
+    expect(folders[0]).toMatchObject({ name: "Club games — 2 games (Amy)", parentId: null });
+    const saved = await loadSavedAnalyses();
+    expect(saved.map((row) => [row.name, row.folderId, row.pgn])).toEqual([
+      ["Zed – Amy", folders[0].id, GAMES[0]],
+      ["Amy – Bob", folders[0].id, GAMES[1]],
+    ]);
+    expect(saved[0]).toMatchObject({ path: [], orientation: "white" });
+    expect(screen.getByTestId("library-picks-analyse-open")).toHaveAttribute(
+      "href",
+      `/tools/analysis/saved?folder=${folders[0].id}`,
+    );
+    // The picks stay as they were.
+    expect(screen.getByTestId("library-picks-selected-count")).toHaveTextContent("2 selected");
+    expect(analyse()).toBeEnabled();
+  });
+
+  it("leaves out a game the index could not read, and says so", async () => {
+    const mine = await keep("Mixed", [GAMES[0], '[White "Broken"]\n[Black "Game"]\n\n1. e4 Zz9 *']);
+    await mountTable(`/library/${mine.id}`);
+    expect(screen.getByTestId("library-table-unreadable-2")).toBeInTheDocument();
+    fireEvent.click(within(screen.getByTestId("library-picks-select-all")).getByRole("checkbox"));
+    fireEvent.click(analyse());
+
+    expect(await notice()).toHaveTextContent(
+      "1 game added to Saved analyses, in “Mixed — 1 game”. 1 game could not be read and was left out.",
+    );
+    expect((await loadSavedAnalyses()).map((row) => row.pgn)).toEqual([GAMES[0]]);
+  });
+
+  it("works on a shipped collection too", async () => {
+    await mountTable("/library/morphy");
+    pick(1);
+    fireEvent.click(analyse());
+    expect(await notice()).toHaveTextContent("1 game added to Saved analyses, in “Morphy — 1 game”.");
+    const [saved] = await loadSavedAnalyses();
+    expect(saved.pgn).toBe((peekShippedGames("morphy") ?? [])[0].trim());
+    expect(saved.name).toBe("Morphy, Paul – Morphy, Alonzo");
+  });
+
+  it("says why, and leaves nothing behind, when no folder can be made", async () => {
+    for (let index = 0; index < MAX_ANALYSIS_FOLDERS; index += 1) {
+      await createAnalysisFolder(`F${index}`, null);
+    }
+    const mine = await upload();
+    await mountTable(`/library/${mine.id}`);
+    pick(1);
+    fireEvent.click(analyse());
+    expect(await notice()).toHaveTextContent(`at most ${MAX_ANALYSIS_FOLDERS} folders`);
+    expect(await loadSavedAnalyses()).toEqual([]);
+    expect(screen.queryByTestId("library-picks-analyse-open")).toBeNull();
+  });
+
+  it("takes the folder back out when the games cannot be stored", async () => {
+    const put = IDBObjectStore.prototype.put;
+    vi.spyOn(IDBObjectStore.prototype, "put").mockImplementation(function (
+      this: IDBObjectStore,
+      value: unknown,
+      key?: IDBValidKey,
+    ) {
+      // The analyses' records carry a PGN; the folder's does not.
+      if ((value as { value?: { pgn?: string } }).value?.pgn !== undefined) {
+        throw new DOMException("full", "QuotaExceededError");
+      }
+      return put.call(this, value, key);
+    });
+    const mine = await upload();
+    await mountTable(`/library/${mine.id}`);
+    pick(1);
+    fireEvent.click(analyse());
+    expect(await notice()).toHaveTextContent("storage may be full");
+    vi.restoreAllMocks();
+    expect(await loadAnalysisFolders()).toEqual([]);
+    expect(await loadSavedAnalyses()).toEqual([]);
   });
 });
 
