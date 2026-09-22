@@ -2,7 +2,7 @@ import { useParams } from "react-router";
 
 import { isRepertoireGameId } from "../../lib/repertoireGames";
 import { isMultiGameRepertoire } from "../../lib/savedRepertoires";
-import { MissingRepertoire, MultiGameRepertoire } from "./RepertoireBoard";
+import { MissingRepertoire, MultiGameRepertoire, ReadingRepertoires } from "./RepertoireBoard";
 import RepertoirePlayer from "./RepertoirePlayer";
 import { useSavedRepertoires } from "./useSavedRepertoires";
 
@@ -17,6 +17,7 @@ import { useSavedRepertoires } from "./useSavedRepertoires";
 function RepertoireGame() {
   const { id, game } = useParams();
   const repertoires = useSavedRepertoires();
+  if (repertoires === undefined) return <ReadingRepertoires />;
   const saved = repertoires.find((row) => row.id === id);
 
   if (saved === undefined || !isRepertoireGameId(game)) return <MissingRepertoire />;

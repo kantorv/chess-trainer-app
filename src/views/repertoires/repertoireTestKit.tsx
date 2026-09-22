@@ -10,14 +10,17 @@
 import { render } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { MemoryRouter, Route, Routes } from "react-router";
+import type { vi } from "vitest";
 
 import { DEFAULT_POSITION } from "chess.js";
 
 import { readRepertoireText, savedRepertoireOf } from "../../lib/savedRepertoires";
+import { loadRepertoireFolders } from "../../lib/savedRepertoireFolderStore";
 import {
+  loadSavedRepertoires,
+  resetSavedRepertoireStore,
   SAVED_REPERTOIRES_STORAGE_KEY,
   saveRepertoire,
-  savedRepertoiresSnapshot,
 } from "../../lib/savedRepertoireStore";
 import AppThemeWithLang from "../../theme/AppThemeWithLang";
 import { RightPanelOutlet, RightPanelProvider } from "../main/rightPanel";
@@ -26,6 +29,16 @@ import RepertoireBoard from "./RepertoireBoard";
 import RepertoireUpload from "./RepertoireUpload";
 import RepertoireSettingsScreen from "./RepertoireSettingsScreen";
 import RepertoireGame from "./RepertoireGame";
+
+/**
+ * Fake timers that leave `setImmediate` real: the stores are IndexedDB's, and
+ * the tests' fake-indexeddb runs every request on `setImmediate` — faked, no
+ * read or write would ever land. The trainer's delay and the tree's
+ * `setTimeout(0)` parse are still the tests' to advance.
+ */
+export const FAKE_TIMERS: Parameters<typeof vi.useFakeTimers>[0] = {
+  toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval", "Date"],
+};
 
 /**
  * A repertoire as the one-game rule wants it: one game, a mainline with a
@@ -53,35 +66,49 @@ export const CARO_TWO_GAMES = [
 ].join("\n");
 
 /** Store a one-game text as the upload screen would, under a known id. */
-export const storeRepertoire = (id: string, text: string = CARO, name = "") => {
+export const storeRepertoire = async (id: string, text: string = CARO, name = "") => {
   const reading = readRepertoireText(text);
   if (!reading.ok || reading.games.length !== 1) {
     throw new Error("fixture is not one readable game");
   }
-  const problem = saveRepertoire(savedRepertoireOf(id, reading.games[0], name, reading.name));
+  const problem = await saveRepertoire(savedRepertoireOf(id, reading.games[0], name, reading.name));
   if (problem !== undefined) throw new Error(`fixture did not save: ${problem}`);
   return id;
 };
 
 /**
  * Store a record the way one was written **before** the one-game rule — the
- * whole multi-game text in one row — to exercise the choice it opens on.
+ * whole multi-game text in one row — to exercise the choice it opens on. Such
+ * a record predates IndexedDB too, so it arrives as one did: under the old
+ * `localStorage` key, moved in (below what IndexedDB holds) on a fresh read.
  */
-export const storeLegacyRepertoire = (id: string, text: string, name = "") => {
+export const storeLegacyRepertoire = async (id: string, text: string, name = "") => {
   const now = new Date().toISOString();
   localStorage.setItem(
     SAVED_REPERTOIRES_STORAGE_KEY,
     JSON.stringify([
-      ...savedRepertoiresSnapshot(),
       { id, name, pgn: text, previewFen: DEFAULT_POSITION, savedAt: now, updatedAt: now },
     ]),
   );
-  localStorage.setItem(`${SAVED_REPERTOIRES_STORAGE_KEY}.rev`, `${Date.now()}-${id}`);
+  resetSavedRepertoireStore();
+  const rows = await loadSavedRepertoires();
+  if (!rows.some((row) => row.id === id)) throw new Error("legacy fixture did not read back");
   return id;
 };
 
-/** The section's five routes, mounted at `path`, as `App.tsx` mounts them. */
-export const renderSection = (path: string, extra?: ReactNode) =>
+/**
+ * The section's five routes, mounted at `path`, as `App.tsx` mounts them —
+ * once both stores' first reads have landed (IndexedDB), so a test asserts
+ * the screen rather than its "reading" line. What the routes show before the
+ * read is asserted on its own (`Repertoires.test.tsx`).
+ */
+export const renderSection = async (path: string, extra?: ReactNode) => {
+  await Promise.all([loadSavedRepertoires(), loadRepertoireFolders()]);
+  return renderSectionNow(path, extra);
+};
+
+/** The section's routes mounted at once — before the stores have been read. */
+export const renderSectionNow = (path: string, extra?: ReactNode) =>
   render(
     <AppThemeWithLang>
       <MemoryRouter initialEntries={[path]}>

@@ -5,7 +5,7 @@ import {
   libraryReferenceRead,
   loadLibraryReferenceGames,
 } from "./libraryGameCatalog";
-import { playedGamesCatalog } from "./playedGameStore";
+import { loadPlayedGames, playedGamesCatalog, playedGamesSnapshot } from "./playedGameStore";
 import { findSavedAnalysisGame } from "./savedAnalysisStore";
 
 /**
@@ -53,8 +53,10 @@ export const libraryGameReference = (collectionId: string, number: number): stri
  * Which store a reference's first segment names, as the resolver of the rest
  * of it (`<path>/<id>`). *Called* rather than held, because the stores change
  * while the app runs and a game saved a moment ago has to be as referenceable
- * as an old one. The played games memoise their whole catalog on their
- * snapshot; the saved analyses — thousands of records since CTA-77, in
+ * as an old one. Every store here is read asynchronously, and each resolves
+ * out of what has been read — so the Analysis Board waits for that read
+ * before it resolves a reference. The played games memoise their whole
+ * catalog on their snapshot; the saved analyses — thousands of records since CTA-77, in
  * IndexedDB — parse only the one named, out of what has been read (so the
  * Analysis Board waits for that read before it resolves one).
  */
@@ -77,20 +79,22 @@ export const isAnalysisReference = (reference: string | null | undefined): boole
   referenceSegments(reference)[0] === ANALYSIS_REFERENCE_KEY;
 
 /**
- * Whether a Library reference's games have been read — a Library collection's
- * games, like the saved analyses, are read asynchronously. Anything else is
- * ready at once.
+ * Whether what a `play` or Library reference names has been read — the
+ * played games (IndexedDB) and a Library collection's games are read
+ * asynchronously, like the saved analyses. Anything else is ready at once.
  */
 export const isReferenceRead = (reference: string | null | undefined): boolean => {
   if (reference === null || reference === undefined) return true;
   const [sectionKey, ...rest] = referenceSegments(reference);
+  if (sectionKey === PLAY_REFERENCE_KEY) return playedGamesSnapshot() !== undefined;
   return sectionKey !== LIBRARY_REFERENCE_KEY || libraryReferenceRead(rest);
 };
 
-/** Read what a Library reference names (a no-op for any other). Never rejects. */
+/** Read what a `play` or Library reference names (a no-op for any other). Never rejects. */
 export const loadReferencedGames = async (reference: string | null | undefined): Promise<void> => {
   if (reference === null || reference === undefined) return;
   const [sectionKey, ...rest] = referenceSegments(reference);
+  if (sectionKey === PLAY_REFERENCE_KEY) await loadPlayedGames();
   if (sectionKey === LIBRARY_REFERENCE_KEY) await loadLibraryReferenceGames(rest);
 };
 

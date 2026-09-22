@@ -59,8 +59,8 @@ const paste = (text: string) => {
 
 /** The record the last bring-in wrote — found once the screen has moved on. */
 const stored = async (): Promise<SavedRepertoire> => {
-  await waitFor(() => expect(savedRepertoiresSnapshot()).toHaveLength(1));
-  return savedRepertoiresSnapshot()[0];
+  await waitFor(() => expect(savedRepertoiresSnapshot()!).toHaveLength(1));
+  return savedRepertoiresSnapshot()![0];
 };
 
 describe("bringing a repertoire in", () => {
@@ -68,14 +68,14 @@ describe("bringing a repertoire in", () => {
     // A file off disk has Windows line endings; a textarea never does.
     const fileText = CARO.replace(/\n/g, "\r\n");
 
-    const first = renderSection("/repertoires/new");
+    const first = await renderSection("/repertoires/new");
     await pickFile(fileText);
     const fromFile = await stored();
     first.unmount();
 
-    clearSavedRepertoires();
+    await clearSavedRepertoires();
 
-    renderSection("/repertoires/new");
+    await renderSection("/repertoires/new");
     paste(CARO);
     await userEvent.click(screen.getByTestId("repertoire-upload-save"));
     const fromPaste = await stored();
@@ -91,7 +91,7 @@ describe("bringing a repertoire in", () => {
   });
 
   it("names it as the reader asks, and then opens it on the board", async () => {
-    renderSection("/repertoires/new");
+    await renderSection("/repertoires/new");
     await userEvent.type(screen.getByTestId("repertoire-upload-name"), "Caro-Kann");
     await pickFile(CARO);
 
@@ -103,18 +103,18 @@ describe("bringing a repertoire in", () => {
   });
 
   it("refuses what it cannot read, says why, and keeps nothing", async () => {
-    renderSection("/repertoires/new");
+    await renderSection("/repertoires/new");
     paste('[Event "x"]\n\n1. e4 Ke5 *');
     await userEvent.click(screen.getByTestId("repertoire-upload-save"));
 
     expect(await screen.findByTestId("repertoire-upload-problem")).toHaveTextContent(
       "No line in it could be read.",
     );
-    expect(savedRepertoiresSnapshot()).toEqual([]);
+    expect(savedRepertoiresSnapshot()!).toEqual([]);
   });
 
   it("refuses an empty file", async () => {
-    renderSection("/repertoires/new");
+    await renderSection("/repertoires/new");
     await pickFile("   ");
     expect(await screen.findByTestId("repertoire-upload-problem")).toHaveTextContent(
       "That holds no PGN.",
@@ -122,20 +122,23 @@ describe("bringing a repertoire in", () => {
   });
 
   it("reports a full browser store rather than failing silently", async () => {
-    renderSection("/repertoires/new");
-    const setItem = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+    await renderSection("/repertoires/new");
+    const put = vi.spyOn(IDBObjectStore.prototype, "put").mockImplementation(() => {
       throw new DOMException("full", "QuotaExceededError");
     });
-    paste(CARO);
-    await userEvent.click(screen.getByTestId("repertoire-upload-save"));
-    expect(await screen.findByTestId("repertoire-upload-problem")).toHaveTextContent(
-      "storage is full",
-    );
-    setItem.mockRestore();
+    try {
+      paste(CARO);
+      await userEvent.click(screen.getByTestId("repertoire-upload-save"));
+      expect(await screen.findByTestId("repertoire-upload-problem")).toHaveTextContent(
+        "storage is full",
+      );
+    } finally {
+      put.mockRestore();
+    }
   });
 
   it("stores one game as it stands — no choice to make", async () => {
-    renderSection("/repertoires/new");
+    await renderSection("/repertoires/new");
     paste(CARO);
     await userEvent.click(screen.getByTestId("repertoire-upload-save"));
     await stored();
@@ -145,7 +148,7 @@ describe("bringing a repertoire in", () => {
 
 describe("a text of several games", () => {
   it("is not stored as it is: the reader is asked to merge or split", async () => {
-    renderSection("/repertoires/new");
+    await renderSection("/repertoires/new");
     paste(CARO_TWO_GAMES);
     await userEvent.click(screen.getByTestId("repertoire-upload-save"));
 
@@ -154,11 +157,11 @@ describe("a text of several games", () => {
     expect(screen.getByTestId("repertoire-choice-split")).toHaveTextContent(
       "Split into 2 repertoires",
     );
-    expect(savedRepertoiresSnapshot()).toEqual([]);
+    expect(savedRepertoiresSnapshot()!).toEqual([]);
   });
 
   it("merges into one repertoire and opens it", async () => {
-    renderSection("/repertoires/new");
+    await renderSection("/repertoires/new");
     fireEvent.change(screen.getByTestId("repertoire-upload-name"), {
       target: { value: "Caro-Kann" },
     });
@@ -166,22 +169,22 @@ describe("a text of several games", () => {
     await userEvent.click(screen.getByTestId("repertoire-upload-save"));
     await userEvent.click(await screen.findByTestId("repertoire-choice-merge"));
 
-    const [record] = savedRepertoiresSnapshot();
-    expect(savedRepertoiresSnapshot()).toHaveLength(1);
+    const record = await stored();
     expect(record).toMatchObject({ name: "Caro-Kann", stats: { moves: 4, variations: 1 } });
     expect(await screen.findByTestId("repertoire-board-name")).toHaveTextContent("Caro-Kann");
   });
 
   it("splits into one repertoire per game, in a folder of their own, and opens it", async () => {
-    renderSection("/repertoires/new");
+    await renderSection("/repertoires/new");
     paste(CARO_TWO_GAMES);
     await userEvent.click(screen.getByTestId("repertoire-upload-save"));
     await userEvent.click(await screen.findByTestId("repertoire-choice-split"));
 
-    const [folder] = repertoireFoldersSnapshot();
+    await waitFor(() => expect(savedRepertoiresSnapshot()!).toHaveLength(2));
+    const [folder] = repertoireFoldersSnapshot()!;
     expect(folder.name).toBe("My Caro");
     expect(
-      savedRepertoiresSnapshot().map((row) => [row.name, row.folderId]),
+      savedRepertoiresSnapshot()!.map((row) => [row.name, row.folderId]),
     ).toEqual([
       ["Advance · 3...Bf5", folder.id],
       ["Exchange · 3...cxd5", folder.id],
@@ -192,7 +195,7 @@ describe("a text of several games", () => {
   });
 
   it("offers no merge for games from different starts, and says why", async () => {
-    renderSection("/repertoires/new");
+    await renderSection("/repertoires/new");
     paste(
       `${CARO}\n\n[Event "Endgame"]\n[SetUp "1"]\n[FEN "8/8/8/4k3/8/8/4P3/4K3 w - - 0 1"]\n\n1. Kd2 *`,
     );

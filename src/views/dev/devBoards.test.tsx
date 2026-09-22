@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { act, render, screen, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import type { ReactNode } from "react";
 
@@ -38,7 +38,7 @@ vi.mock("../../lib/openings", async (importOriginal) => {
 });
 
 import { boardOptions, FakeEngine } from "./devTestHarness";
-import { playedGamesSnapshot } from "../../lib/playedGameStore";
+import { loadPlayedGames, playedGamesSnapshot } from "../../lib/playedGameStore";
 import AnalysisBoard from "../tools/analysis/AnalysisBoard";
 import PlayWithEngine from "../engine/play/PlayWithEngine";
 import LibraryGameBoard from "../library/LibraryGameBoard";
@@ -291,24 +291,23 @@ describe("Masked Pieces (CTA-79)", () => {
     expect(screen.getByTestId("masked-play-panel-variations")).toBeInTheDocument();
   });
 
-  it("saves its game with the engine games, costume and all", () => {
+  it("saves its game with the engine games, costume and all", async () => {
     renderBoard(MaskedPlay);
 
     expect(drag("e2", "e4")).toBe(true);
 
-    const saved = playedGamesSnapshot();
-    expect(saved).toHaveLength(1);
-    expect(saved[0].mask?.notation).toBe(true);
+    await waitFor(() => expect(playedGamesSnapshot()).toHaveLength(1));
+    expect(playedGamesSnapshot()?.[0].mask?.notation).toBe(true);
   });
 });
 
 describe("the Openings explorer (CTA-78)", () => {
-  it("keeps nothing: no save, and no store written", () => {
+  it("keeps nothing: no save, and no store written", async () => {
     renderBoard(OpeningsBoard);
 
     expect(drag("e2", "e4")).toBe(true);
     expect(screen.queryByTestId("openings-save")).not.toBeInTheDocument();
-    expect(playedGamesSnapshot()).toEqual([]);
+    expect(await loadPlayedGames()).toEqual([]);
   });
 
   it("carries the book explorer in a tab of its own", () => {

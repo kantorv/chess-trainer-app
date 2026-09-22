@@ -35,20 +35,20 @@ const store = (id: string, pgn: string, playAs: "white" | "black" = "white") =>
   );
 
 beforeEach(async () => {
-  localStorage.clear();
   await i18n.changeLanguage("en");
 });
 
 describe("Saved games (v2) — the list", () => {
-  it("says so when there is nothing yet", () => {
+  it("says it is reading until the store's first read lands, then that there is nothing yet", async () => {
     mount();
-    expect(screen.getByTestId("played-games-empty")).toBeInTheDocument();
+    expect(screen.getByTestId("played-games-loading")).toBeInTheDocument();
+    expect(await screen.findByTestId("played-games-empty")).toBeInTheDocument();
     expect(screen.getByTestId("played-games-count")).toHaveTextContent("Games: 0");
   });
 
-  it("lists the games newest first, titled by the pairing, White first", () => {
-    store("a", "1. e4 (1. d4) 1... e5 *");
-    store("b", "1. d4 d5 *", "black");
+  it("lists the games newest first, titled by the pairing, White first", async () => {
+    await store("a", "1. e4 (1. d4) 1... e5 *");
+    await store("b", "1. d4 d5 *", "black");
     mount();
 
     const rows = screen.getAllByTestId(/^played-games-item-/);
@@ -64,9 +64,9 @@ describe("Saved games (v2) — the list", () => {
     );
   });
 
-  it("gives the length, the side lines and the result as PGN writes it", () => {
-    store("a", "1. e4 (1. d4) 1... e5 *");
-    store("m", "1. f3 e5 2. g4 Qh4# 0-1");
+  it("gives the length, the side lines and the result as PGN writes it", async () => {
+    await store("a", "1. e4 (1. d4) 1... e5 *");
+    await store("m", "1. f3 e5 2. g4 Qh4# 0-1");
     mount();
     expect(screen.getByTestId("played-games-caption-a")).toHaveTextContent(
       /^1 move · 1 side line · \* · /,
@@ -74,8 +74,8 @@ describe("Saved games (v2) — the list", () => {
     expect(screen.getByTestId("played-games-caption-m")).toHaveTextContent(/ · 0-1 · /);
   });
 
-  it("continues a game on Play with Engine, and hands it to the Analysis Board", () => {
-    store("a", "1. e4 *");
+  it("continues a game on Play with Engine, and hands it to the Analysis Board", async () => {
+    await store("a", "1. e4 *");
     mount();
     expect(screen.getByTestId("played-games-continue-a")).toHaveAttribute(
       "href",
@@ -87,21 +87,21 @@ describe("Saved games (v2) — the list", () => {
     );
   });
 
-  it("deletes a game only once asked", () => {
-    store("a", "1. e4 *");
+  it("deletes a game only once asked", async () => {
+    await store("a", "1. e4 *");
     mount();
     fireEvent.click(screen.getByTestId("played-games-remove-a"));
     expect(playedGamesSnapshot()).toHaveLength(1);
     fireEvent.click(screen.getByTestId("played-games-delete-confirm"));
+    expect(await screen.findByTestId("played-games-empty")).toBeInTheDocument();
     expect(playedGamesSnapshot()).toHaveLength(0);
-    expect(screen.getByTestId("played-games-empty")).toBeInTheDocument();
   });
 });
 
 describe("Saved games — a masked game (CTA-79)", () => {
-  it("is marked Masked, continues on Masked Pieces and opens unmasked in Analysis", () => {
-    store("plain", "1. e4 *");
-    savePlayedGame(
+  it("is marked Masked, continues on Masked Pieces and opens unmasked in Analysis", async () => {
+    await store("plain", "1. e4 *");
+    await savePlayedGame(
       playedGameOf(
         "m",
         parsePgnTree("1. Nf3 *"),

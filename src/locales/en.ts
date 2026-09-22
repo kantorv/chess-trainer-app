@@ -344,6 +344,7 @@ const en = {
   playedGames: {
     title: "Saved games",
     count: "Games: {{count}}",
+    loading: "Reading your saved games…",
     empty: "No saved games yet. Play a game against the engine and it appears here on its own.",
     hint: "Every game you play against the engine is written down as you play it — side lines too. Pick one up where you left it, or open it on the Analysis Board.",
     storage: "Saved games are kept in this browser only. Clearing site data removes them, and they do not follow you to another device.",
@@ -1003,6 +1004,7 @@ const en = {
   repertoires: {
     title: "Repertoires",
     count: "Repertoires: {{count}}",
+    loading: "Reading your repertoires…",
     empty:
       "No repertoires yet. Add one from a .pgn file, or paste its PGN, and it appears here.",
     hint: "Your own opening repertoires. Open one to read its lines on the board, side lines and all, with the engine beside you.",

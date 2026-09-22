@@ -10,6 +10,7 @@ import { useTranslation } from "react-i18next";
 import { MASK_PRESETS, type PieceMask } from "../../../lib/pieceMask";
 import type { PlayedGameMask } from "../../../lib/playedGames";
 import PlayScreen, { type PlayScreenMasking } from "../play/PlayScreen";
+import { PlayedGameRead } from "../play/PlayedGameRead";
 import { arrivalOf } from "../play/usePlayGame";
 import MaskEditor from "./MaskEditor";
 
@@ -40,9 +41,18 @@ import MaskEditor from "./MaskEditor";
  *
  * A `?saved=` naming an **unmasked** game goes to `/engine/play`, where it was
  * begun — the counterpart of the redirect there — rather than acquiring a
- * costume it never had.
+ * costume it never had. A `?saved=` arrival waits for the played games'
+ * first read (IndexedDB — `PlayedGameRead`) before the arrival is read.
  */
 function MaskedPlay() {
+  return (
+    <PlayedGameRead testId="masked-play">
+      <MaskedPlayArrival />
+    </PlayedGameRead>
+  );
+}
+
+function MaskedPlayArrival() {
   const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const [arrival] = useState(() => arrivalOf(searchParams));

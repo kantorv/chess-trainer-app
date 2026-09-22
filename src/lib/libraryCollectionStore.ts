@@ -1,10 +1,11 @@
 import { numberedRows, type IndexedRow } from "./collectionIndex";
 import type { CollectionRow, CollectionSummary } from "./libraryCollections";
+import { committed, done, idbDatabase } from "./idb";
 import { newRecordId } from "./recordId";
 
 /**
  * **The reader's own Library collections** (CTA-75) — kept in **IndexedDB**,
- * the one store in the app that is not `localStorage`.
+ * opened through `lib/idb.ts` (the app's storage: `.claude/rules/database.md`).
  *
  * ### Why IndexedDB
  *
@@ -63,48 +64,8 @@ type StoredGames = { id: string; games: string[] };
 
 /* --- the connection ----------------------------------------------- */
 
-let dbPromise: Promise<IDBDatabase> | undefined;
-
-const openDb = (): Promise<IDBDatabase> =>
-  (dbPromise ??= new Promise<IDBDatabase>((resolve, reject) => {
-    if (typeof indexedDB === "undefined") {
-      reject(new Error("IndexedDB is not available"));
-      return;
-    }
-    const request = indexedDB.open(LIBRARY_DB_NAME, DB_VERSION);
-    request.onupgradeneeded = () => {
-      const db = request.result;
-      for (const store of [COLLECTIONS, INDEXES, GAMES]) {
-        if (!db.objectStoreNames.contains(store)) db.createObjectStore(store, { keyPath: "id" });
-      }
-    };
-    request.onsuccess = () => {
-      const db = request.result;
-      // A newer version opening elsewhere: step aside, and reconnect on the next call.
-      db.onversionchange = () => {
-        db.close();
-        dbPromise = undefined;
-      };
-      resolve(db);
-    };
-    request.onerror = () => reject(request.error);
-  }).catch((error: unknown) => {
-    dbPromise = undefined;
-    throw error;
-  }));
-
-const done = <T>(request: IDBRequest<T>): Promise<T> =>
-  new Promise((resolve, reject) => {
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
-
-const committed = (tx: IDBTransaction): Promise<void> =>
-  new Promise((resolve, reject) => {
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-    tx.onabort = () => reject(tx.error ?? new Error("aborted"));
-  });
+const libraryDb = idbDatabase(LIBRARY_DB_NAME, DB_VERSION, [COLLECTIONS, INDEXES, GAMES]);
+const openDb = libraryDb.open;
 
 /* --- what has been read, kept ------------------------------------- */
 
@@ -423,15 +384,8 @@ export const removeCollectionGames = (
  * database — the IndexedDB counterpart of `localStorage.clear()`.
  */
 export const resetLibraryCollectionStore = async (): Promise<void> => {
-  const pending = dbPromise;
-  dbPromise = undefined;
   summaries = undefined;
   rowsCache.clear();
   gamesCache.clear();
-  (await pending?.catch(() => undefined))?.close();
-  if (typeof indexedDB === "undefined") return;
-  await new Promise<void>((resolve) => {
-    const request = indexedDB.deleteDatabase(LIBRARY_DB_NAME);
-    request.onsuccess = request.onerror = request.onblocked = () => resolve();
-  });
+  await libraryDb.remove();
 };

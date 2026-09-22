@@ -162,7 +162,7 @@ function PlayedGames() {
   // Each record read once per change of the store: whether it parses, and its caption.
   const rows = useMemo(
     () =>
-      games.map((saved) => {
+      (games ?? []).map((saved) => {
         const tree = playedGameToTree(saved);
         return { saved, readable: tree !== undefined, summary: playedGameSummary(saved, tree) };
       }),
@@ -192,7 +192,7 @@ function PlayedGames() {
             variant="caption"
             sx={{ display: "block", color: "text.secondary" }}
           >
-            {t("playedGames.count", { count: games.length })}
+            {games === undefined ? "" : t("playedGames.count", { count: games.length })}
           </Typography>
         </Box>
         {/* The one region that scrolls: the shell scrolls nothing in the square. */}
@@ -200,7 +200,11 @@ function PlayedGames() {
           data-testid="played-games-body"
           sx={{ flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden" }}
         >
-          {games.length === 0 ? (
+          {games === undefined ? (
+            <Typography data-testid="played-games-loading" sx={{ color: "text.secondary", p: 2 }}>
+              {t("playedGames.loading")}
+            </Typography>
+          ) : games.length === 0 ? (
             <Typography
               data-testid="played-games-empty"
               variant="body2"
@@ -242,7 +246,7 @@ function PlayedGames() {
             color="error"
             data-testid="played-games-delete-confirm"
             onClick={() => {
-              if (deleting !== null) removePlayedGame(deleting);
+              if (deleting !== null) void removePlayedGame(deleting);
               setDeleting(null);
             }}
           >

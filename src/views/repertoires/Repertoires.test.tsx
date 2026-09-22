@@ -1,15 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { act, screen, within } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import i18n from "../../i18n";
+import { resetRepertoireFolderStore } from "../../lib/savedRepertoireFolderStore";
 import {
+  clearSavedRepertoires,
+  resetSavedRepertoireStore,
   SAVED_REPERTOIRES_STORAGE_KEY,
   savedRepertoiresSnapshot,
 } from "../../lib/savedRepertoireStore";
 import {
   CARO_TWO_GAMES,
   renderSection,
+  renderSectionNow,
   storeLegacyRepertoire,
   storeRepertoire,
 } from "./repertoireTestKit";
@@ -17,7 +21,7 @@ import {
 /*
   The list screen. `<Chessboard>` is stubbed (`.claude/rules/chessboard.md` §8)
   and keeps the id and position it was handed; the store is not — it writes to
-  the `localStorage` jsdom provides, which `src/test/setup.ts` clears.
+  the tests' fake-indexeddb, whose databases `src/test/setup.ts` deletes.
 */
 vi.mock("react-chessboard", () => ({
   Chessboard: ({ options }: { options: { id?: string; position?: string } }) => (
@@ -36,8 +40,8 @@ beforeEach(async () => {
 });
 
 describe("the Repertoires list", () => {
-  it("says so when there are none, and offers the way in", () => {
-    renderSection("/repertoires");
+  it("says so when there are none, and offers the way in", async () => {
+    await renderSection("/repertoires");
     expect(screen.getByTestId("repertoires-empty")).toBeInTheDocument();
     expect(screen.getByTestId("repertoires-add")).toHaveAttribute(
       "href",
@@ -45,10 +49,10 @@ describe("the Repertoires list", () => {
     );
   });
 
-  it("lists stored repertoires newest first, with their size, and links each to its board", () => {
-    store("a", "Caro");
-    store("b", "");
-    renderSection("/repertoires");
+  it("lists stored repertoires newest first, with their size, and links each to its board", async () => {
+    await store("a", "Caro");
+    await store("b", "");
+    await renderSection("/repertoires");
 
     const rows = screen.getAllByTestId(/^repertoires-item-/);
     expect(rows.map((row) => row.dataset.testid)).toEqual([
@@ -66,19 +70,36 @@ describe("the Repertoires list", () => {
     expect(screen.getByTestId("repertoires-count")).toHaveTextContent("2");
   });
 
-  it("survives a reload — a fresh mount reads what storage holds", () => {
-    store("a", "Caro");
-    const first = renderSection("/repertoires");
+  it("survives a reload — a fresh mount reads what storage holds, saying so meanwhile", async () => {
+    await store("a", "Caro");
+    const first = await renderSection("/repertoires");
     first.unmount();
 
-    expect(localStorage.getItem(SAVED_REPERTOIRES_STORAGE_KEY)).toContain('"id":"a"');
-    renderSection("/repertoires");
-    expect(screen.getByTestId("repertoires-item-a")).toBeInTheDocument();
+    // A reload: nothing read yet, and no data in localStorage (the language
+    // choice is all that lives there) — IndexedDB holds it.
+    resetSavedRepertoireStore();
+    resetRepertoireFolderStore();
+    expect(Object.keys(localStorage).filter((key) => key.startsWith("chessapp."))).toEqual([]);
+    renderSectionNow("/repertoires");
+    expect(screen.getByTestId("repertoires-loading")).toHaveTextContent("Reading your repertoires");
+    expect(await screen.findByTestId("repertoires-item-a")).toBeInTheDocument();
+  });
+
+  it("moves repertoires saved before IndexedDB out of localStorage on the first visit", async () => {
+    await store("a", "Caro");
+    const kept = savedRepertoiresSnapshot()!;
+    await clearSavedRepertoires();
+    resetSavedRepertoireStore();
+    localStorage.setItem(SAVED_REPERTOIRES_STORAGE_KEY, JSON.stringify(kept));
+
+    renderSectionNow("/repertoires");
+    expect(await screen.findByTestId("repertoires-item-a")).toBeInTheDocument();
+    expect(localStorage.getItem(SAVED_REPERTOIRES_STORAGE_KEY)).toBeNull();
   });
 
   it("carries no per-record delete or move, on a row or a card", async () => {
-    store("a", "Caro");
-    renderSection("/repertoires");
+    await store("a", "Caro");
+    await renderSection("/repertoires");
     expect(screen.queryByTestId("repertoires-remove-a")).not.toBeInTheDocument();
     expect(screen.queryByTestId("repertoires-move-a")).not.toBeInTheDocument();
 
@@ -88,10 +109,10 @@ describe("the Repertoires list", () => {
   });
 
   it("deletes the picked repertoires in bulk, after asking", async () => {
-    store("a", "Caro");
-    store("b", "Slav");
-    store("c", "French");
-    renderSection("/repertoires");
+    await store("a", "Caro");
+    await store("b", "Slav");
+    await store("c", "French");
+    await renderSection("/repertoires");
 
     // Nothing picked, nothing to delete.
     expect(screen.getByTestId("repertoires-delete")).toBeDisabled();
@@ -104,7 +125,7 @@ describe("the Repertoires list", () => {
     );
     await userEvent.click(screen.getByTestId("repertoires-delete-confirm"));
 
-    expect(savedRepertoiresSnapshot().map((row) => row.id)).toEqual(["b"]);
+    await waitFor(() => expect(savedRepertoiresSnapshot()!.map((row) => row.id)).toEqual(["b"]));
     expect(screen.getAllByTestId(/^repertoires-item-/).map((row) => row.dataset.testid)).toEqual(
       ["repertoires-item-b"],
     );
@@ -114,8 +135,8 @@ describe("the Repertoires list", () => {
   });
 
   it("deletes nothing when the ask is cancelled", async () => {
-    store("a", "Caro");
-    renderSection("/repertoires");
+    await store("a", "Caro");
+    await renderSection("/repertoires");
 
     await userEvent.click(within(screen.getByTestId("repertoires-select-a")).getByRole("checkbox"));
     await userEvent.click(screen.getByTestId("repertoires-delete"));
@@ -124,14 +145,14 @@ describe("the Repertoires list", () => {
     );
     await userEvent.click(screen.getByTestId("repertoires-delete-cancel"));
 
-    expect(savedRepertoiresSnapshot().map((row) => row.id)).toEqual(["a"]);
+    expect(savedRepertoiresSnapshot()!.map((row) => row.id)).toEqual(["a"]);
     expect(screen.getByTestId("repertoires-selected-count")).toHaveTextContent("1");
   });
 
   it("picks, downloads and deletes on the cards too, keeping the picks across views", async () => {
-    store("a", "Caro");
-    store("b", "Slav");
-    renderSection("/repertoires");
+    await store("a", "Caro");
+    await store("b", "Slav");
+    await renderSection("/repertoires");
 
     await userEvent.click(within(screen.getByTestId("repertoires-select-a")).getByRole("checkbox"));
     for (const view of ["compact", "comfortable"]) {
@@ -152,13 +173,13 @@ describe("the Repertoires list", () => {
     expect(screen.getByTestId("repertoires-selected-count")).toHaveTextContent("2");
     await userEvent.click(screen.getByTestId("repertoires-delete"));
     await userEvent.click(screen.getByTestId("repertoires-delete-confirm"));
-    expect(savedRepertoiresSnapshot()).toEqual([]);
-    expect(screen.getByTestId("repertoires-empty")).toBeInTheDocument();
+    expect(await screen.findByTestId("repertoires-empty")).toBeInTheDocument();
+    expect(savedRepertoiresSnapshot()!).toEqual([]);
   });
 
   it("offers the saved screens' three views, and previews where the lines branch", async () => {
-    store("a", "Caro");
-    renderSection("/repertoires");
+    await store("a", "Caro");
+    await renderSection("/repertoires");
 
     for (const view of ["list", "compact", "comfortable"]) {
       expect(screen.getByTestId(`repertoires-view-${view}`)).toBeInTheDocument();
@@ -177,9 +198,9 @@ describe("the Repertoires list", () => {
   });
 
   it("picks rows for export in the list view", async () => {
-    store("a", "Caro");
-    store("b", "Slav");
-    renderSection("/repertoires");
+    await store("a", "Caro");
+    await store("b", "Slav");
+    await renderSection("/repertoires");
 
     await userEvent.click(
       within(screen.getByTestId("repertoires-select-a")).getByRole("checkbox"),
@@ -192,17 +213,17 @@ describe("the Repertoires list", () => {
     expect(screen.getByTestId("repertoires-download")).toBeEnabled();
   });
 
-  it("follows a write made while it is showing", () => {
-    renderSection("/repertoires");
-    act(() => {
-      store("a", "Caro");
+  it("follows a write made while it is showing", async () => {
+    await renderSection("/repertoires");
+    await act(async () => {
+      await store("a", "Caro");
     });
     expect(screen.getByTestId("repertoires-item-a")).toBeInTheDocument();
   });
 
-  it("marks a record from before the one-game rule as needing a choice", () => {
-    storeLegacyRepertoire("old", CARO_TWO_GAMES, "Old Caro");
-    renderSection("/repertoires");
+  it("marks a record from before the one-game rule as needing a choice", async () => {
+    await storeLegacyRepertoire("old", CARO_TWO_GAMES, "Old Caro");
+    await renderSection("/repertoires");
     expect(screen.getByTestId("repertoires-item-old")).toHaveTextContent(
       "Several games — open to merge or split",
     );

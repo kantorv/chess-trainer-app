@@ -11,6 +11,7 @@ import {
   renderSection,
   storeLegacyRepertoire,
   storeRepertoire,
+  FAKE_TIMERS,
 } from "./repertoireTestKit";
 
 /*
@@ -60,8 +61,8 @@ const tally = () => [
 ];
 const lines = () => screen.getByTestId(`${ID}-score-lines`).textContent;
 
-const mount = (path: string) => {
-  renderSection(path);
+const mount = async (path: string) => {
+  await renderSection(path);
   act(() => {
     vi.advanceTimersByTime(0);
   });
@@ -97,7 +98,7 @@ const play = (...moves: [string, string][]) => {
 beforeEach(async () => {
   FakeEngine.reset();
   await i18n.changeLanguage("en");
-  vi.useFakeTimers();
+  vi.useFakeTimers(FAKE_TIMERS);
   vi.spyOn(Math, "random").mockReturnValue(0);
 });
 
@@ -107,9 +108,9 @@ afterEach(() => {
 });
 
 describe("reaching a game", () => {
-  it("is a menu on the repertoire's own view, and on its row in the list", () => {
-    storeRepertoire("r", CARO);
-    mount("/repertoires/r");
+  it("is a menu on the repertoire's own view, and on its row in the list", async () => {
+    await storeRepertoire("r", CARO);
+    await mount("/repertoires/r");
     fireEvent.click(screen.getByTestId("repertoire-board-games"));
     expect(screen.getByTestId("repertoire-board-games-end")).toHaveAttribute(
       "href",
@@ -121,9 +122,9 @@ describe("reaching a game", () => {
     );
   });
 
-  it("is the same menu in the list", () => {
-    storeRepertoire("r", CARO);
-    mount("/repertoires");
+  it("is the same menu in the list", async () => {
+    await storeRepertoire("r", CARO);
+    await mount("/repertoires");
     fireEvent.click(screen.getByTestId("repertoires-games-r"));
     expect(screen.getByTestId("repertoires-games-r-backtrack")).toHaveAttribute(
       "href",
@@ -131,8 +132,8 @@ describe("reaching a game", () => {
     );
   });
 
-  it("opens on the Score tab, with the trainer playing and no Autoplay switch", () => {
-    mount(`/repertoires/${storeRepertoire("r", CARO, "Caro")}/games/end`);
+  it("opens on the Score tab, with the trainer playing and no Autoplay switch", async () => {
+    await mount(`/repertoires/${await storeRepertoire("r", CARO, "Caro")}/games/end`);
     expect(boardOptions().id).toBe(ID);
     expect(screen.getByTestId(`${ID}-title`)).toHaveTextContent("Get to the end");
     expect(screen.getByTestId(`${ID}-score`)).toBeVisible();
@@ -142,21 +143,21 @@ describe("reaching a game", () => {
     expect(screen.getByTestId(`${ID}-back`)).toHaveAttribute("href", "/repertoires/r");
   });
 
-  it("says so for a game there is no such thing as", () => {
-    storeRepertoire("r", CARO);
-    mount("/repertoires/r/games/nope");
+  it("says so for a game there is no such thing as", async () => {
+    await storeRepertoire("r", CARO);
+    await mount("/repertoires/r/games/nope");
     expect(screen.getByTestId("repertoire-board-missing")).toBeInTheDocument();
   });
 
-  it("offers a record from before the one-game rule its merge-or-split choice", () => {
-    mount(`/repertoires/${storeLegacyRepertoire("old", CARO_TWO_GAMES, "Old")}/games/end`);
+  it("offers a record from before the one-game rule its merge-or-split choice", async () => {
+    await mount(`/repertoires/${await storeLegacyRepertoire("old", CARO_TWO_GAMES, "Old")}/games/end`);
     expect(screen.getByTestId("repertoire-board-multi")).toBeInTheDocument();
   });
 });
 
 describe("Get to the end", () => {
-  it("counts a right move, takes a wrong one back, and counts a position once", () => {
-    mount(`/repertoires/${storeRepertoire("r", CARO)}/games/end`);
+  it("counts a right move, takes a wrong one back, and counts a position once", async () => {
+    await mount(`/repertoires/${await storeRepertoire("r", CARO)}/games/end`);
 
     play(["e2", "e4"]);
     expect(tally()).toEqual(["1", "0"]);
@@ -184,8 +185,8 @@ describe("Get to the end", () => {
     expect(screen.getByTestId(`${ID}-score-accuracy`)).toHaveTextContent("67%");
   });
 
-  it("finishes a line at its end, counts it, and counts again after a restart", () => {
-    mount(`/repertoires/${storeRepertoire("r", CARO)}/games/end`);
+  it("finishes a line at its end, counts it, and counts again after a restart", async () => {
+    await mount(`/repertoires/${await storeRepertoire("r", CARO)}/games/end`);
     play(["e2", "e4"], ["d2", "d4"], ["e4", "e5"], ["g1", "f3"]);
     expect(status()).toBe("line-complete");
     expect(lines()).toBe("1 line finished");
@@ -213,8 +214,8 @@ describe("Get to the end", () => {
 });
 
 describe("Backtracking", () => {
-  it("covers one line, goes back to the next, and ends when every line is covered", () => {
-    mount(`/repertoires/${storeRepertoire("r", CARO)}/games/backtrack`);
+  it("covers one line, goes back to the next, and ends when every line is covered", async () => {
+    await mount(`/repertoires/${await storeRepertoire("r", CARO)}/games/backtrack`);
     expect(screen.getByTestId(`${ID}-title`)).toHaveTextContent("Backtracking");
     expect(lines()).toBe("Lines covered: 0 of 2");
 
@@ -239,8 +240,8 @@ describe("Backtracking", () => {
     expect(tally()).toEqual(["5", "0"]);
   });
 
-  it("marks the required move where the reader's other moves are covered, and refuses those", () => {
-    mount(`/repertoires/${storeRepertoire("f", WHITE_FORK)}/games/backtrack`);
+  it("marks the required move where the reader's other moves are covered, and refuses those", async () => {
+    await mount(`/repertoires/${await storeRepertoire("f", WHITE_FORK)}/games/backtrack`);
     play(["e2", "e4"]);
     // Both of White's moves still lead somewhere new: nothing required.
     expect(status()).toBe("your-move");
@@ -267,8 +268,8 @@ describe("Backtracking", () => {
     expect(status()).toBe("all-covered");
   });
 
-  it("draws the repertoire as a map, with where the reader is and what is covered", () => {
-    mount(`/repertoires/${storeRepertoire("r", CARO)}/games/backtrack`);
+  it("draws the repertoire as a map, with where the reader is and what is covered", async () => {
+    await mount(`/repertoires/${await storeRepertoire("r", CARO)}/games/backtrack`);
     const map = `${ID}-map`;
     // Get to the end has no map; Backtracking has, beside the Score.
     fireEvent.click(screen.getByTestId(`${ID}-panel-tab-map`));
@@ -300,8 +301,8 @@ describe("Backtracking", () => {
     expect(screen.getByTestId(`${map}-here`)).toHaveAttribute("data-node-id", end!);
   });
 
-  it("dots every move in its side's colour, and rings the ones played", () => {
-    mount(`/repertoires/${storeRepertoire("r", CARO)}/games/backtrack`);
+  it("dots every move in its side's colour, and rings the ones played", async () => {
+    await mount(`/repertoires/${await storeRepertoire("r", CARO)}/games/backtrack`);
     const map = `${ID}-map`;
     fireEvent.click(screen.getByTestId(`${ID}-panel-tab-map`));
     const dots = (name: string) =>
@@ -325,8 +326,8 @@ describe("Backtracking", () => {
     expect(within(screen.getByTestId(`${map}-labels`)).getByText("e4")).toBeInTheDocument();
   });
 
-  it("zooms and pans the map in the tab as full screen does, and keeps it across tabs", () => {
-    mount(`/repertoires/${storeRepertoire("r", CARO)}/games/backtrack`);
+  it("zooms and pans the map in the tab as full screen does, and keeps it across tabs", async () => {
+    await mount(`/repertoires/${await storeRepertoire("r", CARO)}/games/backtrack`);
     const map = `${ID}-map`;
     fireEvent.click(screen.getByTestId(`${ID}-panel-tab-map`));
     const view = () => {
@@ -357,8 +358,8 @@ describe("Backtracking", () => {
     expect(view()).toEqual(kept);
   });
 
-  it("follows the reader when play leaves the view", () => {
-    mount(`/repertoires/${storeRepertoire("r", CARO)}/games/backtrack`);
+  it("follows the reader when play leaves the view", async () => {
+    await mount(`/repertoires/${await storeRepertoire("r", CARO)}/games/backtrack`);
     const map = `${ID}-map`;
     fireEvent.click(screen.getByTestId(`${ID}-panel-tab-map`));
     const viewport = screen.getByTestId(`${map}-viewport`);
@@ -381,8 +382,8 @@ describe("Backtracking", () => {
     expect(sy).toBeLessThan(360 - 24);
   });
 
-  it("opens the map full screen, zoomed with the wheel and moved by dragging", () => {
-    mount(`/repertoires/${storeRepertoire("r", CARO)}/games/backtrack`);
+  it("opens the map full screen, zoomed with the wheel and moved by dragging", async () => {
+    await mount(`/repertoires/${await storeRepertoire("r", CARO)}/games/backtrack`);
     const map = `${ID}-map`;
     const full = `${map}-dialog`;
     fireEvent.click(screen.getByTestId(`${ID}-panel-tab-map`));
@@ -435,8 +436,8 @@ describe("Backtracking", () => {
     expect(screen.queryByTestId(`${full}-view`)).not.toBeInTheDocument();
   });
 
-  it("writes the moves on the full-screen map by default, for the dots on screen", () => {
-    mount(`/repertoires/${storeRepertoire("r", CARO)}/games/backtrack`);
+  it("writes the moves on the full-screen map by default, for the dots on screen", async () => {
+    await mount(`/repertoires/${await storeRepertoire("r", CARO)}/games/backtrack`);
     const full = `${ID}-map-dialog`;
     fireEvent.click(screen.getByTestId(`${ID}-panel-tab-map`));
     play(["e2", "e4"]);
@@ -473,13 +474,13 @@ describe("Backtracking", () => {
     expect(screen.getByTestId(`${ID}-map-show-moves`)).toHaveAttribute("aria-pressed", "false");
   });
 
-  it("has no map in Get to the end", () => {
-    mount(`/repertoires/${storeRepertoire("r", CARO)}/games/end`);
+  it("has no map in Get to the end", async () => {
+    await mount(`/repertoires/${await storeRepertoire("r", CARO)}/games/end`);
     expect(screen.queryByTestId(`${ID}-panel-tab-map`)).not.toBeInTheDocument();
   });
 
-  it("starts over with nothing covered", () => {
-    mount(`/repertoires/${storeRepertoire("f", WHITE_FORK)}/games/backtrack`);
+  it("starts over with nothing covered", async () => {
+    await mount(`/repertoires/${await storeRepertoire("f", WHITE_FORK)}/games/backtrack`);
     play(["e2", "e4"]);
     drop("g1", "f3");
     expect(lines()).toBe("Lines covered: 1 of 2");

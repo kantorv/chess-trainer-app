@@ -196,7 +196,7 @@ export function BoardSection({ draft, onChange }: RepertoireSettingsSectionProps
  */
 export function FolderSection({ draft, onChange }: RepertoireSettingsSectionProps) {
   const { t } = useTranslation();
-  const folders = sortedRepertoireFolders(useRepertoireFolders());
+  const folders = sortedRepertoireFolders(useRepertoireFolders() ?? []);
 
   const item = (folderId: string | null, label: string, depth: number) => {
     const selected = draft.folderId === folderId;
