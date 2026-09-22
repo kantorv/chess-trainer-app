@@ -29,6 +29,8 @@ const en = {
     /** The Library's two screens (CTA-75): the collections, and adding one. */
     libraryCollections: "Collections",
     addCollection: "Add collection",
+    /** Settings' Export tab (CTA-86), in the Settings folder. */
+    settingsExport: "Export",
     /** Sidebar folders — groupings over the routes, never routes themselves. */
     folders: {
       engine: "Engine",
@@ -40,6 +42,8 @@ const en = {
        * the rows of `/library`, named from their files and uploads.
        */
       library: "Library",
+      /** The app's own settings (CTA-86) — one screen per tab. */
+      settings: "Settings",
     },
   },
   /** The index screen — a landing page linking out to the real screens. */
@@ -1280,6 +1284,33 @@ const en = {
         tree: "Tree",
         engine: "Engine",
       },
+    },
+  },
+  /** Settings (`/settings/<tab>`, CTA-86) — one tab per concern. */
+  settings: {
+    title: "Settings",
+    tabs: {
+      export: "Export",
+    },
+    /** The Export tab: the reader's data as PGN files and a manifest, in one zip. */
+    export: {
+      intro:
+        "Download your data as one .zip: PGN files that any chess program reads, and a manifest.json saying how they fit back together.",
+      categories: {
+        collections: "Collections",
+        games: "Games",
+        analyses: "Analyses",
+        repertoires: "Repertoires",
+      },
+      includeShipped_one: "Include the {{count}} shipped collection",
+      includeShipped_other: "Include the {{count}} shipped collections",
+      run: "Export",
+      working: "Exporting…",
+      done: "Downloaded {{fileName}}.",
+      failed: "The export could not be saved. Nothing was downloaded.",
+      unreadable: "The games of “{{name}}” could not be read. Nothing was downloaded.",
+      panel:
+        "Games and Analyses are one PGN file each; every collection is a file of its own; repertoires are one file per folder, plus one for the unfiled ones. Your uploaded collections always go with Collections — the ones the app ships only when you ask. Nothing is changed or removed.",
     },
   },
   footer: {

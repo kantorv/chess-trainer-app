@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import Box from "@mui/material/Box";
 import Collapse from "@mui/material/Collapse";
+import Divider from "@mui/material/Divider";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
 import ListItemButton from "@mui/material/ListItemButton";
@@ -197,19 +198,50 @@ function SidebarLinks({ tree: given }: { tree?: NavTreeNode[] }) {
       prev.includes(id) ? prev.slice(0, prev.indexOf(id)) : folderChain(id, tree),
     );
 
+  const rowsOf = (nodes: NavTreeNode[]) =>
+    nodes.map((node) => (
+      <TreeRow
+        key={`${node.kind}:${node.id}`}
+        node={node}
+        depth={0}
+        expanded={expanded}
+        pathname={pathname}
+        onToggle={toggle}
+      />
+    ));
+
+  /*
+    A folder pinned to the foot (Settings) is the app's own chrome, so it sits
+    apart: the screens scroll in the region above, and the foot never scrolls
+    away. Opening a pinned folder grows the foot upwards and shrinks the
+    region above, so its screens are always in view. One `nav` landmark for
+    both, and one open chain across them.
+  */
+  const main = tree.filter((node) => !node.pinToBottom);
+  const pinned = tree.filter((node) => node.pinToBottom);
+
   return (
-    <List dense component="nav" aria-label={t("nav.ariaLabel")} sx={{ p: 0 }}>
-      {tree.map((node) => (
-        <TreeRow
-          key={`${node.kind}:${node.id}`}
-          node={node}
-          depth={0}
-          expanded={expanded}
-          pathname={pathname}
-          onToggle={toggle}
-        />
-      ))}
-    </List>
+    <Box
+      component="nav"
+      aria-label={t("nav.ariaLabel")}
+      sx={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}
+    >
+      <List dense sx={{ p: 0, flex: 1, minHeight: 0, overflowY: "auto" }}>
+        {rowsOf(main)}
+      </List>
+      {pinned.length > 0 && (
+        <>
+          <Divider sx={{ my: 0.5 }} />
+          <List
+            dense
+            data-testid="layout-sidebar-pinned"
+            sx={{ p: 0, flexShrink: 0, maxHeight: "50%", overflowY: "auto" }}
+          >
+            {rowsOf(pinned)}
+          </List>
+        </>
+      )}
+    </Box>
   );
 }
 
@@ -222,7 +254,10 @@ const SideBar = ({ tree }: { tree?: NavTreeNode[] }) => (
       display: "flex",
       flexDirection: "column",
       flexGrow: 1,
-      overflow: "auto",
+      // The nav divides the height itself: the screens scroll, the pinned foot
+      // stays (`SidebarLinks`).
+      minHeight: 0,
+      overflow: "hidden",
       bgcolor: "background.sunken",
       // A logical border, so it sits between the rail and the body in both
       // directions — under RTL the sidebar is on the right and this flips with

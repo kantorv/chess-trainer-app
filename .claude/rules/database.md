@@ -205,6 +205,11 @@ not decide "missing" (or "start a new game") before the store has been read:
 | `/engine/games` | `PlayedGames` | the hook's `undefined` → `played-games-loading` |
 | `/tools/analysis/saved` | `SavedAnalyses` | `saved-analyses-loading` |
 
+A screen that reads **every** store at once — Settings' Export
+(`lib/dataExportSource.ts`, [`settings.md`](./settings.md)) — calls each
+ticked store's `load()` before it builds, rather than trusting a snapshot a
+subscription may not have filled yet. It only reads.
+
 The reading line's words are the catalog's `*.loading` keys
 (`playedGames.loading`, `repertoires.loading`, `savedAnalyses.loading`).
 

@@ -3,9 +3,10 @@
 A Vite + React 19 + TypeScript chess trainer. Its board screens — Play with
 Engine and Masked Pieces, the Analysis Board, the Openings explorer, the
 repertoire player and the Library's game board — sit inside one app shell,
-reached from a plain landing page at `/`. The boards are `react-chessboard`
-v5 driven by `chess.js` and a Stockfish WASM worker, and every one is composed
-from one **board core** (`src/views/board/core/`).
+reached from a plain landing page at `/`, beside a Settings section whose
+Export tab downloads the reader's data as one zip. The boards are
+`react-chessboard` v5 driven by `chess.js` and a Stockfish WASM worker, and
+every one is composed from one **board core** (`src/views/board/core/`).
 
 ## Where the detail is
 
@@ -68,6 +69,7 @@ uses can look unused — check `scripts/` before removing one.
 | **Openings explorer** | `/openings` | `views/openings/`, `lib/openings.ts`, `lib/analysisHandOff.ts` | [`openings-explorer.md`](.claude/rules/openings-explorer.md) |
 | **Repertoires** | `/repertoires`, `/repertoires/<id>`, `/…/games/<game>` | `views/repertoires/`, `lib/savedRepertoire*`, `lib/repertoire*`, `lib/playChance.ts` | [`repertoires.md`](.claude/rules/repertoires.md) |
 | **Library** (game collections) | `/library`, `/library/<c>`, `/library/<c>/<n>` | `views/library/`, `lib/library*`, `lib/collectionIndex.ts`, `src/data/library/` | [`game-collections.md`](.claude/rules/game-collections.md) |
+| **Settings** (Export today) | `/settings/<tab>` (`/settings/export`) | `views/settings/`, `lib/dataExport*.ts`, `lib/pgnExport.ts` | [`settings.md`](.claude/rules/settings.md) |
 | **Position editor** (a component, hosted by the Lobby) | — | `views/shared/positionEditor/`, `lib/positionEditor.ts` | [`position-editor.md`](.claude/rules/position-editor.md) |
 | **Tree views** (how a board shows its game tree) | — | `views/explorer/`, `lib/treeMap.ts` | [`tree-views.md`](.claude/rules/tree-views.md) |
 | **The board core** | — | `views/board/core/` | [`chessboard.md`](.claude/rules/chessboard.md) §9 |
@@ -85,7 +87,7 @@ uses can look unused — check `scripts/` before removing one.
 | `src/views/board/` | **The board core** (`core/`: `useBoardCore`, the capability modules, `BoardShell`, `BoardPanel`), the test harness and the two propagation tests. |
 | `src/views/explorer/` | **The tree views** — the variations explorer every board attaches. |
 | `src/views/shared/` | Pieces the screens share, each taking props and knowing no screen: `MoveList`, `VariationLine`, `BoardControls`, `EvalBar`, `BestVariations`, `PromotionPicker`, `EngineBoardSquare`, `CapturedPieces`, `CurrentOpening`, `GameInfo`, `OptionSlider`, `CopyableValue`, the saved-list machinery (`savedList.ts`, `SavedList*`), `folders/` and `positionEditor/`. Their locale keys are top-level (`moveList.*`, `variations.*`, `board.*`, …); the saved-list pieces take each screen's `labelKey` and test-id prefix instead. |
-| `src/views/engine/`, `tools/analysis/`, `openings/`, `repertoires/`, `library/` | The module screens (table above). Each route renders a layout-only `…Main.tsx` wrapper. |
+| `src/views/engine/`, `tools/analysis/`, `openings/`, `repertoires/`, `library/`, `settings/` | The module screens (table above). Each route renders a layout-only `…Main.tsx` wrapper. |
 | `src/lib/` | Everything pure or storage: the game model and tree, PGN and FEN reading, the engine wrapper and score reading, the stores and records, the opening book. Named per module (table above); the shared core is below. |
 
 The shared core of `src/lib/`: `gameModel.ts` (`Game`, one line), `gameTree.ts`
@@ -202,7 +204,7 @@ The sidebar is a folder tree over the routes; a folder never appears in a URL.
 | Layer | File | What it owns |
 | --- | --- | --- |
 | Walks | `src/lib/treeManager.ts` | Depth-first reads over any tree. |
-| Data | `navFolders()` + `navItems()` | The folders (`{ id, labelKey?, label?, icon, children?, singleEntry? }`) and the screens, each naming its `folder`. **Functions**, so a dev-only entry can be a spread gated on `import.meta.env.DEV`. |
+| Data | `navFolders()` + `navItems()` | The folders (`{ id, labelKey?, label?, icon, children?, singleEntry?, pinToBottom? }`) and the screens, each naming its `folder`. **Functions**, so a dev-only entry can be a spread gated on `import.meta.env.DEV`. |
 | Builder | `navTree.ts` | `buildNavTree`, `folderPath`, `folderChain`, `navLabel` (a catalog key *or* a data label, `lib/localizedText.ts`), `navLabelKeys`. |
 | Renderer | `Sidebar.tsx` | A recursive `TreeRow`: folders are `aria-expanded` toggles, screens are links. |
 
@@ -211,6 +213,10 @@ The sidebar is a folder tree over the routes; a folder never appears in a URL.
 - **A `singleEntry` folder** renders as one row, under its own name, straight
   to its one screen (Analysis → Saved analyses, Openings, Repertoires). Board
   screens those hide are reached from the screens' own controls.
+- **A `pinToBottom` folder** (Settings) renders at the sidebar's foot, under
+  a divider, apart from the screens: the rows above scroll, the foot never
+  does, and opening it grows the foot upwards so its screens stay in view.
+  One `nav` landmark, one open chain across both.
 - **One chain is open at a time, and the route decides which**, adjusted
   during render against the previous pathname (not in an effect, which
   `react-hooks/set-state-in-effect` rejects). Nothing is persisted.

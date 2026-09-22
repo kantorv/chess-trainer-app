@@ -22,7 +22,7 @@
  */
 
 /** One PGN file out of several single-game records, in the order given. */
-const pgnFileOf = (pgns: readonly string[]): string =>
+export const pgnFileOf = (pgns: readonly string[]): string =>
   pgns
     .map((pgn) => pgn.trim())
     .filter((pgn) => pgn !== "")
@@ -32,7 +32,7 @@ const pgnFileOf = (pgns: readonly string[]): string =>
     .concat("\n");
 
 /** `YYYY-MM-DD`, for a file name. The reader's own timezone, as a date is. */
-const isoDate = (when: Date): string =>
+export const isoDate = (when: Date): string =>
   [
     when.getFullYear(),
     `${when.getMonth() + 1}`.padStart(2, "0"),
@@ -50,7 +50,7 @@ const pgnFileName = (stem: string, now: Date = new Date()): string =>
   `${stem}-${isoDate(now)}.pgn`;
 
 /**
- * Hand a string to the browser to save.
+ * Hand a blob to the browser to save.
  *
  * A blob URL and a synthetic click on an `<a download>`: the only way to save a
  * file the app generated rather than fetched. The anchor is never in the
@@ -62,13 +62,9 @@ const pgnFileName = (stem: string, now: Date = new Date()): string =>
  * Non-throwing, like everything else that touches the platform here: a browser
  * that refuses the download reports it rather than taking the screen down.
  */
-const downloadTextFile = (
-  fileName: string,
-  text: string,
-  type = "application/x-chess-pgn",
-): boolean => {
+const downloadBlob = (fileName: string, blob: () => Blob): boolean => {
   try {
-    const url = URL.createObjectURL(new Blob([text], { type }));
+    const url = URL.createObjectURL(blob());
     const anchor = document.createElement("a");
     anchor.href = url;
     anchor.download = fileName;
@@ -83,6 +79,24 @@ const downloadTextFile = (
     return false;
   }
 };
+
+/** Hand a string to the browser to save. `false` if the browser refused. */
+const downloadTextFile = (
+  fileName: string,
+  text: string,
+  type = "application/x-chess-pgn",
+): boolean => downloadBlob(fileName, () => new Blob([text], { type }));
+
+/**
+ * Hand bytes to the browser to save — {@link downloadTextFile}'s binary
+ * sibling, for a file that is not text (the Settings export's zip, CTA-86).
+ * `false` if the browser refused.
+ */
+export const downloadBinaryFile = (
+  fileName: string,
+  bytes: Uint8Array<ArrayBuffer>,
+  type = "application/octet-stream",
+): boolean => downloadBlob(fileName, () => new Blob([bytes], { type }));
 
 /** Save several PGN records as one file. `false` if the browser refused. */
 export const downloadPgn = (
