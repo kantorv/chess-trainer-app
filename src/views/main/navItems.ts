@@ -33,20 +33,19 @@ export type NavItem = {
  * spread gated on `import.meta.env.DEV` (none today — `chessboard-v2.md` §5).
  */
 export const navItems = (): readonly NavItem[] => [
+  /*
+    The engine's Lobby (CTA-82): the games played against the engine, and the
+    new-game form whose Start button is how Play with Engine is reached. Play
+    with Engine has no nav entry of its own; its route `/engine/play` stays —
+    Start, Continue, the `?fen=` hand-offs and old bookmarks all land there.
+  */
   {
-    to: "/engine/play",
-    labelKey: "nav.playWithEngine",
+    to: "/engine/games",
+    labelKey: "nav.lobby",
     icon: SportsEsportsRoundedIcon,
     folder: "engine",
   },
-  // Play with Engine v2's games (CTA-74) — the list the nav calls Saved games.
-  {
-    to: "/engine/games",
-    labelKey: "nav.savedGames",
-    icon: HistoryRoundedIcon,
-    folder: "engine",
-  },
-  // Masked Pieces (CTA-79) — Play with Engine in a costume, beside it.
+  // Masked Pieces (CTA-79) — Play with Engine in a costume, beside the Lobby.
   {
     to: "/engine/masked",
     labelKey: "nav.maskedPlay",

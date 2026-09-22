@@ -6,9 +6,9 @@ import Typography from "@mui/material/Typography";
 import { useTranslation } from "react-i18next";
 import type { EngineOption } from "../../../lib/engine";
 import OptionSlider from "../../shared/OptionSlider";
-import { MAX_VARIATIONS_OFFERED } from "../../../lib/engineAnalysis";
 import {
   approximateElo,
+  ENGINE_SETTING_BOUNDS,
   SETTING_UCI_OPTION,
   type EngineSettings as EngineSettingsValues,
 } from "../../../lib/engineSettings";
@@ -17,7 +17,9 @@ import {
  * The Engine tab: strength, search limits, how many lines to report, the two
  * resource knobs and the eval bar. (Which colour the reader plays, and a new
  * game, are the header's — the side toggle and Replay — on both screens that
- * render this tab, Play with Engine and Masked Pieces.)
+ * render this tab, Play with Engine and Masked Pieces.) The Lobby's new-game
+ * form (`views/engine/games/NewGameForm.tsx`, CTA-82) renders it too, over an
+ * engine that is handshaken but never searches.
  *
  * Every option-backed control is a `<OptionSlider>` (`views/shared/`), which
  * renders it from what the running worker declared — present, pinned, or absent.
@@ -65,8 +67,8 @@ function EngineSettings({
         option={optionFor(SETTING_UCI_OPTION.skillLevel)}
         label={t("playEngine.settings.strength")}
         value={settings.skillLevel}
-        fallbackMin={0}
-        fallbackMax={20}
+        fallbackMin={ENGINE_SETTING_BOUNDS.skillLevel.min}
+        fallbackMax={ENGINE_SETTING_BOUNDS.skillLevel.max}
         onChange={(skillLevel) => onChange({ skillLevel })}
         valueLabel={t("playEngine.settings.strengthValue", {
           level: settings.skillLevel,
@@ -101,10 +103,10 @@ function EngineSettings({
           size="small"
           aria-label={t("playEngine.settings.depth")}
           value={settings.depth}
-          min={1}
+          min={ENGINE_SETTING_BOUNDS.depth.min}
           // The wrapper clamps a search to 24 plies; offering more would be a
           // control that silently stops moving.
-          max={24}
+          max={ENGINE_SETTING_BOUNDS.depth.max}
           step={1}
           onChange={(_event, next) => onChange({ depth: next as number })}
         />
@@ -140,8 +142,8 @@ function EngineSettings({
           size="small"
           aria-label={t("playEngine.settings.moveTime")}
           value={settings.moveTimeMs}
-          min={0}
-          max={10000}
+          min={ENGINE_SETTING_BOUNDS.moveTimeMs.min}
+          max={ENGINE_SETTING_BOUNDS.moveTimeMs.max}
           step={250}
           onChange={(_event, next) => onChange({ moveTimeMs: next as number })}
         />
@@ -152,9 +154,9 @@ function EngineSettings({
         option={optionFor(SETTING_UCI_OPTION.multiPv)}
         label={t("playEngine.settings.multiPv")}
         value={settings.multiPv}
-        fallbackMin={1}
-        fallbackMax={MAX_VARIATIONS_OFFERED}
-        maxOffered={MAX_VARIATIONS_OFFERED}
+        fallbackMin={ENGINE_SETTING_BOUNDS.multiPv.min}
+        fallbackMax={ENGINE_SETTING_BOUNDS.multiPv.max}
+        maxOffered={ENGINE_SETTING_BOUNDS.multiPv.max}
         onChange={(multiPv) => onChange({ multiPv })}
       />
 
@@ -163,8 +165,8 @@ function EngineSettings({
         option={optionFor(SETTING_UCI_OPTION.threads)}
         label={t("playEngine.settings.threads")}
         value={settings.threads}
-        fallbackMin={1}
-        fallbackMax={4}
+        fallbackMin={ENGINE_SETTING_BOUNDS.threads.min}
+        fallbackMax={ENGINE_SETTING_BOUNDS.threads.max}
         onChange={(threads) => onChange({ threads })}
       />
 
@@ -173,8 +175,8 @@ function EngineSettings({
         option={optionFor(SETTING_UCI_OPTION.hashMb)}
         label={t("playEngine.settings.hash")}
         value={settings.hashMb}
-        fallbackMin={1}
-        fallbackMax={256}
+        fallbackMin={ENGINE_SETTING_BOUNDS.hashMb.min}
+        fallbackMax={ENGINE_SETTING_BOUNDS.hashMb.max}
         step={1}
         onChange={(hashMb) => onChange({ hashMb })}
       />

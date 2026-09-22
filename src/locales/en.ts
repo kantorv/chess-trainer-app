@@ -12,10 +12,13 @@ const en = {
     ariaLabel: "Main navigation",
     toggleColorMode: "Toggle light and dark mode",
     switchLanguage: "Switch language",
-    playWithEngine: "Play with Engine",
-    /** The games played on that screen, kept in this browser — the flat list at `/engine/games` (CTA-74). */
-    savedGames: "Saved games",
-    /** Play with Engine with the pieces in disguise (`/engine/masked`, CTA-79), beside it in the Engine folder. */
+    /**
+     * The engine's lobby at `/engine/games` (CTA-82; "Saved games" until then):
+     * the games played against the engine, and the new-game form whose Start
+     * button is how Play with Engine is reached — it has no nav entry of its own.
+     */
+    lobby: "Lobby",
+    /** Play with Engine with the pieces in disguise (`/engine/masked`, CTA-79), beside the Lobby in the Engine folder. */
     maskedPlay: "Masked Pieces",
     analysisBoard: "Analysis Board",
     savedAnalyses: "Saved analyses",
@@ -337,17 +340,41 @@ const en = {
     },
   },
   /**
-   * The **Saved games** list of Play with Engine v2 (CTA-74,
-   * `views/engine/games/`) — flat, newest first; each game a tree, resumed
-   * where the reader left it.
+   * The engine's **Lobby** (`views/engine/games/`; the Saved games list of
+   * CTA-74, a lobby since CTA-82) — the games, flat and newest first, each a
+   * tree resumed where the reader left it, with their filters; and the
+   * new-game form in the right-hand panel.
    */
   playedGames: {
-    title: "Saved games",
+    title: "Lobby",
     count: "Games: {{count}}",
+    /** The count while a filter narrows the list. */
+    countFiltered: "Games: {{shown}} of {{count}}",
+    /** A filter that leaves nothing. */
+    noMatch: "No games match these filters.",
+    filters: {
+      /** The side the reader played. */
+      color: "Your side",
+      all: "All",
+      white: "White",
+      black: "Black",
+      /** The opening each game reached — the deepest one the book names along its mainline. */
+      opening: "Opening",
+      allOpenings: "All openings",
+      openingLoading: "Reading the openings…",
+    },
+    /** The right-hand panel: a new game's options, and the button that starts it. */
+    newGame: {
+      title: "New game",
+      side: "Play as",
+      white: "White",
+      black: "Black",
+      random: "Random",
+      start: "Start",
+    },
     loading: "Reading your saved games…",
     empty: "No saved games yet. Play a game against the engine and it appears here on its own.",
-    hint: "Every game you play against the engine is written down as you play it — side lines too. Pick one up where you left it, or open it on the Analysis Board.",
-    storage: "Saved games are kept in this browser only. Clearing site data removes them, and they do not follow you to another device.",
+    storage: "Your games are kept in this browser only. Clearing site data removes them, and they do not follow you to another device.",
     /** A row's title: the pairing, White first. */
     players: "{{white}} - {{black}}",
     human: "Human",

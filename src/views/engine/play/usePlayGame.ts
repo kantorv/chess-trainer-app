@@ -2,11 +2,13 @@ import { useCallback, useMemo, useRef, useState } from "react";
 
 import {
   DEFAULT_ENGINE_SETTINGS,
-  SETTING_UCI_OPTION,
+  uciOptionsOf,
+  withClampedUciOptions,
   type EngineSettings,
 } from "../../../lib/engineSettings";
 import { parseFen } from "../../../lib/fen";
 import { emptyTree, sanPathTo } from "../../../lib/gameTree";
+import { newGameRequestOf, type NewGameRequest } from "../../../lib/newGameLink";
 import {
   findPlayedGame,
   removePlayedGame,
@@ -43,7 +45,8 @@ import { usePlayToggle } from "../../dev/core/usePlayToggle";
  * 1. **Play is on from the start.** A new board — the standard start, or the
  *    `?fen=` hand-off (a position with Black to move sets the reader to Black
  *    and turns the board) — with the reader on the side at the bottom and the
- *    engine answering. Everything that pauses Play on the Analysis Board
+ *    engine answering. The Lobby's Start link (CTA-82) adds the options —
+ *    the settings, the side (which beats the FEN's) and the eval bar. Everything that pauses Play on the Analysis Board
  *    pauses it here (`usePlayToggle`): a step that is not one move forward,
  *    the reader switching side (the flip, or the header's side toggle), the
  *    engine off, the game over. Pressing Play goes on from wherever the reader
@@ -77,15 +80,27 @@ import { usePlayToggle } from "../../dev/core/usePlayToggle";
 export type PlayGameStart = {
   /** The position the game starts from — the `?fen=` hand-off. */
   fen?: string;
-  /** A played game to go on with — the `?saved=` hand-off. Beats `fen`. */
+  /** A played game to go on with — the `?saved=` hand-off. Beats everything else. */
   resume?: PlayedGame;
+  /**
+   * A new game's options — the Lobby's Start link (`lib/newGameLink.ts`,
+   * CTA-82): settings over the defaults, the reader's side (beats the side to
+   * move of `fen`) and the eval bar. Ignored when `resume` opens.
+   */
+  request?: NewGameRequest;
 };
 
 /**
  * Everything the URL hands a play screen, read once by its route — `?fen=`
- * (validated; an unreadable one starts an ordinary game) and `?saved=`.
+ * (validated; an unreadable one starts an ordinary game), `?saved=`, and a
+ * new game's options (`side`, `skill`, `depth`, `movetime`, `lines`,
+ * `threads`, `hash`, `evalbar` — `newGameRequestOf`, each field validated on
+ * its own). `random` draws a `side=random`.
  */
-export const arrivalOf = (params: URLSearchParams): PlayGameStart => {
+export const arrivalOf = (
+  params: URLSearchParams,
+  random: () => number = Math.random,
+): PlayGameStart => {
   let fen: string | undefined;
   const requestedFen = params.get("fen");
   if (requestedFen !== null) {
@@ -96,17 +111,22 @@ export const arrivalOf = (params: URLSearchParams): PlayGameStart => {
       fen = undefined;
     }
   }
-  return { fen, resume: findPlayedGame(params.get("saved")) };
+  return {
+    fen,
+    resume: findPlayedGame(params.get("saved")),
+    request: newGameRequestOf(params, random),
+  };
 };
 
 export const usePlayGame = (
-  { fen, resume }: PlayGameStart = {},
+  { fen, resume, request }: PlayGameStart = {},
   /** Masked Pieces' costume, stored on the record; absent, an unmasked game. */
   mask?: PlayedGameMask,
 ) => {
   /*
     What the board opens on, built once: a resumed game (parsed, at its place
-    in the tree, facing its side), else a position, else the standard start.
+    in the tree, facing its side), else a position, else the standard start —
+    a new game under the link's options, if it carried any.
     A record that will not parse opens as a new game, like an unreadable
     `?fen=`.
   */
@@ -123,21 +143,26 @@ export const usePlayGame = (
         startedAt: resume.savedAt,
         resigned: resume.resigned,
         stored: true,
+        showEvalBar: true,
       };
     }
-    // A position turns the board, and the reader plays the side to move.
+    /*
+      A position turns the board, and the reader plays the side to move —
+      unless the link names the reader's side, which is the reader's choice.
+    */
     const orientation: "white" | "black" =
-      fen !== undefined && turnOf(fen) === "b" ? "black" : "white";
+      request?.side ?? (fen !== undefined && turnOf(fen) === "b" ? "black" : "white");
     return {
       tree: fen === undefined ? emptyTree() : emptyTree(fen),
       nodeId: null,
       orientation,
-      settings: DEFAULT_ENGINE_SETTINGS,
+      settings: { ...DEFAULT_ENGINE_SETTINGS, ...request?.settings, playAs: orientation },
       evals: new Map(),
       id: newPlayedGameId(),
       startedAt: new Date().toISOString(),
       resigned: undefined,
       stored: false,
+      showEvalBar: request?.evalBar ?? true,
     };
   });
 
@@ -149,26 +174,12 @@ export const usePlayGame = (
 
   const [settings, setSettings] = useState<EngineSettings>(start.settings);
   const [engineOn, setEngineOn] = useState(true);
-  const [showEvalBar, setShowEvalBar] = useState(true);
+  const [showEvalBar, setShowEvalBar] = useState(start.showEvalBar);
 
   const onUciOptionsReady = useCallback(
+    // The same object when nothing moved: a new one would re-run the search effect for nothing.
     (clamped: Readonly<Record<string, number>>) =>
-      setSettings((current) => {
-        const next: EngineSettings = {
-          ...current,
-          skillLevel: clamped[SETTING_UCI_OPTION.skillLevel] ?? current.skillLevel,
-          multiPv: clamped[SETTING_UCI_OPTION.multiPv] ?? current.multiPv,
-          threads: clamped[SETTING_UCI_OPTION.threads] ?? current.threads,
-          hashMb: clamped[SETTING_UCI_OPTION.hashMb] ?? current.hashMb,
-        };
-        // A new object here would re-run the search effect for nothing.
-        return next.skillLevel === current.skillLevel &&
-          next.multiPv === current.multiPv &&
-          next.threads === current.threads &&
-          next.hashMb === current.hashMb
-          ? current
-          : next;
-      }),
+      setSettings((current) => withClampedUciOptions(current, clamped)),
     [],
   );
 
@@ -188,12 +199,13 @@ export const usePlayGame = (
     depth: settings.depth,
     moveTimeMs: settings.moveTimeMs,
     uciOptions: useMemo(
-      () => ({
-        [SETTING_UCI_OPTION.skillLevel]: settings.skillLevel,
-        [SETTING_UCI_OPTION.multiPv]: settings.multiPv,
-        [SETTING_UCI_OPTION.threads]: settings.threads,
-        [SETTING_UCI_OPTION.hashMb]: settings.hashMb,
-      }),
+      () =>
+        uciOptionsOf({
+          skillLevel: settings.skillLevel,
+          multiPv: settings.multiPv,
+          threads: settings.threads,
+          hashMb: settings.hashMb,
+        }),
       [settings.skillLevel, settings.multiPv, settings.threads, settings.hashMb],
     ),
     onUciOptionsReady,

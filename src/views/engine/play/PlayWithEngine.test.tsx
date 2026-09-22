@@ -33,6 +33,7 @@ vi.mock("../../../lib/openings", async (importOriginal) => {
 });
 
 import PlayWithEngine from "./PlayWithEngine";
+import { arrivalOf } from "./usePlayGame";
 
 /*
   Play with Engine, v2 (CTA-74): a new board with Play on, the engine playing
@@ -133,6 +134,65 @@ describe("Play with Engine — a new game", () => {
   it("ignores an unreadable ?fen=", () => {
     mount("/engine/play?fen=nonsense");
     expect(boardOptions().position).toBe(START);
+  });
+});
+
+describe("Play with Engine — a new game's options from the Lobby's link (CTA-82)", () => {
+  const depthValue = () => screen.getByTestId("engine-setting-depth-value").textContent;
+
+  it("takes the side, the settings and the eval bar from the query", () => {
+    mount("/engine/play?side=black&skill=5&depth=8&movetime=2500&lines=2&evalbar=0");
+    expect(boardOptions().position).toBe(START);
+    expect(boardOptions().boardOrientation).toBe("black");
+    // The engine is White and answers at once, at the strength asked for.
+    expect(FakeEngine.latest().setOptions).toContainEqual(["Skill Level", 5]);
+    expect(FakeEngine.latest().setOptions).toContainEqual(["MultiPV", 2]);
+    expect(screen.queryByTestId("eval-bar")).not.toBeInTheDocument();
+    click("play-with-engine-panel-tab-engine");
+    expect(screen.getByText(/Level 5/)).toBeInTheDocument();
+    expect(depthValue()).toBe("8");
+    expect(screen.getByTestId("engine-setting-movetime-value")).toHaveTextContent("2.5s");
+    expect(screen.getByTestId("engine-setting-evalbar").querySelector("input")).not.toBeChecked();
+  });
+
+  it("reads each field on its own: an unreadable one is the default, one out of range is clamped", () => {
+    mount("/engine/play?side=purple&skill=abc&depth=99&evalbar=maybe");
+    expect(boardOptions().boardOrientation).toBe("white");
+    expect(screen.getByTestId("eval-bar")).toBeInTheDocument();
+    click("play-with-engine-panel-tab-engine");
+    expect(screen.getByText(/Level 10/)).toBeInTheDocument();
+    expect(depthValue()).toBe("24");
+  });
+
+  it("lets a side beat the side to move of a ?fen=, and the FEN decide without one", () => {
+    mount(`/engine/play?fen=${encodeURIComponent(AFTER_E4)}&side=white&skill=3`);
+    expect(boardOptions().position).toBe(AFTER_E4);
+    expect(boardOptions().boardOrientation).toBe("white");
+    click("play-with-engine-panel-tab-engine");
+    expect(screen.getByText(/Level 3/)).toBeInTheDocument();
+  });
+
+  it("is beaten by ?saved=", async () => {
+    await savePlayedGame(
+      playedGameOf("s1", parsePgnTree("1. e4 *"), ["e4"], {
+        ...DEFAULT_ENGINE_SETTINGS,
+        playAs: "white",
+        skillLevel: 7,
+      }),
+    );
+    mount("/engine/play?saved=s1&side=black&skill=2");
+    expect(boardOptions().boardOrientation).toBe("white");
+    click("play-with-engine-panel-tab-engine");
+    expect(screen.getByText(/Level 7/)).toBeInTheDocument();
+  });
+
+  it("draws a random side on arrival (arrivalOf)", () => {
+    const query = new URLSearchParams("side=random&skill=4");
+    expect(arrivalOf(query, () => 0.1).request).toEqual({
+      settings: { skillLevel: 4 },
+      side: "white",
+    });
+    expect(arrivalOf(query, () => 0.9).request?.side).toBe("black");
   });
 });
 
