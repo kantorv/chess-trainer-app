@@ -15,6 +15,9 @@ import { ForceLTR } from '../../theme/ForceLTR';
 import ColorModeIconDropdown from '../../theme/ColorModeIconDropdown';
 import LanguageSwitch from '../../theme/LanguageSwitch';
 
+
+import chessFavicon from '../../assets/chess-favicon.svg';
+
 /**
  * Board inset in pixels — the MUI `p: 2` (2 × the 8px spacing unit), applied
  * once here in the shell so every board screen gets the same breathing room.
@@ -86,21 +89,20 @@ const Header = () => {
                         marginInlineEnd: 'auto',
                     }}
                 >
-                    <Box
-                        sx={{
-                            display: 'grid',
-                            placeItems: 'center',
-                            width: 30,
-                            height: 30,
-                            borderRadius: '9px',
-                            bgcolor: 'text.primary',
-                            color: 'background.paper',
-                            fontSize: 12,
-                            fontWeight: 800,
-                        }}
-                    >
-                        {t('app.brandMark')}
-                    </Box>
+                        <Box
+                                component="img"
+                                src={chessFavicon}
+                                alt=""
+                                sx={{
+                                    width: 30,
+                                    height: 30,
+                                    borderRadius: '3px',
+                                    display: 'block',
+                                    objectFit: 'cover',
+                                    flexShrink: 0,
+                                    overflow:"hidden"
+                                }}
+                            />
                     <Typography
                         component="span"
                         sx={{ fontWeight: 800, letterSpacing: '-0.01em' }}
