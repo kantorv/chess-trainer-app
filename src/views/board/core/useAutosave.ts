@@ -1,8 +1,8 @@
 import { useEffect } from "react";
 
 /**
- * **The persistence capability** — §2.3 of
- * [`.claude/rules/chessboard-v2.md`](../../../../.claude/rules/chessboard-v2.md).
+ * **The persistence capability** — §9.2.3 of
+ * [`.claude/rules/chessboard.md`](../../../../.claude/rules/chessboard.md).
  *
  * Write-on-change, and nothing else. A board composes this when its work is
  * worth keeping by the fact of having been done; the record is built by the

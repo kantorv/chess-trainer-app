@@ -23,10 +23,3 @@ export const moveSx = {
   borderRadius: 0.5,
   minWidth: 0,
 } as const;
-
-/** The highlight of the token the selection is on. */
-export const selectedTokenSx = {
-  bgcolor: "primary.main",
-  color: "primary.contrastText",
-  fontWeight: 700,
-} as const;

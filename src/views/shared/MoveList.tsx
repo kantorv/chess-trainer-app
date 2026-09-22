@@ -46,7 +46,7 @@ import {
  * repertoire, each of them redrew every move (CTA-61).
  *
  * Presentational on purpose — the selected ply comes in as a prop and goes out
- * through `onSelectPly`, so `useGameNavigation` owns the state and this renders
+ * through `onSelectPly`, so the board core (`useTreeNavigation`) owns the state and this renders
  * against a fixture game in tests. It sits in the shell's right-hand aside,
  * *outside* `ForceLTR`: the panel is chrome and mirrors under Hebrew. Only the
  * board is exempt (see the root `CLAUDE.md`).

@@ -14,13 +14,10 @@
  * width the screen shipped with, so the default leaves a reader exactly what
  * they already had and the toggle is purely something offered.
  */
-export const CARD_MIN_PX = { compact: 160, comfortable: 260 } as const;
+const CARD_MIN_PX = { compact: 160, comfortable: 260 } as const;
 
 /** Which of the two the reader has picked. */
 export type CardSize = keyof typeof CARD_MIN_PX;
-
-/** The setting a list screen opens on. */
-export const DEFAULT_CARD_SIZE: CardSize = "compact";
 
 /**
  * That setting as a `grid-template-columns` value.

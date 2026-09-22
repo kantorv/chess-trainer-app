@@ -113,7 +113,7 @@ export const buildNavTree = <Id extends string>(
  * marked as one destination — so every level is folded by exactly one of the
  * two.
  */
-export const collapseLeafCategory = (node: NavTreeNode): NavTreeNode => {
+const collapseLeafCategory = (node: NavTreeNode): NavTreeNode => {
   if (node.kind !== "folder") return node;
   const children = (node.children ?? []).map(collapseLeafCategory);
   return children.length === 1 && children[0].kind === "screen"

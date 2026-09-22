@@ -42,7 +42,7 @@ import { findNode, setComments, type GameTree, type VariationNode } from "./game
  */
 
 /** How deep lichess-tools looks when it weighs a move by its lines. */
-export const LINE_COUNT_PLIES = 8;
+const LINE_COUNT_PLIES = 8;
 
 /** `prc:40`, a whole token; and `[%prc 40]`, the command form. */
 const PRC_TEXT = /(^|\s)prc:\s*(\d+(?:\.\d+)?)(?=\s|$)/i;

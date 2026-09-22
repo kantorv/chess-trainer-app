@@ -107,7 +107,7 @@ export type PlayedGame = {
 };
 
 /** The `Event` tag every played game carries — what these games all are. */
-export const PLAYED_GAME_EVENT = "Play with Engine";
+const PLAYED_GAME_EVENT = "Play with Engine";
 
 /** `YYYY.MM.DD`, the PGN `Date` tag's format, in the reader's own timezone. */
 const pgnDate = (when: Date): string =>

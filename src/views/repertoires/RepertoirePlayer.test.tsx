@@ -19,7 +19,7 @@ import {
   NEXT_MOVE_ARROW_COLOR,
   SIDELINE_NEXT_MOVE_ARROW_COLOR,
 } from "../tools/analysis/nextMoveArrows";
-import { boardOptions, FakeEngine } from "../dev/devTestHarness";
+import { boardOptions, FakeEngine } from "../board/boardTestHarness";
 import {
   renderSection,
   storeRepertoire,
@@ -35,14 +35,14 @@ import {
   trainer's uniform pick is deterministic.
 */
 vi.mock("react-chessboard", async () => {
-  const { reactChessboardMock } = await import("../dev/devTestHarness");
+  const { reactChessboardMock } = await import("../board/boardTestHarness");
   return reactChessboardMock();
 });
 vi.mock("../../lib/engine", async () => ({
-  default: (await import("../dev/devTestHarness")).FakeEngine,
+  default: (await import("../board/boardTestHarness")).FakeEngine,
 }));
 vi.mock("../../lib/openings", async (importOriginal) => {
-  const { openingsMock } = await import("../dev/devTestHarness");
+  const { openingsMock } = await import("../board/boardTestHarness");
   return openingsMock(
     importOriginal as () => Promise<typeof import("../../lib/openings")>,
   );

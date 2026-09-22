@@ -16,7 +16,7 @@ import MoveContextMenu, { type MoveMenuTarget } from "./MoveContextMenu";
  * over a {@link GameTree}, with each side line hanging as an indented run
  * under the mainline move it branches from. (It was "the merged move list"
  * when CTA-53 introduced it; CTA-64 gave it its move menu and its name;
- * CTA-72 moved it out of `views/dev/core/` into the shared explorer, whose
+ * CTA-72 moved it out of `views/board/core/` into the shared explorer, whose
  * Moves part it is — `useVariationsExplorer` renders it, and a screen that
  * wants only the list may render it directly, as the dev boards do.)
  *

@@ -15,7 +15,7 @@ import { idbDatabase } from "./idb";
  * the whole origin, so a handful of courses filled it.
  */
 
-export const REPERTOIRE_DB_NAME = "chessapp.repertoires";
+const REPERTOIRE_DB_NAME = "chessapp.repertoires";
 const DB_VERSION = 1;
 export const REPERTOIRES_STORE = "repertoires";
 export const REPERTOIRE_FOLDERS_STORE = "folders";

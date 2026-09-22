@@ -59,9 +59,8 @@ export const REQUIRED_MOVE_ARROW_COLOR = "#9c27b0";
  * Only a node's `id`, `from` and `to` are read, so a list that is not a
  * tree's — the Library's opening-moves filter (CTA-76) — draws through it too.
  *
- * The one place the v2 boards build their next-move arrows (CTA-63). The
- * shipped Analysis Board keeps its own copy — the shipped board screens are
- * not touched by v2 work (`chessboard-v2.md` §6).
+ * The one place every board builds its next-move arrows, so a change of
+ * colour reaches them all.
  */
 export const nextMoveArrowsOf = (
   nodes: readonly Pick<VariationNode, "id" | "from" | "to">[],

@@ -1,8 +1,9 @@
 # Chessboard rules & patterns
 
-How **this project** builds and operates chess boards, and the index to
-everything else. Read this before adding a new board screen or customizing an
-existing one.
+How **this project** builds and operates chess boards: the library
+conventions, the engine protocol, the layout arithmetic, testing, and the
+**board core** every game board is composed from (§9). Read it before adding a
+board screen or changing one.
 
 - **UI library:** [`react-chessboard`](https://react-chessboard.vercel.app/?path=/docs/get-started--docs) **v5** (`^5.12.1`)
 - **Rules engine:** [`chess.js`](https://www.npmjs.com/package/chess.js) **v1** (`^1.4.0`)
@@ -17,62 +18,27 @@ Everything about the library is already on disk. **Do not read `node_modules`
 source and do not web-search for react-chessboard questions** — answer from
 these instead.
 
-**Loaded every session** (no need to open anything — it is already in context):
+**Loaded every session:**
 
 | File | Covers |
 | --- | --- |
-| **this file** | project conventions, the engine wrapper and its protocol discipline, the board screens, v4→v5, testing a board |
-| [`react-chessboard-options-api.md`](./react-chessboard-options-api.md) | **every `options.*` key** — type, default, purpose. All 43 of them. |
-| [`react-chessboard-types-and-helpers.md`](./react-chessboard-types-and-helpers.md) | exported helpers (`generateBoard`, `fenStringToPositionObject`, `chessColumnToColumnIndex`, `getRelativeCoords`, …) and every handler-arg / data type (`PieceDropHandlerArgs`, `SquareHandlerArgs`, `PieceRenderObject`, `FenPieceString`, …) |
+| **this file** | project conventions, the engine wrapper and its protocol, the layout rules, testing a board, the board core |
+| [`react-chessboard-options-api.md`](./react-chessboard-options-api.md) | **every `options.*` key** — type, default, purpose |
+| [`react-chessboard-types-and-helpers.md`](./react-chessboard-types-and-helpers.md) | exported helpers (`generateBoard`, `fenStringToPositionObject`, `chessColumnToColumnIndex`, …) and every handler-arg / data type |
 
-**Also on disk, and the one to read before building a *new* board screen** —
-[`chessboard-v2.md`](./chessboard-v2.md) (CTA-60): the **unified board core**
-every game board is composed from. A base hook, optional capability modules
-(engine, Play, opening book, trainer, persistence), and one slotted
-shell/panel layer, plus a derivation table for the boards and a recipe for
-adding the next. Nothing there overrides this file — it says who *owns* which
-of these rules once the screens share one implementation. Every game board of
-§5 below is built on it: the Analysis Board since CTA-73, Play with Engine
-since CTA-74, the Library's game board since CTA-75, the Openings explorer
-since CTA-78, the repertoire player since CTA-61/63 and Masked Pieces since
-CTA-79. The position editor, which edits a position, is the one board that
-is not.
+**Loaded when you work on their paths** (each file's `paths:` frontmatter):
 
-**And, for how such a board shows its game tree** —
-[`tree-views.md`](./tree-views.md) (CTA-72): the move list, map, comments
-and next-move arrows as a pluggable **tree view** out of
-`src/views/explorer/` — one seam (`TreeViewSource` in, `TreeViewParts` out),
-the rich variations explorer built (the repertoire player's), the flat and
-puzzle modes specified.
-
-**And, for the position editor** —
-[`position-editor.md`](./position-editor.md): the shared, screen-agnostic
-board a position is set up on (`views/shared/positionEditor/`, CTA-83) — its
-contract, invariants, how a screen hosts it (the Lobby's Board editor tab),
-tests and recipes. It loads when you work on its files.
-
-**And, for the Library** —
-[`game-collections.md`](./game-collections.md): game collections (the list,
-the table and its filters, the shipped files and uploads, each game on a v2
-board). It loads when you work on the Library's own paths.
-
-**And, for the Openings explorer** —
-[`openings-explorer.md`](./openings-explorer.md): `/openings`, the eco.json
-opening book (`lib/openings.ts`, `useOpeningBookModule`, `CurrentOpening`) and
-the whole-tree hand-off to the Analysis Board (`lib/analysisHandOff.ts`). It
-loads when you work on those paths.
-
-**And, for Masked Pieces** —
-[`masked-pieces.md`](./masked-pieces.md): `/engine/masked`, Play with
-Engine's screen in a costume — the mask (`lib/pieceMask.ts`), every surface it
-is applied on and why, the costume on the played game's record, the
-invariants, tests and recipes. It loads when you work on those paths.
-
-**And, for where the reader's data is kept** —
-[`database.md`](./database.md): every store (IndexedDB, one database per
-module), the connection helper and the record-store factory, screens waiting
-for a store's first read, testing and extending it, and when Dexie would be
-worth adding. It loads when you work on the stores.
+| File | Module |
+| --- | --- |
+| [`tree-views.md`](./tree-views.md) | `src/views/explorer/` — how a board shows its game tree (move list, map, comments, next-move arrows) |
+| [`analysis-board.md`](./analysis-board.md) | the Analysis Board, Saved analyses, the `?game=` hand-off |
+| [`play-with-engine.md`](./play-with-engine.md) | Play with Engine, the Lobby, the played games |
+| [`masked-pieces.md`](./masked-pieces.md) | Masked Pieces — Play with Engine in a costume |
+| [`repertoires.md`](./repertoires.md) | the Repertoires section — the list, the player, the trainer and its games |
+| [`openings-explorer.md`](./openings-explorer.md) | the Openings explorer and the opening book |
+| [`game-collections.md`](./game-collections.md) | the Library |
+| [`position-editor.md`](./position-editor.md) | the shared position editor |
+| [`database.md`](./database.md) | every store (IndexedDB) |
 
 **On disk, read on demand** — [`docs/vendor/react-chessboard/`](../../docs/vendor/react-chessboard/),
 routed by its [`INDEX.md`](../../docs/vendor/react-chessboard/INDEX.md):
@@ -102,6 +68,9 @@ chess.js (rules + state)  ->  FEN string  ->  <Chessboard options={{ position }}
         |________________ onPieceDrop / onSquareClick __|
 ```
 
+In the board core (§9) the game is a `GameTree` and `chess.js` is a *rules
+oracle*: `useBoardCore` is the only place `.move()` is called.
+
 ---
 
 ## 2. Creating a board
@@ -109,117 +78,82 @@ chess.js (rules + state)  ->  FEN string  ->  <Chessboard options={{ position }}
 ```tsx
 import { Chessboard, type ChessboardOptions } from 'react-chessboard';
 
-function MyBoard() {
-  const chessboardOptions: ChessboardOptions = {
-    id: 'my-board',
-  };
-  return <Chessboard options={chessboardOptions} />;
-}
+const chessboardOptions: ChessboardOptions = { id: 'my-board' };
+return <Chessboard options={chessboardOptions} />;
 ```
-
-Rules:
 
 - **Always pass a single `options` object typed as `ChessboardOptions`.** This
-  catches misspelled / removed keys at compile time. Do not spread untyped
-  literals.
-- **Always set `options.id`** to a stable, unique string. The default is
-  `"chessboard"`; two boards sharing an id on one page will conflict. The id is
-  also the DOM id and is used by drag sensors.
-- **No `boardWidth` prop in v5.** The board is fully responsive and fills its
-  parent. Size it by constraining the container (the app already does this in
-  `views/main/Layout.tsx` via `layout-board-square-body`). For a standalone
-  board wrap it in a `max-width` box.
-- **`ChessboardProvider`** is only needed for spare pieces / drag-from-palette
-  setups or when you need `useChessboardContext`. Plain boards just use
-  `<Chessboard>`. When you do need it, **every option moves to it** and
-  `<Chessboard />` takes none — `views/shared/positionEditor/PositionEditor.tsx`
-  is the in-repo example, and §5 has the rest of what that changes. It renders no
-  element of its own, so it costs the layout nothing.
+  catches misspelled / removed keys at compile time.
+- **Always set `options.id`** to a stable string, **unique on the page** (the
+  default `"chessboard"` collides; the id is also the DOM id and is used by
+  drag sensors). A list screen that renders a board per card takes the item's
+  id — `saved-analyses-preview-<id>`, `repertoires-preview-<id>`.
+- **No `boardWidth` prop in v5.** The board fills its parent; size it by
+  constraining the container (`views/main/Layout.tsx`'s board square).
+- **`ChessboardProvider`** is needed only for spare pieces or
+  `useChessboardContext`. When you use it, **every option moves to it** and
+  `<Chessboard />` takes none; it renders no element of its own.
+  `views/shared/positionEditor/PositionEditor.tsx` is the in-repo example.
 - **The board must never mirror.** `Layout.tsx` wraps the board area in
-  `ForceLTR` — files run a–h left to right in every language. See the root
-  `CLAUDE.md` for why.
+  `ForceLTR` — files run a–h left to right in every language. A board outside
+  the board area (a panel, a filter) carries its own `ForceLTR`.
 
-### Minimal state pattern (use this for any interactive board)
+### Minimal state pattern (a board outside the core)
 
 ```tsx
-// 1. chess.js in a REF, not state: handlers must see the latest game without
-//    stale closures, and mutating it should not by itself trigger a render.
+// chess.js in a REF: handlers see the latest game without stale closures,
+// and mutating it does not by itself render.
 const chessGameRef = useRef(new Chess());
-const chessGame = chessGameRef.current;
-
-// 2. Mirror the position into state as a FEN string. Passing it back through
-//    options.position makes <Chessboard> controlled — setting the string is
-//    what re-renders the board.
-const [chessPosition, setChessPosition] = useState(chessGame.fen());
+// The position mirrored into state — setting it is what re-renders the board.
+const [chessPosition, setChessPosition] = useState(chessGameRef.current.fen());
 ```
 
-To reset / load a position, replace the ref (`chessGameRef.current = new
-Chess(fen)`) and then `setChessPosition(...)`.
+To reset or load, replace the ref and then `setChessPosition(...)`. A game
+board uses the core (§9) instead.
 
 ---
 
 ## 3. Operations
 
-> Option types, defaults and per-option examples are in
-> [`react-chessboard-options-api.md`](./react-chessboard-options-api.md).
-> This section is only the **project-specific** wiring around them.
+> Option types, defaults and examples are in
+> [`react-chessboard-options-api.md`](./react-chessboard-options-api.md). This
+> section is only the project-specific wiring.
 
 ### 3.1 Move by drag — `onPieceDrop`
 
 ```tsx
-import type { PieceDropHandlerArgs } from 'react-chessboard';
-
-function onPieceDrop({ sourceSquare, targetSquare, piece }: PieceDropHandlerArgs) {
-  if (!targetSquare) return false; // dropped off the board
-
+function onPieceDrop({ sourceSquare, targetSquare }: PieceDropHandlerArgs) {
+  if (!targetSquare) return false;           // dropped off the board
   try {
     chessGame.move({ from: sourceSquare, to: targetSquare, promotion: 'q' });
   } catch {
-    return false; // chess.js throws on an illegal move -> snap back
+    return false;                            // chess.js v1 throws on an illegal move
   }
-
   setChessPosition(chessGame.fen());
-  return true; // accept the move
+  return true;
 }
 ```
 
-- **Return value matters.** `true` = accept (board keeps the move), `false` =
-  reject (board snaps the piece back). Return `true` for every move you actually
-  applied — including the move that ends the game. Returning `false` after a
-  successful `chess.js` move is a bug (it desyncs the board's internal drag
-  state from the position).
+- **The return value matters**: `true` keeps the move, `false` snaps the piece
+  back. Return `true` for every move you applied — including a promotion
+  applied a moment later once the picker answers; returning `false` there
+  snaps the pawn back and then jumps it forward.
 - `targetSquare` is `null` when dropped outside the board — handle it first.
-- `chess.js` `.move()` **throws** on illegal moves in v1; wrap in `try/catch`.
-- `.move()` accepts `{ from: string; to: string; promotion?: string }` — plain
-  strings, no cast needed.
 
 ### 3.2 Move by click — `onSquareClick`
 
-Set `allowDragging: false` and drive a small "from / to" state machine.
-
-```tsx
-const [moveFrom, setMoveFrom] = useState('');
-const [optionSquares, setOptionSquares] = useState<Record<string, React.CSSProperties>>({});
-
-// options: { allowDragging: false, onSquareClick, squareStyles: optionSquares, position, id }
-```
-
-First click on an own piece: compute legal targets with
-`chessGame.moves({ square, verbose: true })` and paint them via `squareStyles`.
-Second click: if it matches a legal target, `chessGame.move(...)`; otherwise
-treat it as selecting a new piece. Clear `moveFrom` + `optionSquares` after a
-move.
-
-`moves({ square })` types `square` as `chess.js` `Square` — cast with
-`square as Square` when calling it.
-
-Full worked example: `stories/basic-examples/ClickToMove.stories.tsx`.
+Set `allowDragging: false` and drive a small from/to state machine: the first
+click on an own piece paints the legal targets
+(`chessGame.moves({ square: square as Square, verbose: true })`) through
+`squareStyles`; the second click moves or reselects. Worked example:
+`stories/basic-examples/ClickToMove.stories.tsx`.
 
 ### 3.3 Highlighting squares — `squareStyles`
 
-Keyed by square id (`"e4"`), layered on top of the light/dark square styles.
-Use it for legal-move dots, last-move highlight, selected square, check
-indicator, right-click marks. The legal-move dot idiom used across the screens:
+Keyed by square id, layered over the square colours. Styles passed in are
+**external**: the board never clears them, so every position hands it the
+whole set (`lastMoveSquareStyles` in `lib/gameNavigation.ts`, the
+lichess-style last-move highlight). The legal-move dot:
 
 ```tsx
 newSquares[move.to] = {
@@ -230,32 +164,21 @@ newSquares[move.to] = {
 
 ### 3.4 Arrows
 
-Arrows **you pass in** via `options.arrows` are external / controlled: they are
-NOT auto-cleared on click or position change. Recompute the array yourself when
-the position changes — see the Openings screen's book-continuation arrows.
-User-drawn (right-drag) arrows are separate and follow `clearArrowsOnClick` /
-`clearArrowsOnPositionChange`. (The last move is not an arrow any more — CTA-48
-replaced it with a lichess-style highlight through `options.squareStyles`, built
-by `squareStylesAtPly` in `lib/gameNavigation.ts`, which obeys the same
-external-styles discipline: the board never clears them, so each ply hands it
-the whole set.)
+Arrows passed in via `options.arrows` are **controlled**: never auto-cleared
+on click or position change. Recompute the whole array whenever the position
+changes. User-drawn (right-drag) arrows are separate and follow
+`clearArrowsOnClick` / `clearArrowsOnPositionChange`. Every board's next-move
+arrows come from one helper, `nextMoveArrowsOf`
+(`views/tools/analysis/nextMoveArrows.ts`).
 
 ### 3.5 Promotion
 
-**v5 removed all built-in promotion UI** (`onPromotionPieceSelect`,
-`showPromotionDialog`, `autoPromoteToQueen`, …). You must handle it yourself:
-
-1. In `onPieceDrop`, detect a pawn reaching the last rank
-   (`targetSquare` ends in `8` or `1`) and that the move is legal
-   (`chessGame.moves({ square: sourceSquare })` contains `` `${targetSquare}=` ``).
-2. Stash `{ sourceSquare, targetSquare }` in state and render your own
-   piece picker (`defaultPieces` from `react-chessboard` gives you the SVGs;
-   `chessColumnToColumnIndex` helps position it over the file).
-3. On pick, `chessGame.move({ from, to, promotion })` and clear the stash.
-
-The demos currently hardcode `promotion: 'q'` for simplicity — that is a
-**demo-only shortcut**, not the pattern for the real app. Worked example:
-`stories/advanced-examples/PiecePromotion.stories.tsx`.
+**v5 has no built-in promotion UI.** Detect a pawn reaching the last rank with
+a legal promotion among `chessGame.moves({ square, verbose: true })`, stash
+`{ from, to }`, render the picker (`views/shared/PromotionPicker.tsx`, over
+`defaultPieces`), and apply the move on pick. The core does all of this
+(`promotion` / `resolvePromotion`). Hardcoding `promotion: 'q'` is a demo-only
+shortcut. Worked example: `stories/advanced-examples/PiecePromotion.stories.tsx`.
 
 ---
 
@@ -265,272 +188,119 @@ Wrapper: [`src/lib/engine.ts`](../../src/lib/engine.ts). Worker script + wasm
 live in `public/stockfish/`, served under Vite's `base` — so the worker URL is
 built from `import.meta.env.BASE_URL`, never hardcoded to the site root. The app
 deploys to GitHub Pages at `/chess-trainer-app/`, where a bare
-`/stockfish/stockfish.wasm.js` 404s; `new Worker()` reports that as an async
-`error` event rather than throwing, so the board simply never evaluates.
+`/stockfish/stockfish.wasm.js` 404s, and `new Worker()` reports that as an
+async `error` event rather than throwing — the board simply never evaluates.
 
 ### API
 
 | Method | Notes |
 | --- | --- |
 | `new Engine()` | Spawns a **dedicated Worker**. One per mounted board. |
-| `search(fen, { depth = 12, movetime })` | The one to use. Depth is clamped to 24; `movetime` is milliseconds and is omitted when 0. **May not start immediately** — see §4.1. |
-| `evaluatePosition(fen, depth = 12)` | Thin alias for `search(fen, { depth })`. No current caller — the demo boards that used it were removed; kept as a convenience wrapper. |
-| `onMessage(cb) => unsubscribe` | Parsed UCI messages. **Returns an unsubscribe fn — you must call it.** |
-| `setOption(name, value) => boolean` | Buffered, not posted (§4.1). `false` means this build will not take it — either it has no such option or it has pinned it. |
-| `whenOptionsReady(cb) => unsubscribe` | Runs `cb` once `options` is complete, immediately if the handshake already landed. |
-| `options` / `supportsOption(name)` | What the **running worker** declared, from its own `uci` reply. |
-| `stop()` | `stop` — engine returns bestmove for the depth reached so far. |
+| `search(fen, { depth = 12, movetime })` | Depth is clamped to 24; `movetime` is milliseconds, omitted when 0. **May not start immediately** — §4.1. |
+| `onMessage(cb) => unsubscribe` | Parsed UCI messages. **You must call the unsubscribe.** |
+| `setOption(name, value) => boolean` | Buffered, not posted (§4.1). `false` means this build will not take it — no such option, or pinned. |
+| `whenOptionsReady(cb) => unsubscribe` | Runs `cb` once `options` is complete, at once if the handshake already landed. |
+| `options` / `supportsOption(name)` | What the **running worker** declared in its own `uci` reply. |
+| `stop()` | The engine returns the bestmove for the depth reached. |
 | `terminate()` | `quit` + `worker.terminate()`. Call on unmount. |
 
-Parsed message shape (`EngineMessage`): `bestMove` (`"e2e4"` or `"e7e8q"` with
-promotion), `ponder`, `positionEvaluation` (centipawns, **string**),
-`possibleMate`, `pv` (best line, space-separated moves), `depth` (number),
-`multipv` (1-based line rank), and `fen` — **the position this result is for**.
-
-`fen` has no UCI equivalent; the wrapper stamps it on. Without it you cannot tell
-a result for the position on screen from one still draining out of the search it
-replaced, which is how a screen ends up playing a move computed for a position
-the player has navigated away from.
+A parsed message (`EngineMessage`) has `bestMove` (`"e2e4"`, `"e7e8q"`),
+`ponder`, `positionEvaluation` (centipawns, a **string**), `possibleMate`,
+`pv`, `depth`, `multipv` (1-based) and `fen` — **the position this result is
+for**, stamped on by the wrapper. Without it a result for the position on
+screen cannot be told from one still draining out of the search it replaced.
 
 ### 4.1 The protocol discipline — why `search` and `setOption` are deferred
 
 **The build in `public/stockfish/` abandons a running search if it receives a
-`setoption` while searching.** Not an error, not an ignored command: no
-`bestmove`, no further `info`, and the board never evaluates again. It is silent,
-so it does not look like a protocol bug — it looks like a broken worker.
+`setoption` while searching**: no `bestmove`, no further `info`, and the board
+never evaluates again. It is silent, so it looks like a broken worker.
 
-`Engine` therefore buffers everything and posts it only when the engine can take
-it. Nothing goes out before `uciok` (until the engine lists its options there is
-no way to tell a real one from a name this build has never heard of), and nothing
-goes out while a search is running (a `stop` goes instead, and the `bestmove`
-that ends the search resumes the queue). Options are applied to an idle engine,
-and a waiting search starts only afterwards — so a search always runs under the
-settings that were asked for.
+`Engine` therefore buffers everything and posts it only when the engine can
+take it: nothing before `uciok`, nothing while a search runs (a `stop` goes
+instead, and the `bestmove` that ends the search resumes the queue). Options go
+to an idle engine, and a waiting search starts only afterwards.
 
-Consequences for a caller:
-
-- **Call `search()` whenever the position changes; do not sequence it yourself.**
-  A second call before the first has started replaces it, so rapid stepping
-  through a game does not build a queue of searches nobody is looking at.
-- **A pinned option is never sent.** An option whose `min` equals its `max` has
-  one legal value, so posting it can only be a no-op — except that
-  `setoption name Threads value 1`, this build's *own declared default*, is
-  itself fatal to it. `setOption` returns `false` for those.
-- **Never hardcode the option roster.** `Threads` and `Hash` exist here but are
-  pinned (`min 1 max 1`, `min 16 max 16`); there is no `UCI_Elo` and no
-  `UCI_LimitStrength`, so strength is `Skill Level` only and any Elo figure shown
-  is an estimate, never a setting. Read `engine.options` and render three states:
-  absent, pinned, and adjustable. `views/engine/play/EngineSettings.tsx` is the
-  worked example, and doing it this way means swapping the binary changes the UI
-  with no code change.
+- **Call `search()` whenever the position changes; do not sequence it
+  yourself.** A second call before the first has started replaces it.
+- **A pinned option is never sent.** An option whose `min` equals its `max`
+  can only be a no-op — except that `setoption name Threads value 1`, this
+  build's own declared default, is itself fatal to it. `setOption` returns
+  `false` for those.
+- **Never hardcode the option roster.** `Threads` and `Hash` are pinned here
+  (`min 1 max 1`, `min 16 max 16`); there is no `UCI_Elo` and no
+  `UCI_LimitStrength`, so strength is `Skill Level` only and any Elo shown is
+  an estimate. Read `engine.options` and render three states: absent, pinned,
+  adjustable (`views/engine/play/EngineSettings.tsx`). Swapping the binary
+  then changes the UI with no code change.
 
 ### Rules for using it from React
 
+All of these live in `useEngineModule` (§9.2.1); a board never writes them
+again.
+
 1. **Create the engine lazily in a ref, resolved at call time — never during
    render**, not `useMemo`, not module scope:
-
-   ```tsx
-   const engineRef = useRef<Engine | null>(null);
-   const getEngine = useCallback(() => (engineRef.current ??= new Engine()), []);
-   ```
-
-   Module-scope workers leak across route changes and can never be torn down.
-   Reading the engine during render (`const engine = engineRef.current`) looks
-   equivalent but dies under StrictMode: its mount → unmount → remount runs the
-   cleanups and then the effects again **with no render in between**, so every
-   effect keeps the instance that rule 3 just terminated and the board is silent
-   for the rest of the session. `getEngine()` rebuilds it instead. Call it from
-   the effects and the move handlers; the engine is then absent from their
-   dependency arrays.
-
-2. **Subscribe in an effect, unsubscribe on cleanup.** Never call
-   `engine.onMessage(...)` inside a per-move function — that adds a new listener
-   every move and never removes it.
-
-   Declare this effect **first**, so on a StrictMode remount it is the one that
-   rebuilds the worker before the evaluate effect asks it for a search.
-
-   ```tsx
-   useEffect(() => {
-     const unsubscribe = getEngine().onMessage((msg) => { /* setState */ });
-     return unsubscribe;
-   }, [getEngine, chessGame]);
-   ```
-
-3. **Terminate on unmount** (also covers StrictMode's mount→unmount→remount):
-
-   ```tsx
-   useEffect(() => () => { engineRef.current?.terminate(); engineRef.current = null; }, []);
-   ```
-
-4. **Normalize the score — through `lib/engineAnalysis.ts`, not by hand.**
-   Stockfish reports `cp` / `mate` from the **side-to-move's** perspective, so
-   the same number means White on one turn and Black on the next. `scoreFromUci`
-   is the single place that flip happens; `formatScore` and `evalBarFraction`
-   then assume White's perspective, and a mate prints as `M5`, never as the
-   five-figure centipawn number it would otherwise imply.
-
-   Pass the turn of **the position that was searched** (read it off that FEN),
-   not `chessGame.turn()` — on a screen where the board can show an earlier ply
-   those are different, and mixing them inverts every evaluation shown.
-
-5. **Filter shallow updates.** The engine streams partial results while it
-   searches; ignore messages below a threshold depth (~10) to reduce churn.
-
-6. On a new user move: `engine.stop()`, clear stale `pv` / mate state, update
-   the position; let the "evaluate on position change" effect start the next
-   search.
+   `const getEngine = useCallback(() => (engineRef.current ??= new Engine()), [])`.
+   Reading the ref during render dies under StrictMode: its mount → unmount →
+   remount runs the cleanups and then the effects again **with no render in
+   between**, so every effect keeps the terminated instance. `getEngine()`
+   rebuilds it.
+2. **Subscribe in an effect, unsubscribe on cleanup**, and declare that effect
+   **first**, so on a StrictMode remount it rebuilds the worker before the
+   search effect asks it for a search.
+3. **Terminate on unmount**.
+4. **Normalize the score through `lib/engineAnalysis.ts`.** Stockfish reports
+   `cp` / `mate` from the side to move's perspective; `scoreFromUci` is the
+   one place that flips it to White's, against the turn of **the searched
+   FEN** — never the live position's, which on a board showing an earlier ply
+   is the other side and inverts every evaluation.
+5. **Filter shallow updates** (below ~depth 10).
+6. **Search the position on screen, not the live one.** Everything shown
+   describes the position being looked at, and an engine move is played only
+   when the search that produced it was for the position on screen.
 
 ---
 
-## 5. The board screens
+## 5. Board-square layout rules
 
-| Route | File | Based on upstream story | Demonstrates |
-| --- | --- | --- | --- |
-| `/` | [`views/home/Home.tsx`](../../src/views/home/Home.tsx) | — | Landing page, no board — a card per screen, built from `navTree()` |
-| `/engine/play` | [`views/engine/play/PlayWithEngine.tsx`](../../src/views/engine/play/PlayWithEngine.tsx), over [`PlayScreen.tsx`](../../src/views/engine/play/PlayScreen.tsx) | (composed) | **A v2 screen since CTA-74** — the Analysis Board's composition (`usePlayGame`: the core, the engine module, the shared Play toggle `usePlayToggle`, the variations explorer) with **Play on from the start**: the engine plays the side not at the bottom, paused by a step back or a change of side (the flip, or the header's White / Black toggle). The header also carries **Replay** (start over, the saved progress discarded) and **Resign** (the reader's side loses; the board then takes no more moves), both asked first. A game is a **tree** — a move by hand from an earlier position is a side line. Tabs Moves · Map · Engine (`EngineSettings`: strength and limits). The screen is `PlayScreen`, shared with Masked Pieces; a masked game's `?saved=` is sent there. **Autosaved** on every move to `lib/playedGameStore.ts` (the URL becomes `?saved=<id>`); takes `?fen=`, `?saved=` and, since CTA-82, a new game's options from the Lobby's Start link (`side`, `skill`, `depth`, `movetime`, `lines`, `threads`, `hash`, `evalbar`, and a `fen` from the Lobby's Board editor since CTA-83 — `lib/newGameLink.ts`, each field validated and clamped on its own; `?saved=` beats them, `side` beats a `?fen=`'s side to move). **No nav entry since CTA-82** — reached from the Lobby. `options.id` is `play-with-engine` |
-| `/engine/games` | [`views/engine/games/PlayedGames.tsx`](../../src/views/engine/games/PlayedGames.tsx), [`NewGameForm.tsx`](../../src/views/engine/games/NewGameForm.tsx) | (composed) | **The Lobby** (Saved games in CTA-74, a lobby since CTA-82): in the square, the games above and Masked Pieces' (a *Masked* chip, Continue on `/engine/masked` — CTA-79), flat and newest first, each titled by its pairing ("Human - Stockfish level 10") with its PGN result — Continue (`?saved=<id>`), Analysis (`?game=play/games/<id>`), delete (asked first) — narrowed by a colour filter and an opening filter (`openingOfLine` over the lazily loaded book; `?color=` / `?opening=`). In the right-hand panel, the **new-game form**: the side (White / Black / Random) over `EngineSettings` itself, its options from an engine handshaken but never searching (`useEngineModule`, `enabled: false`), and a full-width **Start** onto `/engine/play` with the choice as query parameters. Since CTA-83 the form is two tabs — **Game** and **Board editor**, the shared **position editor** ([`position-editor.md`](./position-editor.md); a small board with its spare-piece palettes in the panel, `options.id` `new-game-editor-board`) — and a position other than the standard start rides on Start as `?fen=`, Start off while it cannot be played from. No board in the square. (The pre-CTA-74 `/engine/saved` list and its folders were deleted.) |
-| `/engine/masked` | [`views/engine/masked/MaskedPlay.tsx`](../../src/views/engine/masked/MaskedPlay.tsx) | `Pieces` | **Masked Pieces — a v2 screen since CTA-79**: Play with Engine's own screen (`PlayScreen`, the session `usePlayGame`) with a costume and nothing else — `options.pieces` built from a `PieceMask` (`lib/pieceMask.ts`), the captured strips in costume and the material diff hidden, and, while its notation switch is on, every printed move (list, side lines, map, next moves, menu, comment block, engine lines) in coordinates for a hidden piece. A fourth tab, **Masking** (presets, the twelve selects, the notation switch, and the **engine lines** switch — off by default). Its games autosave with the engine games, the costume on the record; `?saved=` resumes one in the same disguise, `?fen=` as on Play with Engine. `options.id` is `masked-play`. **Everything else is in [`masked-pieces.md`](./masked-pieces.md)** |
-| `/tools/analysis` | [`views/tools/analysis/AnalysisBoard.tsx`](../../src/views/tools/analysis/AnalysisBoard.tsx) | (composed) | **A v2 screen since CTA-73** — the core, the engine module (its best move played for the opponent's side only while the header's **Play** toggle is on — disabled while the engine is off, paused by a step back) and the shared **variations explorer** ([`tree-views.md`](./tree-views.md); editing on, *Play chances…* off): a **variation tree** (`lib/gameTree.ts`), both colours movable from any node, the engine and the eval bar switched independently. Tabs Moves · Map · Load · Export · Engine: Load takes a PGN (one game; several merged onto the board or split into a folder of saved analyses) or a FEN, Export copies the FEN and copies or downloads the PGN with or without comments, NAGs and side lines. **Saved explicitly** — the header's Save opens the changes strip (Update / Save as copy / Discard) over a record, or a name-and-folder dialog for a new board. Takes `?fen=`, `?game=`+`?move=`, `?analysis=`, a whole tree handed over in the location state by the Openings explorer (CTA-78, `lib/analysisHandOff.ts` — a new unsaved board; [`openings-explorer.md`](./openings-explorer.md) §5), and writes `?at=` back — an arrival naming a saved analysis (`?analysis=`, `?game=analysis/…`) waits for the IndexedDB store's first read (CTA-77). `options.id` is `analysis` |
-| `/tools/analysis/saved` | [`views/tools/analysis/saved/SavedAnalyses.tsx`](../../src/views/tools/analysis/saved/SavedAnalyses.tsx) | (composed) | The analyses saved above, kept in **IndexedDB** since CTA-77 (`lib/idbRecordStore.ts`; up to 20,000 of them — a Library batch lands here), newest first, filed into a nested tree of folders (CTA-73; `?folder=<id>`) — **48 a page**, only the page on screen parsed, and a "reading" line until the store's first read lands — as rows, or as read-only preview boards at either card size, each showing the position and the side the reader **was standing on**. Each links to its settings screen (`/tools/analysis/saved/<id>/settings`: title, description, side, next-move arrows, folder) and is filed from its row or card; folders are created, renamed, moved (never into their own subtree), deleted keeping their contents and downloaded as one `.pgn`. Laid out as the Repertoires list without its Games menu: an Open button (on a card, the board), the settings gear and a checkbox on every row and card, deleting in bulk; `?analysis=<id>` is the one destination (the `?game=analysis/saved/<id>` reference still resolves). See the root `CLAUDE.md` |
-| `/openings` | [`views/openings/OpeningsBoard.tsx`](../../src/views/openings/OpeningsBoard.tsx) | (composed) | **The Openings explorer — a v2 screen since CTA-78**, composed like the Library's game board with no behaviour hook of its own: `useAnalysisSession` (the core, the engine, Play), `useOpeningBookModule` and the variations explorer ([`tree-views.md`](./tree-views.md); editing on, *Play chances…* off). Tabs **Book** (eco.json's continuations from the position on screen — a click plays one, from any node, branching at an earlier one) · Moves · Map · Load · Export · Engine; the book's arrows joined with the tree's next-move arrows into one set (`openingArrows.ts`). **Nothing is saved** (no Save, no strip, no folders; Load merges but never splits). The header's **Analysis** button hands the whole tree, the position and the orientation to `/tools/analysis` as a new unsaved board (`lib/analysisHandOff.ts`, router location state beside `?at=`); **Play from here** hands `?fen=` to Play with Engine. Takes `?fen=` (turns the board) and `?at=` (replayed), and writes `?at=` back. `options.id` is `openings`. **Everything else is in [`openings-explorer.md`](./openings-explorer.md)** |
-| `/library` · `/library/<collection>` · `/library/new` | [`views/library/LibraryHome.tsx`](../../src/views/library/LibraryHome.tsx), [`CollectionScreen.tsx`](../../src/views/library/CollectionScreen.tsx), [`LibraryUpload.tsx`](../../src/views/library/LibraryUpload.tsx) | (composed) | **The Library** (CTA-75/76/77): no game board. The collections list, a collection's games as a sortable, filterable table read off its index, with a small **opening-moves board** in its filters (`OpeningFilterBoard.tsx`, `options.id` `library-filter-board`, pinned LTR, drawn with `nextMoveArrowsOf`), and uploads checked in a Web Worker. **Everything else is in [`game-collections.md`](./game-collections.md)** |
-| `/library/<collection>/<game>` | [`views/library/LibraryGameBoard.tsx`](../../src/views/library/LibraryGameBoard.tsx), behind [`LibraryGameScreen.tsx`](../../src/views/library/LibraryGameScreen.tsx) | (composed) | **A v2 screen from the start** (CTA-75): a collection's game on a full analysis board, composed from the Analysis Board's session (`useAnalysisSession`) and the variations explorer, with no behaviour hook of its own. Saved explicitly (an upload's game is updated in place or copied after itself; a shipped game is read-only and its copy goes to Saved analyses). Writes `?at=` back. `options.id` is `library-game`. Details in [`game-collections.md`](./game-collections.md) §6.6 |
-| `/repertoires/<id>` | [`views/repertoires/RepertoireBoard.tsx`](../../src/views/repertoires/RepertoireBoard.tsx) | (composed) | **The first shipped board built from the v2 core** — since CTA-63 the **player** ([`RepertoirePlayer.tsx`](../../src/views/repertoires/RepertoirePlayer.tsx), behind this route file) ([`chessboard-v2.md`](./chessboard-v2.md)) — one of the reader's own repertoires (CTA-61) — **one game**, a mainline with its side lines (Moves · Engine; a text of several games is merged into one tree or split into many on the way in). Its tree is parsed behind a `setTimeout(0)`, because the 7,859-node one-tree example takes about a second. `/repertoires` lists them over the saved-list machinery (preview board `repertoires-preview-<id>`), filed into one level of folders (`?folder=<id>`; a split lands in a folder of its own; a repertoire moves between them from its settings, and the list deletes in bulk over checkboxes on every row and card — CTA-68); `/repertoires/new` brings one in from a file or a paste; `/repertoires/<id>/settings` edits its title, description and main color — the board opens facing that color (`useBoardCore`'s `orientation`, read once), and so does the preview card |
-| `/repertoires/<id>` (the player) and `/repertoires/<id>/games/<game>` | [`views/repertoires/RepertoirePlayer.tsx`](../../src/views/repertoires/RepertoirePlayer.tsx), behind [`RepertoireBoard.tsx`](../../src/views/repertoires/RepertoireBoard.tsx) / [`RepertoireGame.tsx`](../../src/views/repertoires/RepertoireGame.tsx) | (composed) | **One screen, a repertoire read, drilled and played** (CTA-63). `useTrainerModule` ([`chessboard-v2.md`](./chessboard-v2.md) §2.5) is the opponent: it answers only from the file, by the lichess-tools **play chances** (`prc:N` in a move's comment, else the move with more lines in the next 8 plies more often — `lib/playChance.ts`; set per branch from the move menu's *Play chances…*, CTA-69), and only after the reader has moved (stepping back never triggers it) — in the player behind **Autoplay** (off by default), always in a game. A move the file does not have is added under the node on screen and tinted in the move list. A header **Play** button toggles Autoplay beside the Settings switch (CTA-65; the player only). Tabs Moves · (Score) · Settings · Engine; the Moves tab is the **variations explorer** (the shared move list with every side line hung under its move), and in the player a right-click on a move opens its menu — promote variation, make main line, delete from here (asking first, with the count of moves and lines), copy variation PGN (CTA-64; pure edits in `lib/gameTree.ts`, applied through the core's `replaceTree`, which keeps the reader where they stand; a game has no menu); Settings holds the side, Autoplay, the arrows (off by default; mainline and side lines in two colours, `nextMoveArrowsOf`) and the engine's switch (off by default — the Engine tab is disabled until then; the engine never moves a piece). The **games** (`lib/repertoireGames.ts`): **Get to the end** and **Backtracking** — the reader's moves judged before they are made (a wrong one taken back, one verdict per position), a Score tab, and for Backtracking the coverage of every line, a required move marked with a purple arrow, a return to the deepest position with a line left, and a **Map** tab — the repertoire as an SVG tree, covered lines and the reader's position on it (`lib/treeMap.ts`, drawn by the shared explorer's `TreeMap.tsx`), zoomed by the wheel and panned by dragging — in the tab and in a full-screen view alike — with each move written above its dot (Show moves, on by default). The player has the Map too, without coverage, drawn from the session's tree so moves the reader adds appear on it as they are played, in the extension colour; there a written move's dot is a link to its position, in the tab and full screen, and a right-click on it opens the same move menu as the Moves tab (CTA-67) — the edit redrawn on the map at once, the view left where it was, the full-screen view left open. Dots are white or black by the side that moved. The player's position travels as `?at=<SANs from the start>` (`lib/repertoireLink.ts`), read on arrival and written back with history replace, so its URL is always a permanent link. No autosave: while the session differs from the record, the header's Save button lights up and opens a strip that offers **Update repertoire** (the record takes the session's tree — unless the repertoire is **protected**, its settings' default, when the strip says so and links to its settings in Update's place), **Save as copy** (a new record, opened at the position on screen, the original untouched) or **Discard**; the header's download writes the tree out; a game never writes. `options.id` is `repertoire-board` (the player) or `repertoire-game` |
+The shell (`Layout.tsx`) hands a screen a fixed square and knows nothing about
+what shares it.
 
-The `Main.tsx` file next to each board is a layout-only wrapper (an MUI `Box`
-with a `data-testid`); the board component is the unit of interest. Each
-"upstream story" column entry names a file in
-`docs/vendor/react-chessboard/stories/`.
-
-There used to be four small demo screens under `views/demos/` and
-`views/player/` (a bare board, a move loop, an eval demo, a minimal
-engine-play), each showing one idea; they were removed and `/` is now the
-landing page. The vendored Storybook examples under
-`docs/vendor/react-chessboard/stories/` still carry those minimal patterns when
-you need the smallest version of one.
-
-**Three rules the engine-play screens keep** (Play with Engine and Masked
-Pieces — first written for the pre-v2 play hook, `usePlayWithEngine`, which
-went with the old Masked Pieces in CTA-79)**, worth reusing:**
-
-- **Search the position on screen, not the live one.** The reader can step
-  back at any time. Everything shown — evaluation, variations, depth —
-  describes the position being looked at, so that is what gets searched
-  (`useEngineModule`'s `fen` is `core.fen`); the engine's move is played only
-  when the search that produced it was for the position on screen, and only
-  while Play is on (`usePlayToggle`). A move by hand from an earlier position
-  is a side line.
-- **Anything sharing the board square with the board takes width out of it.** The
-  shell hands the screen a square and knows nothing about an eval bar
-  (`Layout.tsx` is not changed for one). Bar width + gap must come to exactly the
-  constant subtracted from the board's side, and the board box needs
-  `flexShrink: 0`, or flex shaves the difference off and the board stops being
-  square. That rule now lives in exactly one file —
-  [`views/shared/EngineBoardSquare.tsx`](../../src/views/shared/EngineBoardSquare.tsx),
-  which every v2 board renders through `BoardShell`. **A new screen with an
-  eval bar renders that, rather than copying the `calc()`.**
-- **The captured-pieces strips are that arithmetic for height.** Two 20px strips
-  sit on the board's top and bottom edges, outside it, and the board gives up
-  their height — the eval bar's width discipline turned 90°. The strips' height
-  + gap must come to exactly the constant the board's side gives up
-  (`CAPTURED_STRIPS_TOTAL_PX`), the board box is a `calc` of it off **both**
-  width and height — one percentage base, so it stays square — and nothing
-  shrinks. The one-strip component and every constant live in
-  [`views/shared/CapturedPieces.tsx`](../../src/views/shared/CapturedPieces.tsx);
-  `EngineBoardSquare` composes the strips for every v2 board (`BoardShell`
-  computes the summary from the core's line). **A strip with
-  nothing in it still renders** — empty strips hold the board's size steady, so
-  a board does not resize when the first capture lands. The position editor and
-  the preview boards carry none: pieces are put and removed there, never
-  captured.
-
-**And three the list screens add:**
-
-- **A read-only board is a board, and it still takes an `options.id` that is
-  unique on the page.** A list screen renders one per card, so the id is the
-  item's, never a constant — `saved-analyses-preview-<id>`,
-  `repertoires-preview-<id>`.
-- **A screen that scrolls inside the board square divides that square up
-  itself, and a grid of `auto` rows will not scroll.** The shell hands the
-  screen a fixed-height box and scrolls nothing in it, so a list screen is a
-  flex column — a `flexShrink: 0` top bar over a `flex: 1; minHeight: 0;
-  overflowY: auto` region (the Library's table: a `TableContainer` that
-  scrolls both ways, a sticky header, the pagination pinned under it). That much is the usual pattern; the trap is the
-  next line. An `auto` grid row inside a box whose height is *definite* is
-  stretched to share that height out — `alignContent: "start"` does not stop it
-  — so the cards were squashed to a quarter of their height, clipped by `Card`'s
-  own `overflow: hidden`, and there was never any overflow to scroll.
-  **`gridAutoRows: "max-content"` is what makes a row as tall as the card in
-  it**, and therefore what makes the region scroll at all. Any board screen that
-  grids content inside the square needs the same.
+- **Anything sharing the board square takes width out of the board.** Eval-bar
+  width + gap must come to exactly the constant subtracted from the board's
+  side, and the board box needs `flexShrink: 0`, or flex shaves the difference
+  off and the board stops being square. The arithmetic lives in exactly one
+  file, [`views/shared/EngineBoardSquare.tsx`](../../src/views/shared/EngineBoardSquare.tsx),
+  which every game board renders through `BoardShell`. **Never copy the
+  `calc()`.**
+- **The captured-pieces strips are that rule for height.** Two 20px strips sit
+  on the board's top and bottom edges; their height + gap equals
+  `CAPTURED_STRIPS_TOTAL_PX`, the board box is a `calc` of it off **both**
+  width and height (one percentage base, so it stays square), and nothing
+  shrinks. A strip with nothing in it still renders, so the board does not
+  resize on the first capture. The constants and the strip are in
+  [`views/shared/CapturedPieces.tsx`](../../src/views/shared/CapturedPieces.tsx).
+  The position editor and the preview boards carry none.
+- **A screen that scrolls inside the square divides it itself**: a flex column,
+  a `flexShrink: 0` top bar over a `flex: 1; minHeight: 0; overflowY: auto`
+  region. **A grid of cards inside it needs `gridAutoRows: "max-content"`** —
+  an `auto` row in a box of definite height is stretched to share that height
+  (`alignContent: "start"` does not stop it), the cards are squashed and
+  clipped by `Card`'s `overflow: hidden`, and nothing ever overflows to scroll.
 - **A position turns the board; a game does not.** A `?fen=` arrival faces the
-  side to move, because that is the side about to answer. A game — a Library
-  game, a `?game=` arrival — opens at its start facing White with the flip
-  control offered, because a PGN's side to move at ply 0 says nothing about
-  which side is being studied. The rule the root `CLAUDE.md` states for the
-  board screens.
-
-**And one the Masked Pieces screen adds:**
-
-- **`options.pieces` is the only honest place to disguise a piece.** The mask is
-  a map from a true type to the type drawn for it, turned into a renderer per
-  type by `maskedPieces` (`lib/pieceMask.ts`), each one taken straight out of the
-  library's `defaultPieces` so a masked rook is *pixel-identical* to a real pawn
-  rather than merely similar. The board goes on reporting the real source and
-  target squares, so `onPieceDrop`, legality and promotion never learn anything
-  happened — which is what keeps the screen ordinary chess and lets it be Play
-  with Engine's own screen with a costume (CTA-79). Never reach for
-  `squareRenderer`, a doctored `position`, or anything that would change what
-  `chess.js` is holding. The other surfaces the mask reaches — the notation,
-  the captured strips, the material diff — are listed in
-  [`masked-pieces.md`](./masked-pieces.md) §4.
-
-**And three the Analysis Board adds:**
-
-- **An analysis board moves a piece only when the reader presses Play**
-  (CTA-73), and then only **the opponent's**: the reader plays the side at the
-  bottom of the board, and `onBestMove` plays a finished search's best move at
-  the node on screen only while the header's Play toggle is on (and the engine
-  is) and it is the other side to move; off, a `bestmove` is ignored. Any step
-  that is not one move forward (back, Home, an earlier move, another line, a
-  load) pauses it, and the reader goes on by hand until pressing Play again.
-  Play is disabled while the engine is off, and pauses itself when the
-  position is over. While Play is on, a status line in the footer
-  (`EngineThinking.tsx`) says the engine is thinking — a spinner, moving dots
-  and the depth reached — or that it is the reader's move, and a ring spins
-  round the Play button while it thinks. The play screen's reply is different in kind — it
-  answers the live position, for one side, always — and whether both colours
-  are draggable (`canMoveAt`) is the rest of the difference; no mode flag.
-- **A screen that can branch navigates by node, not by ply.** See the root
-  `CLAUDE.md` on the tree; the shared `BoardControls` still take a ply, and
-  `useTreeNavigation` derives one from the line the reader is standing on.
-- **The board is written down when the reader says so, and so is where they
-  are standing** (CTA-73 — it used to autosave). `useAnalysisBoard` holds the
-  saved record and a baseline tree; `tree !== baseline` lights the Save button,
-  and Update / Save as copy / a new board's Save write the tree, the settings,
-  the orientation and the SAN path to the current node (`lib/savedAnalyses.ts`),
-  with the reader's name and folder. Reopening is `?analysis=`. See the root
-  `CLAUDE.md`.
-
-**And two the position editor adds** (a component, not a screen —
-[`position-editor.md`](./position-editor.md)):
-
-- **Spare pieces mean `ChessboardProvider`, and the options move with them.**
-  Every option that would have gone on `<Chessboard>` goes on the provider
-  instead and the board itself takes no props (§2, and
-  `stories/basic-examples/SparePieces.stories.tsx`) — a `SparePiece` can only
-  reach the drag context from inside it. `onPieceDrop` then does the whole job:
-  `piece.isSparePiece` says whether it came from a palette, and a `null`
-  `targetSquare` — anywhere off the board, the palettes and the trash included —
-  is a deletion. The provider renders no element, so it costs the layout nothing.
-- **A board being edited is illegal on the way to being legal.** It is a
-  `chess.js` built with `{ skipValidation: true }`, only ever `put` to and
-  `remove`d from, and `lib/positionEditor.ts` *reports* what is wrong instead of
-  refusing it — see the root `CLAUDE.md`. The one thing `chess.js` still refuses
-  is a second king of one colour, so `put` returning `false` is a real branch and
-  the drop has to put back whatever it lifted.
+  side to move; a game (`?game=`, a Library game, a loaded PGN) opens facing
+  White, because a PGN's side to move at ply 0 says nothing about which side is
+  studied. `useBoardCore`'s `loadFen` turns, `loadTree` and `reset` do not.
+- **`options.pieces` is the only honest place to disguise a piece**
+  (Masked Pieces): the board goes on reporting true squares, so legality and
+  promotion never learn anything happened. Never reach for `squareRenderer`, a
+  doctored `position`, or anything that changes what `chess.js` holds.
+- **Spare pieces mean `ChessboardProvider`** (§2), and `onPieceDrop` does the
+  whole job: `piece.isSparePiece` says it came from a palette, and a `null`
+  `targetSquare` is a deletion. A board being *edited* is `chess.js` built with
+  `{ skipValidation: true }`, only `put` / `remove`d — see
+  [`position-editor.md`](./position-editor.md).
 
 ---
 
@@ -545,75 +315,394 @@ If you paste a v4 snippet from the web, translate it:
   `allowDrawingArrows`; `allowDragOutsideBoard` → `allowDragOffBoard`;
   `animationDuration` → `animationDurationInMs`; `showBoardNotation` →
   `showNotation`; `isDraggablePiece` → `canDragPiece`.
-- `boardWidth` — **removed**, board is responsive (size the container).
-- All promotion props (`onPromotionPieceSelect`, `showPromotionDialog`,
-  `autoPromoteToQueen`, `promotionToSquare`, …) — **removed**, handle promotion
-  externally (§3.5).
-- Premove props — **removed**, handle externally
-  (`stories/advanced-examples/Premoves.stories.tsx`).
-- Props are no longer passed individually — everything goes inside `options`.
-- Handler signatures changed to single named-arg objects, e.g.
+- `boardWidth` — **removed**, the board is responsive (size the container).
+- All promotion props and premove props — **removed**, handle them externally
+  (§3.5; `stories/advanced-examples/Premoves.stories.tsx`).
+- Everything goes inside `options`; handlers take one named-arg object, e.g.
   `onPieceDrop({ sourceSquare, targetSquare, piece })` returning `boolean`.
 
 Full detail: `docs/vendor/react-chessboard/G_UpgradeToV5.mdx`.
 
 ---
 
-## 7. Checklist for a new board screen
+## 7. Checklist for a new board
 
-- [ ] `options` typed as `ChessboardOptions`, unique `options.id` set.
-- [ ] `chess.js` instance in a `useRef`; position mirrored to state via `fen()`.
-- [ ] `onPieceDrop` (and/or `onSquareClick`) wraps `chess.js` `.move()` in
-      `try/catch` and returns the correct boolean.
-- [ ] Promotion handled properly, or an explicit `// demo shortcut` comment if
-      hardcoding `'q'`.
-- [ ] If using the engine: lazy ref, subscribe-in-effect + unsubscribe,
-      `terminate()` on unmount, score normalized by turn.
-- [ ] If using spare pieces: `ChessboardProvider` with the options on **it**,
-      the palettes inside it, and `piece.isSparePiece` / a `null` `targetSquare`
-      handled in `onPieceDrop` (§5).
-- [ ] If anything shares the board square with the board (an eval bar, a
-      palette): its size and the gaps sum to exactly the constant subtracted
-      from the board's side, and the board box has `flexShrink: 0` (§5).
+- [ ] A game board is composed from the core (§9.5) — no behaviour hook, no
+      panel, no layout arithmetic of its own.
+- [ ] `options` typed as `ChessboardOptions`, a unique `options.id`.
+- [ ] Outside the core: `chess.js` in a `useRef`, `.move()` in `try/catch`,
+      the right boolean from `onPieceDrop`, promotion handled.
+- [ ] Spare pieces: `ChessboardProvider` with the options on **it** (§5).
+- [ ] Anything sharing the square: its size and gaps sum to the constant
+      subtracted from the board's side, and the board box has
+      `flexShrink: 0` (§5).
 - [ ] Any `setTimeout` / async work cleared on unmount.
-- [ ] `tsc -b` clean, `yarn test:run` green, `yarn lint` adding no findings.
+- [ ] `npx tsc -b` clean, `yarn test:run` green, `yarn lint` adding no
+      findings.
 
 ---
 
 ## 8. Testing a board screen
 
-**Stub `<Chessboard>` in Vitest.** jsdom has no layout engine, so the board
-measures a zero-sized square and throws `Square width not found` from a mount
-effect — an uncaught exception that fails the whole test file, not just the
-assertion that touched it. Tests are about the screen *around* the board, so
-mock the component and assert the position it was handed:
+**Stub `<Chessboard>` in Vitest.** jsdom has no layout, so the board measures a
+zero-sized square and throws `Square width not found` from a mount effect —
+an uncaught exception that fails the whole file. Tests are about the screen
+around the board, so mock the component and assert what it was handed. The
+game boards share one stub, `reactChessboardMock()` in
+[`views/board/boardTestHarness.tsx`](../../src/views/board/boardTestHarness.tsx)
+(`boardOptions()` reads the last options — how drops, positions, orientation
+and arrows are asserted), beside `FakeEngine` (the `lib/engine` stand-in) and
+`openingsMock`.
 
-```tsx
-vi.mock('react-chessboard', () => ({
-  Chessboard: ({ options }: { options: { position?: string } }) => (
-    <div data-testid="board" data-position={options.position} />
-  ),
-}));
+- **Stub what the screen actually imports.** A spare-piece screen needs
+  `ChessboardProvider` (keeping the options), `Chessboard` and `SparePiece`
+  (`PositionEditor.test.tsx`). A screen with captured strips needs
+  `defaultPieces` too (any renderer keyed by the twelve piece types).
+- **jsdom's CSS parser drops what it does not implement** — `aspect-ratio`
+  among them — so a `toHaveStyle` on one silently fails. Assert the constant
+  that can drift (the width `calc`) and leave the rest to a browser check.
+- Anything that needs real layout — sizing, drag, arrow placement — is a
+  browser check, not jsdom.
+
+---
+
+## 9. The board core
+
+Every game board — the Analysis Board, Play with Engine, Masked Pieces, the
+Library's game board, the Openings explorer and the repertoire player — is
+**composed from one core** in `src/views/board/core/`: a base hook, capability
+modules the screen opts into, and one shell/panel layer with slots. The
+position editor, which holds a position rather than a game, is the one board
+that is not.
+
+```
+                       ┌─────────────────────────────────────┐
+   the base ──────────▶│ useBoardCore()                      │  tree, node navigation,
+                       │  GameTree · useTreeNavigation       │  rules oracle, promotion,
+                       │  chess.js oracle · promotion        │  orientation, the FEN on screen
+                       └─────────────────┬───────────────────┘
+                                         │  composed by the screen, never flagged inside the base
+      ┌──────────────────┬───────────────┼────────────────┬─────────────────────┐
+      ▼                  ▼               ▼                ▼                     ▼
+ useEngineModule   useOpeningBook…   useAutosave     useTrainerModule     usePlayToggle
+  search · evals    book lines        a store         the repertoire       Play
+  options · REPLY?  arrows · hover
+                                         │
+                                         ▼
+                           ┌─────────────────────────────┐
+   the shell ─────────────▶│ BoardShell + BoardPanel     │
+                           │  EngineBoardSquare (shared) │
+                           │  pinned BestVariations      │
+                           │  tab strip · BoardControls  │
+                           └─────────────────────────────┘
 ```
 
-The type-only `import type { ChessboardOptions }` in the component under test is
-erased at compile time, so the mock does not have to provide it. Anything that
-depends on the board actually rendering — sizing, drag, arrows — belongs in a
-browser check, not in jsdom. `views/shared/positionEditor/PositionEditor.test.tsx`
-is a worked example; the v2 boards share one stub, `reactChessboardMock` in
-`views/dev/devTestHarness.tsx`.
+It is composition, not class inheritance, and not mode flags: a screen picks
+modules and fills slots. **The propagation guarantee** is that the panel
+skeleton and the pinned best-variations block exist in one component, so a
+change there reaches every board. Two tests assert it:
+`views/board/panelPropagation.test.tsx` replaces `BoardPanel` with a sentinel
+and renders every board (a screen that grew a panel of its own fails), and
+`views/board/boards.test.tsx` renders the real panel and asserts what is in it
+(the repertoire screens have `RepertoirePropagation.test.tsx`).
 
-**Stub whatever the screen actually imports.** A spare-piece screen reaches for
-three exports, not one: the options go to `ChessboardProvider`, the palettes are
-`SparePiece`s, and `<Chessboard>` takes nothing — so the stub keeps the options
-from the *provider* and the board renders what it finds there.
-`views/shared/positionEditor/PositionEditor.test.tsx` is that version. A screen with the
-captured-pieces strips reaches for one more: `defaultPieces`, which the strips
-draw their icons with — provide it in the mock (any renderer keyed by the
-twelve piece types; `reactChessboardMock` in `views/dev/devTestHarness.tsx`
-is the worked example).
+How a board shows its tree — the move list, map, comments and next-move
+arrows — is a **tree view** from `src/views/explorer/`; see
+[`tree-views.md`](./tree-views.md).
 
-jsdom's CSS parser also drops properties it does not implement — `aspect-ratio`
-among them — so a `toHaveStyle` assertion on one silently fails. Assert the
-constant that can drift (the width `calc`) and leave what the browser makes of
-it to a browser check.
+### 9.1 The base — `useBoardCore`
+
+Everything every board has, and nothing any single board has:
+
+- **The `GameTree` as the one game shape.** A linear game is the degenerate
+  tree; `mainlineGame` / `treeFromGame` bridge both ways. Both colours move
+  from any node, and a move from an earlier position is a side line.
+- **Node-based navigation** through `useTreeNavigation`: the node id is the
+  state and the ply is derived, because clicking inside a side line changes
+  *which line is current*. Everything ply-shaped still comes out, so
+  `BoardControls` drive a tree unmodified.
+- **The `chess.js` rules oracle** — one instance in a ref, moved to whichever
+  FEN is asked about. The position comes from the tree.
+- **The promotion picker's state**, **orientation and flip**, **the FEN on
+  screen and the turn in it**, and a **`dirty` flag** (the reader has done
+  something).
+
+| Field | Type | What it is |
+| --- | --- | --- |
+| `tree` | `GameTree` | The game, side lines and all. |
+| `nodeId` | `string \| null` | The selected node; `null` is the start position. |
+| `line` | `VariationNode[]` | The whole line the selection sits on. |
+| `mainlineNodes` | `VariationNode[]` | The mainline, walked once. |
+| `ply` / `lastPly` | `number` | Indices into `line` — what `BoardControls` speak. |
+| `fen` / `turn` | `string` / `"w" \| "b"` | The position on screen, and who moves in it. |
+| `squareStyles` | `Record<string, CSSProperties>` | The last-move highlight — the whole external set. |
+| `goToNode` / `goToPly` | | Navigation. |
+| `orientation` / `flipBoard` / `setOrientation` | | Which way the board faces. |
+| `promotion` / `resolvePromotion` | `{from,to} \| null` / `(piece \| null) => void` | The picker. |
+| `onPieceDrop` | `(args) => boolean` | The drop handler. |
+| `playVariation` | `(sans) => void` | Replay a SAN prefix under the node on screen (clicking an engine line, the trainer's reply, a book move). |
+| `loadTree` / `loadFen` / `reset` | | Replace the whole game; only `loadFen` turns the board. |
+| `replaceTree` | `(tree) => void` | Replace the tree with **an edit of itself** (promote, delete from here, a comment) without stepping to the start: the node on screen stays when it survived, else its nearest surviving ancestor. |
+| `dirty` / `markDirty` | | Whether this board is the reader's own work. |
+| `pgn` | `string` | `treeToPgn(tree)`, memoised on the tree. |
+
+```ts
+useBoardCore({
+  fen?: string,            // a position arriving — turns the board
+  tree?: GameTree,         // a whole game arriving — does NOT turn the board
+  ply?: number,            // the mainline ply an arriving game opens at (?move=)
+  nodeId?: string | null,  // a place inside the tree — a reopened record
+  orientation?: "white" | "black",
+  dirty?: boolean,         // a reopened record starts dirty
+})
+```
+
+Every field is read on the **first render only**: arriving at a URL mounts the
+screen, so there is no later change to follow. A parameter that will not parse
+is the caller's to reject; it arrives as `undefined`.
+
+The base keeps these rules for every screen: only it calls `.move()`;
+**replaying a move that is already there is not a new variation** (`addMove`
+returns the existing node and the same tree by reference, so `dirty` is set
+only when the tree grew); `loadFen` turns the board and `loadTree` / `reset` do
+not; the promotion drop returns `true`.
+
+### 9.2 The capability modules
+
+Each is a hook the **screen** composes; none is a flag in the base, and none
+knows which screen calls it.
+
+#### 9.2.1 `useEngineModule` — the engine
+
+```ts
+const engine = useEngineModule({
+  enabled: boolean,                     // the engine's switch
+  fen: string,                          // the position ON SCREEN — never the live one
+  depth: number,
+  moveTimeMs: number,
+  uciOptions: Readonly<Record<string, number>>,   // name → requested value
+  onUciOptionsReady?: (clamped: Readonly<Record<string, number>>) => void,
+  onBestMove?: (bestMove: string, searchedFen: string) => void,
+});
+// → { analysis, evalsByFen, engineOptions, clearAnalysis }
+```
+
+It owns all of §4: the lazy ref, subscribe-first, terminate on unmount; the
+**`uci` handshake** — what the worker declared is `engineOptions`, and the
+requested values are **clamped into those bounds** and reported through
+`onUciOptionsReady` (the module never learns what a setting *means*);
+`setOption` pushed before the search effect; searching the position on screen,
+stopping when switched off, never searching a terminal position; **per-FEN
+evals** (the score a search *finished* with, recorded at its `bestmove`); and
+scores normalised against the searched FEN's turn.
+
+**The engine's reply is `onBestMove`, and that is the whole Play/Analysis
+difference.** A board that passes none has no branch that moves a piece. One
+that passes it is responsible for the guard — in practice `usePlayToggle`
+(§9.2.6).
+
+#### 9.2.2 `useOpeningBookModule` — the book
+
+```ts
+const book = useOpeningBookModule({ enabled: boolean, fen: string });
+// → { nextMoves, arrows, hoveredMove, setHoveredMove, opening, book, positionBook }
+```
+
+The eco.json continuations from the position on screen and their arrows,
+recomputed on every position and hover. Disabled, it loads nothing (the book
+is ~3 MB). The Openings explorer is its consumer
+([`openings-explorer.md`](./openings-explorer.md)).
+
+#### 9.2.3 `useAutosave` — persistence
+
+```ts
+useAutosave({ enabled: boolean, record: T | undefined, save: (record: T) => void });
+```
+
+Write-on-change and nothing else. `record` is `undefined` while there is
+nothing worth writing; **the store's own idempotency** keeps a mount or a
+settings clamp from re-ordering a list. The record is built by the screen.
+Play with Engine and Masked Pieces use it; the Analysis Board, the Library and
+the repertoires save **explicitly**, and the Openings explorer keeps nothing.
+
+#### 9.2.4 Where a board writes
+
+Each board writes its own store through its own record constructor, over
+`lib/idbRecordStore.ts` ([`database.md`](./database.md)): the played games
+(`lib/playedGameStore.ts`), the saved analyses, the repertoires, the Library's
+collections. A board under development in a Development section (§9.5) writes
+**dev-prefixed databases** over the same factory, so a bug there can never
+damage a real record.
+
+#### 9.2.5 `useTrainerModule` — the repertoire trainer
+
+```ts
+const trainer = useTrainerModule({
+  enabled: boolean,
+  core,                             // nodeId · fen · tree · onPieceDrop · resolvePromotion · playVariation
+  repertoire: GameTree,             // the tree AS IT ARRIVED — what the trainer answers from
+  trainerColor: "w" | "b",
+  policy?: TrainerPolicy,           // default pickTrainerMove; playChancePolicy, backtrackingPolicy
+  random?: () => number,            // injectable, so a test is deterministic
+  delayMs?: number,
+  drill?: boolean,                  // game mode: judge the reader's moves, take a wrong one back
+  onJudged?: (verdict: "success" | "fail") => void,  // once per position — the first try's
+  required?: VariationNode[],       // the moves the reader must choose from here
+});
+// → { status, onPieceDrop, resolvePromotion, requestReply(at), arrival }
+```
+
+A scripted opponent that answers **only from a repertoire**:
+
+- **The reply guard: a move, never a position.** A reply is owed only where a
+  reader's move lands (the wrapped `onPieceDrop` / `resolvePromotion` it hands
+  back) or where the screen calls `requestReply` (the session's start).
+  Navigating drops what is owed; stepping back to the trainer's turn never
+  moves a piece.
+- **It moves through the core** (`playVariation([san])` under the node on
+  screen) and **asks the original tree**, so it cannot move inside a line the
+  reader added.
+- **Game mode (`drill`)**: at the reader's turn, where the repertoire has a
+  move, the drop is judged **before** the core sees it (`judgeDrop`, pure, in
+  `lib/repertoireTrainer.ts`): a repertoire move goes on, any other legal move
+  is refused and never enters the tree. **One verdict per position**, the first
+  try's; `requestReply` (a restart) judges afresh. A repertoire move outside
+  `required` is refused, unjudged. `arrival` is the node the last *played* move
+  landed on (`null` after navigation), which is how a game tells a line was
+  finished.
+- **A new policy is a new `TrainerPolicy` function**, passed as `policy`; what
+  a verdict is worth is the screen's `onJudged`. Neither touches the module or
+  the core. The repertoire games are in [`repertoires.md`](./repertoires.md).
+
+#### 9.2.6 `usePlayToggle` — Play
+
+```ts
+const play = usePlayToggle({ core, engineOn, initial?, finished? });
+// → { playing, thinking, engineTurn, onBestMove, toggle, restart }
+```
+
+The engine playing **the side not at the bottom** while Play is on: its
+`onBestMove` plays a finished search's move only when the search was for the
+node on screen and it is that side's turn. Play pauses on any step that is not
+one move forward, a change of side (the flip — the reader's side *is* the
+orientation), the engine switched off, the game over, or `finished` (a
+resignation). Pressing Play at the engine's turn with a search of that position
+finished plays at once. The Analysis Board, the Library's game board and the
+Openings explorer start it off; Play with Engine starts it on. The header
+button and status line are `PlayToggleButton.tsx` / `EngineThinking.tsx`
+(`views/tools/analysis/`).
+
+### 9.3 The shell and the panel
+
+#### 9.3.1 `BoardShell` — the board square
+
+Renders the shared `views/shared/EngineBoardSquare` (eval bar, captured
+strips, board, promotion picker) and derives its props from the core and the
+modules; the captured-pieces summary is computed here from the core's line.
+The screen's `boardOptions` slot takes arrows, `pieces`, anything else; the
+panel is portalled into the shell's right-hand aside (`RightPanel`).
+
+```
+BoardShell
+├── EngineBoardSquare   (shared: eval bar + captured strips + board + promotion)
+│     boardOptions ← the screen's slot
+└── <RightPanel>
+      └── BoardPanel
+```
+
+#### 9.3.2 `BoardPanel` — the panel skeleton
+
+```
+┌──────────────────────────────────────┐
+│ header slot                          │  fixed
+│ ▸ pinned BestVariations              │  fixed — ONE block, every board
+│ tab strip                            │  fixed
+│ status: the score of the position    │  fixed — only with an engine
+│ the active tab's content             │  SCROLLS — the only scrolling region
+│ footer slot                          │  fixed
+│ |◀ ◀ ▶ ▶|                      flip  │  fixed — BoardControls
+└──────────────────────────────────────┘
+```
+
+| Prop | Type | Notes |
+| --- | --- | --- |
+| `testId` | `string` | The panel's root, and the root of every id under it. |
+| `header` / `footer` | `ReactNode?` | Fixed slots above the variations block and below the tab region. |
+| `analysis` | `Analysis?` | Absent ⇒ no variations block and no status row. |
+| `requestedMultiPv` | `number?` | How many lines were asked for. |
+| `engineOn` | `boolean?` | The block renders nothing while off; the status row says so. |
+| `onPlayVariation` | `((sans) => void)?` | Present ⇒ the lines are clickable. |
+| `mask` | `PieceMask?` | Masked notation in the block (Masked Pieces). |
+| `showVariations` | `boolean?` | Whether the block shows at all — on by default. |
+| `tabs` | `readonly { id, label, content, disabled? }[]` | One is rendered at a time unless `keepMounted` names it; the screen keeps `activeTab` off a disabled tab. |
+| `keepMounted` | `readonly string[]?` | Tabs that mount on first open and stay mounted, hidden — for a body whose mount is the cost (a 9,000-move list). Showing one again scrolls its current move into view. |
+| `activeTab` / `onTabChange` | | The screen's state. |
+| `ply` / `lastPly` / `onSelectPly` / `onFlip` | | Straight through to `BoardControls`. |
+
+**One tab is rendered at a time** by default (a hidden move list would scroll a
+zero-height box on every move); **the panel is a non-scrolling flex column and
+exactly one child scrolls** (`flex: 1; minHeight: 0; overflowY: auto`), because
+the shell's aside does not scroll.
+
+### 9.4 The boards
+
+Every board composed from the core, and what it picks. Each module's file has
+the detail.
+
+| Board | Session | Engine reply | Book | Saving | Tabs | Tree view |
+| --- | --- | --- | --- | --- | --- | --- |
+| **Analysis Board** `/tools/analysis` | `useAnalysisSession` (+ the saved record: `useAnalysisBoard`) | Play (off at start) | — | explicit: Save → changes strip or name-and-folder dialog | Moves · Map · Load · Export · Engine | explorer, editing on, *Play chances…* off, `addedIds` |
+| **Play with Engine** `/engine/play` | `usePlayGame` | Play (on from the start) | — | `useAutosave` → played games | Moves · Map · Engine | explorer, as the Analysis Board without `addedIds` |
+| **Masked Pieces** `/engine/masked` | `usePlayGame` (the same `PlayScreen`) | as Play with Engine | — | as Play with Engine, the costume on the record | + Masking | as Play with Engine, plus `mask` |
+| **Library game** `/library/<c>/<n>` | `useAnalysisSession` | Play (off) | — | explicit: Update / Save as copy (shipped: copy to Saved analyses) | Moves · Map · Info · Export · Engine | as the Analysis Board |
+| **Openings explorer** `/openings` | `useAnalysisSession` | Play (off) | `useOpeningBookModule` | nothing is kept; hands the tree to the Analysis Board | Book · Moves · Map · Load · Export · Engine | as Play with Engine |
+| **Repertoire player** `/repertoires/<id>` (+ `/games/<game>`) | the core + `useTrainerModule` | none — the trainer is the opponent | — | explicit: Update / Save as copy (a game never writes) | Moves · (Score) · Map · Settings · Engine | the full explorer; editing and comments in the player only |
+
+Next-move arrows are one helper, `nextMoveArrowsOf` — the mainline's move
+green, side lines blue, the hovered one in the hover colour — so a change of
+colour reaches every board.
+
+### 9.5 Adding a board
+
+The whole cost of a new board, say a **puzzle trainer** (a position arrives,
+the reader plays the solution, the engine never moves):
+
+1. **Pick the capabilities** in a small screen hook: `useBoardCore({ fen })`,
+   `useEngineModule` with **no** `onBestMove`, no book, no autosave.
+2. **Supply the slots**: `<BoardShell id="puzzle" core={…} analysis={…}
+   evalsByFen={…} panel={{ header, tabs, footer, … }} />`, with the tree view
+   from `useVariationsExplorer` (or the puzzle mode, `tree-views.md` §4).
+3. **One route in `App.tsx` and one `navItems()` entry.** A board still being
+   built goes behind a **Development section**: its nav folder and entries are
+   spreads in `navFolders()` / `navItems()` gated on `import.meta.env.DEV`, its
+   route a `React.lazy` import inside an `import.meta.env.DEV ? [...] : []`
+   array (so the production bundle carries no chunk of it), and a store it
+   writes gets dev-prefixed database names (§9.2.4). Verify after `yarn build`
+   by grepping `dist/` for its paths, test ids and database names (the
+   Stockfish runtime's own `/dev/stdin` and `/dev/tty` are expected).
+4. **Locale keys** in `en.ts` and `he.ts` both (`he` is typed `typeof en`).
+5. **One test** stubbing `react-chessboard` (with `defaultPieces`), and a row
+   in `boards.test.tsx` and `panelPropagation.test.tsx`.
+
+What is **not** on that list, and must not appear: a behaviour hook of its
+own, a copy of the `calc()`, an `engine.ts` subscription, a `setoption` call,
+a second panel, or a locale block repeating `moveList.*` / `variations.*` /
+`board.*`.
+
+### 9.6 What a board must never do
+
+- **Call `.move()` outside the base**; `chess.js` owns the rules.
+- **Break the engine discipline of §4.1**, which lives in `useEngineModule`
+  and nowhere else.
+- **Normalise a score against anything but the searched FEN's turn.**
+- **Repeat the layout arithmetic** of §5 outside `EngineBoardSquare.tsx`.
+- **Mirror under RTL.** A panel token that must stay LTR takes the `dir`
+  attribute, not a CSS declaration (the RTL stylis plugin flips it).
+- **Share an `options.id`** — `analysis`, `play-with-engine`, `masked-play`,
+  `openings`, `library-game`, `repertoire-board`, `repertoire-game`.
+- **Change a shared piece incompatibly.** Under `views/shared/`,
+  `views/explorer/`, `views/board/core/` or `src/lib/`, a new behaviour is an
+  optional prop whose absence is today's behaviour, with every screen's tests
+  passing unchanged.
+- **Ship a Development section**, or import anything of one from a shipped
+  screen.

@@ -37,7 +37,7 @@ import {
   loadSavedAnalyses,
   savedAnalysesSnapshot,
 } from "../../../lib/savedAnalysisStore";
-import BoardShell from "../../dev/core/BoardShell";
+import BoardShell from "../../board/core/BoardShell";
 import { useVariationsExplorer } from "../../explorer/useVariationsExplorer";
 import RepertoireChangesBar from "../../repertoires/RepertoireChangesBar";
 import CurrentOpening from "../../shared/CurrentOpening";
@@ -58,7 +58,7 @@ import { useAnalysisBoard, type AnalysisBoardStart } from "./useAnalysisBoard";
  * paused or until the reader steps back (`useAnalysisBoard`).
  *
  * Composed from the v2 core
- * ([`.claude/rules/chessboard-v2.md`](../../../../.claude/rules/chessboard-v2.md))
+ * ([`.claude/rules/chessboard.md`](../../../../.claude/rules/chessboard.md) §9)
  * and the shared tree view
  * ([`.claude/rules/tree-views.md`](../../../../.claude/rules/tree-views.md)) —
  * functionally the repertoire player without its trainer and its protection:

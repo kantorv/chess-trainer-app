@@ -39,7 +39,7 @@ import { idbRecordStore } from "./idbRecordStore";
  */
 
 /** The database Play with Engine's (and Masked Pieces') games live in. */
-export const ENGINE_DB_NAME = "chessapp.engine";
+const ENGINE_DB_NAME = "chessapp.engine";
 const DB_VERSION = 1;
 const GAMES_STORE = "games";
 
@@ -134,10 +134,6 @@ export const removePlayedGame = (id: string): Promise<PlayedGameProblem | undefi
   write((current) =>
     current.some((row) => row.id === id) ? current.filter((row) => row.id !== id) : current,
   );
-
-/** Forget all of them. */
-export const clearPlayedGames = (): Promise<PlayedGameProblem | undefined> =>
-  write((current) => (current.length === 0 ? current : []));
 
 /* Memoised on the snapshot's identity. */
 let live: { games: readonly PlayedGame[]; catalog: GameCatalog } | undefined;

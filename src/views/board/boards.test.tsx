@@ -14,7 +14,7 @@ import { RightPanelOutlet, RightPanelProvider } from "../main/rightPanel";
   (The Development section's own boards, Play v2 and Masked v2, were the last
   there and went with CTA-79.)
 
-  `devPanelPropagation.test.tsx` is the other half: it replaces the panel with
+  `panelPropagation.test.tsx` is the other half: it replaces the panel with
   a sentinel to prove every board renders *one* component. This file keeps
   the real one and asserts what is inside it — that the shared skeleton's
   parts actually reach every board, that the masked board adds a costume and
@@ -22,22 +22,22 @@ import { RightPanelOutlet, RightPanelProvider } from "../main/rightPanel";
 */
 
 vi.mock("../../lib/engine", async () => ({
-  default: (await import("./devTestHarness")).FakeEngine,
+  default: (await import("./boardTestHarness")).FakeEngine,
 }));
 
 vi.mock("react-chessboard", async () => {
-  const { reactChessboardMock } = await import("./devTestHarness");
+  const { reactChessboardMock } = await import("./boardTestHarness");
   return reactChessboardMock();
 });
 
 vi.mock("../../lib/openings", async (importOriginal) => {
-  const { openingsMock } = await import("./devTestHarness");
+  const { openingsMock } = await import("./boardTestHarness");
   return openingsMock(
     importOriginal as () => Promise<typeof import("../../lib/openings")>,
   );
 });
 
-import { boardOptions, FakeEngine } from "./devTestHarness";
+import { boardOptions, FakeEngine } from "./boardTestHarness";
 import { loadPlayedGames, playedGamesSnapshot } from "../../lib/playedGameStore";
 import AnalysisBoard from "../tools/analysis/AnalysisBoard";
 import PlayWithEngine from "../engine/play/PlayWithEngine";

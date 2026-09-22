@@ -49,7 +49,7 @@ export type NewGameRequest = {
 };
 
 /** Each numeric setting's query parameter. */
-export const NEW_GAME_PARAM = {
+const NEW_GAME_PARAM = {
   skillLevel: "skill",
   depth: "depth",
   moveTimeMs: "movetime",

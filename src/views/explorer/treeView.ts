@@ -24,9 +24,6 @@ import type { GameTree, VariationNode } from "../../lib/gameTree";
  * adding either is a new hook beside it and nothing else.
  */
 
-/** The view modes. Only `explorer` is built; see the rules file for the others. */
-export type TreeViewMode = "explorer";
-
 /** What every tree view reads: the game, the reader's place in it, and the way to move them. */
 export type TreeViewSource = {
   /** The game, side lines and all. */

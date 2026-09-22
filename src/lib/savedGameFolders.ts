@@ -54,7 +54,7 @@ export type GameFolder = {
  * everything else a row gets wrong is {@link gameFolderFrom}'s to normalise,
  * not a reason to drop the record.
  */
-export const isGameFolder = (value: unknown): value is GameFolder => {
+const isGameFolder = (value: unknown): value is GameFolder => {
   if (typeof value !== "object" || value === null) return false;
   const row = value as Record<string, unknown>;
   return typeof row.id === "string" && row.id !== "";

@@ -127,5 +127,3 @@ export const usePlayToggle = ({
 
   return { playing, thinking, engineTurn, onBestMove, toggle, restart };
 };
-
-export type PlayToggle = ReturnType<typeof usePlayToggle>;

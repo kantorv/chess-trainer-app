@@ -37,7 +37,7 @@ import { SparePiece } from "react-chessboard";
  */
 
 /** The largest a palette square grows — the size it had beside the old full-size board. */
-export const PALETTE_SQUARE_MAX_PX = 44;
+const PALETTE_SQUARE_MAX_PX = 44;
 
 /** King first, pawn last — the order a piece box is read in. */
 const PIECES = ["K", "Q", "R", "B", "N", "P"] as const;

@@ -24,12 +24,12 @@ import { startNumbering } from "./gameNavigation";
  */
 
 /** The piece letters a capture can name — a king is never captured. */
-export const CAPTURED_PIECE_LETTERS = ["q", "r", "b", "n", "p"] as const;
+const CAPTURED_PIECE_LETTERS = ["q", "r", "b", "n", "p"] as const;
 
 export type CapturedPieceLetter = (typeof CAPTURED_PIECE_LETTERS)[number];
 
 /** Standard material values: P=1, N=3, B=3, R=5, Q=9. */
-export const MATERIAL_VALUES: Readonly<
+const MATERIAL_VALUES: Readonly<
   Record<CapturedPieceLetter, number>
 > = { p: 1, n: 3, b: 3, r: 5, q: 9 };
 

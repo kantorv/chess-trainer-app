@@ -11,8 +11,8 @@ import BestVariations from "../../shared/BestVariations";
 import BoardControls from "../../shared/BoardControls";
 
 /**
- * **The panel skeleton every v2 board shares** — §3.2 of
- * [`.claude/rules/chessboard-v2.md`](../../../../.claude/rules/chessboard-v2.md).
+ * **The panel skeleton every v2 board shares** — §9.3.2 of
+ * [`.claude/rules/chessboard.md`](../../../../.claude/rules/chessboard.md).
  *
  * One component, every v2 board its consumer. This is the layer that had no
  * owner before CTA-60, and it is the reason that issue existed: the pinned

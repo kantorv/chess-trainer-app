@@ -14,8 +14,8 @@ import type { Turn } from "../../../lib/engineAnalysis";
 import { useTreeNavigation } from "../../tools/analysis/useTreeNavigation";
 
 /**
- * **The base of every v2 board** — §1 of
- * [`.claude/rules/chessboard-v2.md`](../../../../.claude/rules/chessboard-v2.md).
+ * **The base of every v2 board** — §9.1 of
+ * [`.claude/rules/chessboard.md`](../../../../.claude/rules/chessboard.md).
  *
  * Everything every board has, and nothing any single board has: the game as a
  * {@link GameTree}, node-based navigation over it, the `chess.js` rules oracle,
@@ -24,21 +24,13 @@ import { useTreeNavigation } from "../../tools/analysis/useTreeNavigation";
  * screen composes beside this hook (`useEngineModule`, `useOpeningBookModule`,
  * `useAutosave`) — never flags inside it.
  *
- * ## Why a tree, on a screen that cannot branch too
+ * ## Why a tree
  *
- * The Analysis Board is the reference: a tree is the general case and a linear
- * game is the degenerate one. `mainlineGame` / `treeFromGame` already bridge
- * both directions and are tested both ways, so a linear screen loses nothing by
- * holding a tree — and gains the one thing the shipped linear screens never
- * got, which is every improvement written against the tree (CTA-53/54/55).
- *
- * A linear board stays linear through **one predicate**, not a mode:
- * {@link BoardCoreStart.canMoveAt}. A board passing `(_, { isLive }) => isLive`
- * refuses a drag anywhere but the end of the mainline, so no branch can ever
- * form (the dev board Play v2 did, until CTA-79; every shipped board branches,
- * and the flat tree view of `.claude/rules/tree-views.md` §3 is specified for
- * the next one that does not). This hook has no branch on "am I a play board"; it asks a question
- * the screen answers.
+ * A tree is the general case and a linear game is the degenerate one.
+ * `mainlineGame` / `treeFromGame` bridge both directions and are tested both
+ * ways, so a screen that reads one line loses nothing by holding a tree. Every
+ * board branches: both colours move from any node, and a move from an earlier
+ * position is a side line there.
  *
  * ## The node is the state; the ply is derived
  *
@@ -82,7 +74,7 @@ export const isTerminal = (fen: string): boolean => {
 /** What the promotion picker is asking about. */
 export type PendingPromotion = { from: Square; to: Square };
 
-/** What a board opens with. Every field but `canMoveAt` is read once. */
+/** What a board opens with. Every field is read once. */
 export type BoardCoreStart = {
   /** A position to open on — the `?fen=` hand-off. Turns the board. */
   fen?: string;
@@ -96,12 +88,6 @@ export type BoardCoreStart = {
   orientation?: "white" | "black";
   /** A reopened record is already the reader's work, so it starts dirty. */
   dirty?: boolean;
-  /**
-   * Whether a move may be made from the position on screen — the one seam a
-   * **linear** board needs: `(_, { isLive }) => isLive`. The branching boards
-   * — every shipped one — pass nothing and both colours move from any node.
-   */
-  canMoveAt?: (fen: string, core: { isLive: boolean }) => boolean;
 };
 
 export const useBoardCore = ({
@@ -111,7 +97,6 @@ export const useBoardCore = ({
   nodeId: initialNodeId,
   orientation: initialOrientation,
   dirty: initialDirty = false,
-  canMoveAt,
 }: BoardCoreStart = {}) => {
   /*
     One `chess.js` instance, in a ref, moved to whichever position is being
@@ -167,15 +152,7 @@ export const useBoardCore = ({
   const navigation = useTreeNavigation(tree, initialPly, initialNodeId);
   const { fen, nodeId, goToNode } = navigation;
 
-  /*
-    The live position: the end of the mainline. On a branching board it is
-    nothing special; on a linear one it is the only position that can be played
-    on from, and `canMoveAt` is what turns that into a rule.
-  */
   const mainlineNodes = useMemo(() => mainline(tree), [tree]);
-  const liveNode = mainlineNodes[mainlineNodes.length - 1];
-  const liveFen = liveNode?.fen ?? tree.startFen;
-  const isLive = (liveNode?.id ?? null) === nodeId;
 
   /** Add an already-played move under `parentId` and select it. */
   const commit = useCallback(
@@ -216,33 +193,6 @@ export const useBoardCore = ({
   );
 
   /**
-   * Add a move at the **end of the mainline**, wherever the reader is standing
-   * — the engine's reply, which answers the live position and not the one being
-   * looked at. Takes a UCI move string (`"e2e4"`, `"e7e8q"`) or a SAN.
-   */
-  const appendMove = useCallback(
-    (uciOrSan: string) => {
-      const chess = chessAt(liveFen);
-      let move: Move;
-      try {
-        move =
-          /^[a-h][1-8][a-h][1-8][qrbn]?$/.test(uciOrSan)
-            ? chess.move({
-                from: uciOrSan.slice(0, 2),
-                to: uciOrSan.slice(2, 4),
-                promotion: uciOrSan.slice(4) || undefined,
-              })
-            : chess.move(uciOrSan);
-      } catch {
-        // A malformed or stale move: leave the game exactly as it was.
-        return false;
-      }
-      return commit(move, liveNode?.id ?? null);
-    },
-    [chessAt, commit, liveFen, liveNode],
-  );
-
-  /**
    * The drop handler. Returns `true` for every move actually applied — and also
    * for a promotion, which is applied a moment later once the picker is
    * answered; returning `false` there would snap the pawn back and then jump it
@@ -257,7 +207,6 @@ export const useBoardCore = ({
       targetSquare: string | null;
     }): boolean => {
       if (!targetSquare) return false;
-      if (canMoveAt !== undefined && !canMoveAt(fen, { isLive })) return false;
 
       const chess = chessAt(fen);
       if (chess.isGameOver()) return false;
@@ -280,7 +229,7 @@ export const useBoardCore = ({
 
       return applyMove(sourceSquare as Square, targetSquare as Square);
     },
-    [applyMove, canMoveAt, chessAt, fen, isLive],
+    [applyMove, chessAt, fen],
   );
 
   /** Answer the promotion picker with a piece, or dismiss it with `null`. */
@@ -418,12 +367,8 @@ export const useBoardCore = ({
   return {
     tree,
     ...navigation,
-    /** The mainline, walked once — what a linear move list renders. */
+    /** The mainline, walked once — the move list's numbered cells. */
     mainlineNodes,
-    /** The position at the end of the mainline: what a linear board plays on. */
-    liveFen,
-    /** Whether the selection *is* that end. */
-    isLive,
     /**
      * The whole game as PGN, side lines included. Memoised on the tree: it was
      * written out on every render, which on a ~9,000-node repertoire was a
@@ -438,8 +383,6 @@ export const useBoardCore = ({
     promotion,
     resolvePromotion,
     onPieceDrop,
-    applyMove,
-    appendMove,
     playVariation,
     loadTree,
     replaceTree,

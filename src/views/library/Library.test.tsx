@@ -32,15 +32,15 @@ import {
 } from "../../lib/savedAnalysisFolderStore";
 import { downloadPgn } from "../../lib/pgnExport";
 import AppThemeWithLang from "../../theme/AppThemeWithLang";
-import { boardOptions, FakeEngine } from "../dev/devTestHarness";
+import { boardOptions, FakeEngine } from "../board/boardTestHarness";
 import { RightPanelOutlet, RightPanelProvider } from "../main/rightPanel";
 
 vi.mock("../../lib/engine", async () => ({
-  default: (await import("../dev/devTestHarness")).FakeEngine,
+  default: (await import("../board/boardTestHarness")).FakeEngine,
 }));
 
 vi.mock("react-chessboard", async () => {
-  const { reactChessboardMock } = await import("../dev/devTestHarness");
+  const { reactChessboardMock } = await import("../board/boardTestHarness");
   return reactChessboardMock();
 });
 
@@ -51,7 +51,7 @@ vi.mock("../../lib/pgnExport", async (importOriginal) => ({
 }));
 
 vi.mock("../../lib/openings", async (importOriginal) => {
-  const { openingsMock } = await import("../dev/devTestHarness");
+  const { openingsMock } = await import("../board/boardTestHarness");
   return openingsMock(importOriginal as () => Promise<typeof import("../../lib/openings")>);
 });
 
@@ -66,8 +66,8 @@ import LibraryUpload from "./LibraryUpload";
   paste checked game by game and becoming a collection in IndexedDB, and a game
   on its analysis board — Update / Save as copy in an upload, Save as copy
   into Saved analyses from a shipped file. The board's shared panel and square
-  are asserted with the other v2 boards (`devBoards.test.tsx`,
-  `devPanelPropagation.test.tsx`).
+  are asserted with the other v2 boards (`boards.test.tsx`,
+  `panelPropagation.test.tsx`).
 */
 
 const AFTER_E4_E5 = "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2";

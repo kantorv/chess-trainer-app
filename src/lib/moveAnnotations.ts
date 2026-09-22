@@ -24,7 +24,7 @@ import { formatPercent, playChanceInText, withoutPlayChance } from "./playChance
  */
 
 /** One `key: value` read out of a comment. */
-export type AnnotationAttribute = { key: string; value: string };
+type AnnotationAttribute = { key: string; value: string };
 
 /** One comment, read: its prose in paragraphs, and its attributes. */
 export type ReadComment = {

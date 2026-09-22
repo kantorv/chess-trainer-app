@@ -17,12 +17,12 @@ import {
   saveAnalysis,
   type SavedAnalysisProblem,
 } from "../../../lib/savedAnalysisStore";
-import { turnOf } from "../../dev/core/useBoardCore";
+import { turnOf } from "../../board/core/useBoardCore";
 import { useAnalysisSession } from "./useAnalysisSession";
 
 /**
  * **The Analysis Board's session** (CTA-73) — the v2 core
- * ([`.claude/rules/chessboard-v2.md`](../../../../.claude/rules/chessboard-v2.md))
+ * ([`.claude/rules/chessboard.md`](../../../../.claude/rules/chessboard.md) §9)
  * composed for analysis, plus the one thing that is this screen's own: the
  * **saved record** the session is attached to, and what the reader does with
  * its changes.
@@ -48,7 +48,7 @@ import { useAnalysisSession } from "./useAnalysisSession";
  * flipped (the engine's side changed under it), once the position is over,
  * and whenever the engine is switched off. Off, `onBestMove` does nothing:
  * nothing moves unasked. All of it is the shared `usePlayToggle`
- * (`views/dev/core/`), which Play with Engine runs too (CTA-74).
+ * (`views/board/core/`), which Play with Engine runs too (CTA-74).
  *
  * ## Explicit save, against a baseline
  *
@@ -95,7 +95,7 @@ export type AnalysisBoardStart = {
 };
 
 /** A tree that is nothing yet — the standard start, no moves. */
-export const isBlankTree = (tree: GameTree): boolean =>
+const isBlankTree = (tree: GameTree): boolean =>
   tree.moves.length === 0 && tree.startFen === DEFAULT_POSITION;
 
 export const useAnalysisBoard = ({
@@ -317,5 +317,3 @@ export const useAnalysisBoard = ({
     clearBoard,
   };
 };
-
-export type AnalysisBoardState = ReturnType<typeof useAnalysisBoard>;

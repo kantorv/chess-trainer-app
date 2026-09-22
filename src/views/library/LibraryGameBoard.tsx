@@ -32,7 +32,7 @@ import { slugify } from "../../lib/pgnText";
 import { atParamOf, nodeAtParam, REPERTOIRE_AT_PARAM } from "../../lib/repertoireLink";
 import { newSavedAnalysisId, savedAnalysisOf } from "../../lib/savedAnalyses";
 import { saveAnalysis } from "../../lib/savedAnalysisStore";
-import BoardShell from "../dev/core/BoardShell";
+import BoardShell from "../board/core/BoardShell";
 import { useVariationsExplorer } from "../explorer/useVariationsExplorer";
 import RepertoireChangesBar from "../repertoires/RepertoireChangesBar";
 import CurrentOpening from "../shared/CurrentOpening";
@@ -46,7 +46,7 @@ import { useAnalysisSession } from "../tools/analysis/useAnalysisSession";
 /**
  * **A Library game** (`/library/<collection>/<game>`, CTA-75) — a game of a
  * collection on a **full analysis board**, composed exactly as the Analysis
- * Board is ([`chessboard-v2.md`](../../../.claude/rules/chessboard-v2.md) §5 —
+ * Board is ([`chessboard.md`](../../../.claude/rules/chessboard.md) §9.4 —
  * no behaviour hook of its own):
  *
  * | Capability | Taken |
@@ -79,7 +79,7 @@ import { useAnalysisSession } from "../tools/analysis/useAnalysisSession";
 
 const KEEP_MOUNTED = ["moves", "map"] as const;
 
-export type LibraryGameBoardProps = {
+type LibraryGameBoardProps = {
   collection: LibraryCollection;
   /** 1-based: the game's place in the collection. */
   number: number;

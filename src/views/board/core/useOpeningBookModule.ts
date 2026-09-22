@@ -14,8 +14,8 @@ import {
 } from "../../../lib/openings";
 
 /**
- * **The opening-book capability** — §2.2 of
- * [`.claude/rules/chessboard-v2.md`](../../../../.claude/rules/chessboard-v2.md).
+ * **The opening-book capability** — §9.2.2 of
+ * [`.claude/rules/chessboard.md`](../../../../.claude/rules/chessboard.md).
  *
  * The eco.json lookup for the position on screen, its known continuations, and
  * their arrows. A board composes this when it lists book continuations;

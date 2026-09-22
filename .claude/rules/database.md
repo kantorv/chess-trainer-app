@@ -133,9 +133,8 @@ Only preferences, written by libraries rather than by us:
 | `mui-mode` (and MUI's other colour-scheme keys) | MUI's `ThemeProvider` with `colorSchemes` (`theme/AppThemeWithLang.tsx`) | light / dark / system |
 | `i18nextLng` | `i18next-browser-languagedetector` (`i18n.ts`) | the language picked |
 
-Nothing else in `src/` touches `localStorage`. The data stores that once
-lived there moved to IndexedDB, and the one-time move of their old keys has
-been removed too: data under an old `chessapp.*.v1` key is no longer read.
+Nothing else in `src/` touches `localStorage`, and nothing reads the old
+`chessapp.*.v1` keys — do not reuse those names.
 `grep -rn localStorage src --include=*.ts --include=*.tsx | grep -v test`
 should show only comments.
 
@@ -240,7 +239,7 @@ ignore an answer that is no longer about the record on screen
 
 ## 6. Performance, measured
 
-Measured under the tests' `fake-indexeddb` and jsdom (CTA-77, the Carlsen
+Measured under the tests' `fake-indexeddb` and jsdom (the Carlsen
 fixture's games as analyses): 7,818 records ≈ 8 MB, written in one batch in
 ~80 ms, read back in ~60 ms; 20,000 ≈ 20 MB, ~0.6 s and ~0.1 s. A real
 browser is faster. The engine games (100) and the repertoires (500, but a

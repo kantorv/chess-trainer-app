@@ -87,7 +87,7 @@ function ResultBar({ node }: { node: OpeningTreeNode }) {
   );
 }
 
-export type OpeningFilterBoardProps = {
+type OpeningFilterBoardProps = {
   /** The moves played, already matched against the collection's tree. */
   line: readonly string[];
   /** The node `line` reaches. */

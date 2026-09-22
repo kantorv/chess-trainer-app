@@ -7,9 +7,9 @@ import {
 } from "../../../lib/analysisSettings";
 import { findNode, pathTo, type GameTree } from "../../../lib/gameTree";
 import { extensionIdsOf, nodeIdsOf } from "../../../lib/repertoireTrainer";
-import { useBoardCore } from "../../dev/core/useBoardCore";
-import { useEngineModule } from "../../dev/core/useEngineModule";
-import { usePlayToggle } from "../../dev/core/usePlayToggle";
+import { useBoardCore } from "../../board/core/useBoardCore";
+import { useEngineModule } from "../../board/core/useEngineModule";
+import { usePlayToggle } from "../../board/core/usePlayToggle";
 
 /**
  * **An analysis session against a baseline** — the part of the Analysis
@@ -28,7 +28,7 @@ import { usePlayToggle } from "../../dev/core/usePlayToggle";
  *
  * What is **kept**, and where, is the screen's: a saved analysis
  * (`useAnalysisBoard`), or a Library collection's game. Composed from the
- * core's modules ([`chessboard-v2.md`](../../../../.claude/rules/chessboard-v2.md))
+ * core's modules ([`chessboard.md`](../../../../.claude/rules/chessboard.md) §9)
  * — nothing here that a module owns.
  */
 
@@ -141,5 +141,3 @@ export const useAnalysisSession = ({
     discard,
   };
 };
-
-export type AnalysisSession = ReturnType<typeof useAnalysisSession>;

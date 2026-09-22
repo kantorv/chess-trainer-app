@@ -21,10 +21,10 @@ people and for LLM sessions alike. It loads automatically when you work on
 the files in its `paths:` list. Anything outside the module that touches it
 (the `?game=` registry, the Analysis Board, Saved analyses) points back here.
 
-The root `CLAUDE.md` keeps only a short summary. When the two disagree, this
-file is the authority for the Library, and the board rules
-([`chessboard.md`](./chessboard.md), [`chessboard-v2.md`](./chessboard-v2.md),
-[`tree-views.md`](./tree-views.md)) are the authority for the game board.
+This file is the authority for the Library; the board rules
+([`chessboard.md`](./chessboard.md), [`tree-views.md`](./tree-views.md)) are
+the authority for the game board, and [`analysis-board.md`](./analysis-board.md)
+for the Analysis Board and Saved analyses it hands games to.
 
 > **"Game" collections, deliberately.** Everything here is a collection of
 > **games**: PGN text with moves, a table of players and results, and an
@@ -43,10 +43,10 @@ file is the authority for the Library, and the board rules
 | `src/lib/libraryCollections.ts` | **The model, pure**: `CollectionSource`, `CollectionSummary`, `LibraryCollection`, `CollectionRow`, `COLLECTION_COLUMNS`, `collectionRowOf` (the tag half of a row, no `chess.js`), `sortedRows`, `RowFilter` / `filteredRows`, `CollectionFilterValues` / `COLLECTION_FILTER_PARAMS`, `collectionFacetsOf`, `openingLabelOf`, `dateBounds`, `activeFilterSummary` / `batchFolderNameOf` (the Analyse folder name), `collectionNameOfStem` / `collectionIdOfStem`, `collectionGamesOf` (**the one rule for cutting a text into games**), `readCollectionText` (a file or a paste), `MAX_COLLECTION_CHARS`. |
 | `src/lib/collectionIndex.ts` | **The index**: `IndexedRow`, `indexedRowOf` (tags + a `parsePgnTree` pass), `indexGame` (one game, with the app's book), `buildCollectionIndex` / `buildCollectionIndexAsync`, `numberedRows`, `textHash`, `LINE_PLIES`, `OpeningLookup` / `loadOpeningLookup`, and the file format: `encodeCollectionIndex` / `decodeCollectionIndex`, `COLLECTION_INDEX_FORMAT` / `COLLECTION_INDEX_VERSION`. |
 | `src/lib/collectionIndex.worker.ts` | The index pass for an upload, off the main thread. |
-| `src/lib/openingTree.ts` | **The opening tree** (CTA-76): `openingTreeOf` (rows' `line`s merged by SAN), `openingNodeAt` / `openingNodeOn`, `OPENING_LINE_PARAM` (`line`), `openingLineParamOf` / `openingLineOfParam`. Pure, with no `chess.js`. |
+| `src/lib/openingTree.ts` | **The opening tree**: `openingTreeOf` (rows' `line`s merged by SAN), `openingNodeAt` / `openingNodeOn`, `OPENING_LINE_PARAM` (`line`), `openingLineParamOf` / `openingLineOfParam`. Pure, with no `chess.js`. |
 | `src/lib/shippedCollections.ts` | **Shipped collections**: the manifest (a static import) and two lazy globs (`*.pgn`, `*.index.json`, `?raw`). `shippedCollectionsOf` (takes its inputs as parameters, for tests), `shippedCollections`, `findShippedCollection`, `peekShippedRows` / `peekShippedGames`, `subscribeShipped`. |
 | `src/lib/libraryCollectionStore.ts` | **Uploaded collections, in IndexedDB** (`chessapp.library`). Reads: `uploadedCollectionsSnapshot`, `subscribeUploadedCollections`, `loadUploadedCollections`, `peekUploadedRows` / `loadUploadedRows`, `peekUploadedGames` / `loadUploadedGames`. Writes: `addCollection`, `removeCollection`, `replaceCollectionGame` (Update), `insertCollectionGame` (Save as copy), `appendCollectionGames` (Add games), `removeCollectionGames` (delete picked). Also `newCollectionId` and `resetLibraryCollectionStore` (for tests). |
-| `src/lib/libraryGameCatalog.ts` | **A Library game as a `?game=` reference** (CTA-77): `library/<collection>/<n>`. `findLibraryGame`, `libraryReferenceRead`, `loadLibraryReferenceGames`, `libraryReferencePathOf`. Registered in `lib/gameReference.ts`. |
+| `src/lib/libraryGameCatalog.ts` | **A Library game as a `?game=` reference**: `library/<collection>/<n>`. `findLibraryGame`, `libraryReferenceRead`, `loadLibraryReferenceGames`, `libraryReferencePathOf`. Registered in `lib/gameReference.ts`. |
 | `src/data/library/` | The shipped files: `<Stem>.pgn`, `<Stem>.index.json`, `manifest.json`, and a `README.md` for whoever adds a file. |
 | `scripts/wirepgn.js` | **The wiring CLI** (`yarn wirepgn`): wire, `--list`, `--check`, `--rebuild`, `--remove`, `--dir`. |
 | `src/views/library/LibraryHome.tsx` | `/library`: the list, the name filter, and each row's download and delete. |
@@ -54,7 +54,7 @@ file is the authority for the Library, and the board rules
 | `src/views/library/CollectionScreen.tsx` | `/library/<collection>`: the table, the picks, the export bar, Analyse, Add games, and deleting games. |
 | `src/views/library/CollectionFilters.tsx` | The table's right-hand panel: player and side, the opening board, then opening, event, dates and result. |
 | `src/views/library/OpeningFilterBoard.tsx` | The opening-moves board (`options.id` `library-filter-board`). |
-| `src/views/library/LibraryGameScreen.tsx` → `LibraryGameBoard.tsx` | `/library/<collection>/<n>`: resolve and parse the game, then the v2 analysis board. |
+| `src/views/library/LibraryGameScreen.tsx` → `LibraryGameBoard.tsx` | `/library/<collection>/<n>`: resolve and parse the game, then the analysis board. |
 | `src/views/library/useLibraryCollections.ts` | The React bindings: `useUploadedCollections`, `useCollectionSummary`, `useCollectionRows`, `useCollectionGames`, `loadCollectionGames`. |
 | `src/views/library/indexCollection.ts` | Runs the worker with progress and cancel, with a jsdom fallback. |
 | `src/views/library/LibraryMiss.tsx` | The "no such collection / game" screen. |
@@ -119,7 +119,7 @@ a collection =   ──▶ rows:  CollectionRow[]  (its INDEX, one per game)    
 | `eco` | `ECO` tag | Or, when the tags lack it, from eco.json. **A tag always wins.** |
 | `moves` | parsed mainline | Full moves: 41 plies → 21. (`collectionRowOf` counts it from the text; the index replaces that with the parsed count.) |
 | `unreadable` | index pass | `parsePgnTree` threw. The table marks it; Analyse skips it. |
-| `line` | index pass | The first `LINE_PLIES` (30) plies of the parsed mainline as SAN (CTA-76). **Absent** for unreadable games, games not from the standard start, and indexes from before the column. |
+| `line` | index pass | The first `LINE_PLIES` (30) plies of the parsed mainline as SAN. **Absent** for unreadable games, games not from the standard start, and indexes from before the column. |
 
 **The table never parses a game.** A row is built **once**, when the
 collection comes in, and read afterwards.
@@ -242,7 +242,7 @@ A 10,000-game collection is about 10 million characters. `localStorage` holds
 about 5 million for the **whole origin**, shared with every other store.
 IndexedDB's quota is a share of the disk. Every store of the reader's data is
 IndexedDB now — the Library (`chessapp.library`), the saved analyses
-(`chessapp.analyses`, CTA-77), the engine games and the repertoires; the whole
+(`chessapp.analyses`), the engine games and the repertoires; the whole
 map is [`database.md`](./database.md). The connection is opened through the
 shared `lib/idb.ts`.
 
@@ -269,7 +269,7 @@ the caches, re-reads the summaries and announces the change to other tabs.
 
 | Write | Used by | Behaviour |
 | --- | --- | --- |
-| `addCollection(name, games, rows, now?, id?)` | upload, empty collection | New id (`u` + the saved games' minter, so it can never collide with a shipped slug). Empty `games` is allowed. Newest first in the list. |
+| `addCollection(name, games, rows, now?, id?)` | upload, empty collection | New id (`u` + `newRecordId`, so it can never collide with a shipped slug). Empty `games` is allowed. Newest first in the list. |
 | `removeCollection(id)` | `/library` row delete | Deletes all three records. An unknown id is a no-op. |
 | `replaceCollectionGame(id, n, pgn, row)` | game board Update | Rewrites in place. |
 | `insertCollectionGame(id, n, pgn, row)` | game board Save as copy | Inserts at `n`; later games move down. |
@@ -343,12 +343,10 @@ or a count mismatch gives `undefined`.
 | `/library/new?into=<id>` | `LibraryUpload` (add games; uploaded collections only, otherwise the miss) | that summary |
 | `/library/<collection>` | `CollectionScreen` | summary + rows |
 | `/library/<collection>/<n>` | `LibraryGameScreen` → `LibraryGameBoard` | summary + games |
-| `/pgn/*` | redirect to `/library` (the pre-CTA-38 Library) | — |
 
 `new` is a static segment, so it ranks above `:collectionId`. **Never give a
 collection the id `new`**; minted ids start with `u`, and slugs come from file
-names. A pre-CTA-75 `/library/<folder>/<id>` link reaches the new routes and
-gets "no such collection".
+names.
 
 ### 6.2 `/library` — the list
 
@@ -494,8 +492,8 @@ miss) and parses the game **with its side lines** (`parsePgnTree`). An
 unreadable game says so. The board is keyed by collection and number, so
 previous / next mounts a fresh session.
 
-`LibraryGameBoard` is a **v2 board with no behaviour hook of its own** (the
-authority is [`chessboard-v2.md`](./chessboard-v2.md) §4):
+`LibraryGameBoard` is a **board with no behaviour hook of its own** (the
+authority is [`chessboard.md`](./chessboard.md) §9.4):
 `useAnalysisSession` (core, engine, Play, baseline, shared with the Analysis
 Board), `useVariationsExplorer` (editing on, *Play chances…* off), and
 `BoardShell` / `BoardPanel` with `options.id` `library-game`.
@@ -514,7 +512,7 @@ Board), `useVariationsExplorer` (editing on, *Play chances…* off), and
   with the same `?at=`) or Discard. **Shipped** (`readOnly`): Save as copy
   into **Saved analyses** ("‹players› (copy)"), then open it on the Analysis
   Board; or Discard. Leaving with unsaved changes triggers `beforeunload`.
-- **Export tab → Analysis Board** (`library-game-open-analysis`, CTA-77): a
+- **Export tab → Analysis Board** (`library-game-open-analysis`): a
   link to `/tools/analysis?game=library/<collection>/<n>&at=<position>`. It
   opens **the game as the collection holds it**. Unsaved session changes stay
   behind, and the caption under the button says so while there are any.
@@ -568,9 +566,9 @@ the index instead (§10.1).
 8. **The boards never mirror.** The filter board is in `ForceLTR`, and SAN or
    notation tokens take `dir="ltr"` (root `CLAUDE.md`, *Theming*).
 9. **Unique `options.id`**: `library-filter-board`, `library-game`.
-10. **The game board is a v2 board.** No behaviour hook of its own, no
-    second panel. It stays under `devBoards.test.tsx` and
-    `devPanelPropagation.test.tsx`.
+10. **The game board is composed from the core.** No behaviour hook of its
+    own, no second panel. It stays under `boards.test.tsx` and
+    `panelPropagation.test.tsx`.
 
 ---
 
@@ -582,7 +580,7 @@ the index instead (§10.1).
   (`where()` returns the current path and search).
 - **Stubs**: `react-chessboard` → `reactChessboardMock()`, `lib/engine` →
   `FakeEngine`, `lib/openings` → `openingsMock` (all from
-  `views/dev/devTestHarness.tsx`). `downloadPgn` is mocked to capture what it
+  `views/board/boardTestHarness.tsx`). `downloadPgn` is mocked to capture what it
   was given. `boardOptions()` reads the last board's options, which is how the
   tests drive drops (`onPieceDrop`) and assert arrows and positions.
 - **IndexedDB** is `fake-indexeddb` (`src/test/setup.ts`). Call

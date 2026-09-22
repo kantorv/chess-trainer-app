@@ -24,14 +24,14 @@ import {
   type PlayedGame,
   type PlayedGameMask,
 } from "../../../lib/playedGames";
-import { useAutosave } from "../../dev/core/useAutosave";
-import { turnOf, useBoardCore } from "../../dev/core/useBoardCore";
-import { useEngineModule } from "../../dev/core/useEngineModule";
-import { usePlayToggle } from "../../dev/core/usePlayToggle";
+import { useAutosave } from "../../board/core/useAutosave";
+import { turnOf, useBoardCore } from "../../board/core/useBoardCore";
+import { useEngineModule } from "../../board/core/useEngineModule";
+import { usePlayToggle } from "../../board/core/usePlayToggle";
 
 /**
  * **Play with Engine's session** (CTA-74) — the v2 core
- * ([`.claude/rules/chessboard-v2.md`](../../../../.claude/rules/chessboard-v2.md))
+ * ([`.claude/rules/chessboard.md`](../../../../.claude/rules/chessboard.md) §9)
  * composed for a game against the engine: the Analysis Board's composition
  * (`useAnalysisBoard`), with three differences.
  *
@@ -51,9 +51,8 @@ import { usePlayToggle } from "../../dev/core/usePlayToggle";
  *    the reader switching side (the flip, or the header's side toggle), the
  *    engine off, the game over. Pressing Play goes on from wherever the reader
  *    stands, the engine now playing whichever side is at the top.
- * 2. **The game is a tree.** There is no `canMoveAt`: a move played by hand
- *    from an earlier position is a side line under it, and Play resumes from
- *    there. The shipped screen could not branch; this one is the Analysis
+ * 2. **The game is a tree.** A move played by hand from an earlier position
+ *    is a side line under it, and Play resumes from there — the Analysis
  *    Board's rule.
  * 3. **It saves itself.** No Save button — a game played is a game kept
  *    (`useAutosave`). The id is stable for the life of a game. **Replay**
@@ -347,5 +346,3 @@ export const usePlayGame = (
     problem,
   };
 };
-
-export type PlayGameState = ReturnType<typeof usePlayGame>;

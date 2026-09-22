@@ -28,7 +28,7 @@ import { slugify } from "./pgnText";
  */
 
 /** Where a collection came from — the one thing that decides what a save may write. */
-export type CollectionSource = "shipped" | "uploaded";
+type CollectionSource = "shipped" | "uploaded";
 
 /**
  * **The most text one collection may be** — 30,000,000 characters, about
@@ -553,7 +553,7 @@ export const collectionNameOfStem = (stem: string): string => {
 export const collectionIdOfStem = (stem: string): string => slugify(stem) || "collection";
 
 /** Why a text was not taken as a collection. */
-export type CollectionTextProblem = "empty" | "too-large" | "unreadable";
+type CollectionTextProblem = "empty" | "too-large" | "unreadable";
 
 export type CollectionReading =
   | { ok: true; games: string[]; name?: string }

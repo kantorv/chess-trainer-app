@@ -39,8 +39,6 @@ import {
 
 const NOTHING_COVERED: ReadonlySet<string> = new Set();
 
-export type RepertoireGameState = ReturnType<typeof useRepertoireGame>;
-
 export const useRepertoireGame = ({
   game,
   repertoire,

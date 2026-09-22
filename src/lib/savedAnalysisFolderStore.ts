@@ -59,14 +59,6 @@ const write = folders.write;
 const normaliseName = (name: string): string =>
   name.trim().slice(0, MAX_ANALYSIS_FOLDER_NAME);
 
-/** One folder by id, out of what has been read, or `undefined`. */
-export const findAnalysisFolder = (
-  id: string | null | undefined,
-): AnalysisFolder | undefined =>
-  id === null || id === undefined
-    ? undefined
-    : analysisFoldersSnapshot()?.find((folder) => folder.id === id);
-
 /**
  * Create a folder, and hand it back — `undefined` when nothing was created: a
  * name that trims to nothing, a parent that is not there, a full cap, or a

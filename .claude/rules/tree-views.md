@@ -1,38 +1,27 @@
+---
+paths:
+  - "src/views/explorer/**"
+  - "src/lib/treeMap*"
+  - "src/lib/moveAnnotations*"
+  - "src/views/shared/MoveList.tsx"
+  - "src/views/shared/VariationLine.tsx"
+  - "src/views/shared/moveSelection.ts"
+  - "src/views/tools/analysis/nextMoveArrows.ts"
+  - "src/views/tools/analysis/NextMovesBar.tsx"
+---
+
 # Tree views — how a board screen shows its game tree
 
 How a board screen **attaches a view of its game tree** — the move list, the
-map, the comments, the next-move arrows — instead of wiring them inline. This
-is the spec the shared explorer in [`src/views/explorer/`](../../src/views/explorer/)
-implements (CTA-72). The repertoire player (`/repertoires/<id>` and its games)
-and, since CTA-73, the Analysis Board (`/tools/analysis`), since CTA-74,
-Play with Engine (`/engine/play`), since CTA-75, the Library's game board
-(`/library/<collection>/<game>`), since CTA-78, the Openings explorer
-(`/openings`) and, since CTA-79, Masked Pieces (`/engine/masked` — Play with
-Engine's screen, with the explorer's `mask`) are built on it — every board
-that shows a game tree.
+map, the comments, the next-move arrows — instead of wiring them inline. The
+shared explorer in [`src/views/explorer/`](../../src/views/explorer/)
+implements it, and every board that shows a game tree is built on it: the
+Analysis Board, Play with Engine and Masked Pieces, the Library's game board,
+the Openings explorer and the repertoire player with its games.
 
-Read [`chessboard-v2.md`](./chessboard-v2.md) first. It owns the board core a
-tree view reads from (`useBoardCore`), the shell and panel a view's parts are
-placed into (`BoardShell`, `BoardPanel`) and the capability modules. This
-file says only what a *tree view* is, and nothing here overrides that file.
-
----
-
-## 0. Why this exists
-
-The repertoire player's variations explorer (CTA-53 → CTA-71: the move list
-with side lines, comments, the map, the right-click menu and its dialogs, the
-play-chance arrows) worked, and readers liked it. But it lived in three places:
-
-- the list and the menu were in `views/dev/core/`;
-- the map and the comment block were in `views/repertoires/`;
-- the chance arrows were in `views/tools/analysis/`.
-
-The wiring that joined them — the hovered move, the chances at the branch, the
-comment being edited, which arrows win — sat inline in a 1,232-line
-`RepertoirePlayer.tsx`. A second screen that wanted the explorer would have
-had to copy that wiring. This spec gives the wiring one owner, and gives every
-screen one way to attach a view.
+[`chessboard.md`](./chessboard.md) §9 owns the board core a tree view reads
+from (`useBoardCore`) and the shell and panel its parts are placed into
+(`BoardShell`, `BoardPanel`). This file says only what a *tree view* is.
 
 ---
 
@@ -48,61 +37,48 @@ screen one way to attach a view.
                                                                                       └────────────────────────────┘
 ```
 
-There are three concepts, all in [`treeView.ts`](../../src/views/explorer/treeView.ts):
+The seam is [`treeView.ts`](../../src/views/explorer/treeView.ts):
 
 | Concept | What it is |
 | --- | --- |
-| **`TreeViewSource`** | What every view reads: `tree`, `mainlineNodes`, `nodeId`, `goToNode`, `orientation`. The return of `useBoardCore` already has this shape, so a v2 screen passes `core` itself. |
+| **`TreeViewSource`** | What every view reads: `tree`, `mainlineNodes`, `nodeId`, `goToNode`, `orientation`. `useBoardCore`'s return has this shape, so a screen passes `core` itself. |
 | **`TreeViewParts`** | What every view returns: `moves` (a Moves tab's content), `map?` (a Map tab's content), `annotations?` and `nextMoves?` (footer pieces), `arrows` (`options.arrows`, the whole external set) and `overlay` (drawn over the board, `null` for none). The screen places each part in its own slot. |
-| **A mode** | A hook `(source + the mode's own options) → TreeViewParts`. `TreeViewMode` names them. Only `explorer` is built. |
+| **A mode** | A hook `(source + the mode's own options) → TreeViewParts`. Only the explorer, `useVariationsExplorer`, is built. |
 
 What the seam decides, and why:
 
-- **A view returns parts, not a panel.** The screen already owns a panel
-  (`BoardPanel`) and a shell (`BoardShell`), and those are covered by the
-  propagation guarantee (`chessboard-v2.md` §0). A view that rendered its own
-  panel would be a second panel skeleton. Parts are what the existing slots
-  take, and the screen keeps control of the order, the tab ids and what
-  surrounds each part. For example, the player wraps `moves` in its "reading…"
-  state, and puts its changes strip between `annotations` and `nextMoves`.
-- **A view knows the tree, never the screen.** It gets no saved record, no
-  trainer and no game. Anything a screen means arrives as a plain value: a set
-  of ids to tint, a `MapCoverage` to colour lines by, a list of required moves,
-  a tree to draw other than the session's, or `onEditTree` to allow editing.
-  So a view has no way to branch on which screen called it.
-- **A view owns only the state its parts share.** An example is the hovered
-  continuation: the next-moves bar sets it and the arrows read it. State with
-  one reader stays in the part (the map's zoom, the list's menu). State that
-  means something to the screen stays in the screen (which tab is open,
-  whether arrows are switched on).
-- **Keyboard navigation is the source's job, not the view's.**
-  `useTreeNavigation`, under `useBoardCore`, binds ← → Home End ↑ ↓ for every
-  board over a tree. A view never binds keys, so every mode behaves the same
-  way.
+- **A view returns parts, not a panel.** The screen already owns `BoardPanel`
+  and `BoardShell`, under the propagation guarantee (`chessboard.md` §9); a
+  view that rendered its own panel would be a second skeleton. The screen
+  keeps the order, the tab ids and what surrounds each part (the player wraps
+  `moves` in its "reading…" state and puts its changes strip between
+  `annotations` and `nextMoves`).
+- **A view knows the tree, never the screen.** Anything a screen means
+  arrives as a plain value: ids to tint, a `MapCoverage`, required moves, a
+  tree to draw other than the session's, `onEditTree` to allow editing. A
+  view has no way to branch on which screen called it.
+- **A view owns only the state its parts share** (the hovered continuation:
+  the bar sets it, the arrows read it). State with one reader stays in the
+  part (the map's zoom, the list's menu); state that means something to the
+  screen stays in the screen (the open tab, the arrows switch).
+- **Keyboard navigation is the source's**: `useTreeNavigation`, under
+  `useBoardCore`, binds ← → Home End (the line) and ↑ ↓ (the sibling moves,
+  wrapping) for every board. A view never binds keys.
 
-### Adding a mode — the recipe
+### Adding a mode
 
-1. **Add its name** to `TreeViewMode` in `treeView.ts`.
-2. **Add one hook** in `src/views/explorer/`, `use<Mode>View(options) →
-   TreeViewParts`, whose options extend `{ testId, source }`. Build the parts
-   from the pieces this folder already has, and from `views/shared/`.
-3. **Put new logic in `src/lib/`, pure**, if the mode needs any (§4's
-   `revealedTree`). Never put it in the hook.
-4. **Add one test** of the hook's contract, next to
-   `useVariationsExplorer.test.tsx`: the parts it leaves out, the parts it
-   gives and what its options switch.
-5. **Change nothing else.** `useBoardCore`, `BoardShell`, `BoardPanel` and the
-   seam's two types stay as they are. If a mode needs a new part, add an
-   optional field to `TreeViewParts`, and no existing screen has to place it.
+1. **One hook** in `src/views/explorer/`, `use<Mode>View(options) →
+   TreeViewParts`, whose options extend `{ testId, source }`, built from the
+   pieces in this folder and in `views/shared/`.
+2. **New logic in `src/lib/`, pure** (§4's `revealedTree`), never in the hook.
+3. **One contract test** beside `useVariationsExplorer.test.tsx`: the parts it
+   leaves out, the parts it gives, what its options switch.
+4. **Change nothing else.** A new part is an optional field on
+   `TreeViewParts`, which no existing screen has to place.
 
 ---
 
-## 2. The rich variations explorer — `useVariationsExplorer`
-
-[`src/views/explorer/useVariationsExplorer.tsx`](../../src/views/explorer/useVariationsExplorer.tsx).
-It is the repertoire player's explorer, feature for feature. It was extracted
-with no change in behaviour, and every existing player, game, map, annotation
-and play-chance test passes unchanged.
+## 2. The variations explorer — `useVariationsExplorer`
 
 ### The contract
 
@@ -113,214 +89,119 @@ const parts = useVariationsExplorer({
   evalsByFen?: ReadonlyMap<string, Score>,
   extensionIds?: ReadonlySet<string>,
   onEditTree?: (next: GameTree) => void,  // the one switch for every edit — `core.replaceTree`
-  playChances?: boolean,                  // the menu's *Play chances…* (default on); off where no trainer plays by them (CTA-73)
+  playChances?: boolean,                  // the menu's *Play chances…* (default on); off where no trainer plays by them
   annotations?: boolean,                  // the comment block
   arrows?: { show: boolean; chances?: boolean; required?: readonly VariationNode[] },
   map?: { tree?: GameTree; nodeId?: string | null; coverage?: MapCoverage; addedIds?: ReadonlySet<string>; linked?: boolean },
-  mask?: PieceMask,                       // a masked board's notation — coordinates for a hidden piece's move (CTA-79)
+  mask?: PieceMask,                       // a masked board's notation
 });
 // → { moves, map?, annotations?, nextMoves, arrows, overlay }
 ```
 
-### The features, required or opt-in
+### The features
 
-| Feature | Part | Required / opt-in | Controlled by | Built from |
-| --- | --- | --- | --- | --- |
-| **Move list**: numbered mainline pairs, the current move highlighted and scrolled into view, a click to go to any move | `moves` | required | — | `TreeMoveList` over the shared `MoveList` |
-| **Side lines hung under their move** (CTA-53), clickable, with the ply↔node seam | `moves` | required | — | `TreeMoveList` → `VariationLine` |
-| **Comment marker** on a commented move, in the mainline and in side lines (CTA-69) | `moves` | required | — | `hasComments`, `annotatedPlies`, `markCommentedNodes` |
-| **Evals** on the mainline's cells only | `moves` | opt-in | `evalsByFen` | `MoveList`'s `mainlineEvalsOnly` |
-| **Masked notation** (CTA-79): every move a part prints — the list and its side lines, the map's labels, the next-moves bar, the move menu, the comment block's label — in coordinates when the mask hides its piece | all but `arrows` / `overlay` | opt-in | `mask` | `maskSanLine` / `maskNodeSan` (`lib/pieceMask.ts`); [`masked-pieces.md`](./masked-pieces.md) §4 |
-| **Extension tint** on moves added this session (CTA-63) | `moves` | opt-in | `extensionIds` | the selection store, keyed by node and by ply |
-| **Right-click move menu**: promote variation, make main line, delete from here (confirmed, with a count), copy variation PGN, add comment, play chances… (CTA-64/69) | `moves`, `map` | opt-in | `onEditTree` (*Play chances…* also `playChances`, on by default) | `MoveContextMenu`, `CommentDialog`, `PlayChanceDialog`, over the pure edits in `lib/gameTree.ts` and `lib/playChance.ts` |
-| **Comment block**: the move with its marks, the comment that opens its line, the comments after it, and their attributes as chips | `annotations` | opt-in | `annotations` | `AnnotationsBar` over `lib/moveAnnotations.ts` |
-| **Comment editing** in the block (add, edit, delete) | `annotations` | opt-in | `onEditTree` | `CommentDialog` + `setComments` |
-| **Next-moves bar** (CTA-54): the continuations at a branch, and hovering one draws its arrow | `nextMoves` | required (renders nothing where there is no choice) | — | `views/tools/analysis/NextMovesBar.tsx` |
-| **Next-move arrows**: the mainline's move green, side lines blue, the hovered move red | `arrows` | opt-in | `arrows.show` (off: only a hovered move's arrow) | `views/tools/analysis/nextMoveArrows.ts` |
-| **Play-chance arrows** (CTA-71): white with a magenta border, width by chance, and a percentage per move in the bar | `overlay` (+ `nextMoves`) | opt-in, and only where the branch carries a `prc` mark | `arrows.chances` | `ChanceArrows` over `chanceArrows.ts`, with `playChances` feeding both |
-| **Required moves**: drawn in purple in place of every other arrow | `arrows` | opt-in | `arrows.required` | `REQUIRED_MOVE_ARROW_COLOR` |
-| **Map**: the tree as an SVG — the tab and full screen, zoom, pan, fit, "where am I", following the reader, move labels, dots coloured by side (CTA-63/67) | `map` | opt-in | `map` | `TreeMap` over `lib/treeMap.ts` |
-| Map **coverage**: covered lines green, a progress bar, "N left" | `map` | opt-in | `map.coverage` | `MapCoverage` |
-| Map **added moves** ringed in the extension colour, "N added" | `map` | opt-in | `map.addedIds` | |
-| Map **links**: clicking a dot goes to its position | `map` | opt-in | `map.linked` | `source.goToNode` |
-| Map drawn from **another tree** (Backtracking draws the original repertoire under a session that has grown) | `map` | opt-in | `map.tree`, `map.nodeId` | |
-| **Keyboard navigation** (← → Home End, ↑ ↓ through siblings) | — | required, provided by the source | — | `useTreeNavigation` under `useBoardCore` |
+| Feature | Part | Controlled by | Built from |
+| --- | --- | --- | --- |
+| **Move list**: numbered mainline pairs, the current move highlighted and scrolled into view, a click to any move | `moves` | always | `TreeMoveList` over the shared `MoveList` |
+| **Side lines hung under their move**, clickable | `moves` | always | `TreeMoveList` → `VariationLine` |
+| **Comment marker** on a commented move | `moves` | always | `hasComments`, `annotatedPlies`, `markCommentedNodes` |
+| **Evals** on the mainline's cells only | `moves` | `evalsByFen` | `MoveList`'s `mainlineEvalsOnly` |
+| **Masked notation** — every printed move in coordinates when the mask hides its piece | all but `arrows` / `overlay` | `mask` | `maskSanLine` / `maskNodeSan`; [`masked-pieces.md`](./masked-pieces.md) §4 |
+| **Extension tint** on moves added this session | `moves` | `extensionIds` | the selection store |
+| **Right-click move menu**: promote variation, make main line, delete from here (confirmed, with a count), copy variation PGN, add comment, play chances… | `moves`, `map` | `onEditTree` (*Play chances…* also `playChances`) | `MoveContextMenu`, `CommentDialog`, `PlayChanceDialog`, over the pure edits in `lib/gameTree.ts` and `lib/playChance.ts` |
+| **Comment block**: the move with its marks, the comment opening its line, the comments after it, their attributes as chips | `annotations` | `annotations` | `AnnotationsBar` over `lib/moveAnnotations.ts` |
+| **Comment editing** in the block (add, edit, delete) | `annotations` | `onEditTree` | `CommentDialog` + `setComments` |
+| **Next-moves bar**: the continuations at a branch; hovering one draws its arrow | `nextMoves` | always (nothing where there is no choice) | `views/tools/analysis/NextMovesBar.tsx` |
+| **Next-move arrows**: mainline green, side lines blue, the hovered move red | `arrows` | `arrows.show` (off: only a hovered move's arrow) | `views/tools/analysis/nextMoveArrows.ts` |
+| **Play-chance arrows**: white with a magenta border, width by chance, a percentage per move in the bar | `overlay` (+ `nextMoves`) | `arrows.chances`, and only where the branch carries a `prc` mark | `ChanceArrows` over `chanceArrows.ts` |
+| **Required moves**: purple, in place of every other arrow | `arrows` | `arrows.required` | `REQUIRED_MOVE_ARROW_COLOR` |
+| **Map**: the tree as an SVG — tab and full screen, zoom, pan, fit, "where am I", following the reader, move labels, dots coloured by side | `map` | `map` | `TreeMap` over `lib/treeMap.ts` |
+| Map **coverage** (covered lines green, a progress bar, "N left"), **added moves** ringed, **links** (a dot goes to its position), drawn from **another tree** | `map` | `map.coverage`, `map.addedIds`, `map.linked`, `map.tree` / `map.nodeId` | |
 
-`onEditTree` is **the one switch for writing**. Without it, the list, the map
-and the comment block are read-only, and a right-click is left to the browser.
-The repertoire games pass nothing, and a game never writes.
+`onEditTree` is **the one switch for writing**. Without it the list, the map
+and the comment block are read-only, and a right-click is the browser's. The
+repertoire games pass nothing; a game never writes.
 
 ### The rules it keeps
 
-These are the explorer's own rules, and every future mode keeps them too:
-
-- **Performance (CTA-61).** Each token reads "am I current" and "what is my
-  eval" from the selection store (`views/shared/moveSelection.ts`). So a step
-  re-renders two tokens, and an engine message re-renders none. The list gets
-  the source's own stable `goToNode` and `onEditTree`, and the menu is a
-  sibling of the memoised list, never inside it. The map is a few path
-  strings, so a ~9,000-node tree lays out in about 10ms. The hook itself walks
-  nothing per step except the continuations lookup, which reads the tree's
-  index.
-- **An edit is `replaceTree`.** Every edit comes back as a new tree, through
-  `onEditTree`. A no-op returns the same tree, so a screen's
+- **Performance.** Each token reads "am I current" and "what is my eval" from
+  the selection store (`views/shared/moveSelection.ts`, subscriptions keyed by
+  node, ply and FEN), so a step re-renders two tokens and an engine message
+  none. The list gets the source's stable `goToNode` and `onEditTree`; the
+  menu is a sibling of the memoised list, so opening it re-renders no token.
+  **Keep new per-token state in that store, not in the list's props.** The map
+  is a few path strings: a ~9,000-node tree lays out in ~10 ms, and its labels
+  are drawn only for the dots in view (`mapLabelsIn` / `visibleRect`).
+- **An edit is `replaceTree`.** Every edit returns a new tree, id-preserving,
+  through `onEditTree`; a no-op returns the same tree, so a screen's
   `tree !== original` stays the whole test for "changed".
-- **The board never mirrors, and neither does notation.** The map is pinned
-  LTR with `dir`, the SAN in the menu and the comment block uses
-  `dir="ltr"`, and comment prose uses `dir="auto"` (root `CLAUDE.md`).
-- **Only one set of arrows at a time.** Required moves beat the chance
-  overlay, and the chance overlay beats the library arrows. The chances and
-  the bar's percentages come from one array.
+- **Notation never mirrors.** The map is pinned LTR with `dir`, SAN in the
+  menu and the comment block uses `dir="ltr"`, comment prose `dir="auto"`.
+- **One set of arrows at a time**: required moves beat the chance overlay,
+  which beats the library arrows. The chances and the bar's percentages come
+  from one array, so the number and the width never disagree.
 
-### What stays the screen's — the repertoire player as the worked example
+### How each board attaches it
 
-`RepertoirePlayer.tsx` builds its parts with one call and places them:
+| Board | Options | Placement |
+| --- | --- | --- |
+| **Repertoire player** | `onEditTree` (player only), `annotations` (player, once read), `arrows: { show, chances, required }`, `map: { tree, nodeId, coverage, addedIds, linked }` (none in Get to the end), `extensionIds` | `moves` behind "reading…", `map` once read, `nextMoves` on the Moves tab with Autoplay off |
+| **Analysis Board**, **Library game** | `onEditTree: core.replaceTree`, `playChances: false`, `annotations: true`, `arrows: { show }`, `map: { addedIds, linked: true }`, `extensionIds` (the same set) | Moves and Map tabs (kept mounted); footer: `annotations`, the changes strip, Play's status line, `nextMoves` (Moves tab) |
+| **Play with Engine**, **Openings explorer** | the same without `addedIds` / `extensionIds` — nothing is added against a record | as above, without the strip |
+| **Masked Pieces** | Play with Engine's, plus `mask` while its notation switch is on | Play with Engine's |
 
-| Screen's decision | Passed as |
-| --- | --- |
-| The player edits and a game never does | `onEditTree: game === undefined ? core.replaceTree : undefined` |
-| The comment block is the player's (a game is a test) | `annotations: game === undefined && shown === "ready"` |
-| The arrows switch and the chances switch are session state seeded from the record's settings; Backtracking's required moves | `arrows: { show, chances, required: rules.required }` |
-| The player's map draws the session; Backtracking's draws the repertoire with its coverage; Get to the end has none | `map: hasMap ? { tree, nodeId: mapNodeId, coverage, addedIds, linked } : undefined` |
-| Where each part goes: `moves` behind "reading…", `map` only once the tree is read, `nextMoves` only on the Moves tab and with Autoplay off | the screen's own JSX |
-
-The trainer, the game rules, the saved record, `?at=`, the changes strip and
-the Settings and Score tabs are all the player's, and the explorer never sees
-any of them.
-
-### The Analysis Board — the second screen on it (CTA-73)
-
-`views/tools/analysis/AnalysisBoard.tsx` passes the player's options minus
-the trainer's: `onEditTree: core.replaceTree` (the menu and the comment
-block edit, a session change like a move added), `playChances: false`
-(nothing on the board plays by chance, so the menu does not offer to set
-them), `annotations: true`, `arrows: { show }` (a switch in its Engine tab,
-on), and `map: { addedIds, linked: true }` — the session's tree, the moves
-added since the saved record (or the arrival) ringed, every dot a link. The
-extension tint is the same set. It places `moves` and `map` in its Moves
-and Map tabs (both kept mounted) and `annotations`, its changes strip and
-`nextMoves` (on the Moves tab) in its footer.
-
-### Play with Engine — the third (CTA-74)
-
-`views/engine/play/PlayWithEngine.tsx` passes the Analysis Board's options
-without `addedIds` / `extensionIds` (nothing is "added" against a record — the
-whole game is the reader's): `onEditTree: core.replaceTree`,
-`playChances: false`, `annotations: true`, `arrows: { show }` (a switch in its
-Engine tab, on) and `map: { linked: true }`. A game against the engine is a
-tree there — a move by hand from an earlier position is a side line — so it
-takes the explorer rather than the flat mode below. It places `moves` and
-`map` in its Moves and Map tabs (both kept mounted) and `annotations`, Play's
-status line and `nextMoves` (on the Moves tab) in its footer.
-
-### The Library's game board — the fourth (CTA-75)
-
-`views/library/LibraryGameBoard.tsx` passes exactly the Analysis Board's
-options — `onEditTree: core.replaceTree`, `playChances: false`,
-`annotations: true`, `arrows: { show }` (a switch at the top of its Moves
-tab, on — CTA-77) and `map: { addedIds, linked: true }`, with `extensionIds`
-the same set: the moves
-added since the game arrived (or was last kept), which is what its changes
-strip offers to keep. Its session is the Analysis Board's own
-(`useAnalysisSession`). It places `moves` and `map` in its Moves and Map tabs
-(both kept mounted) and `annotations`, its changes strip, Play's status line
-and `nextMoves` (on the Moves tab) in its footer — the Analysis Board's
-layout, with an Info tab (the game's tags) in place of Load.
-
-### The Openings explorer — the fifth (CTA-78)
-
-`views/openings/OpeningsBoard.tsx` passes Play with Engine's options — nothing
-is "added" against a record, because nothing on it is kept:
-`onEditTree: core.replaceTree`, `playChances: false`, `annotations: true`,
-`arrows: { show }` (a switch at the top of its Moves tab, on) and
-`map: { linked: true }`. Its session is the Analysis Board's
-(`useAnalysisSession`). What it adds is beside the view, not inside it: the
-**book** (`useOpeningBookModule`) gets a tab of its own, first, and its
-arrows are joined with the view's `arrows` into the board's one set by the
-screen (`views/openings/openingArrows.ts` — a move the tree has is drawn once,
-as the tree's; the book row under the pointer recolours its arrow). It places
-`moves` and `map` in its Moves and Map tabs (both kept mounted) and
-`annotations`, Play's status line and `nextMoves` (on the Moves tab) in its
-footer. The screen's own reference is
-[`openings-explorer.md`](./openings-explorer.md).
-
-### Masked Pieces — the sixth (CTA-79)
-
-Masked Pieces renders Play with Engine's own screen (`PlayScreen.tsx`), so it
-passes Play with Engine's options exactly — plus **`mask`**, the costume's
-mask while its notation switch is on (`undefined` when off). Every part that
-prints a move then prints coordinates for a move whose piece the mask hides;
-the arrows and the overlay draw squares and are untouched. The placement is
-Play with Engine's. The screen's own reference is
-[`masked-pieces.md`](./masked-pieces.md).
+The Openings explorer joins the view's `arrows` with the book's into one set
+(`views/openings/openingArrows.ts`).
 
 ---
 
 ## 3. Flat — specified, not built
 
-A **two-column mainline list with no variations**, but with comments and
-arrows. It is meant for a board where the game is one line — where the
-reader and the engine take turns and a branch cannot form
-(`canMoveAt: isLive`), as on the pre-v2 Play with Engine and Masked Pieces.
-(Both v2 screens, CTA-74 and CTA-79, branch, and so took the explorer; no
-shipped board is linear today.)
+A **two-column mainline list with no variations**, with comments and arrows,
+for a board where the game is one line and no branch can form. No board is
+linear today.
 
 ```ts
 const parts = useFlatView({
-  testId, source,                  // a linear tree: `mainlineGame` / `treeFromGame` bridge it both ways
-  evalsByFen?,                     // the per-ply evals a saved game records (CTA-50)
-  annotations?: boolean,           // the comment block, as in §2 — read-only
+  testId, source,
+  evalsByFen?,
+  annotations?: boolean,           // read-only
   arrows?: { show: boolean },      // the next move along the line, when stepped back
-  mask?: PieceMask,                // Masked Pieces: coordinates for a hidden piece's move
+  mask?: PieceMask,
 });
 // → { moves, annotations?, arrows, overlay: null }   — no map, no nextMoves
 ```
 
-- `moves` is the shared `MoveList` over `mainlineGame(source.tree)`, with **no
-  `branches`**. It carries `annotatedPlies` and `evalsByFen`, and never
-  `onContextMenu*`.
-- `arrows.show` draws `children[0]` of the node on screen, which is the only
-  continuation there is, through `nextMoveArrowsOf`. At the live position
-  there is none, so nothing is drawn.
-- No menu and no edits: a played game is not edited move by move. A screen
-  that wanted the explorer's menu would use the explorer.
-- It needs no core change: the linear screen already holds a tree (the v2
-  core), and every piece above exists.
+`moves` is the shared `MoveList` over `mainlineGame(source.tree)` with no
+`branches` and no `onContextMenu*`; `arrows.show` draws `children[0]` of the
+node on screen through `nextMoveArrowsOf`. No menu and no edits. The core
+would need a way to refuse a move off the end of the mainline — an optional
+predicate on `useBoardCore`, added with the first board that needs it.
 
 ---
 
-## 4. Hidden / puzzle — specified, not built (a puzzle screen)
+## 4. Hidden / puzzle — specified, not built
 
-The **next moves are hidden**. The reader solves an interactive puzzle against
-a tree of pre-existing branches (a study's lines), and an optional
-**variations player** answers them from the tree. The screen does not exist
-yet.
+The **next moves are hidden**: the reader solves against a tree of prepared
+branches, and a variations player answers from it.
 
 ```ts
 const parts = usePuzzleView({
-  testId, source,                  // the session's tree: the solution tree plus whatever the reader has reached
-  revealedIds: ReadonlySet<string>,// the moves the reader has played or been shown — the screen's state
-  annotations?: boolean,           // the comments of revealed moves only
-  hint?: VariationNode | null,     // one arrow, when the reader asks for a hint
+  testId, source,                  // the solution tree plus whatever the reader has reached
+  revealedIds: ReadonlySet<string>,// the moves played or shown — the screen's state
+  annotations?: boolean,           // revealed moves' comments only
+  hint?: VariationNode | null,     // one arrow, on request
 });
-// → { moves, annotations?, arrows, overlay: null }   — no map, no nextMoves (both would give the answer away)
+// → { moves, annotations?, arrows, overlay: null }   — no map, no nextMoves (both give the answer away)
 ```
 
 - `moves` is `TreeMoveList` over **`revealedTree(source.tree, revealedIds)`**,
-  a pure helper to add to `lib/gameTree.ts` with the mode. It is the tree
-  pruned to the revealed nodes, keeping their ids, so navigation, `?at=`-style
-  links and the selection store all keep working. The list therefore shows
-  only moves already played.
-- No next-moves bar, no arrows except `hint`, and no map: each of those would
-  give the solution away. That is the rule that already keeps them out of the
-  repertoire games.
-- **The variations player is the repertoire trainer**, composed by the screen,
-  not by the view: `useTrainerModule({ repertoire: solutionTree, drill: true,
-  trainerColor })` judges each move before it is made, and plays the reply
-  from the solution. The screen adds each node the trainer or the reader
-  lands on to `revealedIds` (the module's `arrival`).
-- It needs no core change: the trainer module, `drill`, `judgeDrop` and the
-  list all exist, and the new pieces are one pure helper and one hook.
+  a pure helper to add to `lib/gameTree.ts`: the tree pruned to the revealed
+  nodes, ids kept, so navigation, links and the selection store keep working.
+- **The variations player is the repertoire trainer**, composed by the
+  screen: `useTrainerModule({ repertoire: solutionTree, drill: true,
+  trainerColor })` judges each move and plays the reply; the screen adds each
+  node the module's `arrival` lands on to `revealedIds`.
 
 ---
 
@@ -328,43 +209,15 @@ const parts = usePuzzleView({
 
 | Path | What lives there |
 | --- | --- |
-| `src/views/explorer/treeView.ts` | §1: `TreeViewSource`, `TreeViewParts`, `TreeViewMode`. |
-| `src/views/explorer/useVariationsExplorer.tsx` (+ `.test.tsx`) | §2: the explorer mode, and its contract test. |
-| `src/views/explorer/TreeMoveList.tsx` (+ test) | The variations list over `MoveList` / `VariationLine`: the ply↔node seam, the comment markers, the tint, the mask, and the opt-in menu. |
+| `src/views/explorer/treeView.ts` | §1: `TreeViewSource`, `TreeViewParts`. |
+| `src/views/explorer/useVariationsExplorer.tsx` (+ `.test.tsx`) | §2: the explorer mode and its contract test. |
+| `src/views/explorer/TreeMoveList.tsx` (+ test) | The variations list over `MoveList` / `VariationLine`: the ply↔node seam, comment markers, the tint, the mask, the opt-in menu. |
 | `src/views/explorer/MoveContextMenu.tsx`, `CommentDialog.tsx`, `PlayChanceDialog.tsx` | The right-click menu and its two dialogs. |
-| `src/views/explorer/TreeMap.tsx` | The map: `MapViewport`, the full-screen dialog, links and the menu. The pure layout is `src/lib/treeMap.ts` (it was `lib/repertoireMap.ts`), with `MapCoverage`. |
-| `src/views/explorer/AnnotationsBar.tsx` | The comment block. It is presentational; the reading is `lib/moveAnnotations.ts`. |
+| `src/views/explorer/TreeMap.tsx` | The map: `MapViewport`, the full-screen dialog, links and the menu. The pure layout and viewport arithmetic are `src/lib/treeMap.ts`, with `MapCoverage`. |
+| `src/views/explorer/AnnotationsBar.tsx` | The comment block, presentational; the reading is `lib/moveAnnotations.ts`. |
 | `src/views/explorer/ChanceArrows.tsx` + `chanceArrows.ts` (+ tests) | The play-chance overlay and its geometry. |
-| `src/views/tools/analysis/nextMoveArrows.ts`, `NextMovesBar.tsx` | **Not moved**: they stayed beside the Analysis Board, which since CTA-73 is itself built on the explorer. The explorer imports them from there. |
-| `src/views/shared/MoveList.tsx`, `VariationLine.tsx`, `moveSelection.ts`, `moveContextMenu.ts` | The shared tokens under every list, unchanged. |
+| `src/views/tools/analysis/nextMoveArrows.ts`, `NextMovesBar.tsx` | The next-move arrows and bar, imported by the explorer. |
+| `src/views/shared/MoveList.tsx`, `VariationLine.tsx`, `moveSelection.ts`, `moveContextMenu.ts`, `moveTokenSx.ts` | The shared tokens under every list. |
 
-The locale keys follow the shared-pieces rule (root `CLAUDE.md`): the map's
-strings are the top-level `treeMap.*` block and the comment block's are
-`annotations.*` (they were `repertoires.play.map.*` and
-`repertoires.annotations.*`, with the English unchanged). The menu's
-`moveMenu.*`, `commentDialog.*` and `playChance.*` were already top-level.
-
----
-
-## 6. Where the build departed from the first spec
-
-The issue asked that the spec follow what was actually built. These are the
-places it changed:
-
-- **A hook returning parts, not a `<VariationsExplorer>` component.** The
-  first sketch was one component with slots. But the explorer's pieces live
-  in four different slots of two components (tabs, footer, arrows, overlay),
-  and the player interleaves its own pieces between them. One component could
-  only have taken all of that over by rendering the panel itself, which is
-  the second skeleton §1 rules out.
-- **`nextMoveArrows.ts` and `NextMovesBar.tsx` stayed in `tools/analysis/`**
-  (see §5). The play-chance overlay, which only the player used, moved.
-- **The map was renamed and made generic** (`RepertoireMap` → `TreeMap`,
-  prop `repertoire` → `tree`, `lib/repertoireMap.ts` → `lib/treeMap.ts`). Its
-  coverage type became `MapCoverage`, a structural type that Backtracking's
-  `Coverage` satisfies, so `lib/treeMap.ts` no longer imports
-  `lib/repertoireGames.ts`.
-- **The dev boards switched imports only.** They rendered `TreeMoveList`
-  directly; Analysis v2 and Openings v2 shipped onto the explorer (CTA-73,
-  CTA-78) and Play v2 and Masked v2 were retired for Play with Engine's
-  screen (CTA-74, CTA-79), so none is left.
+Locale keys are top-level, like every shared piece's: `treeMap.*`,
+`annotations.*`, `moveMenu.*`, `commentDialog.*`, `playChance.*`.

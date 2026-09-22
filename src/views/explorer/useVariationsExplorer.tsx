@@ -29,7 +29,7 @@ import TreeMoveList from "./TreeMoveList";
 import type { TreeViewParts, TreeViewSource } from "./treeView";
 
 /** The map part's own options — what to draw it from, and what it may do. */
-export type ExplorerMapOptions = {
+type ExplorerMapOptions = {
   /** The tree to draw — `source.tree` by default. */
   tree?: GameTree;
   /** Where its marker sits, on that tree — `source.nodeId` by default. */
@@ -43,7 +43,7 @@ export type ExplorerMapOptions = {
 };
 
 /** The arrows part's options. */
-export type ExplorerArrowOptions = {
+type ExplorerArrowOptions = {
   /** Draw every continuation (`nextMoveArrowsOf`); off, only a hovered one. */
   show: boolean;
   /** Where the branch on screen carries `prc` marks, size the arrows by them (CTA-71). */

@@ -38,7 +38,7 @@ import type { EngineOption } from "../../lib/engine";
  * judged.
  */
 
-export type OptionSliderProps = {
+type OptionSliderProps = {
   /** The UCI name, e.g. `"Skill Level"` — also what the two notices name. */
   optionName: string;
   /** What the engine declared for it, or `undefined` when it declared nothing. */

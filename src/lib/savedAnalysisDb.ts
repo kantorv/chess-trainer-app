@@ -15,7 +15,7 @@ import { idbDatabase } from "./idb";
  * for the whole origin.
  */
 
-export const ANALYSIS_DB_NAME = "chessapp.analyses";
+const ANALYSIS_DB_NAME = "chessapp.analyses";
 const DB_VERSION = 1;
 export const ANALYSES_STORE = "analyses";
 export const ANALYSIS_FOLDERS_STORE = "folders";

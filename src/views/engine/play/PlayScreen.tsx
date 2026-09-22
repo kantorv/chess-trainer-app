@@ -23,8 +23,8 @@ import { DEFAULT_POSITION } from "chess.js";
 
 import { isAnyMasked, maskedPieces } from "../../../lib/pieceMask";
 import { playedGameResult, type PlayedGameMask } from "../../../lib/playedGames";
-import type { BoardPanelTab } from "../../dev/core/BoardPanel";
-import BoardShell from "../../dev/core/BoardShell";
+import type { BoardPanelTab } from "../../board/core/BoardPanel";
+import BoardShell from "../../board/core/BoardShell";
 import { useVariationsExplorer } from "../../explorer/useVariationsExplorer";
 import CurrentOpening from "../../shared/CurrentOpening";
 import EngineThinking from "../../tools/analysis/EngineThinking";
@@ -38,12 +38,12 @@ import { usePlayGame, type PlayGameStart } from "./usePlayGame";
  * (`/engine/masked`), which is this screen with a costume. Built like the
  * Analysis Board: the v2 core, the engine module and the shared variations
  * explorer, composed by `usePlayGame`, placed in `BoardShell` / `BoardPanel`
- * ([`.claude/rules/chessboard-v2.md`](../../../../.claude/rules/chessboard-v2.md),
+ * ([`.claude/rules/chessboard.md`](../../../../.claude/rules/chessboard.md) §9,
  * [`.claude/rules/tree-views.md`](../../../../.claude/rules/tree-views.md)).
  *
  * | Capability | Taken | Because |
  * | --- | --- | --- |
- * | Base | `useBoardCore`, no `canMoveAt` | a move from an earlier position is a side line |
+ * | Base | `useBoardCore` | a move from an earlier position is a side line |
  * | Engine | switch, on; its reply through **Play**, **on from the start** (`usePlayToggle`) | the Analysis Board's rule — the side not at the bottom, paused by a step back or a change of side |
  * | Tree view | `useVariationsExplorer` | Moves (side lines, evals, the move menu), Map, the comment block, the next-moves bar and arrows — editing on, *Play chances…* off |
  * | Saving | `useAutosave` → `lib/playedGameStore.ts` | every move, no button; the flat list at `/engine/games` |

@@ -4,7 +4,7 @@ import { pickUniform, repertoireMovesAt, type TrainerPolicy } from "./repertoire
 /**
  * **The repertoire games** (CTA-63) — what a game played over a repertoire is,
  * as pure functions. The screen (`views/repertoires/RepertoirePlayer.tsx`) and
- * the trainer module (`views/dev/core/useTrainerModule.ts`) do the playing;
+ * the trainer module (`views/board/core/useTrainerModule.ts`) do the playing;
  * this file only answers questions about the repertoire and what has been
  * covered of it.
  *

@@ -11,7 +11,7 @@ import { MASK_PRESETS } from "../../../lib/pieceMask";
 import AppThemeWithLang from "../../../theme/AppThemeWithLang";
 import { RightPanelOutlet, RightPanelProvider } from "../../main/rightPanel";
 import type { OpeningBook } from "../../../lib/openings";
-import { FakeEngine } from "../../dev/devTestHarness";
+import { FakeEngine } from "../../board/boardTestHarness";
 import PlayedGames from "./PlayedGames";
 
 /*
@@ -22,7 +22,7 @@ import PlayedGames from "./PlayedGames";
 
 // The form handshakes an engine (never searching) for the options it declares.
 vi.mock("../../../lib/engine", async () => ({
-  default: (await import("../../dev/devTestHarness")).FakeEngine,
+  default: (await import("../../board/boardTestHarness")).FakeEngine,
 }));
 
 /*

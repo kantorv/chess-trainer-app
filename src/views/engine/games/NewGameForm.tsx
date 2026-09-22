@@ -21,7 +21,7 @@ import {
 import { parseFen } from "../../../lib/fen";
 import { newGameParams, type NewGameSide } from "../../../lib/newGameLink";
 import { START_POSITION } from "../../../lib/positionEditor";
-import { useEngineModule } from "../../dev/core/useEngineModule";
+import { useEngineModule } from "../../board/core/useEngineModule";
 import PositionEditor from "../../shared/positionEditor/PositionEditor";
 import { usePositionEditor } from "../../shared/positionEditor/usePositionEditor";
 import EngineSettings from "../play/EngineSettings";

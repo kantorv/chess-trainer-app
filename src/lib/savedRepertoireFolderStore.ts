@@ -30,7 +30,7 @@ import { unfileRepertoiresIn } from "./savedRepertoireStore";
 export const MAX_REPERTOIRE_FOLDERS = 100;
 
 /** How long a folder name may be. A name is a label, not a document. */
-export const MAX_REPERTOIRE_FOLDER_NAME = 100;
+const MAX_REPERTOIRE_FOLDER_NAME = 100;
 
 /** What went wrong with a write. One case, but named rather than boolean. */
 export type RepertoireFolderProblem = "storage";
@@ -63,14 +63,6 @@ const write = folders.write;
 /** A name as it is stored: trimmed and bounded. */
 const normaliseName = (name: string): string =>
   name.trim().slice(0, MAX_REPERTOIRE_FOLDER_NAME);
-
-/** One folder by id, out of what has been read, or `undefined`. */
-export const findRepertoireFolder = (
-  id: string | null | undefined,
-): RepertoireFolder | undefined =>
-  id === null || id === undefined
-    ? undefined
-    : repertoireFoldersSnapshot()?.find((folder) => folder.id === id);
 
 /**
  * Create a folder, and hand it back — `undefined` when nothing was created: a

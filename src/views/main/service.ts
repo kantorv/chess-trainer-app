@@ -1,4 +1,4 @@
-import { setup, assign, assertEvent, type ActorRef, type Snapshot } from 'xstate';
+import { setup, assign, assertEvent } from 'xstate';
 import { createActorContext } from '@xstate/react';
 
 import { type UIMatch, type Location } from 'react-router'
@@ -111,5 +111,4 @@ const boardWidgetMachine = setup({
 
 
 export const BoardWidgetContext = createActorContext(boardWidgetMachine);
-export type BoardMainActorRef = ActorRef<Snapshot<unknown>, MachineEvent>;
 

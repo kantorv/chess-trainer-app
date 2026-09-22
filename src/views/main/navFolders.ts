@@ -54,9 +54,8 @@ export type NavFolder = {
  * The folder tree, top to bottom.
  *
  * **A function, not a constant**, so a dev-only folder can be a spread gated
- * on `import.meta.env.DEV`, evaluated when the tree is asked for — the
- * Development section's (CTA-60) was one; it closed with its last board in
- * CTA-79, and `chessboard-v2.md` §5 says how to open one again. The Library's collections are
+ * on `import.meta.env.DEV`, evaluated when the tree is asked for
+ * (`chessboard.md` §9.5 says how to open one). The Library's collections are
  * not folders here: they are the rows of the Library screen (`/library`), so
  * a `.pgn` dropped into `src/data/library/` or uploaded by the reader changes
  * that screen, not this tree.
@@ -80,10 +79,9 @@ export const navFolders = (): readonly NavFolder[] => [
     id: "analysis",
     labelKey: "nav.folders.analysisBoard",
     icon: AccountTreeRoundedIcon,
-    // One destination (CTA-58, mirroring CTA-42's Openings folder): the
-    // saved list is the screen worth reaching for, so the folder renders as
-    // one clickable row to it and the board view leaves the sidebar
-    // entirely — it is the saved list's New button.
+    // One destination: the saved list is the screen worth reaching for, so
+    // the folder renders as one clickable row to it; the board is the saved
+    // list's New button.
     singleEntry: true,
   },
   {
@@ -91,7 +89,7 @@ export const navFolders = (): readonly NavFolder[] => [
     labelKey: "nav.folders.openings",
     icon: TravelExploreRoundedIcon,
     // One destination: the folder renders as one clickable row to the
-    // Openings explorer (CTA-78; the saved list it pointed at before is gone).
+    // Openings explorer.
     singleEntry: true,
   },
   /*
@@ -103,10 +101,9 @@ export const navFolders = (): readonly NavFolder[] => [
     id: "repertoires",
     labelKey: "nav.folders.repertoires",
     icon: MenuBookRoundedIcon,
-    // One destination (CTA-84, mirroring CTA-58/CTA-78): the folder renders
-    // as one clickable row to the Repertoires list — its own "Add
-    // repertoire" link already reaches `/repertoires/new`, so a second row
-    // for it here was redundant.
+    // One destination: the folder renders as one clickable row to the
+    // Repertoires list, whose own "Add repertoire" link reaches
+    // `/repertoires/new`.
     singleEntry: true,
   },
 ];

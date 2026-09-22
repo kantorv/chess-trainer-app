@@ -300,7 +300,7 @@ export const repertoireTrunkFen = (trees: readonly GameTree[]): string => {
 };
 
 /** A tree's size, as a caption prints it. */
-export const repertoireStatsOf = (tree: GameTree): RepertoireStats => ({
+const repertoireStatsOf = (tree: GameTree): RepertoireStats => ({
   moves: Math.ceil(mainline(tree).length / 2),
   variations: countVariations(tree),
 });
