@@ -36,12 +36,15 @@ import {
  * The presets are the doc's variants table (§8), and they are also the way out:
  * "Show real pieces" is the identity mask, so the screen can be played
  * unmasked without leaving it.
+ *
+ * Moved here from the pre-v2 `views/masked/play/` unchanged (CTA-79);
+ * `MaskedPlay.tsx` adds the engine-lines switch under it.
  */
 
 type MaskEditorProps = {
   mask: PieceMask;
   onMaskChange: (mask: PieceMask) => void;
-  /** Whether the move list and the variations hide masked pieces' letters. */
+  /** Whether every printed move — list, map, next moves, engine lines — hides a masked piece's letter. */
   maskNotation: boolean;
   onMaskNotationChange: (next: boolean) => void;
 };

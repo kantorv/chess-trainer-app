@@ -5,10 +5,8 @@ import MenuBookRoundedIcon from "@mui/icons-material/MenuBookRounded";
 import MemoryRoundedIcon from "@mui/icons-material/MemoryRounded";
 import SnippetFolderRoundedIcon from "@mui/icons-material/SnippetFolderRounded";
 import TravelExploreRoundedIcon from "@mui/icons-material/TravelExploreRounded";
-import VisibilityOffRoundedIcon from "@mui/icons-material/VisibilityOffRounded";
 
 import type { LocalizedText } from "../../lib/localizedText";
-import { devNavFolder } from "../dev/devNav";
 
 /**
  * Folders are the groupings in the sidebar. Each screen names exactly one of
@@ -56,8 +54,10 @@ export type NavFolder = {
 /**
  * The folder tree, top to bottom.
  *
- * **A function, not a constant**, so the Development folder's gate below is a
- * spread evaluated when the tree is asked for. The Library's collections are
+ * **A function, not a constant**, so a dev-only folder can be a spread gated
+ * on `import.meta.env.DEV`, evaluated when the tree is asked for — the
+ * Development section's (CTA-60) was one; it closed with its last board in
+ * CTA-79, and `chessboard-v2.md` §5 says how to open one again. The Library's collections are
  * not folders here: they are the rows of the Library screen (`/library`), so
  * a `.pgn` dropped into `src/data/library/` or uploaded by the reader changes
  * that screen, not this tree.
@@ -67,11 +67,6 @@ export const navFolders = (): readonly NavFolder[] => [
     id: "engine",
     labelKey: "nav.folders.engine",
     icon: MemoryRoundedIcon,
-  },
-  {
-    id: "masked-pieces",
-    labelKey: "nav.folders.maskedPieces",
-    icon: VisibilityOffRoundedIcon,
   },
   /*
     The Library (CTA-75): collections of games — the shipped `.pgn` files and
@@ -115,12 +110,4 @@ export const navFolders = (): readonly NavFolder[] => [
     labelKey: "nav.folders.repertoires",
     icon: MenuBookRoundedIcon,
   },
-  /*
-    The Development section (CTA-60) — the boards composed from the unified
-    board core, `.claude/rules/chessboard-v2.md`. Dev-only, and this is the
-    whole of the gate on the folder: in a production build Vite replaces
-    `import.meta.env.DEV` with `false`, the spread is dead code, and rollup
-    drops `views/dev/devNav.ts` and its icons with it.
-  */
-  ...(import.meta.env.DEV ? [devNavFolder()] : []),
 ];

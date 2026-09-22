@@ -138,8 +138,8 @@ export const useEngineModule = ({
   /*
     Subscribe once per Engine instance — and re-subscribe when the caller's
     reply handler changes, because it closes over the position the reply has to
-    be judged against. That is a dependency rather than a ref read for the
-    reason `usePlayWithEngine` gives for the same choice: re-subscribing costs
+    be judged against. That is a dependency rather than a ref read because
+    re-subscribing costs
     one Set entry (no worker is rebuilt), and the alternative is writing a ref
     during render, which `react-hooks/refs` rejects.
 

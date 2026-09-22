@@ -192,6 +192,7 @@ function TreeMoveList({
         onClose={closeMenu}
         onEditTree={onEditTree}
         playChances={playChances}
+        mask={mask}
       />
     </>
   );

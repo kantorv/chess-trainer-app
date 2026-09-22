@@ -4,16 +4,16 @@ import {
   playedGameCatalogOf,
   playedGameFrom,
   samePlayedGameEvals,
+  samePlayedGameMask,
   type PlayedGame,
 } from "./playedGames";
 import { recordStore } from "./recordStore";
 
 /**
- * Where Play with Engine v2's games are kept (CTA-74): one `localStorage` key,
- * a JSON array of {@link PlayedGame}, newest first — over the shared
- * [`recordStore.ts`](./recordStore.ts), which carries the reasoning for the
- * scaffolding. [`savedGameStore.ts`](./savedGameStore.ts) again, for a tree
- * rather than a line, and without folders.
+ * Where the games against the engine are kept (CTA-74; Masked Pieces' too
+ * since CTA-79): one `localStorage` key, a JSON array of {@link PlayedGame},
+ * newest first — over the shared [`recordStore.ts`](./recordStore.ts), which
+ * carries the reasoning for the scaffolding. Flat: no folders.
  *
  * ### Idempotent, and only a move re-orders
  *
@@ -22,7 +22,7 @@ import { recordStore } from "./recordStore";
  * reader stands), an engine score arriving and the settings clamp. So
  * {@link savePlayedGame} does nothing when the record is the one stored, and
  * **only a change of the moves moves a game to the top**: a new place in the
- * tree, a new eval or new settings are written *in place*, with the stored
+ * tree, a new eval, new settings or a new mask are written *in place*, with the stored
  * `updatedAt`. Newest first means the game last played, not last looked at.
  */
 
@@ -71,6 +71,7 @@ export const savePlayedGame = (game: PlayedGame): PlayedGameProblem | undefined 
     samePath(existing.path, game.path) &&
     sameEngineSettings(existing.settings, game.settings) &&
     existing.resigned === game.resigned &&
+    samePlayedGameMask(existing.mask, game.mask) &&
     samePlayedGameEvals(existing.evals, game.evals)
   ) {
     return undefined;

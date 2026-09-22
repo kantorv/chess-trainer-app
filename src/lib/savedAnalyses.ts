@@ -22,7 +22,7 @@ import { parsePgnGame, parsePgnTree, readPgnTags } from "./pgn";
  *
  * The Analysis Board grows a {@link GameTree} move by move
  * (`lib/gameTree.ts`); this is the layer that lets that work outlive the tab.
- * It is [`savedGames.ts`](./savedGames.ts) again, in the same three-way split
+ * It is [`playedGames.ts`](./playedGames.ts) again, in the same three-way split
  * (pure model here, IndexedDB since CTA-77 in
  * [`savedAnalysisStore.ts`](./savedAnalysisStore.ts), a `useSyncExternalStore`
  * binding in `views/tools/analysis/saved/useSavedAnalyses.ts`) and for the same
@@ -132,7 +132,7 @@ export const SAVED_ANALYSIS_PLAYER = "Analysis";
  * unique within its own store, and the two stores are separate, so there is
  * nothing here for a second rule to say.
  */
-export { newSavedGameId as newSavedAnalysisId } from "./savedGames";
+export { newRecordId as newSavedAnalysisId } from "./recordId";
 
 /** `YYYY.MM.DD`, the PGN `Date` tag's format, in the reader's own timezone. */
 const pgnDate = (when: Date): string =>

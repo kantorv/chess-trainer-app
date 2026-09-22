@@ -1,6 +1,8 @@
+import { Chess } from "chess.js";
+
 import type { Score } from "./engineAnalysis";
 import { engineSettingsFrom, type EngineSettings } from "./engineSettings";
-import { gameTag, type Game } from "./gameModel";
+import { gameTag, type Game, type GameHeaders } from "./gameModel";
 import {
   countVariations,
   fenAtNode,
@@ -12,18 +14,18 @@ import {
 } from "./gameTree";
 import type { CatalogGame, GameCatalog } from "./gameCatalog";
 import { parsePgnGame, parsePgnTree } from "./pgn";
-import { resultOfFen, savedGameHeaders } from "./savedGames";
+import { pieceMaskFrom, samePieceMask, type PieceMask } from "./pieceMask";
 
 /**
- * **The reader's games on Play with Engine v2** (CTA-74) — what one is when it
- * is written down, and how it is read back.
+ * **The reader's games against the engine** (CTA-74) — Play with Engine's and,
+ * since CTA-79, Masked Pieces' — what one is when it is written down, and how
+ * it is read back.
  *
- * The saved games' three-way split again (pure model here, `localStorage` in
+ * The three-way split every store keeps (pure model here, `localStorage` in
  * [`playedGameStore.ts`](./playedGameStore.ts), a `useSyncExternalStore`
- * binding in `views/engine/games/usePlayedGames.ts`) — a **new** store beside
- * [`savedGames.ts`](./savedGames.ts) rather than a new version of it, because
- * the game is a different shape now and the old records are not migrated.
- * Only what is different is written out here:
+ * binding in `views/engine/games/usePlayedGames.ts`). It replaced the
+ * pre-CTA-74 linear saved game (`savedGames.ts`, deleted in CTA-79; its
+ * records were never migrated). What a record is:
  *
  * - **A tree, not a line.** A move played by hand from an earlier position is
  *   a side line under it, so the record is `treeToPgn` out and
@@ -35,7 +37,44 @@ import { resultOfFen, savedGameHeaders } from "./savedGames";
  * - **The evals are keyed by FEN**, not by ply: a ply cannot say which line
  *   it is on. Only positions the tree reaches are kept.
  * - **Flat.** No folders — the list is newest first and nothing else.
+ * - **A masked game carries its costume** (CTA-79, {@link PlayedGameMask}):
+ *   the mask and the notation switch, so Continue reopens it on
+ *   `/engine/masked` in the same disguise. The PGN is the true game — a mask
+ *   is a costume, never a rule — so the Analysis Board opens it unmasked. A
+ *   record without one is an unmasked game, which every record from before
+ *   is. The full reference is `.claude/rules/masked-pieces.md`.
  */
+
+/**
+ * A masked game's costume (CTA-79): how its pieces are drawn, and whether the
+ * notation hides a masked piece's move. Present only on a game played on
+ * Masked Pieces — whatever the mask is, the identity one included, since that
+ * is still the screen the game is continued on.
+ */
+export type PlayedGameMask = {
+  pieces: PieceMask;
+  /** Whether the notation prints coordinates for a hidden piece's move. */
+  notation: boolean;
+};
+
+/** Whether two records' costumes are the same — both absent included. */
+export const samePlayedGameMask = (
+  a: PlayedGameMask | undefined,
+  b: PlayedGameMask | undefined,
+): boolean =>
+  a === undefined || b === undefined
+    ? a === b
+    : a.notation === b.notation && samePieceMask(a.pieces, b.pieces);
+
+/** A stored costume read back, or `undefined` — an unreadable one reads as unmasked. */
+const playedGameMaskFrom = (value: unknown): PlayedGameMask | undefined => {
+  if (typeof value !== "object" || value === null) return undefined;
+  const row = value as Record<string, unknown>;
+  const pieces = pieceMaskFrom(row.pieces);
+  if (pieces === undefined) return undefined;
+  // The notation defaults to the screen's own default: on.
+  return { pieces, notation: row.notation !== false };
+};
 
 /** One stored eval: the score of one position the tree reaches. Plain JSON. */
 export type PlayedGameEval = {
@@ -63,7 +102,62 @@ export type PlayedGame = {
   evals?: PlayedGameEval[];
   /** The side that resigned — the reader's; absent while the game is on. It decides the result. */
   resigned?: "white" | "black";
+  /** A Masked Pieces game's costume (CTA-79); absent on an unmasked game. */
+  mask?: PlayedGameMask;
 };
+
+/** The `Event` tag every played game carries — what these games all are. */
+export const PLAYED_GAME_EVENT = "Play with Engine";
+
+/** `YYYY.MM.DD`, the PGN `Date` tag's format, in the reader's own timezone. */
+const pgnDate = (when: Date): string =>
+  [
+    when.getFullYear(),
+    `${when.getMonth() + 1}`.padStart(2, "0"),
+    `${when.getDate()}`.padStart(2, "0"),
+  ].join(".");
+
+/**
+ * How a position stands, as a PGN result terminator — read off the position
+ * rather than tracked as state: `chess.js` already knows whether a position
+ * is mate, stalemate or a draw by the other rules. An unfinished game is
+ * `"*"`, and so is a FEN that will not load.
+ */
+export const resultOfFen = (fen: string): string => {
+  let chess: Chess;
+  try {
+    chess = new Chess(fen);
+  } catch {
+    return "*";
+  }
+
+  if (chess.isCheckmate()) return chess.turn() === "w" ? "0-1" : "1-0";
+  return chess.isGameOver() ? "1/2-1/2" : "*";
+};
+
+/** How the engine signs a game: its name and the strength it was set to. */
+const engineName = (settings: EngineSettings): string =>
+  `Stockfish (level ${settings.skillLevel})`;
+
+/**
+ * The tag pairs a played game is written with — who played, on which side,
+ * and how it stands. The reader is `"Player"` and the engine is named by its
+ * strength, because a PGN tag is language-independent notation: it travels to
+ * an export and to any other reader of the file.
+ */
+export const playedGameHeaders = (
+  settings: EngineSettings,
+  result: string,
+  now: Date = new Date(),
+): GameHeaders => ({
+  Event: PLAYED_GAME_EVENT,
+  Site: "Chess Trainer",
+  Date: pgnDate(now),
+  Round: "-",
+  White: settings.playAs === "white" ? "Player" : engineName(settings),
+  Black: settings.playAs === "white" ? engineName(settings) : "Player",
+  Result: result,
+});
 
 /**
  * How a game stands, as a PGN result: a resignation decides it (the side that
@@ -81,8 +175,8 @@ export const playedGameResult = (
 /** The played games' catalog path — their `?game=play/<path>/<id>` segment. */
 export const PLAYED_GAMES_PATH = "games";
 
-/** A fresh id — the saved games' minter; ids are unique within a store. */
-export { newSavedGameId as newPlayedGameId } from "./savedGames";
+/** A fresh id — the shared minter; ids are unique within a store. */
+export { newRecordId as newPlayedGameId } from "./recordId";
 
 /** Every node of a tree, depth first. */
 const nodesOf = (tree: GameTree): VariationNode[] => {
@@ -133,10 +227,11 @@ export const playedGameOf = (
   now: Date = new Date(),
   savedAt: string = now.toISOString(),
   resigned?: "white" | "black",
+  mask?: PlayedGameMask,
 ): PlayedGame => {
   const result = playedGameResult(tree, resigned);
   const evals = evalsOf(tree, evalsByFen);
-  const headers = { ...tree.headers, ...savedGameHeaders(settings, result, new Date(savedAt)) };
+  const headers = { ...tree.headers, ...playedGameHeaders(settings, result, new Date(savedAt)) };
   if (resigned !== undefined) {
     headers.Termination = `${resigned === "white" ? "White" : "Black"} resigns`;
   }
@@ -149,6 +244,7 @@ export const playedGameOf = (
     updatedAt: now.toISOString(),
     ...(evals.length > 0 ? { evals } : {}),
     ...(resigned !== undefined ? { resigned } : {}),
+    ...(mask !== undefined ? { mask: { pieces: mask.pieces, notation: mask.notation } } : {}),
   };
 };
 
@@ -226,6 +322,7 @@ export const playedGameFrom = (value: unknown): PlayedGame | undefined => {
   const evals = Array.isArray(row.evals)
     ? row.evals.map(playedGameEvalFrom).filter((entry) => entry !== undefined)
     : [];
+  const mask = playedGameMaskFrom(row.mask);
   return {
     id: row.id,
     pgn: row.pgn,
@@ -237,6 +334,7 @@ export const playedGameFrom = (value: unknown): PlayedGame | undefined => {
     updatedAt: row.updatedAt,
     ...(evals.length > 0 ? { evals } : {}),
     ...(row.resigned === "white" || row.resigned === "black" ? { resigned: row.resigned } : {}),
+    ...(mask !== undefined ? { mask } : {}),
   };
 };
 
@@ -252,6 +350,8 @@ export type PlayedGameSummary = {
   playAs: EngineSettings["playAs"];
   /** `Skill Level` the engine is set to. */
   skillLevel: number;
+  /** Whether it was played on Masked Pieces — the list's marker, and where Continue goes. */
+  masked: boolean;
 };
 
 export const playedGameSummary = (
@@ -264,6 +364,7 @@ export const playedGameSummary = (
     result: tree === undefined ? "*" : playedGameResult(tree, saved.resigned),
     playAs: saved.settings.playAs,
     skillLevel: saved.settings.skillLevel,
+    masked: saved.mask !== undefined,
   };
 };
 

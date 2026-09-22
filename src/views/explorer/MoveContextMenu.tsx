@@ -32,6 +32,7 @@ import {
   subtreeCounts,
   type GameTree,
 } from "../../lib/gameTree";
+import { maskNodeSan, type PieceMask } from "../../lib/pieceMask";
 import CommentDialog, { type CommentDraft } from "./CommentDialog";
 import PlayChanceDialog, { type PlayChanceTarget } from "./PlayChanceDialog";
 import type { MenuAnchor } from "../shared/moveContextMenu";
@@ -68,6 +69,7 @@ function MoveContextMenu({
   onClose,
   onEditTree,
   playChances = true,
+  mask,
 }: {
   tree: GameTree;
   /** The last move a menu was opened on — kept while the menu fades out. */
@@ -80,6 +82,8 @@ function MoveContextMenu({
    * — the Analysis Board (CTA-73) — turns it off.
    */
   playChances?: boolean;
+  /** A masked board's costume (CTA-79): the move it names prints as coordinates when hidden. */
+  mask?: PieceMask;
 }) {
   const { t } = useTranslation();
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -102,7 +106,7 @@ function MoveContextMenu({
   const moveText = (at: typeof node) => {
     if (at === null) return "";
     const { number, isWhiteMove } = plyLabel(tree.startFen, at.ply);
-    return `${number}${isWhiteMove ? "." : "…"} ${at.san}`;
+    return `${number}${isWhiteMove ? "." : "…"} ${maskNodeSan(mask, at)}`;
   };
 
   // Built on each render, so the save edits the tree as it is then.

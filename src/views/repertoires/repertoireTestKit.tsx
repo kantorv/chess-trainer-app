@@ -3,9 +3,9 @@
  *
  * The section's screens render inside the app shell's right-panel slot and
  * under the router, so every test mounts them the same way; the board screen
- * is composed from the v2 core, so its tests take the stand-ins the
- * Development section already wrote for exactly that
- * (`views/dev/devTestHarness.tsx`) rather than a second copy of them.
+ * is composed from the v2 core, so its tests take the stand-ins every v2
+ * board's tests share (`views/dev/devTestHarness.tsx`) rather than a second
+ * copy of them.
  */
 import { render } from "@testing-library/react";
 import type { ReactNode } from "react";

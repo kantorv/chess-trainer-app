@@ -75,6 +75,17 @@ describe("the shipped nav tree", () => {
     }
   });
 
+  it("files Masked Pieces in the Engine folder, beside Play with Engine (CTA-79)", () => {
+    expect(navItemsInFolder("engine").map((item) => item.to)).toEqual([
+      "/engine/play",
+      "/engine/games",
+      "/engine/masked",
+    ]);
+    // Its old folder and route are gone, with no redirect.
+    expect(navFolders().map((folder) => folder.id)).not.toContain("masked-pieces");
+    expect(folderPath("/masked/play")).toEqual([]);
+  });
+
   it("returns an empty breadcrumb for a path that is not a screen", () => {
     expect(folderPath("/nope")).toEqual([]);
     expect(folderPath("")).toEqual([]);

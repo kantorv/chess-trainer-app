@@ -1,6 +1,6 @@
 import { numberedRows, type IndexedRow } from "./collectionIndex";
 import type { CollectionRow, CollectionSummary } from "./libraryCollections";
-import { newSavedGameId } from "./savedGames";
+import { newRecordId } from "./recordId";
 
 /**
  * **The reader's own Library collections** (CTA-75) — kept in **IndexedDB**,
@@ -242,7 +242,7 @@ export const loadUploadedGames = async (id: string): Promise<readonly string[] |
 /* --- writing ------------------------------------------------------- */
 
 /** A fresh id — `u` and the saved games' minter, so it cannot be a shipped file's slug. */
-export const newCollectionId = (): string => `u${newSavedGameId()}`;
+export const newCollectionId = (): string => `u${newRecordId()}`;
 
 /** After a write: the caches take what was written, the summaries are re-read, other tabs told. */
 const settle = async (

@@ -4,7 +4,7 @@ import {
   type RepertoireFolder,
 } from "./savedRepertoireFolders";
 import { unfileRepertoiresIn } from "./savedRepertoireStore";
-import { newSavedGameId as newRepertoireFolderId } from "./savedGames";
+import { newRecordId as newRepertoireFolderId } from "./recordId";
 
 /**
  * Where the reader's repertoire folders are kept: one `localStorage` key,

@@ -7,6 +7,7 @@ import { DEFAULT_ENGINE_SETTINGS } from "../../../lib/engineSettings";
 import { parsePgnTree } from "../../../lib/pgn";
 import { playedGamesSnapshot, savePlayedGame } from "../../../lib/playedGameStore";
 import { playedGameOf } from "../../../lib/playedGames";
+import { MASK_PRESETS } from "../../../lib/pieceMask";
 import AppThemeWithLang from "../../../theme/AppThemeWithLang";
 import { RightPanelOutlet, RightPanelProvider } from "../../main/rightPanel";
 import PlayedGames from "./PlayedGames";
@@ -94,5 +95,41 @@ describe("Saved games (v2) — the list", () => {
     fireEvent.click(screen.getByTestId("played-games-delete-confirm"));
     expect(playedGamesSnapshot()).toHaveLength(0);
     expect(screen.getByTestId("played-games-empty")).toBeInTheDocument();
+  });
+});
+
+describe("Saved games — a masked game (CTA-79)", () => {
+  it("is marked Masked, continues on Masked Pieces and opens unmasked in Analysis", () => {
+    store("plain", "1. e4 *");
+    savePlayedGame(
+      playedGameOf(
+        "m",
+        parsePgnTree("1. Nf3 *"),
+        [],
+        DEFAULT_ENGINE_SETTINGS,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        { pieces: MASK_PRESETS.nonPawns, notation: true },
+      ),
+    );
+    mount();
+
+    expect(screen.getByTestId("played-games-masked-m")).toHaveTextContent("Masked");
+    expect(screen.queryByTestId("played-games-masked-plain")).not.toBeInTheDocument();
+    expect(screen.getByTestId("played-games-continue-m")).toHaveAttribute(
+      "href",
+      "/engine/masked?saved=m",
+    );
+    expect(screen.getByTestId("played-games-continue-plain")).toHaveAttribute(
+      "href",
+      "/engine/play?saved=plain",
+    );
+    // The PGN is the true game: the Analysis Board reads it as any other.
+    expect(screen.getByTestId("played-games-analysis-m")).toHaveAttribute(
+      "href",
+      `/tools/analysis?game=${encodeURIComponent("play/games/m")}`,
+    );
   });
 });

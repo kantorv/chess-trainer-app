@@ -4,6 +4,7 @@ import i18n from "../../i18n";
 import AppThemeWithLang from "../../theme/AppThemeWithLang";
 import { mainline, nodeAtSanPath, type GameTree } from "../../lib/gameTree";
 import { parsePgnTree } from "../../lib/pgn";
+import { MASK_PRESETS } from "../../lib/pieceMask";
 import {
   NEXT_MOVE_ARROW_COLOR,
   REQUIRED_MOVE_ARROW_COLOR,
@@ -138,5 +139,35 @@ describe("useVariationsExplorer — the arrows", () => {
     mount({ arrows: { show: true, chances: true }, nodeId: at(tree, "e4", "e5") });
     expect(parts.arrows).toEqual([]);
     expect(screen.getByTestId("x-chance-arrows-overlay")).toBeInTheDocument();
+  });
+});
+
+describe("useVariationsExplorer — a masked board's notation (CTA-79)", () => {
+  it("writes a hidden piece's move as coordinates in every part that prints one", () => {
+    mount({
+      nodeId: at(tree, "e4", "e5"),
+      mask: MASK_PRESETS.nonPawns,
+      annotations: true,
+      map: {},
+    });
+    // The side lines under the list's rows.
+    const moves = screen.getByTestId("moves");
+    expect(moves).toHaveTextContent("b1c3");
+    expect(moves).not.toHaveTextContent(/Nf3|Nc3/);
+    // The next-moves bar at the branch — a pawn move is hidden too, being
+    // what the others are drawn as.
+    const next = screen.getByTestId("next");
+    expect(next).toHaveTextContent("g1f3");
+    expect(next).toHaveTextContent("f2f4");
+    // The map's labels.
+    const labels = screen.getByTestId("x-map-labels");
+    expect(labels).toHaveTextContent("g1f3");
+    expect(labels).not.toHaveTextContent("Nf3");
+  });
+
+  it("prints SAN with no mask", () => {
+    mount({ nodeId: at(tree, "e4", "e5"), map: {} });
+    expect(screen.getByTestId("next")).toHaveTextContent("Nf3");
+    expect(screen.getByTestId("x-map-labels")).toHaveTextContent("Nf3");
   });
 });

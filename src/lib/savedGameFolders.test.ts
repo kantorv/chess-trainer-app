@@ -1,9 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { Chess } from "chess.js";
-
-import { DEFAULT_ENGINE_SETTINGS } from "./engineSettings";
-import { gameFromChess } from "./gameModel";
-import { savedGameOf, type SavedGame } from "./savedGames";
 import {
   flattenGameFolders,
   gameFolderChildren,
@@ -12,6 +7,7 @@ import {
   gameFolderSubtree,
   gamesInFolder,
   gamesUnderFolder,
+  type FiledRecord,
   type GameFolder,
 } from "./savedGameFolders";
 
@@ -35,16 +31,11 @@ const folder = (
   updatedAt: AT.toISOString(),
 });
 
-/** One game filed into `folderId`. The moves are irrelevant to the reads. */
-const game = (id: string, folderId: string | null): SavedGame =>
-  savedGameOf(
-    id,
-    gameFromChess(new Chess()),
-    DEFAULT_ENGINE_SETTINGS,
-    AT,
-    AT.toISOString(),
-    folderId,
-  );
+/** One record filed into `folderId`. What it holds is irrelevant to the reads. */
+const game = (id: string, folderId: string | null): FiledRecord & { id: string } => ({
+  id,
+  folderId,
+});
 
 describe("gameFolderFrom — reading a stored row back", () => {
   it("keeps a folder whose fields all parse", () => {

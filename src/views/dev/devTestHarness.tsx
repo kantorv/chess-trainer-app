@@ -1,9 +1,10 @@
 /**
- * The stand-ins the Development section's tests share.
+ * The stand-ins every v2 board's tests share (it lives here, beside the core,
+ * from the days of the Development section — CTA-60 to CTA-79).
  *
  * Not a test file — a helper the test files pull their `vi.mock` factories
- * from, because five boards composed from one core want one set of stubs, not
- * five copies of them. Which is the same argument the core itself makes.
+ * from, because the boards composed from one core want one set of stubs, not
+ * a copy each. Which is the same argument the core itself makes.
  *
  * Two things have to be stubbed for any board screen under jsdom
  * (`.claude/rules/chessboard.md` §8):

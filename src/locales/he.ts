@@ -15,7 +15,7 @@ const he: typeof en = {
     switchLanguage: "החלפת שפה",
     playWithEngine: "משחק מול המנוע",
     savedGames: "משחקים שמורים",
-    maskedPlay: "משחק מול המנוע (מוסווה)",
+    maskedPlay: "כלים מוסווים",
     analysisBoard: "לוח ניתוח",
     savedAnalyses: "ניתוחים שמורים",
     boardEditor: "עורך העמדות",
@@ -26,7 +26,6 @@ const he: typeof en = {
     addCollection: "הוספת אוסף",
     folders: {
       engine: "מנוע",
-      maskedPieces: "כלים מוסווים",
       tools: "כלים",
       library: "ספרייה",
       analysisBoard: "לוח ניתוח",
@@ -121,7 +120,11 @@ const he: typeof en = {
     },
     notation: "הסתרת כלים מוסווים ברישום המהלכים",
     notationHint:
-      "מהלך של כלי מוסווה נרשם כקואורדינטות (g1f3) ברשימת המהלכים ובווריאציות, כדי שהרישום לא יסגיר את מה שהלוח מסתיר.",
+      "מהלך של כלי מוסווה נרשם כקואורדינטות (g1f3) בכל מקום שבו נרשם מהלך — רשימת המהלכים, המפה, המהלכים הבאים, הקווים של המנוע — כדי שהרישום לא יסגיר את מה שהלוח מסתיר.",
+    lines: "הצגת הקווים הטובים ביותר של המנוע",
+    linesHint:
+      "כבוי כברירת מחדל: קו של המנוע הוא רשימה של הכלים שההסוואה מסתירה. סרגל ההערכה והציון אינם מושפעים.",
+    marker: "מוסווה",
   },
   moveMenu: {
     promote: "קידום הווריאציה",
@@ -215,16 +218,9 @@ const he: typeof en = {
   },
   playEngine: {
     tabs: {
-      game: "משחק",
       engine: "מנוע",
-      lines: "וריאציות",
       moves: "מהלכים",
       map: "מפה",
-    },
-    status: {
-      yourTurn: "התור שלך",
-      engineTurn: "המנוע חושב…",
-      reviewing: "צפייה במהלך קודם",
     },
     game: {
       replay: "התחלה מחדש",
@@ -258,7 +254,6 @@ const he: typeof en = {
       white: "לבן",
       black: "שחור",
       evalBar: "הצגת סרגל ההערכה",
-      newGame: "משחק חדש",
     },
   },
   playedGames: {
@@ -985,23 +980,6 @@ const he: typeof en = {
   },
   footer: {
     source: "מקור",
-  },
-  dev: {
-    folder: "פיתוח",
-    screens: {
-      play: "משחק מול המנוע v2",
-      masked: "כלים מוסווים v2",
-    },
-    tabs: {
-      moves: "מסעים",
-      engine: "מנוע",
-      position: "עמדה",
-      mask: "הסוואה",
-    },
-    controls: {
-      newGame: "משחק חדש",
-      newBoard: "לוח חדש",
-    },
   },
 };
 

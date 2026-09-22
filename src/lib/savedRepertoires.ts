@@ -114,7 +114,7 @@ export type SavedRepertoire = {
  * A fresh id — the same minter the other stores use, in `[0-9a-z]` because
  * the value travels in a URL.
  */
-export { newSavedGameId as newSavedRepertoireId } from "./savedGames";
+export { newRecordId as newSavedRepertoireId } from "./recordId";
 
 /**
  * The text as it is stored: `\r\n` and `\r` read as `\n`, and the whitespace
