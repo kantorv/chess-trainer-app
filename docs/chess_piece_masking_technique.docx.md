@@ -164,25 +164,30 @@ A concise product requirement for the feature could read:
 **Historical terminology:** Older Soviet/Russian chess literature discusses chess memory, operational memory, spatial imagination, and exercises that deliberately reduce reliance on visual recognition. However, the exact practice of replacing the visual representations of pieces with pawns does not appear to have a single universally established name in the sources reviewed for this specification. “Piece Masking” is therefore used here as a precise descriptive product term, not as a claim about an official historical method name.
 ---
 
-# **15\. Implementation in this app (CTA-15)**
+# **15\. Implementation in this app (CTA-15, rebuilt in CTA-79)**
 
 This section is not part of the specification above. It records how the
-technique is built in `chessapp-analyze-v1`, and the four design decisions
-settled with the requester on 2026-09-03 before the work started.
+technique is built in `chessapp-analyze-v1`: the four design decisions
+settled with the requester on 2026-09-03 before the first build (CTA-15), and
+what the rebuild onto Play with Engine's v2 screen changed (CTA-79,
+2026-09-22). The full engineering reference — every surface the mask
+reaches, the stored record, the invariants, tests and recipes — is
+[`.claude/rules/masked-pieces.md`](../.claude/rules/masked-pieces.md).
 
 ## **15.1 Where it lives**
 
 | Piece | File |
 | :---- | :---- |
 | The mask, and everything pure about it | [`src/lib/pieceMask.ts`](../src/lib/pieceMask.ts) |
-| The screen | [`src/views/masked/play/`](../src/views/masked/play/) — `MaskedPlay.tsx`, `MaskedPanel.tsx`, `MaskEditor.tsx` |
-| The board square both engine screens share | [`src/views/shared/EngineBoardSquare.tsx`](../src/views/shared/EngineBoardSquare.tsx) |
-| Route and sidebar entry | `/masked/play`, in the **Masked Pieces** folder |
+| The screen | [`src/views/engine/masked/`](../src/views/engine/masked/) — `MaskedPlay.tsx` (the route and the costume's state), `MaskEditor.tsx` |
+| The play screen it is | [`src/views/engine/play/PlayScreen.tsx`](../src/views/engine/play/PlayScreen.tsx) and `usePlayGame.ts` — Play with Engine's, shared |
+| The saved game | [`src/lib/playedGames.ts`](../src/lib/playedGames.ts) (`PlayedGame.mask`) over `playedGameStore.ts` |
+| Route and sidebar entry | `/engine/masked`, in the **Engine** folder beside Play with Engine and Saved games |
 
-Nothing in `chess.js`, `lib/engine.ts`, `lib/gameModel.ts` or the PGN path knows
-the feature exists — §7 and §13 turned into an arrangement of files. The mask is
-read at render time in exactly two places: the board's `options.pieces`, and the
-notation.
+Nothing in `chess.js`, `lib/engine.ts`, `lib/gameTree.ts`, the board core or the
+PGN path knows the feature exists — §7 and §13 turned into an arrangement of
+files. The mask is read at render time on the board (`options.pieces`, the
+captured strips, the material diff) and in the notation, and nowhere else.
 
 ## **15.2 Decision 1 — mask by piece type, not by individual piece**
 
@@ -208,9 +213,11 @@ SAN names the piece that moved, and the move list sits directly beside the
 board, so `Nf3` hands back the identity the board is busy hiding (§3.2's
 "optional derived information such as the piece symbol in move history"). With
 the setting on, a move whose piece is hidden is printed as plain coordinates —
-`g1f3`, `e7e8q` — in **both** the move list and the Variations tab. The check
-and mate marks are kept: every piece can give check, so `+` and `#` identify
-nothing.
+`g1f3`, `e7e8q` — **wherever a move is printed**: the move list and its side
+lines, the map's labels, the next-moves bar, the move menu, the comment
+block's label and the engine's lines (CTA-79; CTA-15 had a linear move list
+and a Variations tab). The check and mate marks are kept: every piece can
+give check, so `+` and `#` identify nothing.
 
 "Hidden" there is deliberately wider than "in disguise", and this is the part
 worth remembering:
@@ -224,16 +231,32 @@ to look at, so `e4` in the move list is the one thing that would say which of
 them really was one. Under *Non-pawns only* the king is the opposite case:
 nothing else is drawn as a king, so `Kf1` gives nothing away and stays SAN.
 
-## **15.4 Decision 3 — share the hook, extract the layout**
+## **15.4 Decision 3 — share the screen, add a costume**
 
-`usePlayWithEngine` is reused **verbatim, with zero edits** — it is all of the
-behaviour, and the masked game is an ordinary game. The eval bar + board +
-promotion-picker square was lifted out of `PlayWithEngine.tsx` into
-`views/shared/EngineBoardSquare.tsx`, which both screens render, so the
-board-square width discipline (`.claude/rules/chessboard.md` §5) exists in one
-place. Rejected: forking the screen (that sizing rule and the panel layout would
-exist twice and drift), and a mode flag on the shipped screen (the pattern the
-repo already rejected for `useAnalysisBoard` vs `usePlayWithEngine`).
+CTA-15 reused the play hook (`usePlayWithEngine`) **verbatim** with its own
+panel, and lifted the eval bar + board + promotion-picker square into
+`views/shared/EngineBoardSquare.tsx` so the width discipline existed once.
+
+CTA-79 took the same decision one level up. Play with Engine had become a v2
+screen (CTA-74: a game tree, the variations explorer, Play, Replay, Resign,
+autosave), so Masked Pieces now renders **Play with Engine's own screen**,
+`PlayScreen`, with one optional prop — the costume (the mask, the notation
+switch, the engine-lines switch, and the Masking tab). The session
+(`usePlayGame`) takes the mask only to write it on the record. There is no
+mode flag and no fork; the old hook, panel and screen were deleted.
+
+What changed for the reader with it:
+
+- **Side lines.** A move from an earlier position is a side line, as on
+  Play with Engine, and the notation masking reaches the side lines too.
+- **The engine's best lines are hidden by default**, behind a switch in the
+  Masking tab: a line of engine moves is a list of the pieces the mask
+  hides. The evaluation bar and the score stay.
+- **Games are saved.** CTA-15 did not persist, because a game resumed on
+  `/engine/play` would have lost its costume. The record now carries the mask
+  and the notation setting, Saved games marks it *Masked*, and Continue
+  reopens it on `/engine/masked` in the same disguise. The PGN is the true
+  game, so the Analysis Board opens it unmasked.
 
 The promotion picker is deliberately **not** masked. It is the player's own
 choice of what to promote to, so four identical pawns there would hide a
@@ -243,7 +266,8 @@ remember. The piece it produces is drawn masked from the next render on.
 ## **15.5 Decision 4 — the tab is called "Masking"**
 
 `/tools/editor` is already the Board Editor and it edits *positions*; this tab
-edits *appearance*.
+edits *appearance*. It is the fourth tab after Play with Engine's Moves · Map ·
+Engine.
 
 ## **15.6 The presets that ship**
 
@@ -262,6 +286,6 @@ edit away.
 
 The reveal and feedback modes (§9), and progressive / temporary / random masking
 and the difficulty ladder (§8, §10). All of them build on this same `PieceMask`
-rather than replacing it. Masking on the Analysis Board, the Library's game board
+rather than replacing it (`.claude/rules/masked-pieces.md` §11 has the recipes). Masking on the Analysis Board, the Library's game board
 and the Board Editor is also out of scope: those screens study a game rather than
 play one.

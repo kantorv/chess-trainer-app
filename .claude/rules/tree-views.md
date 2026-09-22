@@ -6,9 +6,10 @@ is the spec the shared explorer in [`src/views/explorer/`](../../src/views/explo
 implements (CTA-72). The repertoire player (`/repertoires/<id>` and its games)
 and, since CTA-73, the Analysis Board (`/tools/analysis`), since CTA-74,
 Play with Engine (`/engine/play`), since CTA-75, the Library's game board
-(`/library/<collection>/<game>`) and, since CTA-78, the Openings explorer
-(`/openings`) are built on it. The other screens will move onto it in later
-issues.
+(`/library/<collection>/<game>`), since CTA-78, the Openings explorer
+(`/openings`) and, since CTA-79, Masked Pieces (`/engine/masked` — Play with
+Engine's screen, with the explorer's `mask`) are built on it — every board
+that shows a game tree.
 
 Read [`chessboard-v2.md`](./chessboard-v2.md) first. It owns the board core a
 tree view reads from (`useBoardCore`), the shell and panel a view's parts are
@@ -116,6 +117,7 @@ const parts = useVariationsExplorer({
   annotations?: boolean,                  // the comment block
   arrows?: { show: boolean; chances?: boolean; required?: readonly VariationNode[] },
   map?: { tree?: GameTree; nodeId?: string | null; coverage?: MapCoverage; addedIds?: ReadonlySet<string>; linked?: boolean },
+  mask?: PieceMask,                       // a masked board's notation — coordinates for a hidden piece's move (CTA-79)
 });
 // → { moves, map?, annotations?, nextMoves, arrows, overlay }
 ```
@@ -128,6 +130,7 @@ const parts = useVariationsExplorer({
 | **Side lines hung under their move** (CTA-53), clickable, with the ply↔node seam | `moves` | required | — | `TreeMoveList` → `VariationLine` |
 | **Comment marker** on a commented move, in the mainline and in side lines (CTA-69) | `moves` | required | — | `hasComments`, `annotatedPlies`, `markCommentedNodes` |
 | **Evals** on the mainline's cells only | `moves` | opt-in | `evalsByFen` | `MoveList`'s `mainlineEvalsOnly` |
+| **Masked notation** (CTA-79): every move a part prints — the list and its side lines, the map's labels, the next-moves bar, the move menu, the comment block's label — in coordinates when the mask hides its piece | all but `arrows` / `overlay` | opt-in | `mask` | `maskSanLine` / `maskNodeSan` (`lib/pieceMask.ts`); [`masked-pieces.md`](./masked-pieces.md) §4 |
 | **Extension tint** on moves added this session (CTA-63) | `moves` | opt-in | `extensionIds` | the selection store, keyed by node and by ply |
 | **Right-click move menu**: promote variation, make main line, delete from here (confirmed, with a count), copy variation PGN, add comment, play chances… (CTA-64/69) | `moves`, `map` | opt-in | `onEditTree` (*Play chances…* also `playChances`, on by default) | `MoveContextMenu`, `CommentDialog`, `PlayChanceDialog`, over the pure edits in `lib/gameTree.ts` and `lib/playChance.ts` |
 | **Comment block**: the move with its marks, the comment that opens its line, the comments after it, and their attributes as chips | `annotations` | opt-in | `annotations` | `AnnotationsBar` over `lib/moveAnnotations.ts` |
@@ -241,6 +244,16 @@ as the tree's; the book row under the pointer recolours its arrow). It places
 footer. The screen's own reference is
 [`openings-explorer.md`](./openings-explorer.md).
 
+### Masked Pieces — the sixth (CTA-79)
+
+Masked Pieces renders Play with Engine's own screen (`PlayScreen.tsx`), so it
+passes Play with Engine's options exactly — plus **`mask`**, the costume's
+mask while its notation switch is on (`undefined` when off). Every part that
+prints a move then prints coordinates for a move whose piece the mask hides;
+the arrows and the overlay draw squares and are untouched. The placement is
+Play with Engine's. The screen's own reference is
+[`masked-pieces.md`](./masked-pieces.md).
+
 ---
 
 ## 3. Flat — specified, not built
@@ -249,7 +262,8 @@ A **two-column mainline list with no variations**, but with comments and
 arrows. It is meant for a board where the game is one line — where the
 reader and the engine take turns and a branch cannot form
 (`canMoveAt: isLive`), as on the pre-v2 Play with Engine and Masked Pieces.
-(Play with Engine v2, CTA-74, branches, and so took the explorer.)
+(Both v2 screens, CTA-74 and CTA-79, branch, and so took the explorer; no
+shipped board is linear today.)
 
 ```ts
 const parts = useFlatView({
@@ -316,7 +330,7 @@ const parts = usePuzzleView({
 | --- | --- |
 | `src/views/explorer/treeView.ts` | §1: `TreeViewSource`, `TreeViewParts`, `TreeViewMode`. |
 | `src/views/explorer/useVariationsExplorer.tsx` (+ `.test.tsx`) | §2: the explorer mode, and its contract test. |
-| `src/views/explorer/TreeMoveList.tsx` (+ test) | The variations list over `MoveList` / `VariationLine`: the ply↔node seam, the comment markers, the tint, and the opt-in menu. The dev boards render it directly. |
+| `src/views/explorer/TreeMoveList.tsx` (+ test) | The variations list over `MoveList` / `VariationLine`: the ply↔node seam, the comment markers, the tint, the mask, and the opt-in menu. |
 | `src/views/explorer/MoveContextMenu.tsx`, `CommentDialog.tsx`, `PlayChanceDialog.tsx` | The right-click menu and its two dialogs. |
 | `src/views/explorer/TreeMap.tsx` | The map: `MapViewport`, the full-screen dialog, links and the menu. The pure layout is `src/lib/treeMap.ts` (it was `lib/repertoireMap.ts`), with `MapCoverage`. |
 | `src/views/explorer/AnnotationsBar.tsx` | The comment block. It is presentational; the reading is `lib/moveAnnotations.ts`. |
@@ -350,6 +364,7 @@ places it changed:
   coverage type became `MapCoverage`, a structural type that Backtracking's
   `Coverage` satisfies, so `lib/treeMap.ts` no longer imports
   `lib/repertoireGames.ts`.
-- **The dev boards switched imports only.** They still render `TreeMoveList`
-  directly; moving them onto modes is part of the Analysis and Openings
-  follow-ups.
+- **The dev boards switched imports only.** They rendered `TreeMoveList`
+  directly; Analysis v2 and Openings v2 shipped onto the explorer (CTA-73,
+  CTA-78) and Play v2 and Masked v2 were retired for Play with Engine's
+  screen (CTA-74, CTA-79), so none is left.
