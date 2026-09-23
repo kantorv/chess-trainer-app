@@ -102,7 +102,9 @@ compile error.
 - **No record, so no baseline in use.** The session still holds one (the tree
   as it arrived), but the screen reads neither `changed` nor `extensionIds`:
   nothing is "added" against a record, so the explorer is given no
-  `extensionIds` / `addedIds` (Play with Engine's options, `tree-views.md` §2).
+  `extensionIds` / `addedIds` — the options `tree-views.md` §2 lists for a
+  board that keeps no record (its Map stays: only Play with Engine's game
+  view has none, CTA-91).
 - **The engine is on at the start**, as on the Analysis Board: the pinned
   best variations, the eval bar and per-FEN evals in the move list. **Play**
   (off at the start) makes it play the side not at the bottom until paused,

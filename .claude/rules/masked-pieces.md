@@ -73,8 +73,9 @@ is Play with Engine's `playEngine.*` / `playedGames.*`. `he` is typed
 
 - **Play with Engine, every feature of it** (`/engine/play`): a new
   board with **Play on**, the engine playing the side not at the bottom;
-  the header's side toggle, Play, Replay, Resign, the games list and the
-  engine switch; the tabs **Moves · Map · Engine**; side lines from an
+  the header's back button to the Lobby (CTA-91), side toggle, Play,
+  Replay, Resign and the engine switch; the tabs **Moves · Engine** (no
+  Map, CTA-91); side lines from an
   earlier position; the variations explorer (move menu, comments, next-moves
   bar, arrows); the autosave to the played-games store; `?fen=` and
   `?saved=`.
@@ -89,8 +90,10 @@ is Play with Engine's `playEngine.*` / `playedGames.*`. `he` is typed
   best-variations block (`BoardPanel`) is hidden until the Masking tab's
   switch is on, because a line of engine moves is a list of the pieces the
   mask hides — even in coordinates, "the thing on g1 goes to f3, then
-  e5…" gives shapes away. The **eval bar and the score chip stay**: a
-  number says nothing about identity.
+  e5…" gives shapes away. The **eval bar stays**: a number says nothing
+  about identity. The **score chip hides with the lines** (CTA-91): while
+  the block is withheld, the panel's chip is too — a behaviour of every
+  board (`BoardPanel`), not a costume decision.
 - **Its games are the engine games.** Saved to `lib/playedGameStore.ts`
   with Play with Engine's, listed in the Lobby with a *Masked* chip, and
   resumed here in the same disguise.
@@ -115,7 +118,7 @@ MaskedPlay.tsx (route)                      PlayWithEngine.tsx (route)
                              hideMaterialDiff      = isAnyMasked(mask)
                              panel.mask            = notationMask
                              panel.showVariations  = showLines
-                             panel.tabs            = Moves · Map · Engine · Masking
+                             panel.tabs            = Moves · Engine · Masking
 ```
 
 - **No mode flag, no fork.** `PlayScreen` renders the same JSX for both
@@ -288,8 +291,9 @@ whatever the switch says — the switch is about the notation.
    but this one passes none, and must render exactly as before.
 6. **The material diff is hidden while anything is masked**; the captured
    lists keep rendering, in costume.
-7. **The engine lines are off until asked for**; the eval bar and score are
-   never hidden by the mask.
+7. **The engine lines are off until asked for**; the eval bar is never hidden
+   by the mask, and the score chip hides with the lines (CTA-91) — the
+   panel's shared behaviour on every board, not the mask's.
 8. **A game belongs to its screen** — the two `?saved=` redirects (§5).
 9. **The costume is read back non-throwing and strictly** — a bad one is
    "unmasked", never a crash, never a cross-colour mask.

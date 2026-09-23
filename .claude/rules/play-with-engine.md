@@ -60,17 +60,28 @@ prefixed `play-with-engine-`. Locale keys: `playEngine.*` (the screen) and
   goes on from where the reader stands.
 - **The game is a tree.** A move by hand from an earlier position is a side
   line there, and Play resumes from it. The explorer shows it all — Moves,
-  Map, the next-moves bar, the arrows, the move menu (editing on, *Play
+  the next-moves bar, the arrows, the move menu (editing on, *Play
   chances…* off), the comment block.
-- **The header holds the game's controls**: the side toggle, **Play**,
-  **Replay** (start over from the position the game began at; the saved
+- **The header holds the game's controls**: the back button to the Lobby
+  first (CTA-91 — an arrow to `/engine/games`, named by where it goes), the
+  side toggle, **Play**, **Replay** (start over from the position the game
+  began at; the saved
   progress is **discarded**, its record removed; asked first when there is
   anything to lose), **Resign** (asked first; the reader's side loses —
   `resigned` on the record, the PGN's `Result` and `Termination` — Play stays
-  off, the board takes no more moves but can still be stepped through), the
-  games list and the engine switch.
-- **Tabs: Moves · Map · Engine.** The engine's lines are pinned above every
-  tab (`BoardPanel`), so there is no Variations tab.
+  off, the board takes no more moves but can still be stepped through), and
+  the engine switch.
+- **Tabs: Moves · Engine** (the Map went with CTA-91 — a game is one tree on
+  a board; every other board keeps its Map). The engine's lines are pinned
+  above every tab (`BoardPanel`), so there is no Variations tab.
+- **A game that has ended shows its result and the way to analyse it**
+  (CTA-91, lichess's game-over treatment): once `playedGameResult` is
+  decided — a resignation, or the mainline's final position on the board —
+  the footer states the result beside an **Open in analysis** button, which
+  appears with the one autosave that names a record (`?game=play/games/<id>`,
+  the Lobby's Analysis reference; the true PGN, unmasked — Masked Pieces'
+  documented reveal). **Replay** starts a new game and takes the whole
+  treatment away.
 - **It saves itself** — no Save button. `useAutosave` writes on every change;
   the id is stable for the life of a game; once written, the URL is
   `?saved=<id>` (history replace), so a reload goes on with it.

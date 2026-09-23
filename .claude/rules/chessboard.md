@@ -617,7 +617,7 @@ BoardShell
 │ header slot                          │  fixed
 │ ▸ pinned BestVariations              │  fixed — ONE block, every board
 │ tab strip                            │  fixed
-│ status: the score of the position    │  fixed — only with an engine
+│ status: the score of the position    │  fixed — only with an engine; its chip hides with the lines (CTA-91)
 │ the active tab's content             │  SCROLLS — the only scrolling region
 │ footer slot                          │  fixed
 │ |◀ ◀ ▶ ▶|                      flip  │  fixed — BoardControls
@@ -633,7 +633,7 @@ BoardShell
 | `engineOn` | `boolean?` | The block renders nothing while off; the status row says so. |
 | `onPlayVariation` | `((sans) => void)?` | Present ⇒ the lines are clickable. |
 | `mask` | `PieceMask?` | Masked notation in the block (Masked Pieces). |
-| `showVariations` | `boolean?` | Whether the block shows at all — on by default. |
+| `showVariations` | `boolean?` | Whether the block shows at all — on by default. While the lines are hidden — by this, or by the block's own header checkbox — the status row's score chip hides with them (CTA-91), on every board; the row itself, and the engine-off dash, stay. |
 | `initialShowLines` | `boolean?` | The seed for the block's own show-lines checkbox (CTA-90) — what a new game starts with; the header checkbox stays the live control. |
 | `tabs` | `readonly { id, label, content, disabled? }[]` | One is rendered at a time unless `keepMounted` names it; the screen keeps `activeTab` off a disabled tab. |
 | `keepMounted` | `readonly string[]?` | Tabs that mount on first open and stay mounted, hidden — for a body whose mount is the cost (a 9,000-move list). Showing one again scrolls its current move into view. |
@@ -653,10 +653,10 @@ the detail.
 | Board | Session | Engine reply | Book | Saving | Tabs | Tree view |
 | --- | --- | --- | --- | --- | --- | --- |
 | **Analysis Board** `/tools/analysis` | `useAnalysisSession` (+ the saved record: `useAnalysisBoard`) | Play (off at start) | — | explicit: Save → changes strip or name-and-folder dialog | Moves · Map · Load · Export · Engine | explorer, editing on, *Play chances…* off, `addedIds` |
-| **Play with Engine** `/engine/play` | `usePlayGame` | Play (on from the start) | — | `useAutosave` → played games | Moves · Map · Engine | explorer, as the Analysis Board without `addedIds` |
+| **Play with Engine** `/engine/play` | `usePlayGame` | Play (on from the start) | — | `useAutosave` → played games | Moves · Engine (no Map, CTA-91) | explorer, as the Analysis Board without `addedIds`, and without the `map` option — no Map is drawn |
 | **Masked Pieces** `/engine/masked` | `usePlayGame` (the same `PlayScreen`) | as Play with Engine | — | as Play with Engine, the costume on the record | + Masking | as Play with Engine, plus `mask` |
 | **Library game** `/library/<c>/<n>` | `useAnalysisSession` | Play (off) | — | explicit: Update / Save as copy (shipped: copy to Saved analyses) | Moves · Map · Info · Export · Engine | as the Analysis Board |
-| **Openings explorer** `/openings` | `useAnalysisSession` | Play (off) | `useOpeningBookModule` | nothing is kept; hands the tree to the Analysis Board | Book · Moves · Map · Load · Export · Engine | as Play with Engine |
+| **Openings explorer** `/openings` | `useAnalysisSession` | Play (off) | `useOpeningBookModule` | nothing is kept; hands the tree to the Analysis Board | Book · Moves · Map · Load · Export · Engine | explorer, as the Analysis Board without `addedIds` |
 | **Repertoire player** `/repertoires/<id>` (+ `/games/<game>`) | the core + `useTrainerModule` | none — the trainer is the opponent | — | explicit: Update / Save as copy (a game never writes) | Moves · (Score) · Map · Settings · Engine | the full explorer; editing and comments in the player only |
 
 Next-move arrows are one helper, `nextMoveArrowsOf` — the mainline's move

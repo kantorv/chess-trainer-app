@@ -301,12 +301,16 @@ const en = {
   playEngine: {
     tabs: {
       engine: "Engine",
-      /** Play with Engine v2's (CTA-74) — the variations explorer's two tabs. */
+      /** Play with Engine v2's (CTA-74) — the variations explorer's move list. */
       moves: "Moves",
-      map: "Map",
     },
     /** Play with Engine v2's header controls (CTA-74). */
     game: {
+      /**
+       * The header's first control (CTA-91): the way back to the Lobby — an
+       * arrow named by where it goes.
+       */
+      backToLobby: "Back to the Lobby",
       replay: "Replay — start over",
       resign: "Resign",
       cancel: "Cancel",
@@ -322,6 +326,13 @@ const en = {
       },
       /** The footer's line once resigned. */
       resigned: "You resigned · {{result}}",
+      /** The footer's line for an ending decided on the board (CTA-91). */
+      ended: "Game over · {{result}}",
+      /**
+       * The game-over button (CTA-91): the ended game, opened on the
+       * Analysis Board.
+       */
+      openAnalysis: "Open in analysis",
     },
     settings: {
       /** The engine's on/off switch above the tab strip — the tab's own name. */
