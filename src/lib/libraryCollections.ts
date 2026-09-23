@@ -10,8 +10,10 @@ import { slugify } from "./pgnText";
  *
  * A **collection is one PGN text of many games** — a tournament, a player's
  * games — held as one PGN chunk per game, in file order. It is not a single
- * game or a position, and it does not nest: the Library is one level of
- * collections, each a table of its games, each game an analysis board.
+ * game or a position, and it does not nest: a collection is a table of its
+ * games, each game an analysis board. The Library files collections in
+ * folders (CTA-88, `lib/libraryFolderStore.ts`), but a collection holds no
+ * folder.
  *
  * A game is **addressed by its place in the collection** — its 1-based
  * number, the table's `#` column and the last segment of its route. Nothing in
@@ -53,6 +55,12 @@ export type CollectionSummary = {
   count: number;
   /** ISO 8601 — when an upload was added. Absent for a shipped file. */
   addedAt?: string;
+  /**
+   * The folder an upload is filed in (CTA-88) — `null` the top level, as is a
+   * folder that is not there. Absent for a shipped file, which lives in the
+   * Library's fixed Built-in folder.
+   */
+  folderId?: string | null;
 };
 
 export type LibraryCollection = {

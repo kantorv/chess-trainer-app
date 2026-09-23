@@ -1,6 +1,14 @@
 import { numberedRows, type IndexedRow } from "./collectionIndex";
 import type { CollectionRow, CollectionSummary } from "./libraryCollections";
-import { committed, done, idbDatabase } from "./idb";
+import { committed, done } from "./idb";
+import {
+  LIBRARY_CHANNEL,
+  LIBRARY_COLLECTIONS_STORE,
+  LIBRARY_GAMES_STORE,
+  LIBRARY_INDEXES_STORE,
+  deleteLibraryDb,
+  openLibraryDb,
+} from "./libraryDb";
 import { newRecordId } from "./recordId";
 
 /**
@@ -27,7 +35,7 @@ import { newRecordId } from "./recordId";
  *
  * | Store | Holds | Read when |
  * | --- | --- | --- |
- * | `collections` | its summary: id, name, when added, how many games | the Library lists them — small |
+ * | `collections` | its summary: id, name, when added, how many games, its folder | the Library lists them — small |
  * | `indexes` | its index rows (`lib/collectionIndex.ts`) | its table opens |
  * | `games` | its games, one PGN chunk each | a game opens, or it is downloaded |
  *
@@ -43,29 +51,40 @@ import { newRecordId } from "./recordId";
  * answer empty or `null`, writes answer a {@link LibraryCollectionProblem}.
  * Another tab's write reaches this one through a `BroadcastChannel`.
  *
+ * ### Folders (CTA-88)
+ *
+ * A summary names the folder it is filed in (`folderId`, `null` the top
+ * level). The folders themselves are a store of their own in the same
+ * database (`lib/libraryFolderStore.ts`); a `folderId` this store holds may
+ * name one that is gone, and the Library reads that as the top level. A
+ * summary from before folders has no `folderId` and reads the same way, so
+ * there is nothing to migrate.
+ *
  * (Before this, uploads lived under the `localStorage` key
  * `chessapp.libraryCollections.v1`. That store never shipped — it was replaced
  * inside CTA-75 — so there is nothing to migrate.)
  */
 
-export const LIBRARY_DB_NAME = "chessapp.library";
-const DB_VERSION = 1;
-const COLLECTIONS = "collections";
-const INDEXES = "indexes";
-const GAMES = "games";
-const CHANNEL = "chessapp.library";
+export { LIBRARY_DB_NAME } from "./libraryDb";
+const COLLECTIONS = LIBRARY_COLLECTIONS_STORE;
+const INDEXES = LIBRARY_INDEXES_STORE;
+const GAMES = LIBRARY_GAMES_STORE;
 
 /** What went wrong with a write. */
 export type LibraryCollectionProblem = "storage" | "missing";
 
-type StoredSummary = { id: string; name: string; addedAt: string; count: number };
+type StoredSummary = {
+  id: string;
+  name: string;
+  addedAt: string;
+  count: number;
+  /** Absent on a record from before folders — the top level. */
+  folderId?: string | null;
+};
 type StoredIndex = { id: string; rows: IndexedRow[] };
 type StoredGames = { id: string; games: string[] };
 
-/* --- the connection ----------------------------------------------- */
-
-const libraryDb = idbDatabase(LIBRARY_DB_NAME, DB_VERSION, [COLLECTIONS, INDEXES, GAMES]);
-const openDb = libraryDb.open;
+const openDb = openLibraryDb;
 
 /* --- what has been read, kept ------------------------------------- */
 
@@ -87,6 +106,7 @@ const summaryOf = (row: StoredSummary): CollectionSummary => ({
   source: "uploaded",
   count: row.count,
   addedAt: row.addedAt,
+  folderId: typeof row.folderId === "string" && row.folderId !== "" ? row.folderId : null,
 });
 
 const isStoredSummary = (value: unknown): value is StoredSummary => {
@@ -121,7 +141,9 @@ const refresh = (): Promise<void> =>
   })());
 
 /** Another tab changed `id` (or everything, `null`): forget it and re-read. */
-const onChannelMessage = (event: MessageEvent<{ id: string | null }>) => {
+const onChannelMessage = (event: MessageEvent<{ id?: string | null; store?: string }>) => {
+  // The folder store's writes share the channel; they change no collection.
+  if (event.data?.store !== undefined) return;
   const id = event.data?.id ?? null;
   if (id === null) {
     rowsCache.clear();
@@ -144,7 +166,7 @@ export const uploadedCollectionsSnapshot = (): readonly CollectionSummary[] | un
 export const subscribeUploadedCollections = (listener: () => void): (() => void) => {
   listeners.add(listener);
   if (channel === undefined && typeof BroadcastChannel !== "undefined") {
-    channel = new BroadcastChannel(CHANNEL);
+    channel = new BroadcastChannel(LIBRARY_CHANNEL);
     channel.onmessage = onChannelMessage;
     // Node's channel would hold a test run open; a browser's has no `unref`.
     (channel as unknown as { unref?: () => void }).unref?.();
@@ -219,7 +241,8 @@ const settle = async (
 
 /**
  * Keep a new collection: its games and their index rows (one per game, in
- * order — `buildCollectionIndex`'s). Newest first in the list.
+ * order — `buildCollectionIndex`'s), filed in `folderId` (`null`, the top
+ * level, by default). Newest first in the list.
  */
 export const addCollection = async (
   name: string,
@@ -227,9 +250,16 @@ export const addCollection = async (
   rows: readonly IndexedRow[],
   now: Date = new Date(),
   id: string = newCollectionId(),
+  folderId: string | null = null,
 ): Promise<{ collection: CollectionSummary } | { problem: LibraryCollectionProblem }> => {
   if (rows.length !== games.length) throw new Error("addCollection: one index row per game");
-  const summary: StoredSummary = { id, name: name.trim() || id, addedAt: now.toISOString(), count: games.length };
+  const summary: StoredSummary = {
+    id,
+    name: name.trim() || id,
+    addedAt: now.toISOString(),
+    count: games.length,
+    folderId,
+  };
   try {
     const db = await openDb();
     const tx = db.transaction([COLLECTIONS, INDEXES, GAMES], "readwrite");
@@ -257,6 +287,64 @@ export const removeCollection = async (id: string): Promise<LibraryCollectionPro
   await settle(id, null, null);
   return undefined;
 };
+
+/**
+ * Change the summaries alone (their folders) in one transaction — `change`
+ * gets every stored summary and answers the ones to write. Nothing to write
+ * is a no-op: no transaction, no re-read.
+ */
+const editSummaries = async (
+  change: (rows: readonly StoredSummary[]) => StoredSummary[],
+): Promise<LibraryCollectionProblem | undefined> => {
+  let written: StoredSummary[];
+  try {
+    const db = await openDb();
+    const tx = db.transaction(COLLECTIONS, "readwrite");
+    const outcome = committed(tx);
+    const rows = (await done(tx.objectStore(COLLECTIONS).getAll())).filter(isStoredSummary);
+    written = change(rows);
+    for (const row of written) tx.objectStore(COLLECTIONS).put(row);
+    await outcome;
+  } catch {
+    return "storage";
+  }
+  if (written.length === 0) return undefined;
+  await refresh();
+  for (const row of written) announce(row.id);
+  return undefined;
+};
+
+/**
+ * **Move to…**: file collection `id` in `folderId` (`null`, the top level).
+ * A collection that is not there answers `"missing"`; one already there is a
+ * no-op.
+ */
+export const moveCollection = async (
+  id: string,
+  folderId: string | null,
+): Promise<LibraryCollectionProblem | undefined> => {
+  let found = false;
+  const problem = await editSummaries((rows) => {
+    const row = rows.find((candidate) => candidate.id === id);
+    if (row === undefined) return [];
+    found = true;
+    return (row.folderId ?? null) === folderId ? [] : [{ ...row, folderId }];
+  });
+  return problem ?? (found ? undefined : "missing");
+};
+
+/**
+ * A folder deleted: every collection filed directly in `folderId` moves up to
+ * `parentId` — deleting a folder keeps its contents
+ * (`lib/libraryFolderStore.ts`'s `removeLibraryFolder`).
+ */
+export const refileCollectionsIn = (
+  folderId: string,
+  parentId: string | null,
+): Promise<LibraryCollectionProblem | undefined> =>
+  editSummaries((rows) =>
+    rows.filter((row) => row.folderId === folderId).map((row) => ({ ...row, folderId: parentId })),
+  );
 
 /**
  * Rewrite one collection's games and rows together, in one transaction —
@@ -387,5 +475,5 @@ export const resetLibraryCollectionStore = async (): Promise<void> => {
   summaries = undefined;
   rowsCache.clear();
   gamesCache.clear();
-  await libraryDb.remove();
+  await deleteLibraryDb();
 };
