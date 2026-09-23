@@ -198,11 +198,56 @@ const recordFields = (entry: Record<string, unknown>): Record<string, unknown> =
   return fields;
 };
 
+/** A movetext's last token is a game termination marker. */
+const TERMINATED = /(?:^|\s)(?:1-0|0-1|1\/2-1\/2|\*)$/;
+
+/** A paragraph opening with the `Event` tag. */
+const EVENT_FIRST = /^[ \t]*\[Event\b/;
+
 /**
- * A records file cut back into its records: its games (`splitPgnGames`, what
- * the export counted them with), each record's `games` of them from its
- * `index`, in order and covering the file, each record built by `recordOf`.
- * Anything that does not add up makes the file unreadable.
+ * A text cut where each game **ends**: a blank line after a paragraph whose
+ * last token is a termination marker (`1-0`, `0-1`, `1/2-1/2`, `*`), or
+ * before an `[Event …]` tag. `splitPgnGames` cuts only before `[Event`, so a
+ * game whose tags do not open with `Event` — every game `treeToPgn` writes
+ * from a set-up position leads with `[SetUp`/`[FEN` — or that has no tags at
+ * all (a repertoire pasted as bare moves) is glued onto the one before it.
+ */
+const gamesByTermination = (text: string): string[] => {
+  const games: string[] = [];
+  let game: string[] = [];
+  const close = () => {
+    if (game.length > 0) games.push(game.join("\n\n").trim());
+    game = [];
+  };
+  for (const paragraph of text.replace(/\r\n?/g, "\n").split(/\n[ \t]*\n/)) {
+    if (paragraph.trim() === "") continue;
+    if (EVENT_FIRST.test(paragraph)) close();
+    game.push(paragraph);
+    if (TERMINATED.test(paragraph.trim())) close();
+  }
+  close();
+  return games;
+};
+
+/**
+ * A file's games, `expected` of them: cut as the export counted them
+ * (`splitPgnGames`) when that adds up, else where each game ends
+ * ({@link gamesByTermination}) when that does — how a zip holding a game from
+ * a set-up position still reads. When neither adds up, the first, which the
+ * caller refuses.
+ */
+const gamesOf = (text: string, expected: number): string[] => {
+  const games = splitPgnGames(text);
+  if (games.length === expected) return games;
+  const ended = gamesByTermination(text);
+  return ended.length === expected ? ended : games;
+};
+
+/**
+ * A records file cut back into its records: its games ({@link gamesOf}),
+ * each record's `games` of them from its `index`, in order and covering the
+ * file, each record built by `recordOf`. Anything that does not add up makes
+ * the file unreadable.
  */
 const recordsOf = <R>(
   path: string,
@@ -211,15 +256,19 @@ const recordsOf = <R>(
   recordOf: (entry: Record<string, unknown>, pgn: string) => R | undefined,
 ): R[] => {
   if (!Array.isArray(entries)) return refuse({ kind: "malformed" });
-  const games = splitPgnGames(text);
-  const records: R[] = [];
-  let at = 0;
+  let expected = 0;
   for (const entry of entries) {
-    if (!isObject(entry) || !isCount(entry.index, 0) || !isCount(entry.games, 1) || entry.index !== at) {
+    if (!isObject(entry) || !isCount(entry.index, 0) || !isCount(entry.games, 1) || entry.index !== expected) {
       return refuse({ kind: "unreadable", path });
     }
+    expected += entry.games;
+  }
+  const games = gamesOf(text, expected);
+  const records: R[] = [];
+  let at = 0;
+  for (const entry of entries as { index: number; games: number }[]) {
     if (at + entry.games > games.length) return refuse({ kind: "unreadable", path });
-    const record = recordOf(entry, games.slice(at, at + entry.games).join("\n\n"));
+    const record = recordOf(entry as Record<string, unknown>, games.slice(at, at + entry.games).join("\n\n"));
     if (record === undefined) return refuse({ kind: "unreadable", path });
     records.push(record);
     at += entry.games;
@@ -316,7 +365,7 @@ const dumpOf = (manifest: RawManifest, files: Readonly<Record<string, Uint8Array
           break;
         }
         const folder = collection.folderPath ?? [];
-        const games = splitPgnGames(text);
+        const games = gamesOf(text, collection.games);
         if (!isFolderPath(folder) || games.length !== collection.games) return refuse({ kind: "unreadable", path });
         dump.collections.push({ record: { id: collection.id, name: collection.name, games }, folder });
         break;

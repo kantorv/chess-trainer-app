@@ -152,8 +152,9 @@ off with nothing ticked; a failure is an `Alert`, never a throw.
 ```
 
 1. **Reading writes nothing.** `readImport` unzips (`unzipSync`), checks the
-   manifest (§6, §7), then every file it names: cut with `splitPgnGames` (the
-   rule the export counted with), each record's `games` from its `index`, in
+   manifest (§6, §7), then every file it names: cut into games (`gamesOf` —
+   `splitPgnGames`, the rule the export counted with, or where each game ends
+   when that does not add up, §7), each record's `games` from its `index`, in
    order and covering the file exactly, the record rebuilt from its manifest
    entry and its PGN and run through **its store's normaliser**
    (`playedGameFrom`, `savedAnalysisFrom`, `savedRepertoireFrom`). An uploaded
@@ -173,6 +174,10 @@ off with nothing ticked; a failure is an `Alert`, never a throw.
    An uploaded collection's games are indexed first with the Library's worker
    (`views/library/indexCollection.ts`, progress on the tab), then written
    through `addCollection` under its own id and folder.
+   **Indexing is the slow part**: about 8–12 ms a game, so a zip carrying
+   100,000 games of uploads the app does not have takes a quarter of an hour
+   or more (the progress names each collection). A collection the app already
+   has (Merge, same id) is skipped without indexing.
 5. **The report** is one `Alert`, a line per category: added, replaced,
    skipped, folders created — or refused (a cap), or failed (the storage, a cap
    reached meanwhile, the indexing). Nothing throws.
@@ -258,14 +263,19 @@ can still come in by hand: collections through the Library's upload
 tab (`/tools/analysis`), repertoires through Add repertoire
 (`/repertoires/new`), listing the `.pgn` files. **Nothing is written.**
 
-A known edge: a record whose PGN does not begin with an `[Event …]` tag (a
-repertoire pasted as bare moves, or from a file with no `Event`) joins the
-record before it when the file is cut again, so the file does not match its
-manifest and the zip reads as unreadable. Played games and saved analyses are
-always written with `Event` first; a repertoire keeps the text it arrived as.
-The fix, when it is wanted, is an optional per-record character offset in the
-manifest that the import prefers when present — an added field, so no bump
-(§6).
+**Cutting a file back into games.** The export counted each record's games
+with `splitPgnGames`, which cuts only where a blank line is followed by
+`[Event …]`. Not every stored PGN opens with `Event`: `treeToPgn` writes a game
+from a set-up position with `[SetUp "1"]` / `[FEN …]` first (a played game
+begun from a FEN, an analysis of a position), and a repertoire pasted as bare
+moves has no tags at all — cut that way, each is glued onto the record before
+it. So `gamesOf` tries `splitPgnGames` and, when it does not add up to the
+manifest's count, cuts where each game **ends** (a blank line after a
+termination marker — `1-0`, `0-1`, `1/2-1/2`, `*` — or before `[Event`). Only
+a file that neither way adds up is unreadable: in practice a record with no
+termination marker whose next record does not open with `Event`. If that ever
+matters, the fix is an optional per-record character offset in the manifest
+that the import prefers when present — an added field, so no bump (§6).
 
 ---
 
@@ -289,8 +299,8 @@ in the meantime still never takes a partial category.
 ## 9. Invariants
 
 1. **Export only reads; the import writes nothing until the reader confirms.**
-2. **The PGN travels as it is stored** — joined on the way out, cut with
-   `splitPgnGames` on the way in, never re-serialised.
+2. **The PGN travels as it is stored** — joined on the way out, cut back into
+   games on the way in (§7), never re-serialised.
 3. **Every incoming record goes through its store's normaliser.**
 4. **Folders are matched by their path of names**, never by a directory or an
    id; an id is kept from the zip, so a re-import finds its own records.

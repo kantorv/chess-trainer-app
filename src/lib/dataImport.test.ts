@@ -219,6 +219,32 @@ describe("reading a zip", () => {
     expect(dump.repertoires.map(({ record }) => record.pgn)).toEqual([legacy.pgn, pgn("Rep r8")]);
   });
 
+  it("cuts out a game whose tags do not open with Event, and a repertoire with no tags at all", () => {
+    // `treeToPgn` writes a game from a set-up position with `SetUp`/`FEN` first;
+    // `splitPgnGames` alone would glue it onto the game before it.
+    const fromPosition: PlayedGame = {
+      ...played("g3"),
+      pgn: `[SetUp "1"]\n[FEN "rnb1kbnr/ppp1pppp/8/3q4/8/8/PPPP1PPP/RNBQKBNR w KQkq - 0 1"]\n${pgn("Played g3", "1. Nc3 Qa5 *")}`,
+    };
+    const bare = repertoire("r9", null, { pgn: "1. e4 e5 2. Nf3 *" });
+    const dump = dumpOf(
+      zipOf({
+        playedGames: [played("g1"), fromPosition, played("g2")],
+        repertoires: [repertoire("r1", null), bare, repertoire("r2", null)],
+      }),
+    );
+    expect(dump.games.map((game) => [game.id, game.pgn])).toEqual([
+      ["g1", played("g1").pgn],
+      ["g3", fromPosition.pgn],
+      ["g2", played("g2").pgn],
+    ]);
+    expect(dump.repertoires.map(({ record }) => [record.id, record.pgn])).toEqual([
+      ["r1", pgn("Rep r1")],
+      ["r9", bare.pgn],
+      ["r2", pgn("Rep r2")],
+    ]);
+  });
+
   it("holds only the categories the manifest lists", () => {
     const dump = dumpOf(zipOf(SOURCE, { ...ALL, collections: false, repertoires: false }));
     expect(dump.categories).toEqual(["games", "analyses"]);
