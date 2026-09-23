@@ -70,10 +70,13 @@ import { useAnalysisBoard, type AnalysisBoardStart } from "./useAnalysisBoard";
  * | Tree view | `useVariationsExplorer` | Moves (side lines, comment marks, evals, the move menu), Map, the comment block, the next-moves bar and arrows — editing on, *Play chances…* off (nothing here plays by chance) |
  * | Saving | `useAnalysisBoard` — explicit | no autosave: the header's Save lights while the board differs from its record, and opens the changes strip (Update / Save as copy / Discard); a board with no record yet saves through a name-and-folder dialog |
  *
- * **Tabs: Moves · Map · Load · Export · Engine.** Load brings a PGN (a file or
- * a paste — several games are merged onto the board or split into a folder of
- * saved analyses) or a FEN; Export copies the FEN, and copies or downloads the
- * PGN with or without comments, NAGs and side lines.
+ * **Tabs: Moves · Map · Load · Export · Engine.** Load brings a PGN (a file
+ * or a paste — several games are merged onto the board or split into a
+ * folder of saved analyses) or a FEN; Export copies the FEN, and copies or
+ * downloads the PGN with or without comments, NAGs and side lines. The
+ * saved list's panel hosts the position editor that starts a new analysis
+ * from a custom position
+ * ([`position-editor.md`](../../../../.claude/rules/position-editor.md) §4).
  *
  * **Arrivals, read once** (arriving at the URL is what mounts the screen, and
  * the screen writes its own URL as the reader moves): `?fen=` (a position —

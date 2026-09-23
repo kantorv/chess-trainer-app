@@ -332,6 +332,11 @@ const he: typeof en = {
     },
     open: "פתיחה",
     new: "חדש",
+    newAnalysis: {
+      title: "ניתוח חדש",
+      start: "התחל",
+      illegal: "ההתחלה כבויה עד שאפשר יהיה לנתח את העמדה שבעורך העמדות.",
+    },
     select: "בחירת הניתוח",
     selectAll: "בחירת כל הניתוחים",
     selected: "{{count}} נבחרו",

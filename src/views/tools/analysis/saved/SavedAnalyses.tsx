@@ -55,6 +55,7 @@ import { RightPanel } from "../../../main/rightPanel";
 import { RepertoireBulkDeleteDialog } from "../../../repertoires/RepertoireFolderDialogs";
 import SavedListExportBar from "../../../shared/SavedListExportBar";
 import SavedListViewToggle from "../../../shared/SavedListViewToggle";
+import NewAnalysisForm from "./NewAnalysisForm";
 import {
   SAVED_LIST_DEFAULT_VIEW,
   savedListDate,
@@ -70,6 +71,10 @@ import { useSavedAnalyses } from "./useSavedAnalyses";
  * **Saved analyses** (`/tools/analysis/saved`) — the analyses the reader has
  * saved on the Analysis Board, newest first, filed into a nested tree of
  * folders, as rows or as preview boards at the saved lists' two card sizes.
+ * The right-hand panel is the **new-analysis form** (CTA-87,
+ * `NewAnalysisForm.tsx`): the shared position editor and a **Start** that
+ * opens the Analysis Board on the edited position — the Lobby-of-analyses
+ * counterpart of the engine Lobby's new-game form.
  *
  * Since CTA-73 it is laid out as the **Repertoires list**
  * (`views/repertoires/Repertoires.tsx`), without that list's Games menu:
@@ -739,14 +744,7 @@ function SavedAnalysesList({
       </Box>
 
       <RightPanel>
-        <Box sx={{ color: "text.secondary" }}>
-          <Typography variant="body2" sx={{ mb: 1 }}>
-            {t("savedAnalyses.hint")}
-          </Typography>
-          <Typography variant="body2" data-testid="saved-analyses-storage-note">
-            {t("savedAnalyses.storage")}
-          </Typography>
-        </Box>
+        <NewAnalysisForm />
       </RightPanel>
 
       <FolderNameDialog

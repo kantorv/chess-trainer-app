@@ -42,6 +42,7 @@ explorer's hand-off). The board core, the engine protocol and testing are
 | `src/views/tools/analysis/useTreeNavigation.ts` | The core's navigation (node id as state, the keys). |
 | `src/views/tools/analysis/nextMoveArrows.ts`, `NextMovesBar.tsx` | The next-move arrows and bar every board draws through ([`tree-views.md`](./tree-views.md)). |
 | `src/views/tools/analysis/saved/SavedAnalyses.tsx` | `/tools/analysis/saved`: the list and preview cards, the folders, the picks and bulk delete. |
+| `src/views/tools/analysis/saved/NewAnalysisForm.tsx` | The saved list's right-hand panel: the shared position editor and a **Start** that opens the Analysis Board on the edited position (CTA-87, [`position-editor.md`](./position-editor.md) §4). |
 | `src/views/tools/analysis/saved/AnalysisSettingsScreen.tsx` | `/tools/analysis/saved/<id>/settings`. |
 | `src/views/tools/analysis/saved/useSavedAnalyses.ts`, `useAnalysisFolders.ts` | The store bindings (`undefined` until read). |
 | `src/views/shared/folders/` | The nested-folder components (rows, cards, breadcrumb, name / move / delete dialogs, picker), each taking a `labelKey` and a test-id prefix. |
@@ -51,7 +52,7 @@ explorer's hand-off). The board core, the engine protocol and testing are
 | `src/lib/analysisSettings.ts` | `AnalysisSettings`, the defaults, `ANALYSIS_UCI_OPTION`, `analysisSettingsFrom`. |
 | `src/lib/gameReference.ts` + `gameCatalog.ts` | **The `?game=` carrier** (§3). |
 | `src/lib/pgnExport.ts` | `downloadPgn` — several stored PGN records joined with a blank line (`pgnFileOf`), saved as a file. Also Settings' Export's (`downloadBinaryFile`, [`settings.md`](./settings.md)). |
-| Tests | `AnalysisBoard.test.tsx` (every arrival, Save, Load, Export, Play, the hand-off), `useTreeNavigation.test.ts`, `EngineThinking.test.tsx`, `nextMoveArrows.test.ts`, `saved/SavedAnalyses.test.tsx`, `saved/AnalysisSettingsScreen.test.tsx`, `src/lib/savedAnalyses.test.ts`, `savedAnalysisStore.test.ts`, `savedAnalysisFolderStore.test.ts`, `savedGameFolders.test.ts`, `gameReference.test.ts`, and the propagation tests in `src/views/board/`. |
+| Tests | `AnalysisBoard.test.tsx` (every arrival, Save, Load, Export, Play, the hand-off), `useTreeNavigation.test.ts`, `EngineThinking.test.tsx`, `nextMoveArrows.test.ts`, `saved/SavedAnalyses.test.tsx` (the list and the panel's new-analysis form), `saved/AnalysisSettingsScreen.test.tsx`, `src/lib/savedAnalyses.test.ts`, `savedAnalysisStore.test.ts`, `savedAnalysisFolderStore.test.ts`, `savedGameFolders.test.ts`, `gameReference.test.ts`, and the propagation tests in `src/views/board/`. |
 
 Routes and nav: the **Analysis** folder is `singleEntry` and renders as one
 row to `/tools/analysis/saved`; the board itself has no nav entry and is the
@@ -183,6 +184,10 @@ validated, ignored when it does not resolve, taken as *initial* state.
 - **Newest first, filed into a nested tree of folders**; `?folder=<id>` is
   where the reader stands (a split lands there). The top level shows the
   folders, then the Unfiled analyses.
+- **The panel is the new-analysis form** (CTA-87): the shared position editor
+  and a **Start** that opens the Analysis Board — the edited position riding
+  along as `?fen=` when it is not the standard start, which turns the board
+  to its side to move ([`position-editor.md`](./position-editor.md) §4).
 - **A list or preview boards** at the saved lists' two card sizes
   (`views/shared/cardSize.ts`), each card showing the position and side the
   reader **was standing on** (`options.id` `saved-analyses-preview-<id>`).
@@ -225,5 +230,5 @@ validated, ignored when it does not resolve, taken as *initial* state.
 - **A new tab**: a `tabs` entry in `AnalysisBoard.tsx` and
   `analysis.tabs.<id>` in both catalogs; keep the `moves` and `engine` ids,
   which the propagation tests expect.
-- **Hosting the position editor** (a *Set up position* action): see
-  [`position-editor.md`](./position-editor.md) §4.
+- **The new-analysis form** (the shared position editor in the saved list's
+  panel, a second host of it): [`position-editor.md`](./position-editor.md) §4.

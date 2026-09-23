@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
+import type { ReactNode } from "react";
 import { Chess } from "chess.js";
 
 import i18n from "../../../../i18n";
@@ -32,7 +33,9 @@ import SavedAnalyses, { SAVED_ANALYSES_PAGE } from "./SavedAnalyses";
   The same two stand-ins the Saved games suite needs, and for the same reasons.
   `<Chessboard>` measures its own square on mount and throws where there is no
   layout engine (`.claude/rules/chessboard.md` §8), so it is stubbed and the stub
-  keeps the position and the id it was handed. The opening book is stubbed
+  keeps the position and the id it was handed — the preview boards pass their
+  own options, and the new-analysis form's editor is the spare-piece trio with
+  the provider holding them (CTA-87). The opening book is stubbed
   because the real one is ~3MB of JSON and what is under test is that the card
   prints what the book says, not the book.
 
@@ -54,18 +57,36 @@ vi.mock("../../../../lib/openings", async (importOriginal) => {
   };
 });
 
+/*
+  The stub keeps the position and the id it was handed — the preview boards
+  pass their own; the form's editor renders the spare-piece trio, its provider
+  holding the options (`PlayedGames.test.tsx`'s Board editor pattern) — so a
+  test drags a piece by calling the provider's `onPieceDrop`.
+*/
+const editorBoard = vi.hoisted(() => ({ options: null as Record<string, unknown> | null }));
 vi.mock("react-chessboard", () => ({
+  ChessboardProvider: ({
+    options,
+    children,
+  }: {
+    options: Record<string, unknown>;
+    children?: ReactNode;
+  }) => {
+    editorBoard.options = options;
+    return <div data-testid="chessboard-provider">{children}</div>;
+  },
   Chessboard: ({
     options,
   }: {
-    options: { id?: string; position?: string; boardOrientation?: string };
+    options?: { id?: string; position?: string; boardOrientation?: string };
   }) => (
     <div
-      data-testid={`board-${options.id}`}
-      data-position={options.position}
-      data-orientation={options.boardOrientation}
+      data-testid={`board-${options?.id ?? "editor"}`}
+      data-position={options?.position ?? String(editorBoard.options?.position)}
+      data-orientation={options?.boardOrientation ?? String(editorBoard.options?.boardOrientation)}
     />
   ),
+  SparePiece: ({ pieceType }: { pieceType: string }) => <div data-testid={`spare-${pieceType}`} />,
 }));
 
 /**
@@ -521,5 +542,56 @@ describe("Saved analyses — a folder of thousands (CTA-77)", () => {
     await saveAnalysis(save("a1", [[[], ["e4"]]]));
     await renderScreen();
     expect(screen.queryByTestId("saved-analyses-pagination")).toBeNull();
+  });
+});
+
+describe("the new-analysis form (CTA-87)", () => {
+  const START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+  // The editor's e2→e4 places a piece, it does not make a move: White still to move.
+  const AFTER_E4 = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 1";
+
+  /** Drag a piece in the form's editor, the way the provider reports it. */
+  const editorDrag = (pieceType: string, from: string, to: string | null) =>
+    act(() => {
+      (editorBoard.options!.onPieceDrop as (args: unknown) => boolean)({
+        piece: { pieceType, isSparePiece: false, position: from },
+        sourceSquare: from,
+        targetSquare: to,
+      });
+    });
+
+  const startHref = () => screen.getByTestId("new-analysis-start").getAttribute("href") ?? "";
+
+  it("hosts the shared editor, and Start opens the plain board for the standard start", async () => {
+    await renderScreen();
+    expect(screen.getByTestId("new-analysis-editor")).toBeInTheDocument();
+    expect(screen.getByTestId("board-editor")).toHaveAttribute("data-position", START);
+    const start = screen.getByTestId("new-analysis-start");
+    expect(start).toBeEnabled();
+    expect(startHref()).toBe("/tools/analysis");
+    // What the panel said before the form came is kept, under Start.
+    expect(screen.getByTestId("saved-analyses-storage-note")).toBeInTheDocument();
+  });
+
+  it("sends an edited position along as ?fen=", async () => {
+    await renderScreen();
+    editorDrag("wP", "e2", "e4");
+    expect(startHref()).toBe(`/tools/analysis?fen=${encodeURIComponent(AFTER_E4)}`);
+  });
+
+  it("switches Start off, and says why, while the position cannot be analyzed", async () => {
+    await renderScreen();
+    editorDrag("wK", "e1", null); // dragged off the board: the king is gone
+
+    const start = screen.getByTestId("new-analysis-start");
+    expect(start).toBeDisabled();
+    expect(start).not.toHaveAttribute("href");
+    expect(screen.getByTestId("new-analysis-illegal")).toHaveTextContent("White has no king.");
+
+    // Back to the standard start, and Start is back.
+    fireEvent.click(screen.getByTestId("new-analysis-editor-reset-start"));
+    expect(screen.queryByTestId("new-analysis-illegal")).toBeNull();
+    expect(screen.getByTestId("new-analysis-start")).toBeEnabled();
+    expect(startHref()).toBe("/tools/analysis");
   });
 });
