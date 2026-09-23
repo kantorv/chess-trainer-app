@@ -816,10 +816,17 @@ const en = {
     count_other: "{{count}} collections",
     games_one: "{{count}} game",
     games_other: "{{count}} games",
-    shipped: "Shipped",
-    uploaded: "Uploaded",
-    /** The words box over the list — a collection's name, or part of it. */
-    filter: "Filter collections by name",
+    /** The fixed, read-only top-level folder of the shipped collections (CTA-88). */
+    builtIn: "Built-in",
+    /** The list's columns — a file manager's details view (CTA-88). */
+    columns: {
+      name: "Name",
+      games: "Games",
+      added: "Added",
+      actions: "Actions",
+    },
+    /** The words box over the list — a collection's or a folder's name, or part of it. */
+    filter: "Filter by name",
     shown: "{{shown}} of {{count}} collections",
     noMatches: "No collection's name matches.",
     add: "Add collection",
@@ -827,7 +834,32 @@ const en = {
     download: "Download the whole collection as PGN",
     /** An uploaded collection's row — delete it, asked first. */
     delete: "Delete collection",
-    hint: "A collection is one PGN file of many games — a tournament, a player's games. Open one to sort and filter its games, and open a game to analyse it: side lines, the engine, Play against it, the map and comments.",
+    hint: "A collection is one PGN file of many games — a tournament, a player's games. Open one to sort and filter its games, and open a game to analyse it: side lines, the engine, Play against it, the map and comments. File your collections in folders; the ones that ship with the app are in Built-in.",
+    /**
+     * The reader's folders (CTA-88) — the keys the shared folder dialogs read
+     * (`views/shared/folders/`), and the rows' actions.
+     */
+    folder: {
+      untitled: "Untitled folder",
+      newFolder: "New folder",
+      newSubFolder: "New sub-folder",
+      renameFolder: "Rename folder",
+      moveFolder: "Move folder",
+      moveCollection: "Move collection",
+      moveTo: "Move to…",
+      deleteFolder: "Delete folder",
+      download: "Download everything in this folder as one PGN",
+      uploadHere: "Add a collection here",
+      expand: "Open {{name}}",
+      collapse: "Close {{name}}",
+      topLevel: "Top level",
+      name: "Folder name",
+      save: "Save",
+      cancel: "Cancel",
+      deleteConfirm:
+        "Deleting this folder keeps its contents: its collections and sub-folders move up to the folder it is in.",
+      deleteCounts: "This folder holds {{games}} collections and {{subFolders}} sub-folders.",
+    },
     /** The table screen — `/library/<collection>`. */
     table: {
       back: "All collections",
@@ -942,8 +974,10 @@ const en = {
     /** `/library/new` — a PGN file or a paste becomes a collection. */
     upload: {
       title: "Add a collection",
-      intro: "A collection is one PGN text of many games — a tournament export, a player's games. It becomes a folder of its own in the Library.",
+      intro: "A collection is one PGN text of many games — a tournament export, a player's games. It becomes a table of its own in the Library.",
       name: "Name",
+      /** The folder the new collection is filed in (CTA-88). */
+      folder: "Folder",
       chooseFile: "Choose a .pgn file",
       pasteLabel: "Or paste PGN text",
       read_one: "{{count}} game found",
