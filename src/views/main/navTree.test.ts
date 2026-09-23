@@ -90,7 +90,7 @@ describe("the shipped nav tree", () => {
     expect(folderPath("/masked/play")).toEqual([]);
   });
 
-  it("files Export in a Settings folder, a folder rather than a single entry (CTA-86)", () => {
+  it("files Export and Import in a Settings folder, a folder rather than a single entry (CTA-86, CTA-89)", () => {
     const settings = navFolders().find((folder) => folder.id === "settings");
     expect(settings).toMatchObject({ labelKey: "nav.folders.settings" });
     expect(settings?.singleEntry).toBeFalsy();
@@ -100,8 +100,10 @@ describe("the shipped nav tree", () => {
     expect(navTree().filter((node) => node.pinToBottom).map((node) => node.id)).toEqual(["settings"]);
     expect(navItemsInFolder("settings").map((item) => [item.to, item.labelKey])).toEqual([
       ["/settings/export", "nav.settingsExport"],
+      ["/settings/import", "nav.settingsImport"],
     ]);
     expect(folderPath("/settings/export")).toEqual(["settings"]);
+    expect(folderPath("/settings/import")).toEqual(["settings"]);
   });
 
   it("returns an empty breadcrumb for a path that is not a screen", () => {
