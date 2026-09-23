@@ -49,7 +49,10 @@ import { usePlayedGames } from "./usePlayedGames";
  * its side lines, the result as PGN writes it (`1-0`, `0-1`, `1/2-1/2`, `*`)
  * and when it was begun, and offers **Continue** (`?saved=<id>` on
  * `/engine/play` — at the node and on the side it was left — or, for a game
- * marked **Masked**, on `/engine/masked`, in the same disguise), **Analysis**
+ * marked **Masked**, on `/engine/masked`, in the same disguise; only while
+ * the game is still on — a result decided by `playedGameResult`, a
+ * resignation or the final position, is a game that cannot go on, CTA-90),
+ * **Analysis**
  * (`?game=play/games/<id>` on the Analysis Board, side lines and all — a
  * masked game unmasked, since its PGN is the true game) and a delete that
  * asks first.
@@ -147,15 +150,22 @@ function PlayedGameRow({
       <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexShrink: 0 }}>
         {readable && (
           <>
-            <Button
-              component={RouterLink}
-              to={`${summary.masked ? "/engine/masked" : "/engine/play"}?saved=${encodeURIComponent(saved.id)}`}
-              size="small"
-              variant="contained"
-              data-testid={`played-games-continue-${saved.id}`}
-            >
-              {t("playedGames.continue")}
-            </Button>
+            {/*
+              Continue only while the game is on (CTA-90): the row's own
+              result says whether it can — anything but `*` (a resignation,
+              mate or a draw, `playedGameResult`) is a game that has ended.
+            */}
+            {summary.result === "*" && (
+              <Button
+                component={RouterLink}
+                to={`${summary.masked ? "/engine/masked" : "/engine/play"}?saved=${encodeURIComponent(saved.id)}`}
+                size="small"
+                variant="contained"
+                data-testid={`played-games-continue-${saved.id}`}
+              >
+                {t("playedGames.continue")}
+              </Button>
+            )}
             <Button
               component={RouterLink}
               to={`/tools/analysis?game=${reference}`}

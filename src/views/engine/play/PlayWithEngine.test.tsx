@@ -186,13 +186,24 @@ describe("Play with Engine — a new game's options from the Lobby's link (CTA-8
     expect(screen.getByText(/Level 7/)).toBeInTheDocument();
   });
 
-  it("draws a random side on arrival (arrivalOf)", () => {
-    const query = new URLSearchParams("side=random&skill=4");
-    expect(arrivalOf(query, () => 0.1).request).toEqual({
+  it("reads ?side=random as no side at all (CTA-90)", () => {
+    expect(arrivalOf(new URLSearchParams("side=random&skill=4")).request).toEqual({
       settings: { skillLevel: 4 },
-      side: "white",
     });
-    expect(arrivalOf(query, () => 0.9).request?.side).toBe("black");
+  });
+
+  it("starts with the pinned lines hidden when the link says so (CTA-90)", () => {
+    mount("/engine/play?variations=0");
+    // The block is there; its own header checkbox is the live control, unchecked.
+    expect(screen.getByTestId("play-with-engine-panel-variations")).toBeInTheDocument();
+    const toggle = screen.getByTestId("variations-toggle").querySelector("input")!;
+    expect(toggle).not.toBeChecked();
+    expect(screen.queryByTestId("variation-1-pending")).not.toBeInTheDocument();
+
+    // Checking it is the way back: the waiting line returns.
+    fireEvent.click(toggle);
+    expect(toggle).toBeChecked();
+    expect(screen.getByTestId("variation-1-pending")).toBeInTheDocument();
   });
 });
 
@@ -410,6 +421,12 @@ describe("Play with Engine — resuming", () => {
     expect(screen.getByTestId("play-with-engine-resigned")).toHaveTextContent("0-1");
     expect(isPlaying()).toBe(false);
     expect(boardOptions().allowDragging).toBe(false);
+  });
+
+  it("resumes with the lines shown whatever the link says beside ?saved= (CTA-90)", async () => {
+    await stored("1. e4 *", ["e4"], "white");
+    mount("/engine/play?saved=p1&variations=0");
+    expect(screen.getByTestId("variations-toggle").querySelector("input")).toBeChecked();
   });
 });
 

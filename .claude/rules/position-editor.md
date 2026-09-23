@@ -121,12 +121,10 @@ switches off itself is the FEN tab's copy button.
 
 - The form holds `usePositionEditor(undefined, { orientation })` beside its
   settings, side and eval-bar state, the orientation pinned to the side chosen
-  on the Game tab — White or Black at the bottom, as the reader will play;
-  **Random** pins nothing, and the editor faces its own way with its Flip
-  back. It renders two tabs, **Game** and **Board
-  editor**; the Board editor tab is `<PositionEditor editor={editor}
-  testId="new-game-editor" boardMaxWidth={360} />` inside the panel's one
-  scrolling region. The games list keeps the board square.
+  on the Game tab — White or Black at the bottom, as the reader will play. It
+  renders two tabs, **Game** and **Board editor**; the Board editor tab is
+  `<PositionEditor editor={editor} testId="new-game-editor" boardMaxWidth={360} />` inside
+  the panel's one scrolling region. The games list keeps the board square.
 - **Start** and the storage note sit below the tabs, visible on both.
 - `customFen = editor.fen === START_POSITION ? undefined : editor.fen` — the
   standard start sends no `fen`, so an ordinary game's link is unchanged.

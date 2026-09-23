@@ -279,6 +279,12 @@ function PlayScreen({
           onPlayVariation: core.playVariation,
           // Masked Pieces: off unless asked for, and in costume when shown.
           showVariations: masking?.showLines ?? true,
+          /*
+            The Lobby's Variations choice (CTA-90) seeds the block's own
+            checkbox — the header stays the live control. Masked Pieces'
+            switch owns the block there, so no seed is handed to fight it.
+          */
+          initialShowLines: masking === undefined ? state.showLines : undefined,
           mask: notationMask,
           activeTab: tab,
           onTabChange: setTab,

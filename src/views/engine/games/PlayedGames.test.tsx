@@ -169,6 +169,25 @@ describe("Lobby — the list", () => {
     );
   });
 
+  it("hides Continue on a game that has ended, and keeps it on one still on (CTA-90)", async () => {
+    await store("live", "1. e4 *");
+    // Mated: the final position decides the result; resigned: the record does.
+    await store("mated", "1. f3 e5 2. g4 Qh4# 0-1");
+    await savePlayedGame(
+      playedGameOf("resigned", parsePgnTree("1. e4 e5 *"), [], DEFAULT_ENGINE_SETTINGS,
+        undefined, undefined, undefined, "black"),
+    );
+    mount();
+
+    expect(screen.getByTestId("played-games-continue-live")).toBeInTheDocument();
+    expect(screen.queryByTestId("played-games-continue-mated")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("played-games-continue-resigned")).not.toBeInTheDocument();
+    // Analysis and the delete stay on every row.
+    expect(screen.getByTestId("played-games-analysis-mated")).toBeInTheDocument();
+    expect(screen.getByTestId("played-games-analysis-resigned")).toBeInTheDocument();
+    expect(screen.getByTestId("played-games-remove-resigned")).toBeInTheDocument();
+  });
+
   it("deletes a game only once asked", async () => {
     await store("a", "1. e4 *");
     mount();
@@ -310,20 +329,34 @@ describe("Lobby — the new-game form (CTA-82)", () => {
       threads: "1",
       hash: "16",
       evalbar: "1",
+      variations: "1",
     });
   });
 
   it("carries the reader's choices on Start's link", async () => {
     mount();
-    fireEvent.click(screen.getByTestId("new-game-side-random"));
+    fireEvent.click(screen.getByTestId("new-game-side-black"));
     fireEvent.click(screen.getByTestId("engine-setting-evalbar"));
     const depth = within(screen.getByTestId("engine-setting-depth")).getByRole("slider");
     fireEvent.change(depth, { target: { value: 9 } });
 
     const params = startHref();
-    expect(params.get("side")).toBe("random");
+    expect(params.get("side")).toBe("black");
     expect(params.get("evalbar")).toBe("0");
     expect(params.get("depth")).toBe("9");
+  });
+
+  it("carries the Variations choice on Start's link, checked by default (CTA-90)", () => {
+    mount();
+    const box = () => screen.getByTestId("new-game-variations").querySelector("input")!;
+    expect(box()).toBeChecked();
+    expect(startHref().get("variations")).toBe("1");
+
+    fireEvent.click(box());
+    expect(startHref().get("variations")).toBe("0");
+
+    fireEvent.click(box());
+    expect(startHref().get("variations")).toBe("1");
   });
 });
 
@@ -391,13 +424,6 @@ describe("Lobby — the new-game form's Board editor (CTA-83)", () => {
     expect(orientation()).toBe("black");
     // The side is the reader's choice, so the editor offers no Flip of its own.
     expect(screen.queryByTestId("new-game-editor-reset-flip")).toBeNull();
-
-    // Random names no side: the editor faces its own way, and can be flipped.
-    fireEvent.click(screen.getByTestId("new-game-tab-game"));
-    fireEvent.click(screen.getByTestId("new-game-side-random"));
-    fireEvent.click(screen.getByTestId("new-game-tab-editor"));
-    expect(orientation()).toBe("white");
-    expect(screen.getByTestId("new-game-editor-reset-flip")).toBeInTheDocument();
   });
 
   it("switches Start off, and says why, while the position is illegal", () => {

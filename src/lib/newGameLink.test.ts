@@ -6,10 +6,11 @@ import { newGameParams, newGameRequestOf } from "./newGameLink";
 const params = (query: string) => new URLSearchParams(query);
 
 describe("newGameParams — the Lobby's Start link (CTA-82)", () => {
-  it("writes every field, the side and the eval bar", () => {
+  it("writes every field, the side, the eval bar and the lines' start", () => {
     const written = newGameParams(
       { ...DEFAULT_ENGINE_SETTINGS, skillLevel: 5, depth: 8, moveTimeMs: 2500 },
       "black",
+      false,
       false,
     );
     expect(Object.fromEntries(written)).toEqual({
@@ -21,15 +22,17 @@ describe("newGameParams — the Lobby's Start link (CTA-82)", () => {
       threads: "1",
       hash: "16",
       evalbar: "0",
+      variations: "0",
     });
   });
 
   it("reads back what it wrote", () => {
     const settings = { ...DEFAULT_ENGINE_SETTINGS, skillLevel: 3, multiPv: 5, threads: 2, hashMb: 64 };
-    expect(newGameRequestOf(newGameParams(settings, "white", true))).toEqual({
+    expect(newGameRequestOf(newGameParams(settings, "white", true, false))).toEqual({
       settings: { skillLevel: 3, depth: 14, moveTimeMs: 1000, multiPv: 5, threads: 2, hashMb: 64 },
       side: "white",
       evalBar: true,
+      variations: false,
     });
   });
 });
@@ -38,7 +41,7 @@ describe("newGameParams — a starting position (CTA-83)", () => {
   const FEN = "4k3/8/8/8/8/8/8/4K2R b K - 0 1";
 
   it("carries a position when given one, beside the other fields", () => {
-    const written = newGameParams(DEFAULT_ENGINE_SETTINGS, "white", true, FEN);
+    const written = newGameParams(DEFAULT_ENGINE_SETTINGS, "white", true, true, FEN);
     expect(written.get("fen")).toBe(FEN);
     expect(written.get("side")).toBe("white");
     // And it survives the URL: spaces and slashes intact.
@@ -46,7 +49,7 @@ describe("newGameParams — a starting position (CTA-83)", () => {
   });
 
   it("carries none when given none", () => {
-    expect(newGameParams(DEFAULT_ENGINE_SETTINGS, "white", true).has("fen")).toBe(false);
+    expect(newGameParams(DEFAULT_ENGINE_SETTINGS, "white", true, true).has("fen")).toBe(false);
   });
 });
 
@@ -69,13 +72,22 @@ describe("newGameRequestOf — reading a link", () => {
     expect(newGameRequestOf(params("skill=7.6")).settings).toEqual({ skillLevel: 8 });
   });
 
-  it("draws a random side once, from the source it is given", () => {
-    expect(newGameRequestOf(params("side=random"), () => 0.2).side).toBe("white");
-    expect(newGameRequestOf(params("side=random"), () => 0.7).side).toBe("black");
+  it("reads ?side=random as no side at all (CTA-90)", () => {
+    expect(newGameRequestOf(params("side=random&skill=4"))).toEqual({
+      settings: { skillLevel: 4 },
+    });
   });
 
   it("reads the eval bar as 1 or 0", () => {
     expect(newGameRequestOf(params("evalbar=0")).evalBar).toBe(false);
     expect(newGameRequestOf(params("evalbar=1")).evalBar).toBe(true);
+  });
+
+  it("reads the lines' start as 1 or 0 (CTA-90)", () => {
+    expect(newGameRequestOf(params("variations=0")).variations).toBe(false);
+    expect(newGameRequestOf(params("variations=1")).variations).toBe(true);
+    // Absent or unreadable: the default, like every field.
+    expect(newGameRequestOf(params("")).variations).toBeUndefined();
+    expect(newGameRequestOf(params("variations=x")).variations).toBeUndefined();
   });
 });

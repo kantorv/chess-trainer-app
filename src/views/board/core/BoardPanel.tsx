@@ -123,6 +123,13 @@ export type BoardPanelProps = {
    * the pieces the mask hides. The status row, and its score, stay.
    */
   showVariations?: boolean;
+  /**
+   * The seed for the block's own show-lines checkbox (CTA-90): what a new
+   * game starts with, the Lobby's Variations choice. The header checkbox
+   * stays the live control — this is read at the block's mount, never
+   * afterwards. Absent: checked, today's behaviour.
+   */
+  initialShowLines?: boolean;
 
   tabs: readonly BoardPanelTab[];
   /**
@@ -157,6 +164,7 @@ function BoardPanel({
   onPlayVariation,
   mask,
   showVariations = true,
+  initialShowLines,
   tabs,
   keepMounted,
   activeTab,
@@ -274,6 +282,7 @@ function BoardPanel({
             requested={requestedMultiPv}
             mask={mask}
             onSelectMove={onPlayVariation}
+            initialShowLines={initialShowLines}
           />
         </Box>
       )}
