@@ -10,6 +10,7 @@ import { indexedRowOf } from "../../lib/collectionIndex";
 import type { ExportManifest } from "../../lib/dataExport";
 import { DEFAULT_ENGINE_SETTINGS } from "../../lib/engineSettings";
 import { addCollection, resetLibraryCollectionStore } from "../../lib/libraryCollectionStore";
+import { createLibraryFolder } from "../../lib/libraryFolderStore";
 import { downloadBinaryFile } from "../../lib/pgnExport";
 import { savePlayedGame } from "../../lib/playedGameStore";
 import { DEFAULT_REPERTOIRE_SETTINGS } from "../../lib/repertoireSettings";
@@ -76,6 +77,10 @@ const seed = async () => {
   }
   const games = [pgn("Mine 1"), pgn("Mine 2")];
   await addCollection("My games", games, games.map((game) => indexedRowOf(game)));
+  // A collection filed two folders down in the Library (CTA-88).
+  const club = await createLibraryFolder("Club", null);
+  const blitz = await createLibraryFolder("Blitz", club?.id ?? null);
+  await addCollection("Friday", [pgn("Friday")], [indexedRowOf(pgn("Friday"))], undefined, undefined, blitz?.id ?? null);
 };
 
 const renderAt = (path: string) =>
@@ -133,11 +138,11 @@ describe("the Export tab", () => {
     await waitFor(() => expect(count("games")).toHaveTextContent("(1)"));
     await waitFor(() => expect(count("analyses")).toHaveTextContent("(2)"));
     await waitFor(() => expect(count("repertoires")).toHaveTextContent("(3)"));
-    await waitFor(() => expect(count("collections")).toHaveTextContent("(1)"));
+    await waitFor(() => expect(count("collections")).toHaveTextContent("(2)"));
 
     await userEvent.click(box("settings-export-collections"));
     await userEvent.click(box("settings-export-shipped"));
-    expect(count("collections")).toHaveTextContent(`(${1 + shippedCollections.length})`);
+    expect(count("collections")).toHaveTextContent(`(${2 + shippedCollections.length})`);
   });
 
   it("starts with nothing ticked and Export off; the shipped box waits on Collections", async () => {
@@ -172,6 +177,8 @@ describe("the Export tab", () => {
     const { fileName, files, manifest } = downloaded();
     expect(fileName).toMatch(/^chessapp-export-\d{4}-\d{2}-\d{2}\.zip$/);
     expect(Object.keys(files).sort()).toEqual([
+      // The Library's folders are the directories.
+      "collections/club/blitz/friday.pgn",
       "collections/my-games.pgn",
       "games.pgn",
       "manifest.json",
@@ -181,6 +188,9 @@ describe("the Export tab", () => {
     expect(manifest.categories).toEqual(["collections", "games", "repertoires"]);
     expect(manifest.appVersion).toBe(__APP_VERSION__);
     expect(manifest.includeShippedCollections).toBe(false);
+    expect(manifest.folders.collections).toEqual([["Club"], ["Club", "Blitz"]]);
+    const friday = manifest.files.find((file) => file.path === "collections/club/blitz/friday.pgn");
+    expect(friday?.kind === "collection" && friday.collection.folderPath).toEqual(["Club", "Blitz"]);
     expect(strFromU8(files["games.pgn"])).toBe(`${pgn("Played")}\n`);
   });
 

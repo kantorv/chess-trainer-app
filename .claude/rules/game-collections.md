@@ -338,6 +338,12 @@ makes up to hold the shipped collections. It is never stored, so it cannot be
 renamed, moved or deleted, no picker offers it, and a collection naming it is
 read as the top level.
 
+**The export keeps the tree.** Settings' Export (`lib/dataExport.ts`,
+[`settings.md`](./settings.md) §2.2) writes each collection into a directory
+per folder under `collections/` (the shipped ones in `collections/built-in/`),
+and its manifest carries each upload's `folderPath` and the whole folder tree
+(`folders.collections`), so an empty folder survives.
+
 ---
 
 ## 5. The index — `lib/collectionIndex.ts`
