@@ -13,8 +13,8 @@ import ToggleButton from "@mui/material/ToggleButton";
 import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
+import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import FlagRoundedIcon from "@mui/icons-material/FlagRounded";
-import HistoryRoundedIcon from "@mui/icons-material/HistoryRounded";
 import ReplayRoundedIcon from "@mui/icons-material/ReplayRounded";
 import { createSearchParams, Link as RouterLink, useSearchParams } from "react-router";
 import { useTranslation } from "react-i18next";
@@ -22,7 +22,12 @@ import type { ChessboardOptions } from "react-chessboard";
 import { DEFAULT_POSITION } from "chess.js";
 
 import { isAnyMasked, maskedPieces } from "../../../lib/pieceMask";
-import { playedGameResult, type PlayedGameMask } from "../../../lib/playedGames";
+import { PLAY_REFERENCE_KEY } from "../../../lib/gameReference";
+import {
+  PLAYED_GAMES_PATH,
+  playedGameResult,
+  type PlayedGameMask,
+} from "../../../lib/playedGames";
 import type { BoardPanelTab } from "../../board/core/BoardPanel";
 import BoardShell from "../../board/core/BoardShell";
 import { useVariationsExplorer } from "../../explorer/useVariationsExplorer";
@@ -45,15 +50,25 @@ import { usePlayGame, type PlayGameStart } from "./usePlayGame";
  * | --- | --- | --- |
  * | Base | `useBoardCore` | a move from an earlier position is a side line |
  * | Engine | switch, on; its reply through **Play**, **on from the start** (`usePlayToggle`) | the Analysis Board's rule — the side not at the bottom, paused by a step back or a change of side |
- * | Tree view | `useVariationsExplorer` | Moves (side lines, evals, the move menu), Map, the comment block, the next-moves bar and arrows — editing on, *Play chances…* off |
+ * | Tree view | `useVariationsExplorer` | Moves (side lines, evals, the move menu), the comment block, the next-moves bar and arrows — editing on, *Play chances…* off |
  * | Saving | `useAutosave` → `lib/playedGameStore.ts` | every move, no button; the flat list at `/engine/games` |
  *
- * **The header** carries the game's controls: the reader's **side** (White /
- * Black — the board's orientation; a change pauses Play), **Play**,
- * **Replay** (start over; the game's saved progress is discarded — asked
- * first) and **Resign** (the reader's side loses — asked first; the board
- * then takes no more moves). **Tabs: Moves · Map · Engine** — the Engine tab
- * is the strength panel (`EngineSettings.tsx`).
+ * **The header** carries the game's controls, the **back button to the
+ * Lobby** first of all (`/engine/games`, CTA-91 — the way out of a game), then
+ * the reader's **side** (White / Black — the board's orientation; a change
+ * pauses Play), **Play**, **Replay** (start over; the game's saved progress
+ * is discarded — asked first) and **Resign** (the reader's side loses —
+ * asked first; the board then takes no more moves). **Tabs: Moves ·
+ * Engine** — the Engine tab is the strength panel (`EngineSettings.tsx`) —
+ * with no Map: a game is one tree on a board, and its lines are in the list.
+ *
+ * **A game that has ended** (a resignation, or the mainline's final position
+ * through `playedGameResult`) shows its result in the footer beside an
+ * **Open in analysis** button (CTA-91, lichess's game-over treatment) once
+ * the autosave has written the game — the one record the reader is waiting
+ * on for the link to name. It hands the game to the Analysis Board as
+ * `?game=play/games/<id>` — the same reference the Lobby's Analysis row
+ * builds, the true PGN, unmasked — and Replay takes it away again.
  *
  * **The costume** ({@link PlayScreenMasking}, Masked Pieces only) reaches
  * exactly the surfaces `.claude/rules/masked-pieces.md` lists and no others:
@@ -81,8 +96,8 @@ export type PlayScreenMasking = {
   tab: BoardPanelTab;
 };
 
-/** The tabs that stay mounted once opened: a long move list, and the Map's view. */
-const KEEP_MOUNTED = ["moves", "map"] as const;
+/** The tab that stays mounted once opened: a game's move list, however long. */
+const KEEP_MOUNTED = ["moves"] as const;
 
 function PlayScreen({
   id,
@@ -127,7 +142,8 @@ function PlayScreen({
     playChances: false,
     annotations: true,
     arrows: { show: showArrows },
-    map: { linked: true },
+    // No map option (CTA-91): the game view has no Map tab, so nothing here
+    // draws one.
     mask: notationMask,
   });
   const boardOptions: ChessboardOptions = {
@@ -161,6 +177,13 @@ function PlayScreen({
   };
 
   const hasMoves = core.tree.moves.length > 0;
+  /*
+    How the game stands (CTA-91): decided by a resignation, or by the
+    mainline's final position on the board. What the footer's game-over
+    treatment — the result line, and the Open-in-analysis link once the
+    autosave has named a record — hangs on.
+  */
+  const result = playedGameResult(core.tree, state.resigned);
 
   return (
     <>
@@ -181,6 +204,24 @@ function PlayScreen({
         panel={{
           header: (
             <>
+              {/*
+                The way back to the Lobby (CTA-91), first of all: a game is
+                one line on the board, and the way out is where it is on every
+                board screen — the inline start. An arrow, named by where it
+                goes rather than what it shows.
+              */}
+              <Tooltip title={t("playEngine.game.backToLobby")}>
+                <IconButton
+                  size="small"
+                  component={RouterLink}
+                  to="/engine/games"
+                  aria-label={t("playEngine.game.backToLobby")}
+                  data-testid={`${id}-back`}
+                  sx={{ flexShrink: 0 }}
+                >
+                  <ArrowBackRoundedIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
               <Box sx={{ flexGrow: 1, minWidth: 0 }}>
                 <CurrentOpening fen={core.fen} testId={`${id}-current-opening`} />
               </Box>
@@ -246,18 +287,6 @@ function PlayScreen({
                   </IconButton>
                 </span>
               </Tooltip>
-              <Tooltip title={t("playedGames.title")}>
-                <IconButton
-                  size="small"
-                  component={RouterLink}
-                  to="/engine/games"
-                  aria-label={t("playedGames.title")}
-                  data-testid={`${id}-games`}
-                  sx={{ flexShrink: 0 }}
-                >
-                  <HistoryRoundedIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
               <FormControlLabel
                 sx={{ flexShrink: 0, marginInlineEnd: 0 }}
                 control={
@@ -291,7 +320,6 @@ function PlayScreen({
           keepMounted: KEEP_MOUNTED,
           tabs: [
             { id: "moves", label: t("playEngine.tabs.moves"), content: explorer.moves },
-            { id: "map", label: t("playEngine.tabs.map"), content: explorer.map },
             {
               id: "engine",
               label: t("playEngine.tabs.engine"),
@@ -334,17 +362,50 @@ function PlayScreen({
                   {t("playedGames.problem.storage")}
                 </Typography>
               )}
-              {state.resigned !== undefined && (
-                <Typography
-                  role="status"
-                  variant="body2"
-                  data-testid={`${id}-resigned`}
-                  sx={{ px: 1, py: 0.5, fontWeight: 600 }}
-                >
-                  {t("playEngine.game.resigned", {
-                    result: playedGameResult(core.tree, state.resigned),
-                  })}
-                </Typography>
+              {/*
+                The game's ending (CTA-91), lichess's game-over treatment: the
+                result stated — the resigned line that was already here, or
+                its extension to the board's own decisions (mate, stalemate,
+                a draw by rule) — with the way to analyse it, once the
+                autosave's one record has landed and the link has an id to
+                name. Replay starts a new game and takes the whole block away.
+              */}
+              {result !== "*" && (
+                <>
+                  {state.resigned === undefined ? (
+                    <Typography
+                      role="status"
+                      variant="body2"
+                      data-testid={`${id}-ended`}
+                      sx={{ px: 1, py: 0.5, fontWeight: 600 }}
+                    >
+                      {t("playEngine.game.ended", { result })}
+                    </Typography>
+                  ) : (
+                    <Typography
+                      role="status"
+                      variant="body2"
+                      data-testid={`${id}-resigned`}
+                      sx={{ px: 1, py: 0.5, fontWeight: 600 }}
+                    >
+                      {t("playEngine.game.resigned", { result })}
+                    </Typography>
+                  )}
+                  {state.savedId !== null && (
+                    <Button
+                      component={RouterLink}
+                      to={`/tools/analysis?game=${encodeURIComponent(
+                        `${PLAY_REFERENCE_KEY}/${PLAYED_GAMES_PATH}/${state.savedId}`,
+                      )}`}
+                      size="small"
+                      variant="contained"
+                      data-testid={`${id}-open-analysis`}
+                      sx={{ mx: 1, mb: 0.5 }}
+                    >
+                      {t("playEngine.game.openAnalysis")}
+                    </Button>
+                  )}
+                </>
               )}
               {/* Play's status — the engine thinking, or the reader's move. */}
               {state.playing && (

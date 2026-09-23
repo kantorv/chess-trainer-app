@@ -24,11 +24,12 @@ import BoardControls from "../../shared/BoardControls";
  * ┌──────────────────────────────────────┐
  * │ header slot                          │  fixed   — opening line, hand-offs, the switch
  * ├──────────────────────────────────────┤
- * │ ▸ pinned BestVariations              │  fixed   — ONE block, every board (CTA-55)  
+ * │ ▸ pinned BestVariations              │  fixed   — ONE block, every board (CTA-55)
  * ├──────────────────────────────────────┤
  * │ tab strip                            │  fixed   — the tabs the screen supplied
  * ├──────────────────────────────────────┤
- * │ status: the score on screen          │  fixed   — only on a board with an engine
+ * │ status: the score on screen          │  fixed   — only on a board with an engine;
+ * │                                      │           its chip hides with the lines (CTA-91)
  * ├──────────────────────────────────────┤
  * │ the active tab's content             │  SCROLLS — the only scrolling region
  * ├──────────────────────────────────────┤
@@ -120,7 +121,9 @@ export type BoardPanelProps = {
   /**
    * Whether the pinned variations block shows — on by default. Masked Pieces
    * (CTA-79) opens with it off behind a switch: an engine line is a list of
-   * the pieces the mask hides. The status row, and its score, stay.
+   * the pieces the mask hides. The status row stays; while the lines are
+   * hidden — by this, or by the block's own header checkbox — its score chip
+   * hides with them (CTA-91), a behaviour of every board rather than a flag.
    */
   showVariations?: boolean;
   /**
@@ -179,6 +182,21 @@ function BoardPanel({
 
   const hasEngine = analysis !== undefined;
   const topLine = analysis?.lines.find((line) => line !== undefined);
+
+  /*
+    Whether the block's lines show, mirrored from its own header checkbox
+    (CTA-91) — reported up on its every change and at its mount, so this
+    mirrors even across the block's remounts (the engine switched off and on
+    re-seeds its checkbox). Seeded to what it seeds, so the two start agreeing.
+  */
+  const [linesShown, setLinesShown] = useState(initialShowLines ?? true);
+  /*
+    The chip's rule (CTA-91): hidden while the engine's lines are — the
+    block's checkbox unchecked, or the whole block withheld (Masked Pieces'
+    switch) — and only while the engine is on: engine off, the row keeps its
+    dash, which says so honestly.
+  */
+  const showScoreChip = !engineOn || (showVariations && linesShown);
 
   // A tab id that names nothing falls back to the first tab rather than
   // rendering an empty body: the strip would show a selection with no content.
@@ -283,6 +301,7 @@ function BoardPanel({
             mask={mask}
             onSelectMove={onPlayVariation}
             initialShowLines={initialShowLines}
+            onShowLinesChange={setLinesShown}
           />
         </Box>
       )}
@@ -318,7 +337,10 @@ function BoardPanel({
       {/*
         The one line of status that belongs above every tab: the evaluation of
         the position on screen. A dash while the engine is off, because that is
-        honestly what is known about the position then.
+        honestly what is known about the position then. The chip hides with
+        the engine's lines (CTA-91) — the checkbox's or Masked Pieces' switch's
+        doing — while the row itself stays; the label and the engine-off dash
+        are not the engine's talk.
       */}
       {hasEngine && (
         <Box
@@ -338,12 +360,14 @@ function BoardPanel({
                 : "analysis.settings.engineOff",
             )}
           </Typography>
-          <Chip
-            size="small"
-            dir="ltr"
-            data-testid={`${testId}-status-score`}
-            label={formatScore(topLine?.score ?? null)}
-          />
+          {showScoreChip && (
+            <Chip
+              size="small"
+              dir="ltr"
+              data-testid={`${testId}-status-score`}
+              label={formatScore(topLine?.score ?? null)}
+            />
+          )}
         </Box>
       )}
 

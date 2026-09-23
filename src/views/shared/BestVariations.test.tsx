@@ -23,19 +23,22 @@ const line = (
 });
 
 /*
-  What only the Analysis Board passes (CTA-55): a mask is Masked Pieces'
-  business, and the click handler is what turns a line the reader reads into
-  one they play.
+  What a consumer passes beyond the analysis: a mask is Masked Pieces'
+  business, the click handler is what turns a line the reader reads into one
+  they play (CTA-55), and the report-up callback lets `BoardPanel` treat the
+  checkbox as a state of the board (CTA-91).
 */
 type PlayableProps = {
   mask?: PieceMask;
   onSelectMove?: (san: readonly string[]) => void;
+  initialShowLines?: boolean;
+  onShowLinesChange?: (shown: boolean) => void;
 };
 
 const renderVariations = (
   analysis: Analysis,
   requested = 3,
-  { mask, onSelectMove }: PlayableProps = {},
+  { mask, onSelectMove, initialShowLines, onShowLinesChange }: PlayableProps = {},
 ) =>
   render(
     <AppThemeWithLang>
@@ -44,6 +47,8 @@ const renderVariations = (
         requested={requested}
         mask={mask}
         onSelectMove={onSelectMove}
+        initialShowLines={initialShowLines}
+        onShowLinesChange={onShowLinesChange}
       />
     </AppThemeWithLang>,
   );
@@ -450,6 +455,39 @@ describe("the best variations view", () => {
 
     expect(screen.getByRole("checkbox", { name: "Variations" })).not.toBeChecked();
     expect(view.queryByTestId("variation-1")).not.toBeInTheDocument();
+  });
+
+  it("reports its checkbox up when a callback is given, seed first", async () => {
+    // CTA-91: the checkbox stays the block's own, but a consumer can treat
+    // "the lines are hidden" as a state of the board — `BoardPanel` hides its
+    // status chip while they are. Reported at mount with the seed, so a
+    // consumer whose copy of it survives a remount of this block re-hears the
+    // re-seeded value, and on every change.
+    const onShowLinesChange = vi.fn();
+    renderVariations(
+      { fen: DEFAULT_POSITION, depth: 18, lines: [line(1, 32, "e2e4 e7e5")] },
+      3,
+      { onShowLinesChange },
+    );
+    expect(onShowLinesChange).toHaveBeenLastCalledWith(true);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("checkbox", { name: "Variations" }));
+    expect(onShowLinesChange).toHaveBeenLastCalledWith(false);
+
+    await user.click(screen.getByRole("checkbox", { name: "Variations" }));
+    expect(onShowLinesChange).toHaveBeenLastCalledWith(true);
+  });
+
+  it("reports a seed that starts hidden (CTA-90's choice)", () => {
+    // The seed reaches the consumer the same way a change does, so a board
+    // opening with the lines hidden opens with the chip hidden too.
+    const onShowLinesChange = vi.fn();
+    renderVariations({ fen: DEFAULT_POSITION, depth: 0, lines: [] }, 3, {
+      initialShowLines: false,
+      onShowLinesChange,
+    });
+    expect(onShowLinesChange).toHaveBeenCalledWith(false);
   });
 
   it("prints a masked line in coordinates but the click carries the true SAN", async () => {

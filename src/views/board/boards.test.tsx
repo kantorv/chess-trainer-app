@@ -275,12 +275,15 @@ describe("Masked Pieces (CTA-79)", () => {
     expect(drag("a1", "a5")).toBe(false);
   });
 
-  it("keeps its engine lines behind a switch, the score still shown", () => {
+  it("keeps its engine lines behind a switch, the score chip with them (CTA-91)", () => {
     renderBoard(MaskedPlay);
 
     engineReports({ depth: 14, multipv: 1, cp: 42, pv: "e2e4 e7e5" });
     expect(screen.queryByTestId("masked-play-panel-variations")).not.toBeInTheDocument();
-    expect(screen.getByTestId("masked-play-panel-status-score")).toHaveTextContent("+0.42");
+    // The chip hides with the block: the engine's lines away is the engine's
+    // talk away, the number included. The status row itself stays.
+    expect(screen.queryByTestId("masked-play-panel-status-score")).not.toBeInTheDocument();
+    expect(screen.getByTestId("masked-play-panel-status")).toBeInTheDocument();
 
     act(() => {
       screen.getByTestId("masked-play-panel-tab-masking").click();
@@ -289,6 +292,7 @@ describe("Masked Pieces (CTA-79)", () => {
       screen.getByTestId("mask-setting-lines").querySelector("input")!.click();
     });
     expect(screen.getByTestId("masked-play-panel-variations")).toBeInTheDocument();
+    expect(screen.getByTestId("masked-play-panel-status-score")).toHaveTextContent("+0.42");
   });
 
   it("saves its game with the engine games, costume and all", async () => {

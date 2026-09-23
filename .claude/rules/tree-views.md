@@ -147,7 +147,8 @@ repertoire games pass nothing; a game never writes.
 | --- | --- | --- |
 | **Repertoire player** | `onEditTree` (player only), `annotations` (player, once read), `arrows: { show, chances, required }`, `map: { tree, nodeId, coverage, addedIds, linked }` (none in Get to the end), `extensionIds` | `moves` behind "reading…", `map` once read, `nextMoves` on the Moves tab with Autoplay off |
 | **Analysis Board**, **Library game** | `onEditTree: core.replaceTree`, `playChances: false`, `annotations: true`, `arrows: { show }`, `map: { addedIds, linked: true }`, `extensionIds` (the same set) | Moves and Map tabs (kept mounted); footer: `annotations`, the changes strip, Play's status line, `nextMoves` (Moves tab) |
-| **Play with Engine**, **Openings explorer** | the same without `addedIds` / `extensionIds` — nothing is added against a record | as above, without the strip |
+| **Openings explorer** | the same without `addedIds` / `extensionIds` — nothing is added against a record | as above, without the strip |
+| **Play with Engine** | the same without `addedIds` / `extensionIds`, and without `map` — nothing is added against a record, and (CTA-91) no Map is drawn or offered | Moves tab only (kept mounted); footer: `annotations`, Play's status line, the game-over result and its *Open in analysis* button (CTA-91), `nextMoves` (Moves tab) |
 | **Masked Pieces** | Play with Engine's, plus `mask` while its notation switch is on | Play with Engine's |
 
 The Openings explorer joins the view's `arrows` with the book's into one set
