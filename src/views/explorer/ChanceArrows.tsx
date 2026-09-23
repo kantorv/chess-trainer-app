@@ -14,7 +14,10 @@ import {
  *
  * Rendered inside the board's relative box — the `overlay` slot
  * `EngineBoardSquare` hands a screen, the promotion picker's precedent — so
- * `position: absolute; inset: 0` covers the board exactly. The `viewBox` is
+ * `position: absolute; inset: 0` covers the board exactly. The Library's
+ * opening-moves filter board (`views/library/OpeningFilterBoard.tsx`, CTA-92)
+ * renders it in its own relative box the same way, its arrows' magnitude a
+ * move's share of the games. The `viewBox` is
  * `0 0 8 8`, one unit per square: the overlay scales with the responsive board
  * and nothing measures a pixel. `pointer-events: none`, so the board beneath
  * keeps every drag and click.
@@ -26,8 +29,13 @@ import {
 
 type ChanceArrowsProps = {
   testId: string;
-  /** The continuations of the position on screen — `chances` in their order. */
-  nodes: readonly VariationNode[];
+  /**
+   * The continuations of the position on screen — `chances` in their order.
+   * Only each node's `id` (the key, and the hover's match), `from` and `to`
+   * are read, so the filter board's own continuation shape draws through
+   * this too.
+   */
+  nodes: readonly Pick<VariationNode, "id" | "from" | "to">[];
   /**
    * Each continuation's play chance, 0–1. `playChances` numbers every move at
    * a marked branch, so an `undefined` entry only draws nothing — the

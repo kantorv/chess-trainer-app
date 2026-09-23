@@ -13,9 +13,9 @@ import { useTranslation } from "react-i18next";
 
 import type { OpeningTreeNode } from "../../lib/openingTree";
 import { ForceLTR } from "../../theme/ForceLTR";
+import ChanceArrows from "../explorer/ChanceArrows";
 import PromotionPicker, { type PromotionChoice } from "../shared/PromotionPicker";
 import { moveSx, sanTokenSx } from "../shared/moveTokenSx";
-import { nextMoveArrowsOf } from "../tools/analysis/nextMoveArrows";
 
 /**
  * **The opening-moves filter** (CTA-76) — a small board at the foot of a
@@ -28,18 +28,23 @@ import { nextMoveArrowsOf } from "../tools/analysis/nextMoveArrows";
  * never played the line — and every change goes out through `onLine`. From the
  * position it reaches, the board shows
  *
- * - the **continuations** as arrows through the shared `nextMoveArrowsOf` —
- *   the most played in the mainline colour, the rest in the side-line colour,
- *   the hovered one in the hover colour — and as a list, lichess-explorer
+ * - the **continuations** as the play-chance arrows over the board
+ *   (`ChanceArrows`, CTA-92) — white with a magenta border, the wider the more
+ *   of the position's games played the move (its share, `child.count /
+ *   node.count`), the hovered one in red — and as a list, lichess-explorer
  *   style: each move with its games, their share, and a White / draw / Black
  *   bar. A click plays it, a hover draws its arrow;
  * - **only those moves**: a drop the games never played is refused and the
  *   piece snaps back. A promotion the games made more than one way asks which
  *   piece, the shared picker over the board.
  *
+ * The tree is cut where the games stop branching (`node.continues`): a
+ * position only one game goes on from offers nothing to choose, and the
+ * caption says so rather than drawing one lone arrow for the rest of it.
+ *
  * `chess.js` only turns the line into a position and SAN into squares here —
- * at most 30 plies, replayed when the line changes. The board is pinned LTR
- * (`ForceLTR`): files run a–h left to right in every language.
+ * up to a game's full length, replayed when the line changes. The board is
+ * pinned LTR (`ForceLTR`): files run a–h left to right in every language.
  */
 
 type Continuation = {
@@ -148,7 +153,6 @@ function OpeningFilterBoard({ line, node, onLine }: OpeningFilterBoardProps) {
     id: "library-filter-board",
     position: fen,
     boardOrientation: orientation,
-    arrows: nextMoveArrowsOf(continuations, hovered),
     allowDrawingArrows: false,
     canDragPiece: ({ piece }) => piece.pieceType.startsWith(turn),
     onPieceDrop,
@@ -202,6 +206,13 @@ function OpeningFilterBoard({ line, node, onLine }: OpeningFilterBoardProps) {
 
       <ForceLTR sx={{ position: "relative", width: "100%", aspectRatio: "1 / 1" }}>
         <Chessboard options={options} />
+        <ChanceArrows
+          testId="library-filter-arrows"
+          nodes={continuations}
+          chances={continuations.map((move) => move.node.count / node.count)}
+          hoveredId={hovered}
+          orientation={orientation}
+        />
         {promotion && (
           <PromotionPicker
             targetSquare={promotion.to}
@@ -223,7 +234,13 @@ function OpeningFilterBoard({ line, node, onLine }: OpeningFilterBoardProps) {
 
       {continuations.length === 0 ? (
         <Typography variant="caption" sx={{ color: "text.secondary" }} data-testid="library-filter-moves-end">
-          {t(node.count === 0 ? "library.filters.moves.none" : "library.filters.moves.end")}
+          {t(
+            node.count === 0
+              ? "library.filters.moves.none"
+              : node.continues
+                ? "library.filters.moves.single"
+                : "library.filters.moves.end",
+          )}
         </Typography>
       ) : (
         <Box

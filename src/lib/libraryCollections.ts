@@ -122,10 +122,12 @@ export type CollectionRow = {
    */
   unreadable?: boolean;
   /**
-   * The first 30 plies of its parsed mainline, as SAN (CTA-76) — what the
-   * opening-moves board filters by (`lib/openingTree.ts`). Set by the index's
-   * `chess.js` pass; absent for an unreadable game, one that does not start
-   * from the standard position, and every game of an index from before it.
+   * The game's whole parsed mainline, as SAN (CTA-76, uncapped by CTA-92) —
+   * what the opening-moves board filters by (`lib/openingTree.ts`). Set by
+   * the index's `chess.js` pass; absent for an unreadable game, one that does
+   * not start from the standard position, and every game of an index from
+   * before it — and an index from between the two holds only the game's
+   * first 30 plies, which the tree follows as far as they go.
    */
   line?: readonly string[];
 };

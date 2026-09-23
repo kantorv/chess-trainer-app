@@ -6,7 +6,6 @@ import {
   decodeCollectionIndex,
   encodeCollectionIndex,
   indexedRowOf,
-  LINE_PLIES,
   numberedRows,
   textHash,
   type OpeningLookup,
@@ -48,11 +47,11 @@ describe("a game's indexed row", () => {
     });
   });
 
-  it("keeps the first 30 plies of the mainline as its line, from the standard start only", () => {
+  it("keeps the whole mainline as its line, from the standard start only", () => {
     const long = `[Event "Long"]\n[Result "*"]\n\n${"1. Nf3 Nf6 2. Ng1 Ng8 ".repeat(10)}*`;
     const row = indexedRowOf(long);
     expect(row.moves).toBe(20); // 40 plies
-    expect(row.line).toHaveLength(LINE_PLIES);
+    expect(row.line).toHaveLength(40); // the whole game — CTA-92 took the cap off
     expect(row.line?.slice(0, 4)).toEqual(["Nf3", "Nf6", "Ng1", "Ng8"]);
     // A set-up position cannot join a tree from the standard start.
     const setUp =

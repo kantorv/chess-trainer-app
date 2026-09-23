@@ -979,6 +979,8 @@ const en = {
         flip: "Flip the board",
         start: "Play a move to keep the games that began with it",
         end: "No game in the collection goes further here",
+        /** Where the tree's cut landed (CTA-92): one game does go on, alone. */
+        single: "Only one game in the collection goes further here",
         none: "No game the other filters leave was played this way",
       },
     },
