@@ -332,6 +332,11 @@ const he: typeof en = {
     },
     open: "פתיחה",
     new: "חדש",
+    newAnalysis: {
+      title: "ניתוח חדש",
+      start: "התחל",
+      illegal: "ההתחלה כבויה עד שאפשר יהיה לנתח את העמדה שבעורך העמדות.",
+    },
     select: "בחירת הניתוח",
     selectAll: "בחירת כל הניתוחים",
     selected: "{{count}} נבחרו",
@@ -371,7 +376,6 @@ const he: typeof en = {
       moves: "מהלכים",
       map: "מפה",
       load: "טעינה",
-      position: "עמדה",
       export: "ייצוא",
       engine: "מנוע",
     },
@@ -497,10 +501,6 @@ const he: typeof en = {
       errors: {
         fen: "לא ניתן לקרוא את ה-FEN הזה. {{detail}}",
       },
-    },
-    editor: {
-      confirm: "הגדרת העמדה לניתוח",
-      illegal: "הגדרת העמדה כבויה עד שאפשר יהיה לנתח את העמדה שבעורך העמדות.",
     },
   },
   positionEditor: {

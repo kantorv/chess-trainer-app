@@ -456,6 +456,16 @@ const en = {
      * single Analysis entry hides (CTA-58), so the board is reached from here.
      */
     new: "New",
+    /**
+     * The panel's new-analysis form (CTA-87): the shared position editor, and
+     * the Start that opens the board on the edited position.
+     */
+    newAnalysis: {
+      title: "New analysis",
+      start: "Start",
+      /** Above Start while the position in the editor cannot be analyzed. */
+      illegal: "Start is off until the position in the board editor can be analyzed.",
+    },
     /** Picking analyses and taking them out as one `.pgn`, side lines and all. */
     select: "Select this analysis",
     selectAll: "Select all analyses",
@@ -503,7 +513,6 @@ const en = {
       moves: "Moves",
       map: "Map",
       load: "Load",
-      position: "Position",
       export: "Export",
       engine: "Engine",
     },
@@ -656,13 +665,6 @@ const en = {
       errors: {
         fen: "Could not read this FEN. {{detail}}",
       },
-    },
-    /** The Position tab (CTA-87): the shared editor, and the confirm that takes its position to the board. */
-    editor: {
-      /** The confirm — a new unsaved analysis of the editor's position, facing its side to move. */
-      confirm: "Set position and analyze",
-      /** Above the confirm while the position in the editor cannot be analyzed. */
-      illegal: "Set position is off until the position in the editor can be analyzed.",
     },
   },
   /**

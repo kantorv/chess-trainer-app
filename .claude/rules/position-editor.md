@@ -4,14 +4,15 @@ paths:
   - "src/lib/positionEditor*"
   - "src/views/engine/games/NewGameForm.tsx"
   - "src/lib/newGameLink*"
+  - "src/views/tools/analysis/saved/NewAnalysisForm.tsx"
 ---
 
 # The position editor — `views/shared/positionEditor/`
 
 A board a **position** is set up on, piece by piece, as one screen-agnostic
 component. The Lobby's new-game form hosts it in its **Board editor** tab;
-the Analysis Board hosts it in its **Position** tab (CTA-87). This file is
-the whole reference: the contract, the invariants, how a screen embeds it,
+the analyses' Lobby hosts it in its **new-analysis form** (CTA-87). This file
+is the whole reference: the contract, the invariants, how a screen embeds it,
 how to test it and how to extend it. It loads when you work on the files in
 its `paths:` list.
 
@@ -36,7 +37,7 @@ as `?fen=`, which each validates with `parseFen` and takes as initial state.
 | `src/lib/positionEditor.ts` | Pure: `fenFields` / `fenFromFields`, `enPassantOptions`, `positionProblems`, `START_POSITION` / `EMPTY_POSITION`. |
 | `src/views/shared/positionEditor/PositionEditor.test.tsx` | The component's tests, in a bare host (§5). |
 | `src/views/engine/games/NewGameForm.tsx` | **The first host** — the Lobby's form (§3). |
-| `src/views/tools/analysis/AnalysisBoard.tsx` | **The second host** — the Analysis Board's Position tab (§4). |
+| `src/views/tools/analysis/saved/NewAnalysisForm.tsx` | **The second host** — the analyses' Lobby's form (§4). |
 | `src/lib/newGameLink.ts` | `newGameParams(settings, side, evalBar, fen?)` — Start's link, `fen` included for a custom position. |
 
 Locale keys: `positionEditor.*` in `src/locales/en.ts` / `he.ts` — top level,
@@ -142,20 +143,19 @@ switches off itself is the FEN tab's copy button.
 - Precedence on arrival is `arrivalOf`'s, unchanged: the Lobby always writes a
   `side`, which beats the position's side to move.
 
-## 4. The second host — the Analysis Board's Position tab
+## 4. The second host — the analyses' Lobby's new-analysis form
 
-Built (CTA-87): a `BoardPanel` tab (Moves · Map · Load · **Position** ·
-Export · Engine) holding `usePositionEditor(core.fen)` — the position on
-screen, seeded on the first render only — and a **Set position and analyze**
-confirm. The hook's state is the screen's, so a switch of tab (the editor
-unmounts; only Moves and Map stay mounted) loses nothing. The confirm loads
-the edited FEN through the session's `loadFen` (`useAnalysisBoard`: a new
-unsaved analysis, like any Load) and clears the arrival's URL — and a
-position turns the board, so it faces the position's side to move, whatever
-the board faced before. The gate is the Lobby's — `isValid` plus `parseFen`:
-while the position cannot be analyzed, the confirm is a plain disabled button
-with a warning above it listing the problems. `boardMaxWidth` 360. Nothing
-in this folder changed for it.
+Built (CTA-87): the right-hand panel of `/tools/analysis/saved`
+(`NewAnalysisForm.tsx`, the counterpart of the engine Lobby's form) holds
+`usePositionEditor()` — the standard start, on every visit — rendered
+directly, no Game tab around it: nothing rides along to the Analysis Board,
+whose engine and settings are its own tabs. A full-width **Start** opens
+`/tools/analysis`, the edited position riding along as `?fen=` whenever it is
+not the standard start — and a position turns the board there, so the
+analysis opens facing the side to move. The gate is the Lobby's — `isValid`
+plus `parseFen`: while the position cannot be analyzed, Start is a plain
+disabled button with a warning above it listing the problems.
+`boardMaxWidth` 360. Nothing in this folder changed for it.
 
 ---
 
@@ -175,15 +175,13 @@ in this folder changed for it.
   mounts the form in its right panel): the two tabs with Start on both, the
   edited FEN on Start's link beside the Game tab's options, the Game tab's
   note and reset, Start off and why.
-- **The second host** — `AnalysisBoard.test.tsx`'s *Position tab* block: the
-  editor seeded from the position on screen (and only from it), the confirm
-  loading the edited FEN as a new analysis that turns the board and clears
-  the arrival's URL, the engine reading the confirmed position, the confirm
-  off with the problems listed while the position cannot be analyzed, and
-  the state surviving a switch of tab. The shared board stub keeps the
-  editor's provider options while its tab is open — a spare-piece board
-  renders with no options of its own (`boardTestHarness.tsx`,
-  `chessboard.md` §8).
+- **The second host** — `SavedAnalyses.test.tsx`'s *new-analysis form* block:
+  Start opening the plain board for the standard start, the edited position
+  riding along as `?fen=`, and Start off with the problems listed while the
+  position cannot be analyzed, then back on at a reset. The screen stubs the
+  spare-piece trio with the provider holding the options — a spare-piece board
+  renders with no options of its own (`chessboard.md` §8), and the list's
+  preview boards pass their own.
 - `newGameLink.test.ts` — `newGameParams` with and without a `fen`.
 - The board's actual drawing, palette sizing and drag are a browser check.
 

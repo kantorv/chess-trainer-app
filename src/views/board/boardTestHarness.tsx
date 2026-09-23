@@ -15,13 +15,6 @@
  *   reads the arrows back. A screen with the captured-pieces strips reaches for
  *   `defaultPieces` too, and the promotion picker for
  *   `chessColumnToColumnIndex`, so the mock provides those.
- * - **A screen that hosts the shared position editor** (the Lobby's Board
- *   editor, the Analysis Board's Position tab) also reaches for the spare-piece
- *   pieces — `ChessboardProvider` and `SparePiece` — so the mock provides
- *   those too. The provider holds the spy, and a prop-less `<Chessboard />`
- *   (all its options went to the provider, `chessboard.md` §2) reads them
- *   back: while the editor's tab is open the provider renders after the main
- *   board, so `boardOptions()` is the editor's.
  * - **`Engine`** builds a real `Worker`, which jsdom has none of. The fake
  *   records what was searched and lets a test push UCI results back, so a
  *   board's engine behaviour is driven exactly and synchronously — including
@@ -116,39 +109,22 @@ export const boardSpy: { options: Record<string, unknown> | null } = {
 
 /** The `react-chessboard` stand-in, as a `vi.mock` factory's return value. */
 export const reactChessboardMock = () => ({
-  Chessboard: ({ options }: { options?: Record<string, unknown> }) => {
-    // A spare-piece board renders with no options of its own — they all went
-    // to the provider below, which holds the spy.
-    if (options !== undefined) boardSpy.options = options;
-    const held = (options ?? boardSpy.options) as Record<string, unknown> | null;
+  Chessboard: ({ options }: { options: Record<string, unknown> }) => {
+    boardSpy.options = options;
     return (
       <div
         data-testid="board"
-        data-board-id={String(held?.id)}
-        data-position={String(held?.position)}
-        data-orientation={String(held?.boardOrientation)}
-        data-dragging={String(held?.allowDragging)}
+        data-board-id={String(options.id)}
+        data-position={String(options.position)}
+        data-orientation={String(options.boardOrientation)}
+        data-dragging={String(options.allowDragging)}
         data-arrows={String(
-          (held?.arrows as { endSquare: string }[] | undefined)?.length ?? 0,
+          (options.arrows as { endSquare: string }[] | undefined)?.length ?? 0,
         )}
-        data-masked={String(held?.pieces !== undefined)}
+        data-masked={String(options.pieces !== undefined)}
       />
     );
   },
-  // The spare-piece host: every option is the provider's (chessboard.md §2).
-  ChessboardProvider: ({
-    options,
-    children,
-  }: {
-    options: Record<string, unknown>;
-    children?: ReactNode;
-  }) => {
-    boardSpy.options = options;
-    return <div data-testid="chessboard-provider">{children}</div>;
-  },
-  SparePiece: ({ pieceType }: { pieceType: string }) => (
-    <div data-testid={`spare-piece-${pieceType}`} />
-  ),
   // Only what `PromotionPicker` reaches for.
   chessColumnToColumnIndex: (
     column: string,
@@ -199,8 +175,6 @@ export const boardOptions = () => {
     pieces?: unknown;
     arrows?: { startSquare: string; endSquare: string; color: string }[];
     onPieceDrop?: (args: {
-      /** The drag's piece — absent in a plain board's drag, present from a palette. */
-      piece?: { pieceType: string; isSparePiece: boolean; position: string };
       sourceSquare: string;
       targetSquare: string | null;
     }) => boolean;

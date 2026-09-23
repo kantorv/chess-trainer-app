@@ -39,10 +39,10 @@ import AnalysisBoard from "./AnalysisBoard";
 /*
   The Analysis Board, v2 (CTA-73): the arrivals, the explicit save (a new
   board's dialog, and Update / Save as copy / Discard over a record), the Load
-  tab's one game, merge and split, the Position tab's shared editor (CTA-87),
-  the Export tab's options and the `?at=` link. The shared panel and square
-  are asserted with the dev boards' (`boards.test.tsx`,
-  `panelPropagation.test.tsx`), which include this screen.
+  tab's one game, merge and split, the Export tab's options and the `?at=`
+  link. The shared panel and square are asserted with the dev boards'
+  (`boards.test.tsx`, `panelPropagation.test.tsx`), which include this
+  screen.
 */
 
 const START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
@@ -616,104 +616,5 @@ describe("Play — the engine's thinking, shown", () => {
     expect(screen.getByTestId("analysis-play-status")).toBeInTheDocument();
     fireEvent.click(screen.getByTestId("analysis-play"));
     expect(screen.queryByTestId("analysis-play-status")).toBeNull();
-  });
-});
-
-describe("the Position tab (CTA-87)", () => {
-  /** Drop one of the editor's palette pieces onto a square, the way the provider reports it. */
-  const dropSpare = (pieceType: string, to: string) => {
-    let accepted = false;
-    act(() => {
-      accepted = boardOptions().onPieceDrop!({
-        piece: { pieceType, isSparePiece: true, position: pieceType },
-        sourceSquare: pieceType,
-        targetSquare: to,
-      });
-    });
-    return accepted;
-  };
-
-  it("hosts the shared editor, seeded from the position on screen — and only from it", () => {
-    mount(`/tools/analysis?fen=${encodeURIComponent(AFTER_E4)}`);
-    // The arrival turned the main board to the side to move; the tab is there.
-    expect(boardOptions().boardOrientation).toBe("black");
-    expect(screen.getByTestId("analysis-panel-tab-position")).toBeInTheDocument();
-
-    openTab("position");
-    // While the tab is open, the spy holds the editor's provider's options:
-    // the seeded position, facing its side to move, with a Reset back to it.
-    expect(boardOptions().id).toBe("analysis-editor-board");
-    expect(boardOptions().position).toBe(AFTER_E4);
-    expect(boardOptions().boardOrientation).toBe("black");
-    expect(screen.getByTestId("analysis-editor-reset-initial")).toBeInTheDocument();
-
-    // The seed is the first render's only: a move played on the main board
-    // does not re-seed the editor.
-    openTab("moves");
-    drag("e7", "e5");
-    expect(boardOptions().position).toBe(AFTER_E4_E5);
-    openTab("position");
-    expect(boardOptions().position).toBe(AFTER_E4);
-    expect(screen.getByTestId("analysis-editor-confirm")).toBeEnabled();
-  });
-
-  it("confirm loads the edited position as a new analysis, and the engine reads it", () => {
-    mount(`/tools/analysis?fen=${encodeURIComponent(AFTER_E4)}`);
-    openTab("position");
-    expect(dropSpare("wQ", "d5")).toBe(true);
-    const edited = "rnbqkbnr/pppppppp/8/3Q4/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1";
-    expect(boardOptions().position).toBe(edited);
-
-    fireEvent.click(screen.getByTestId("analysis-editor-confirm"));
-
-    // The arrival's URL is gone — a new unsaved analysis, like any Load.
-    expect(where()).toBe("/tools/analysis");
-    expect(screen.getByTestId("analysis-save")).toBeEnabled();
-    openTab("moves");
-    expect(boardOptions().id).toBe("analysis");
-    expect(boardOptions().position).toBe(edited);
-    expect(FakeEngine.latest().lastSearch).toBe(edited);
-  });
-
-  it("confirm turns the board to the side to move", () => {
-    mount();
-    expect(boardOptions().boardOrientation).toBe("white");
-    openTab("position");
-    fireEvent.click(screen.getByTestId("analysis-editor-turn-b"));
-    fireEvent.click(screen.getByTestId("analysis-editor-confirm"));
-    openTab("moves");
-    const blackToMove = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1";
-    expect(boardOptions().position).toBe(blackToMove);
-    expect(boardOptions().boardOrientation).toBe("black");
-  });
-
-  it("keeps the confirm off while the position cannot be analyzed, and says why", () => {
-    mount();
-    openTab("position");
-    fireEvent.click(screen.getByTestId("analysis-editor-reset-clear"));
-    expect(screen.getByTestId("analysis-editor-problem-noWhiteKing")).toBeInTheDocument();
-    expect(screen.getByTestId("analysis-editor-problem-noBlackKing")).toBeInTheDocument();
-    const illegal = screen.getByTestId("analysis-editor-illegal");
-    expect(illegal).toHaveTextContent("White has no king.");
-    expect(illegal).toHaveTextContent("Black has no king.");
-    expect(screen.getByTestId("analysis-editor-confirm")).toBeDisabled();
-
-    // Back to a position that can be analyzed, and the confirm is back.
-    fireEvent.click(screen.getByTestId("analysis-editor-reset-start"));
-    expect(screen.queryByTestId("analysis-editor-illegal")).toBeNull();
-    expect(screen.getByTestId("analysis-editor-confirm")).toBeEnabled();
-  });
-
-  it("keeps the editor's state across a switch of tab", () => {
-    mount();
-    openTab("position");
-    fireEvent.click(screen.getByTestId("analysis-editor-reset-clear"));
-    expect(screen.getByTestId("analysis-editor-confirm")).toBeDisabled();
-    openTab("moves");
-    expect(screen.queryByTestId("analysis-editor-confirm")).toBeNull();
-    openTab("position");
-    expect(boardOptions().position).toBe("8/8/8/8/8/8/8/8 w - - 0 1");
-    expect(screen.getByTestId("analysis-editor-problem-noWhiteKing")).toBeInTheDocument();
-    expect(screen.getByTestId("analysis-editor-confirm")).toBeDisabled();
   });
 });
