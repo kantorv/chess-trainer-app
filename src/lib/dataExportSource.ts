@@ -8,6 +8,7 @@ import {
   type ExportSource,
 } from "./dataExport";
 import { loadUploadedCollections, loadUploadedGames } from "./libraryCollectionStore";
+import { loadLibraryFolders } from "./libraryFolderStore";
 import type { CollectionSummary } from "./libraryCollections";
 import { loadPlayedGames } from "./playedGameStore";
 import { loadAnalysisFolders } from "./savedAnalysisFolderStore";
@@ -62,7 +63,7 @@ const loadCollectionSummaries = async (): Promise<readonly CollectionSummary[]> 
  * look complete and not be.
  */
 const loadExportSource = async (selection: ExportSelection): Promise<ExportSource> => {
-  const [playedGames, analyses, analysisFolders, repertoires, repertoireFolders, summaries] =
+  const [playedGames, analyses, analysisFolders, repertoires, repertoireFolders, summaries, collectionFolders] =
     await Promise.all([
       selection.games ? loadPlayedGames() : NOTHING,
       selection.analyses ? loadSavedAnalyses() : NOTHING,
@@ -70,6 +71,7 @@ const loadExportSource = async (selection: ExportSelection): Promise<ExportSourc
       selection.repertoires ? loadSavedRepertoires() : NOTHING,
       selection.repertoires ? loadRepertoireFolders() : NOTHING,
       selection.collections ? loadCollectionSummaries() : NOTHING,
+      selection.collections ? loadLibraryFolders() : NOTHING,
     ]);
 
   const collections: ExportCollection[] = [];
@@ -79,7 +81,7 @@ const loadExportSource = async (selection: ExportSelection): Promise<ExportSourc
     collections.push({ summary, games });
   }
 
-  return { playedGames, analyses, analysisFolders, repertoires, repertoireFolders, collections };
+  return { playedGames, analyses, analysisFolders, repertoires, repertoireFolders, collections, collectionFolders };
 };
 
 /** The zip for a selection: its bytes and what the download is called. */

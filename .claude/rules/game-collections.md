@@ -3,6 +3,10 @@ paths:
   - "src/views/library/**"
   - "src/lib/libraryCollections*"
   - "src/lib/libraryCollectionStore*"
+  - "src/lib/libraryDb.ts"
+  - "src/lib/libraryFolderStore*"
+  - "src/lib/folderTreeRows*"
+  - "src/views/shared/folders/FolderTreeTable.tsx"
   - "src/lib/libraryGameCatalog*"
   - "src/lib/shippedCollections*"
   - "src/lib/collectionIndex*"
@@ -45,36 +49,41 @@ for the Analysis Board and Saved analyses it hands games to.
 | `src/lib/collectionIndex.worker.ts` | The index pass for an upload, off the main thread. |
 | `src/lib/openingTree.ts` | **The opening tree**: `openingTreeOf` (rows' `line`s merged by SAN), `openingNodeAt` / `openingNodeOn`, `OPENING_LINE_PARAM` (`line`), `openingLineParamOf` / `openingLineOfParam`. Pure, with no `chess.js`. |
 | `src/lib/shippedCollections.ts` | **Shipped collections**: the manifest (a static import) and two lazy globs (`*.pgn`, `*.index.json`, `?raw`). `shippedCollectionsOf` (takes its inputs as parameters, for tests), `shippedCollections`, `findShippedCollection`, `peekShippedRows` / `peekShippedGames`, `subscribeShipped`. |
-| `src/lib/libraryCollectionStore.ts` | **Uploaded collections, in IndexedDB** (`chessapp.library`). Reads: `uploadedCollectionsSnapshot`, `subscribeUploadedCollections`, `loadUploadedCollections`, `peekUploadedRows` / `loadUploadedRows`, `peekUploadedGames` / `loadUploadedGames`. Writes: `addCollection`, `removeCollection`, `replaceCollectionGame` (Update), `insertCollectionGame` (Save as copy), `appendCollectionGames` (Add games), `removeCollectionGames` (delete picked). Also `newCollectionId` and `resetLibraryCollectionStore` (for tests). |
+| `src/lib/libraryDb.ts` | **The database**, `chessapp.library` (version 2): its four object store names, the channel, `openLibraryDb` and `deleteLibraryDb`. Both stores below open it. |
+| `src/lib/libraryCollectionStore.ts` | **Uploaded collections, in IndexedDB** (`chessapp.library`). Reads: `uploadedCollectionsSnapshot`, `subscribeUploadedCollections`, `loadUploadedCollections`, `peekUploadedRows` / `loadUploadedRows`, `peekUploadedGames` / `loadUploadedGames`. Writes: `addCollection` (into a folder, optionally), `removeCollection`, `moveCollection` (Move to…), `refileCollectionsIn` (a folder deleted), `replaceCollectionGame` (Update), `insertCollectionGame` (Save as copy), `appendCollectionGames` (Add games), `removeCollectionGames` (delete picked). Also `newCollectionId` and `resetLibraryCollectionStore` (for tests). |
+| `src/lib/libraryFolderStore.ts` | **The reader's folders** (CTA-88), the `folders` object store over `idbRecordStore`: `libraryFoldersSnapshot`, `subscribeLibraryFolders`, `loadLibraryFolders`, `createLibraryFolder`, `renameLibraryFolder`, `moveLibraryFolder` (never into its own subtree), `removeLibraryFolder` (keeps the contents), `BUILT_IN_FOLDER_ID`, `MAX_LIBRARY_FOLDERS` (100). A folder is the app's one nested-folder model, `GameFolder` (`lib/savedGameFolders.ts`). |
+| `src/lib/folderTreeRows.ts` | **A folder tree as table rows**, pure and generic over anything with a `folderId`: folders first, a pinned folder first, sizes over subtrees, closed folders' contents left out, the filter that opens the way to a match. |
 | `src/lib/libraryGameCatalog.ts` | **A Library game as a `?game=` reference**: `library/<collection>/<n>`. `findLibraryGame`, `libraryReferenceRead`, `loadLibraryReferenceGames`, `libraryReferencePathOf`. Registered in `lib/gameReference.ts`. |
 | `src/data/library/` | The shipped files: `<Stem>.pgn`, `<Stem>.index.json`, `manifest.json`, and a `README.md` for whoever adds a file. |
 | `scripts/wirepgn.js` | **The wiring CLI** (`yarn wirepgn`): wire, `--list`, `--check`, `--rebuild`, `--remove`, `--dir`. |
-| `src/views/library/LibraryHome.tsx` | `/library`: the list, the name filter, and each row's download and delete. |
-| `src/views/library/LibraryUpload.tsx` | `/library/new`: a new collection (file, paste, or empty), and `?into=<id>` to add games to an existing one. |
+| `src/views/library/LibraryHome.tsx` | `/library`: the folder tree table (Built-in and the reader's folders), the name filter, the sort, each row's actions and the folder dialogs. |
+| `src/views/shared/folders/FolderTreeTable.tsx` | The details view itself — sticky header, sortable columns, indented rows with chevrons, hover actions. Presentational and reusable; the Library is its one consumer. |
+| `src/views/library/LibraryUpload.tsx` | `/library/new`: a new collection (file, paste, or empty), filed in a folder (`?folder=<id>`, the picker), and `?into=<id>` to add games to an existing one. |
 | `src/views/library/CollectionScreen.tsx` | `/library/<collection>`: the table, the picks, the export bar, Analyse, Add games, and deleting games. |
 | `src/views/library/CollectionFilters.tsx` | The table's right-hand panel: player and side, the opening board, then opening, event, dates and result. |
 | `src/views/library/OpeningFilterBoard.tsx` | The opening-moves board (`options.id` `library-filter-board`). |
 | `src/views/library/LibraryGameScreen.tsx` → `LibraryGameBoard.tsx` | `/library/<collection>/<n>`: resolve and parse the game, then the analysis board. |
-| `src/views/library/useLibraryCollections.ts` | The React bindings: `useUploadedCollections`, `useCollectionSummary`, `useCollectionRows`, `useCollectionGames`, `loadCollectionGames`. |
+| `src/views/library/useLibraryCollections.ts` | The React bindings: `useUploadedCollections`, `useLibraryFolders`, `useCollectionSummary`, `useCollectionRows`, `useCollectionGames`, `loadCollectionGames`. |
 | `src/views/library/indexCollection.ts` | Runs the worker with progress and cancel, with a jsdom fallback. |
 | `src/views/library/LibraryMiss.tsx` | The "no such collection / game" screen. |
 | `src/views/library/*Main.tsx` | Layout-only wrappers that `App.tsx` routes to. |
-| Tests | `src/lib/libraryCollections.test.ts`, `collectionIndex.test.ts`, `openingTree.test.ts`, `shippedCollections.test.ts`, `libraryCollectionStore.test.ts`, `wirepgn.test.ts`, `gameReference.test.ts` (the `library` key), `src/views/library/Library.test.tsx` (every screen), and `views/tools/analysis/AnalysisBoard.test.tsx` (a `?game=library/…` arrival). |
+| Tests | `src/lib/libraryCollections.test.ts`, `collectionIndex.test.ts`, `openingTree.test.ts`, `shippedCollections.test.ts`, `libraryCollectionStore.test.ts`, `libraryFolderStore.test.ts` (folder CRUD, `folderId`, the v1 → v2 upgrade), `folderTreeRows.test.ts`, `wirepgn.test.ts`, `gameReference.test.ts` (the `library` key), `src/views/library/Library.test.tsx` (every screen), and `views/tools/analysis/AnalysisBoard.test.tsx` (a `?game=library/…` arrival). |
 
 Locale keys all live under `library.*` in `src/locales/en.ts` / `he.ts`
 (`he` is typed `typeof en`, so a missing key is a compile error). The only
 exceptions are the shared pieces a screen passes a `labelKey` to (the export
 bar reads `library.table.picks.*`, the changes strip reads `library.changes.*` /
-`library.shippedChanges.*`).
+`library.shippedChanges.*`, the folder dialogs read `library.folder.*`).
 
 ---
 
 ## 1. The model
 
 ```
-                     ┌─────────────── CollectionSummary ───────────────┐
-                     │ id · name · source ("shipped"|"uploaded") · count│   ← the list (/library)
-                     └─────────────────────────────────────────────────┘
+                     ┌─────────────── CollectionSummary ───────────────────────┐
+                     │ id · name · source ("shipped"|"uploaded") · count        │  ← the list (/library)
+                     │ addedAt · folderId (uploads; null = the top level)       │
+                     └─────────────────────────────────────────────────────────┘
 a collection =   ──▶ rows:  CollectionRow[]  (its INDEX, one per game)      ← the table (/library/<id>)
                  ──▶ games: string[]         (one PGN chunk per game)        ← a board, a download
 ```
@@ -82,10 +91,13 @@ a collection =   ──▶ rows:  CollectionRow[]  (its INDEX, one per game)    
 - **A collection is one PGN text of many games**, such as a tournament or one
   player's games, held as **one PGN chunk per game, in file order**. It is not
   a single game (that goes to the Analysis Board) and not a position.
-- **One level, no nesting.** The Library is a list of collections, each
-  collection is a table, and each row is a game. A collection is not a folder
-  of folders. The sidebar has no entry per collection either; collections are
-  rows of `/library`.
+- **Folders over collections, never inside them** (CTA-88). The Library is a
+  tree of folders holding collections; each collection is a table, and each
+  row is a game. A collection is not a folder: it holds games, not folders or
+  other collections. The shipped collections sit in the fixed, read-only
+  **Built-in** folder; the reader's uploads sit at the top level or in the
+  reader's own folders, nested to any depth (§4.4). The sidebar has no entry
+  per folder or collection; they are rows of `/library`.
 - **Three parts, each read only when a screen needs it.** The **summary**
   (list), the **rows** (table) and the **games** (board and download). Opening
   `/library` reads summaries only. For shipped collections that is the
@@ -139,6 +151,7 @@ collection comes in, and read afterwards.
    manifest.json ── static import ─┐                           collections (summary) ─┐
    x.index.json ── lazy chunk ─────┤                           indexes (rows)        ├─ one record each per collection
    x.pgn ───────── lazy chunk ─────┤                           games (PGN chunks)    ─┘
+                                   │                           folders (the reader's, lib/libraryFolderStore.ts)
                                    ▼                                    ▼
                     lib/shippedCollections.ts             lib/libraryCollectionStore.ts
                     (fetched once, kept, peekable)        (read once, kept, peekable, BroadcastChannel)
@@ -246,17 +259,23 @@ IndexedDB now — the Library (`chessapp.library`), the saved analyses
 map is [`database.md`](./database.md). The connection is opened through the
 shared `lib/idb.ts`.
 
-### 4.2 Schema — three object stores, one record each per collection
+### 4.2 Schema — three object stores per collection, and the folders
 
 | Object store | Record | Read by |
 | --- | --- | --- |
-| `collections` | `{ id, name, addedAt, count }` | the list, which stays small |
+| `collections` | `{ id, name, addedAt, count, folderId }` | the list, which stays small |
 | `indexes` | `{ id, rows: IndexedRow[] }` | the table |
 | `games` | `{ id, games: string[] }` | a board, a download |
+| `folders` | `{ id, seq, value: GameFolder }` (an `idbRecordStore` row) | the list |
 
 Splitting them means the list never loads games, and an edit rewrites one
-collection, not all of them. `DB_VERSION` is 1, and `onupgradeneeded` creates
-any missing store. A future schema change bumps it (§10.4).
+collection, not all of them. The database is opened in `lib/libraryDb.ts` at
+**version 2**: version 1 had the first three stores, and CTA-88's upgrade only
+created `folders` (`onupgradeneeded` creates any missing store), so no
+reader's collection was touched. **`folderId` needed no migration**: a summary
+from before it has none, and an absent `folderId` — or one naming a folder that
+is not there — reads as the top level. A future schema change bumps the
+version again (§10.4).
 
 ### 4.3 Writes
 
@@ -269,8 +288,10 @@ the caches, re-reads the summaries and announces the change to other tabs.
 
 | Write | Used by | Behaviour |
 | --- | --- | --- |
-| `addCollection(name, games, rows, now?, id?)` | upload, empty collection | New id (`u` + `newRecordId`, so it can never collide with a shipped slug). Empty `games` is allowed. Newest first in the list. |
+| `addCollection(name, games, rows, now?, id?, folderId?)` | upload, empty collection | New id (`u` + `newRecordId`, so it can never collide with a shipped slug). Empty `games` is allowed. Filed in `folderId` (default `null`, the top level). |
 | `removeCollection(id)` | `/library` row delete | Deletes all three records. An unknown id is a no-op. |
+| `moveCollection(id, folderId)` | `/library` row's Move to… | Rewrites the summary's `folderId` only. An unknown id answers `"missing"`; the same folder is a no-op. |
+| `refileCollectionsIn(folderId, parentId)` | `removeLibraryFolder` | Every collection filed directly in the folder moves to its parent, in one transaction. |
 | `replaceCollectionGame(id, n, pgn, row)` | game board Update | Rewrites in place. |
 | `insertCollectionGame(id, n, pgn, row)` | game board Save as copy | Inserts at `n`; later games move down. |
 | `appendCollectionGames(id, games, rows)` | Add games (`?into=`) | Appends at the end. |
@@ -292,7 +313,36 @@ the caches, re-reads the summaries and announces the change to other tabs.
   `appendCollectionGames` and `removeCollectionGames` do.
 - **Other tabs** hear about a change through a `BroadcastChannel`
   (`chessapp.library`, message `{ id }`). The listener drops that id's caches
-  and re-reads the summaries.
+  and re-reads the summaries. The folder store's writes share the channel
+  (message `{ store: "folders" }`); the collections' listener ignores them,
+  and the folder store's own re-reads the folders.
+
+### 4.4 Folders — `lib/libraryFolderStore.ts` (CTA-88)
+
+The reader's folders are **the app's one nested-folder model**: a folder is a
+`GameFolder` (`{ id, name, parentId, savedAt, updatedAt }`) and every read over
+the tree is `lib/savedGameFolders.ts`'s, cycle-safe, with a parent that is not
+there read as the top level. The store is an `idbRecordStore` (non-throwing,
+queued writes, idempotent no-ops, the channel) over the `folders` object store.
+
+| Write | Behaviour |
+| --- | --- |
+| `createLibraryFolder(name, parentId)` | At the top level or inside any folder, to any depth. Hands the folder back, or `undefined` for an empty name, a parent that is not there, or the cap (100). Names are trimmed to 100 characters. |
+| `renameLibraryFolder(id, name)` | In place; an empty or unchanged name is a no-op. |
+| `moveLibraryFolder(id, parentId)` | Refuses the folder's own subtree and a parent that is not there. |
+| `removeLibraryFolder(id)` | **Keeps the contents**: its sub-folders and the collections filed directly in it move up to its parent (the top level for a top-level folder). This differs from Saved analyses, where the analyses become Unfiled, because the Library has no Unfiled — the parent is the nearest place. |
+
+**Built-in is not a record.** `BUILT_IN_FOLDER_ID` (`"builtin"`, which
+`newRecordId` — always starting `g` — can never mint) is a folder the list
+makes up to hold the shipped collections. It is never stored, so it cannot be
+renamed, moved or deleted, no picker offers it, and a collection naming it is
+read as the top level.
+
+**The export keeps the tree.** Settings' Export (`lib/dataExport.ts`,
+[`settings.md`](./settings.md) §2.2) writes each collection into a directory
+per folder under `collections/` (the shipped ones in `collections/built-in/`),
+and its manifest carries each upload's `folderPath` and the whole folder tree
+(`folders.collections`), so an empty folder survives.
 
 ---
 
@@ -339,7 +389,8 @@ or a count mismatch gives `undefined`.
 | Route | Screen | Reads |
 | --- | --- | --- |
 | `/library` | `LibraryHome` | summaries |
-| `/library/new` | `LibraryUpload` (new collection) | — |
+| `/library/new` | `LibraryUpload` (new collection) | the folders (for the picker) |
+| `/library/new?folder=<id>` | `LibraryUpload`, the picker starting at that folder (a folder row's *Add a collection here*); an unknown or Built-in id is the top level | the folders, waited for |
 | `/library/new?into=<id>` | `LibraryUpload` (add games; uploaded collections only, otherwise the miss) | that summary |
 | `/library/<collection>` | `CollectionScreen` | summary + rows |
 | `/library/<collection>/<n>` | `LibraryGameScreen` → `LibraryGameBoard` | summary + games |
@@ -348,20 +399,61 @@ or a count mismatch gives `undefined`.
 collection the id `new`**; minted ids start with `u`, and slugs come from file
 names.
 
-### 6.2 `/library` — the list
+### 6.2 `/library` — the folder tree table
 
-Shipped collections (by name), then uploaded ones (newest first). Each row
-links to its table. Beside the link, **not inside it** (a button inside a
-link is invalid HTML), is an actions column, `library-collection-actions-<id>`,
-two icons wide on every row so the downloads line up. It holds the
-**download of the whole collection** (`library-collection-download-<id>`; the
-games are read only then) and, for uploads, the **delete**
-(`library-collection-delete-<id>`, confirmed in `library-delete-dialog`). Do
-not use MUI `ListItem`'s `secondaryAction` for this: it forces 48px of end
-padding on the row link, which overrides any padding you set, so a second
-icon ends up over the chip. A **name filter** (`library-filter`, `?q=`,
-history replace) narrows the list by name (part of it, any case). The count
-reads "N of M collections" while the filter is on.
+A file manager's **details view** (CTA-88): `FolderTreeTable` over rows from
+`folderTreeRows`, in the screen's flex column under the header bar and the
+words box, **the table the one region that scrolls**, its header sticky.
+
+- **Rows.** One per folder or collection, indented by depth
+  (`paddingInlineStart`, so it mirrors), a chevron button on each folder
+  (`library-folder-<id>-toggle`, `aria-expanded`; a closed chevron points the
+  way the text runs, set as an inline style so the RTL stylis plugin leaves it
+  alone). Clicking a folder row (`library-folder-<id>`) or its chevron opens or
+  closes it in place; which folders are open is the screen's state, not the
+  URL's. Clicking a collection row (`library-row-<id>`) opens its table, and
+  its name is a **real link** (`library-collection-<id>`) for the keyboard and
+  a middle click. Names take `dir="auto"`.
+- **Built-in** (`library-folder-builtin`) is always the first row and open at
+  the start; it holds the shipped collections, and is read-only (§4.4): its
+  one action is the download, and its collections' only action is theirs.
+- **Columns**: Name, **Games** (a collection's count; a folder's is the total
+  of its whole subtree), **Added** (an upload's date, a folder's creation, a
+  dash for Built-in and the shipped collections), then the actions. Name,
+  Games and Added sort from their headers (`library-collections-sort-<column>`):
+  `?sort=` (`games` / `added`; absent is Name) and `?dir=` (absent is the
+  column's default — Name A to Z, Games and Added high first), written with
+  history replace, keeping only what differs from the default, as the
+  collection table does (§6.4). **Folders always come before collections at
+  every level**, and Built-in before every other folder. Missing values go
+  last either way; ties go by name.
+- **Row actions** (icon-only, with tooltips), shown on hover and on keyboard
+  focus (always on a device that cannot hover), in a cell of their own — a
+  click there never reaches the row:
+  - a reader's folder (`library-folder-actions-<id>`): *Add a collection here*
+    (`library-folder-upload-<id>`, a link to `/library/new?folder=<id>`), *New
+    sub-folder* (`-new-`), *Download* (`-download-`: the whole subtree as one
+    `.pgn`, its collections by name), *Rename* (`-rename-`), *Move to…*
+    (`-move-`, the shared `FolderMoveDialog`, which leaves out the folder's own
+    subtree) and *Delete* (`-delete-`: an empty folder goes at once; otherwise
+    the shared `FolderDeleteDialog` says the contents move up to its parent);
+  - an upload (`library-collection-actions-<id>`): *Download*
+    (`library-collection-download-<id>`), *Move to…* (`-move-`, the shared
+    `FolderPicker` in `library-collection-move-dialog`, the top level its
+    "none") and *Delete* (`-delete-`, confirmed in `library-delete-dialog`);
+  - a shipped collection: *Download* only.
+- **New folder** (`library-new-folder`) in the header makes a top-level
+  folder; *New sub-folder* opens its parent so the new one is in view. The
+  name dialog is the shared `FolderNameDialog` (`library-folder-name-*`).
+- **The words box** (`library-filter`, `?q=`, history replace) keeps the
+  collections whose name holds the words (any case), the folders whose name
+  does (with everything under them, closed until opened), and the folders on
+  the way down to either — **the folders above a match open by themselves**,
+  and the reader can still close or open any of them while the words stay.
+  The count reads "N of M collections" while the filter is on; nothing left
+  is `library-no-matches`.
+- **Listing still fetches nothing** (§7): the rows are summaries, the folders
+  and the manifest. Downloads read games only when clicked.
 
 ### 6.3 `/library/new` — upload, empty, add games
 
@@ -376,6 +468,11 @@ reads "N of M collections" while the filter is on.
   the screen cancels too. Nothing is written until the pass succeeds.
 - **The name**: as typed, else the `Event` every game shares, else the file
   name's words, else "Pasted collection".
+- **The folder** (CTA-88): a `FolderPicker` (`library-upload-folder-picker`,
+  shown once the reader has a folder) files the new collection — the top
+  level by default, or the `?folder=<id>` the upload was started from. The
+  route waits for the folders' first read before it decides; an unknown or
+  Built-in id is the top level. The empty collection is filed the same way.
 - **Empty** (`library-upload-empty`): `addCollection(name || "New collection",
   [], [])`, then its table. An empty table says "no games yet"
   (`library.table.noGames`).
@@ -558,6 +655,8 @@ the index instead (§10.1).
    same length and order (§4.3).
 4. **Shipped is read-only.** No write path may take a shipped id. Screens
    gate on `source === "uploaded"`, and `?into=` refuses shipped collections.
+   Their **Built-in** folder is not a record: it is never renamed, moved or
+   deleted, no picker offers it, and nothing is filed in it (§4.4).
 5. **The table never parses or fetches games.** Download, Analyse and a board
    read the games; the table reads rows.
 6. **State in the URL, with history replace**, for everything but the picks.
@@ -569,6 +668,10 @@ the index instead (§10.1).
 10. **The game board is composed from the core.** No behaviour hook of its
     own, no second panel. It stays under `boards.test.tsx` and
     `panelPropagation.test.tsx`.
+11. **Folders hold collections; collections hold games.** One folder model
+    (`GameFolder`, `lib/savedGameFolders.ts`), a folder never moved into its
+    own subtree, a `folderId` that does not resolve read as the top level, and
+    **deleting a folder keeps its contents** — they move up to its parent.
 
 ---
 
@@ -584,7 +687,12 @@ the index instead (§10.1).
   was given. `boardOptions()` reads the last board's options, which is how the
   tests drive drops (`onPieceDrop`) and assert arrows and positions.
 - **IndexedDB** is `fake-indexeddb` (`src/test/setup.ts`). Call
-  `resetLibraryCollectionStore()` in `beforeEach`. Helpers in the test file:
+  `resetLibraryFolderStore()` and `resetLibraryCollectionStore()` (which
+  deletes the database) in `beforeEach`; the teardown also waits for and
+  forgets the folder store, as it does every record store. Seed folders with
+  `createLibraryFolder` and a filed collection with `keep(name, games,
+  folderId)`. A dialog left closing still `aria-hidden`s the page, so reading
+  the list's rows by role takes `{ hidden: true }`. Helpers in the test file:
   `keep(name, games)` and `upload()` (the three `GAMES`) add a collection;
   `keepCarlsen()` adds the 7,818-game fixture with **tag-only rows** (the
   full index pass would take a minute); `mountTable` / `mountGame` wait for
@@ -598,8 +706,8 @@ the index instead (§10.1).
   with dates comes back reversed. Mount with `?sort=number` when a test needs
   collection order (for example, picking game 1 of Morphy).
 - Commands: `npx vitest run src/views/library/Library.test.tsx`,
-  `npx vitest run src/lib/libraryCollectionStore.test.ts`, then
-  `yarn test:run`.
+  `npx vitest run src/lib/libraryCollectionStore.test.ts`,
+  `npx vitest run src/lib/libraryFolderStore.test.ts`, then `yarn test:run`.
 
 ---
 
@@ -649,10 +757,13 @@ per-number UI state (picks) afterwards.
 
 ### 10.4 A schema change in IndexedDB
 
-Bump `DB_VERSION`, migrate in `onupgradeneeded` (create stores, never drop a
-reader's data silently), and keep reads tolerant of old records
-(`isStoredSummary`-style guards). A changed record shape needs a normaliser
-on read, not a crash.
+Bump the version in `lib/libraryDb.ts`, migrate in `onupgradeneeded` (create
+stores, never drop a reader's data silently), and keep reads tolerant of old
+records (`isStoredSummary`-style guards). A changed record shape needs a
+normaliser on read, not a crash. CTA-88 is the worked example: version 2 added
+the `folders` store, and `folderId` reads as the top level when absent, so no
+record was rewritten (`libraryFolderStore.test.ts` opens a version-1 database
+and upgrades it).
 
 ### 10.5 A positions collection (planned — not built)
 

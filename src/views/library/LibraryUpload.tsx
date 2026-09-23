@@ -16,14 +16,15 @@ import {
   readCollectionText,
   type CollectionSummary,
 } from "../../lib/libraryCollections";
+import FolderPicker from "../shared/folders/FolderPicker";
 import { RightPanel } from "../main/rightPanel";
 import { indexCollection } from "./indexCollection";
 import LibraryMiss from "./LibraryMiss";
-import { useCollectionSummary } from "./useLibraryCollections";
+import { useCollectionSummary, useLibraryFolders } from "./useLibraryCollections";
 
 /**
  * **Add a collection** (`/library/new`, CTA-75) — a `.pgn` file picked, or
- * PGN text pasted, becomes a new one-level folder of the Library holding its
+ * PGN text pasted, becomes a new collection of the Library holding its
  * games (`lib/libraryCollectionStore.ts`), and the reader lands on its table.
  *
  * A file and a paste go through the **same** reading (`readCollectionText`:
@@ -45,10 +46,16 @@ import { useCollectionSummary } from "./useLibraryCollections";
  * collections only): the same reading and the same check, and the games are
  * added at the end of that collection (`appendCollectionGames`) rather than
  * kept as a new one, and the reader goes back to its table.
+ *
+ * **A new collection is filed in a folder** (CTA-88): the picker starts at the
+ * top level, or at `?folder=<id>` — a folder row's *Add a collection here*.
+ * A folder that is not the reader's (gone, or Built-in) is the top level.
  */
-function LibraryUpload({ into }: { into?: CollectionSummary }) {
+function LibraryUpload({ into, folder = null }: { into?: CollectionSummary; folder?: string | null }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const folders = useLibraryFolders() ?? [];
+  const [folderId, setFolderId] = useState<string | null>(folder);
   const [name, setName] = useState("");
   const [pasted, setPasted] = useState("");
   const [problem, setProblem] = useState<string | null>(null);
@@ -104,7 +111,7 @@ function LibraryUpload({ into }: { into?: CollectionSummary }) {
       navigate(`/library/${encodeURIComponent(into.id)}`);
       return;
     }
-    const added = await addCollection(chosen, reading.games, rows);
+    const added = await addCollection(chosen, reading.games, rows, undefined, undefined, folderId);
     setIndexing(null);
     if ("problem" in added) {
       setProblem(added.problem);
@@ -116,7 +123,14 @@ function LibraryUpload({ into }: { into?: CollectionSummary }) {
   /** A collection with no games yet — named as typed, else "New collection". */
   const createEmpty = async () => {
     setProblem(null);
-    const added = await addCollection(name.trim() || t("library.upload.emptyName"), [], []);
+    const added = await addCollection(
+      name.trim() || t("library.upload.emptyName"),
+      [],
+      [],
+      undefined,
+      undefined,
+      folderId,
+    );
     if ("problem" in added) {
       setProblem(added.problem);
       return;
@@ -204,6 +218,36 @@ function LibraryUpload({ into }: { into?: CollectionSummary }) {
           </Box>
         )}
 
+        {into === undefined && folders.length > 0 && (
+          <Box>
+            <Typography variant="caption" component="div" sx={{ color: "text.secondary", mb: 0.5 }}>
+              {t("library.upload.folder")}
+            </Typography>
+            <Box
+              sx={{
+                maxHeight: 180,
+                overflowY: "auto",
+                border: "1px solid",
+                borderColor: "divider",
+                borderRadius: 1,
+                p: 0.5,
+                opacity: indexing !== null ? 0.5 : 1,
+                pointerEvents: indexing !== null ? "none" : undefined,
+              }}
+            >
+              <FolderPicker
+                labelKey="library"
+                idPrefix="library-upload-folder"
+                folders={folders}
+                value={folderId}
+                onChange={setFolderId}
+                noneLabel={t("library.folder.topLevel")}
+                noneTestId="library-upload-folder-top"
+              />
+            </Box>
+          </Box>
+        )}
+
         <Box>
           <Button
             component="label"
@@ -287,22 +331,30 @@ function LibraryUpload({ into }: { into?: CollectionSummary }) {
 }
 
 /**
- * The route: a new collection, or — `?into=<collection>` — games added to one
- * of the reader's own. A shipped collection, or one that is not there, is the miss.
+ * The route: a new collection — `?folder=<id>` filed in one of the reader's
+ * folders, waiting for them to be read — or, `?into=<collection>`, games
+ * added to one of the reader's own. A shipped collection, or one that is not
+ * there, is the miss.
  */
 function LibraryUploadRoute() {
   const [params] = useSearchParams();
   const into = params.get("into");
+  const folder = params.get("folder");
   const state = useCollectionSummary(into ?? undefined);
+  const folders = useLibraryFolders();
   const { t } = useTranslation();
-  if (into === null) return <LibraryUpload />;
-  if (state.status === "loading") {
-    return (
-      <Typography data-testid="library-loading" sx={{ color: "text.secondary", p: 2 }}>
-        {t("library.table.loading")}
-      </Typography>
-    );
+  const loading = (
+    <Typography data-testid="library-loading" sx={{ color: "text.secondary", p: 2 }}>
+      {t("library.table.loading")}
+    </Typography>
+  );
+  if (into === null) {
+    if (folder === null) return <LibraryUpload />;
+    if (folders === undefined) return loading;
+    const known = folders.some((candidate) => candidate.id === folder);
+    return <LibraryUpload key={folder} folder={known ? folder : null} />;
   }
+  if (state.status === "loading") return loading;
   if (state.status === "missing" || state.summary.source !== "uploaded") {
     return <LibraryMiss what="collection" />;
   }

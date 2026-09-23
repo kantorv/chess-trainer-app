@@ -74,11 +74,18 @@ const repertoire = (id: string, folderId: string | null, text = pgn(`Rep ${id}`)
 
 const repFolder = (id: string, name: string): RepertoireFolder => ({ id, name, savedAt: AT, updatedAt: AT });
 
-const summary = (id: string, name: string, source: "shipped" | "uploaded", count: number): CollectionSummary => ({
+const summary = (
+  id: string,
+  name: string,
+  source: "shipped" | "uploaded",
+  count: number,
+  folderId: string | null = null,
+): CollectionSummary => ({
   id,
   name,
   source,
   count,
+  ...(source === "uploaded" ? { folderId } : {}),
 });
 
 const EMPTY: ExportSource = {
@@ -88,6 +95,7 @@ const EMPTY: ExportSource = {
   repertoires: [],
   repertoireFolders: [],
   collections: [],
+  collectionFolders: [],
 };
 
 const ALL: ExportSelection = {
@@ -146,7 +154,7 @@ describe("buildExport", () => {
     expect(bundle.manifest.categories).toEqual(["collections", "games", "analyses", "repertoires"]);
     expect(bundle.files).toEqual([]);
     expect(bundle.manifest.files).toEqual([]);
-    expect(bundle.manifest.folders).toEqual({ analyses: [], repertoires: [] });
+    expect(bundle.manifest.folders).toEqual({ analyses: [], repertoires: [], collections: [] });
   });
 
   it("joins the played games byte for byte, in store order, with their records", () => {
@@ -251,6 +259,58 @@ describe("buildExport", () => {
     ]);
   });
 
+  it("files the collections in directories mirroring the Library's folders, shipped ones in built-in", () => {
+    const bundle = build(
+      {
+        collections: [
+          { summary: summary("s1", "World Cup", "shipped", 1), games: [pgn("S")] },
+          { summary: summary("u1", "Najdorf games", "uploaded", 1, "sic"), games: [pgn("A")] },
+          { summary: summary("u2", "Loose", "uploaded", 1, null), games: [pgn("B")] },
+          { summary: summary("u3", "Orphan", "uploaded", 1, "gone"), games: [pgn("C")] },
+          { summary: summary("u4", "Hebrew", "uploaded", 1, "he"), games: [pgn("D")] },
+          { summary: summary("u5", "Mine", "uploaded", 1, "bi"), games: [pgn("E")] },
+        ],
+        collectionFolders: [
+          folder("op", "Openings"),
+          folder("sic", "Sicilian", "op"),
+          folder("empty", "Empty", "op"),
+          folder("he", "פתיחות"),
+          folder("bi", "Built-in"),
+        ],
+      },
+      { collections: true, shippedCollections: true },
+    );
+    expect(bundle.files.map((file) => file.path)).toEqual([
+      "collections/built-in/world-cup.pgn",
+      "collections/openings/sicilian/najdorf-games.pgn",
+      "collections/loose.pgn",
+      // A folder that is gone is the top level.
+      "collections/orphan.pgn",
+      // A name with no ASCII is a folder; a reader's "Built-in" does not take Built-in's directory.
+      "collections/folder/hebrew.pgn",
+      "collections/built-in-2/mine.pgn",
+    ]);
+    const paths = bundle.manifest.files.map((file) =>
+      file.kind === "collection" ? [file.collection.id, file.collection.folderPath] : null,
+    );
+    expect(paths).toEqual([
+      ["s1", undefined],
+      ["u1", ["Openings", "Sicilian"]],
+      ["u2", []],
+      ["u3", []],
+      ["u4", ["פתיחות"]],
+      ["u5", ["Built-in"]],
+    ]);
+    // The whole tree rides along, the empty folder too.
+    expect(bundle.manifest.folders.collections).toEqual([
+      ["Built-in"],
+      ["Openings"],
+      ["Openings", "Empty"],
+      ["Openings", "Sicilian"],
+      ["פתיחות"],
+    ]);
+  });
+
   it("exports uploaded collections always, and shipped ones only when asked", () => {
     const collections = [
       { summary: summary("world-cup", "World Cup", "shipped", 2), games: [pgn("S1"), pgn("S2")] },
@@ -264,17 +324,17 @@ describe("buildExport", () => {
     expect(withShipped.manifest.includeShippedCollections).toBe(true);
     expect(withShipped.manifest.files).toEqual([
       {
-        path: "collections/world-cup.pgn",
+        path: "collections/built-in/world-cup.pgn",
         kind: "collection",
         collection: { id: "world-cup", name: "World Cup", source: "shipped", games: 2 },
       },
       {
         path: "collections/mine.pgn",
         kind: "collection",
-        collection: { id: "u1", name: "Mine", source: "uploaded", games: 1 },
+        collection: { id: "u1", name: "Mine", source: "uploaded", games: 1, folderPath: [] },
       },
     ]);
-    expect(fileText(withShipped, "collections/world-cup.pgn")).toBe(`${pgn("S1")}\n\n${pgn("S2")}\n`);
+    expect(fileText(withShipped, "collections/built-in/world-cup.pgn")).toBe(`${pgn("S1")}\n\n${pgn("S2")}\n`);
   });
 
   it("does not export shipped collections when Collections is not ticked", () => {

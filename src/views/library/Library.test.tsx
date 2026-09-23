@@ -14,6 +14,12 @@ import {
   uploadedCollectionsSnapshot,
 } from "../../lib/libraryCollectionStore";
 import {
+  createLibraryFolder,
+  libraryFoldersSnapshot,
+  loadLibraryFolders,
+  resetLibraryFolderStore,
+} from "../../lib/libraryFolderStore";
+import {
   collectionFacetsOf,
   collectionRowOf,
   filteredRows,
@@ -103,8 +109,15 @@ const mount = (entry: string) =>
     </AppThemeWithLang>,
   );
 
-const keep = async (name: string, games: string[]) => {
-  const added = await addCollection(name, games, games.map((pgn) => indexedRowOf(pgn)));
+const keep = async (name: string, games: string[], folderId: string | null = null, at?: string) => {
+  const added = await addCollection(
+    name,
+    games,
+    games.map((pgn) => indexedRowOf(pgn)),
+    at === undefined ? undefined : new Date(at),
+    undefined,
+    folderId,
+  );
   if (!("collection" in added)) throw new Error("not added");
   return added.collection;
 };
@@ -163,6 +176,7 @@ const rowNumbers = () =>
 
 beforeEach(async () => {
   localStorage.clear();
+  resetLibraryFolderStore();
   await resetLibraryCollectionStore();
   FakeEngine.reset();
   await i18n.changeLanguage("en");
@@ -188,14 +202,16 @@ describe("the Library's collections", () => {
       `/library/${mine.id}`,
     );
     expect(screen.getByTestId("library-count")).toHaveTextContent("4 collections");
-    expect(within(screen.getByTestId(`library-collection-${mine.id}`)).getByText("3 games")).toBeInTheDocument();
+    expect(within(screen.getByTestId(`library-row-${mine.id}`)).getByText("3")).toBeInTheDocument();
   });
 
   it("counts the shipped collections off the manifest, fetching nothing", () => {
     mount("/library");
     // On the first frame, no fetch awaited.
-    expect(within(screen.getByTestId("library-collection-morphy")).getByText("211 games")).toBeInTheDocument();
-    expect(within(screen.getByTestId("library-collection-worldcup2023")).getByText("674 games")).toBeInTheDocument();
+    expect(within(screen.getByTestId("library-row-morphy")).getByText("211")).toBeInTheDocument();
+    expect(within(screen.getByTestId("library-row-worldcup2023")).getByText("674")).toBeInTheDocument();
+    // Built-in holds them all.
+    expect(within(screen.getByTestId("library-folder-builtin")).getByText("930")).toBeInTheDocument();
     for (const entry of shippedCollections) {
       expect(peekShippedRows(entry.id)).toBeUndefined();
       expect(peekShippedGames(entry.id)).toBeUndefined();
@@ -268,6 +284,251 @@ describe("the Library's collections", () => {
 
     fireEvent.click(screen.getByTestId(`library-collection-download-${mine.id}`));
     await waitFor(() => expect(downloadPgn).toHaveBeenLastCalledWith("club-games", GAMES));
+  });
+});
+
+describe("the Library's folders (CTA-88)", () => {
+  /** The table's rows, as their test ids, in the order on screen. */
+  const listRows = () =>
+    within(screen.getByTestId("library-collections"))
+      // A closing dialog still hides the page from the accessibility tree.
+      .getAllByRole("row", { hidden: true })
+      .slice(1)
+      .map((row) => row.getAttribute("data-testid"));
+  const folderOf = async (name: string) =>
+    (await loadUploadedCollections()).find((row) => row.name === name)?.folderId;
+  const nameFolder = (name: string) => {
+    fireEvent.change(screen.getByTestId("library-folder-name-input"), { target: { value: name } });
+    fireEvent.click(screen.getByTestId("library-folder-name-save"));
+  };
+  const made = async (name: string, parentId: string | null = null) => {
+    const folder = await createLibraryFolder(name, parentId);
+    if (folder === undefined) throw new Error("not made");
+    return folder;
+  };
+
+  it("keeps the shipped collections in Built-in: first, open, and read-only", async () => {
+    const box = await made("Box");
+    mount("/library");
+    await screen.findByTestId(`library-folder-${box.id}`);
+
+    expect(listRows()).toEqual([
+      "library-folder-builtin",
+      "library-row-bucharest2023",
+      "library-row-morphy",
+      "library-row-worldcup2023",
+      `library-folder-${box.id}`,
+    ]);
+    expect(screen.getByTestId("library-folder-builtin-toggle")).toHaveAttribute("aria-expanded", "true");
+    const actions = screen.getByTestId("library-folder-actions-builtin");
+    expect(within(actions).getByTestId("library-folder-download-builtin")).toBeInTheDocument();
+    for (const action of ["upload", "new", "rename", "move", "delete"]) {
+      expect(screen.queryByTestId(`library-folder-${action}-builtin`)).toBeNull();
+      expect(screen.getByTestId(`library-folder-${action}-${box.id}`)).toBeInTheDocument();
+    }
+    // Its collections only download, and have no date.
+    expect(screen.getByTestId("library-collection-download-morphy")).toBeInTheDocument();
+    expect(screen.queryByTestId("library-collection-move-morphy")).toBeNull();
+    expect(screen.queryByTestId("library-collection-delete-morphy")).toBeNull();
+    expect(within(screen.getByTestId("library-row-morphy")).getByText("—")).toBeInTheDocument();
+    // Nothing can be filed in it.
+    fireEvent.click(screen.getByTestId(`library-folder-move-${box.id}`));
+    expect(screen.queryByTestId("library-folder-picker-builtin")).toBeNull();
+  });
+
+  it("creates folders at the top level and inside one, and opens and closes them in place", async () => {
+    const mine = await upload();
+    mount("/library");
+    await screen.findByTestId(`library-row-${mine.id}`);
+
+    fireEvent.click(screen.getByTestId("library-new-folder"));
+    nameFolder("Openings");
+    await waitFor(() => expect(libraryFoldersSnapshot()).toHaveLength(1));
+    const [openings] = libraryFoldersSnapshot()!;
+    const openingsRow = await screen.findByTestId(`library-folder-${openings.id}`);
+    // Folders come before the collections of their level.
+    expect(listRows().indexOf(`library-folder-${openings.id}`)).toBeLessThan(listRows().indexOf(`library-row-${mine.id}`));
+    expect(within(openingsRow).getByText("Openings")).toHaveAttribute("dir", "auto");
+
+    fireEvent.click(screen.getByTestId(`library-folder-new-${openings.id}`));
+    nameFolder("Sicilian");
+    await waitFor(() => expect(libraryFoldersSnapshot()).toHaveLength(2));
+    const sicilian = libraryFoldersSnapshot()!.find((folder) => folder.name === "Sicilian")!;
+    expect(sicilian.parentId).toBe(openings.id);
+    // Its parent opened to show it.
+    expect(await screen.findByTestId(`library-folder-${sicilian.id}`)).toBeInTheDocument();
+    expect(screen.getByTestId(`library-folder-${openings.id}-toggle`)).toHaveAttribute("aria-expanded", "true");
+
+    // A click on the row closes it; on the chevron, opens it again.
+    fireEvent.click(openingsRow);
+    expect(screen.queryByTestId(`library-folder-${sicilian.id}`)).toBeNull();
+    fireEvent.click(screen.getByTestId(`library-folder-${openings.id}-toggle`));
+    expect(screen.getByTestId(`library-folder-${sicilian.id}`)).toBeInTheDocument();
+    // Built-in closes too.
+    fireEvent.click(screen.getByTestId("library-folder-builtin-toggle"));
+    expect(screen.queryByTestId("library-row-morphy")).toBeNull();
+  });
+
+  it("opens a collection from its row, with a real link in its name", async () => {
+    const box = await made("Box");
+    const mine = await keep("Club games", GAMES, box.id);
+    mount("/library");
+    fireEvent.click(await screen.findByTestId(`library-folder-${box.id}`));
+    expect(screen.getByTestId(`library-collection-${mine.id}`)).toHaveAttribute("href", `/library/${mine.id}`);
+    fireEvent.click(screen.getByTestId(`library-row-${mine.id}`));
+    expect(where()).toBe(`/library/${mine.id}`);
+  });
+
+  it("uploads into a folder from its row, the picker starting there", async () => {
+    const box = await made("Box");
+    mount("/library");
+    fireEvent.click(await screen.findByTestId(`library-folder-upload-${box.id}`));
+    expect(where()).toBe(`/library/new?folder=${box.id}`);
+    expect(await screen.findByTestId(`library-upload-folder-picker-${box.id}`)).toHaveClass("Mui-selected");
+
+    // One game: the upload is a real index pass.
+    fireEvent.change(screen.getByTestId("library-upload-paste"), { target: { value: GAMES[0] } });
+    fireEvent.click(screen.getByTestId("library-upload-save"));
+    await waitFor(() => expect(where()).toMatch(/^\/library\/u/), { timeout: 4000 });
+    expect(await folderOf("Club")).toBe(box.id);
+  });
+
+  it("files an empty collection in the folder picked, and a folder that is not the reader's at the top level", async () => {
+    const box = await made("Box");
+    mount("/library/new");
+    fireEvent.click(await screen.findByTestId(`library-upload-folder-picker-${box.id}`));
+    fireEvent.change(screen.getByTestId("library-upload-name"), { target: { value: "Picked" } });
+    fireEvent.click(screen.getByTestId("library-upload-empty"));
+    await waitFor(() => expect(where()).toMatch(/^\/library\/u/));
+    expect(await folderOf("Picked")).toBe(box.id);
+
+    for (const folder of ["builtin", "nowhere"]) {
+      cleanupAndMount(`/library/new?folder=${folder}`);
+      expect(await screen.findByTestId("library-upload-folder-top")).toHaveClass("Mui-selected");
+    }
+    fireEvent.change(screen.getByTestId("library-upload-name"), { target: { value: "Loose" } });
+    fireEvent.click(screen.getByTestId("library-upload-empty"));
+    await waitFor(() => expect(where()).toMatch(/^\/library\/u/));
+    expect(await folderOf("Loose")).toBeNull();
+  });
+
+  it("moves a collection and a folder with Move to…, never a folder into its own subtree", async () => {
+    const a = await made("A");
+    const b = await made("B", a.id);
+    const c = await made("C");
+    const mine = await upload();
+    mount("/library");
+
+    fireEvent.click(await screen.findByTestId(`library-collection-move-${mine.id}`));
+    fireEvent.click(within(screen.getByTestId("library-collection-move-dialog")).getByTestId(`library-folder-picker-${b.id}`));
+    await waitFor(async () => expect(await folderOf("Club games")).toBe(b.id));
+    // It left the top level for B, which is closed.
+    await waitFor(() => expect(screen.queryByTestId(`library-row-${mine.id}`)).toBeNull());
+    await waitFor(() => expect(screen.queryByTestId("library-collection-move-dialog")).toBeNull());
+
+    fireEvent.click(screen.getByTestId(`library-folder-move-${a.id}`));
+    expect(screen.queryByTestId(`library-folder-picker-${a.id}`)).toBeNull();
+    expect(screen.queryByTestId(`library-folder-picker-${b.id}`)).toBeNull();
+    fireEvent.click(screen.getByTestId(`library-folder-picker-${c.id}`));
+    await waitFor(() => expect(libraryFoldersSnapshot()?.find((row) => row.id === a.id)?.parentId).toBe(c.id));
+  });
+
+  it("renames a folder, and deletes one keeping its contents in its parent — asking first when it holds any", async () => {
+    const top = await made("Top");
+    const doomed = await made("Doomed", top.id);
+    const kept = await made("Kept", doomed.id);
+    await keep("Inside", GAMES, doomed.id);
+    const empty = await made("Empty");
+    mount("/library");
+
+    fireEvent.click(await screen.findByTestId(`library-folder-rename-${top.id}`));
+    expect(screen.getByTestId("library-folder-name-input")).toHaveValue("Top");
+    nameFolder("Renamed");
+    await waitFor(() => expect(screen.getByTestId(`library-folder-${top.id}`)).toHaveTextContent("Renamed"));
+
+    // An empty folder goes at once.
+    fireEvent.click(screen.getByTestId(`library-folder-delete-${empty.id}`));
+    await waitFor(() => expect(screen.queryByTestId(`library-folder-${empty.id}`)).toBeNull());
+
+    fireEvent.click(screen.getByTestId(`library-folder-${top.id}`));
+    fireEvent.click(await screen.findByTestId(`library-folder-delete-${doomed.id}`));
+    expect(screen.getByTestId("library-folder-delete-counts")).toHaveTextContent("1 collections and 1 sub-folders");
+    expect(screen.getByRole("dialog")).toHaveTextContent(i18n.t("library.folder.deleteConfirm"));
+    fireEvent.click(screen.getByTestId("library-folder-delete-confirm"));
+    await waitFor(async () => expect(await folderOf("Inside")).toBe(top.id));
+    expect((await loadLibraryFolders()).find((row) => row.id === kept.id)?.parentId).toBe(top.id);
+  });
+
+  it("filters by name, opening the folders above a match, and shows a folder whose name matches", async () => {
+    const a = await made("Archive");
+    const b = await made("Blitz", a.id);
+    const mine = await keep("Club games", GAMES, b.id);
+    mount("/library");
+    await screen.findByTestId(`library-folder-${a.id}`);
+    expect(screen.queryByTestId(`library-row-${mine.id}`)).toBeNull();
+
+    fireEvent.change(screen.getByTestId("library-filter"), { target: { value: "club" } });
+    expect(where()).toBe("/library?q=club");
+    expect(listRows()).toEqual([`library-folder-${a.id}`, `library-folder-${b.id}`, `library-row-${mine.id}`]);
+    expect(screen.getByTestId("library-count")).toHaveTextContent("1 of 4 collections");
+
+    // The reader can still close what the filter opened.
+    fireEvent.click(screen.getByTestId(`library-folder-${b.id}-toggle`));
+    expect(listRows()).toEqual([`library-folder-${a.id}`, `library-folder-${b.id}`]);
+
+    fireEvent.change(screen.getByTestId("library-filter"), { target: { value: "blitz" } });
+    expect(listRows()).toEqual([`library-folder-${a.id}`, `library-folder-${b.id}`]);
+    expect(screen.getByTestId(`library-folder-${b.id}-toggle`)).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(screen.getByTestId(`library-folder-${b.id}`));
+    expect(listRows()).toContain(`library-row-${mine.id}`);
+
+    fireEvent.change(screen.getByTestId("library-filter"), { target: { value: "nothing like it" } });
+    expect(screen.getByTestId("library-no-matches")).toBeInTheDocument();
+  });
+
+  it("sorts by Name, Games and Added from the headers, in the URL, folders always first", async () => {
+    const box = await made("Zeta box");
+    const small = await keep("Aardvark", GAMES.slice(0, 1), null, "2026-01-01T00:00:00Z");
+    const big = await keep("Mid", GAMES, null, "2026-03-01T00:00:00Z");
+    mount("/library");
+    await screen.findByTestId(`library-row-${big.id}`);
+    fireEvent.click(screen.getByTestId("library-folder-builtin-toggle"));
+    const order = [`library-folder-builtin`, `library-folder-${box.id}`];
+    expect(listRows()).toEqual([...order, `library-row-${small.id}`, `library-row-${big.id}`]);
+
+    fireEvent.click(screen.getByTestId("library-collections-sort-games"));
+    expect(where()).toBe("/library?sort=games");
+    expect(listRows()).toEqual([...order, `library-row-${big.id}`, `library-row-${small.id}`]);
+    fireEvent.click(screen.getByTestId("library-collections-sort-games"));
+    expect(where()).toBe("/library?sort=games&dir=asc");
+    expect(listRows()).toEqual([...order, `library-row-${small.id}`, `library-row-${big.id}`]);
+
+    fireEvent.click(screen.getByTestId("library-collections-sort-added"));
+    expect(where()).toBe("/library?sort=added");
+    expect(listRows()).toEqual([...order, `library-row-${big.id}`, `library-row-${small.id}`]);
+
+    fireEvent.click(screen.getByTestId("library-collections-sort-name"));
+    expect(where()).toBe("/library");
+    fireEvent.click(screen.getByTestId("library-collections-sort-name"));
+    expect(where()).toBe("/library?dir=desc");
+    expect(listRows()).toEqual([...order, `library-row-${big.id}`, `library-row-${small.id}`]);
+
+    cleanupAndMount("/library?sort=games&dir=asc");
+    await screen.findByTestId(`library-row-${big.id}`);
+    expect(listRows().slice(-2)).toEqual([`library-row-${small.id}`, `library-row-${big.id}`]);
+  });
+
+  it("downloads a folder's whole subtree as one PGN, reading the games only then", async () => {
+    vi.mocked(downloadPgn).mockClear();
+    const top = await made("Top");
+    const inner = await made("Inner", top.id);
+    await keep("B games", GAMES.slice(1), top.id);
+    await keep("A games", GAMES.slice(0, 1), inner.id);
+    mount("/library");
+    fireEvent.click(await screen.findByTestId(`library-folder-download-${top.id}`));
+    await waitFor(() => expect(downloadPgn).toHaveBeenCalledTimes(1));
+    expect(downloadPgn).toHaveBeenLastCalledWith("top", [GAMES[0], GAMES[1], GAMES[2]]);
+    expect(where()).toBe("/library");
   });
 });
 

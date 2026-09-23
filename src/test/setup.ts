@@ -41,7 +41,7 @@ if (!globalThis.ResizeObserver) {
   cache hits.
 */
 const recordStores = async () => {
-  const [played, analyses, analysisFolders, analysisDb, repertoires, repertoireFolders, repertoireDb] =
+  const [played, analyses, analysisFolders, analysisDb, repertoires, repertoireFolders, repertoireDb, libraryFolders] =
     await Promise.all([
       import("../lib/playedGameStore"),
       import("../lib/savedAnalysisStore"),
@@ -50,6 +50,7 @@ const recordStores = async () => {
       import("../lib/savedRepertoireStore"),
       import("../lib/savedRepertoireFolderStore"),
       import("../lib/savedRepertoireDb"),
+      import("../lib/libraryFolderStore"),
     ]);
   return {
     settled: [
@@ -58,6 +59,7 @@ const recordStores = async () => {
       played.settledPlayedGames,
       repertoires.settledSavedRepertoires,
       repertoireFolders.settledRepertoireFolders,
+      libraryFolders.settledLibraryFolders,
     ],
     reset: [
       analyses.resetSavedAnalysisStore,
@@ -65,6 +67,7 @@ const recordStores = async () => {
       played.resetPlayedGameStore,
       repertoires.resetSavedRepertoireStore,
       repertoireFolders.resetRepertoireFolderStore,
+      libraryFolders.resetLibraryFolderStore,
     ],
     remove: [analysisDb.deleteAnalysisDb, played.deleteEngineDb, repertoireDb.deleteRepertoireDb],
   };
@@ -74,8 +77,9 @@ afterEach(async () => {
   cleanup();
   localStorage.clear();
   // Every record store is IndexedDB's: what each store kept, and the
-  // databases themselves, go as `localStorage` does. (The Library's store is
-  // reset by the tests that use it — `resetLibraryCollectionStore`.) First
+  // databases themselves, go as `localStorage` does. (The Library's
+  // database is deleted by the tests that use it — `resetLibraryCollectionStore`;
+  // its folder store is forgotten here with the others.) First
   // the writes a screen left in flight land, twice over — a folder's delete
   // queues its records' unfiling behind it — so none reaches the next test.
   const stores = await recordStores();

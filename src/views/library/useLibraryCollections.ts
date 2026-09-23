@@ -9,6 +9,8 @@ import {
   uploadedCollectionsSnapshot,
 } from "../../lib/libraryCollectionStore";
 import type { CollectionRow, CollectionSummary } from "../../lib/libraryCollections";
+import { libraryFoldersSnapshot, subscribeLibraryFolders } from "../../lib/libraryFolderStore";
+import type { GameFolder } from "../../lib/savedGameFolders";
 import {
   findShippedCollection,
   peekShippedGames,
@@ -30,6 +32,10 @@ import {
  * when nothing has been — so an Update made on a board is in the table on
  * the way back.
  */
+
+/** The reader's Library folders (CTA-88) — `undefined` while the first read is out. */
+export const useLibraryFolders = (): readonly GameFolder[] | undefined =>
+  useSyncExternalStore(subscribeLibraryFolders, libraryFoldersSnapshot, libraryFoldersSnapshot);
 
 /** The reader's uploaded collections, newest first — `undefined` while the first read is out. */
 export const useUploadedCollections = (): readonly CollectionSummary[] | undefined =>

@@ -10,6 +10,7 @@ import type { PlayedGame, PlayedGameMask } from "./playedGames";
 import type { RepertoireSettings } from "./repertoireSettings";
 import type { SavedAnalysis } from "./savedAnalyses";
 import { analysisFolderPath, type AnalysisFolder } from "./savedAnalysisFolders";
+import { flattenGameFolders, gameFolderPath, type GameFolder } from "./savedGameFolders";
 import {
   repertoiresInFolder,
   sortedRepertoireFolders,
@@ -32,14 +33,17 @@ import type { RepertoireStats, SavedRepertoire } from "./savedRepertoires";
  * | --- | --- | --- |
  * | Games | `games.pgn` | played game (Play with Engine, Masked Pieces) |
  * | Analyses | `analyses.pgn` | saved analysis |
- * | Collections | `collections/<name>.pgn`, one per collection | game of the collection |
+ * | Collections | `collections/<folder>/…/<name>.pgn`, one per collection, in directories mirroring the Library's folders; shipped ones in `collections/built-in/` | game of the collection |
  * | Repertoires | `repertoires/<folder>.pgn` per folder, and `repertoires/unfiled.pgn` | repertoire |
  *
  * Every PGN is the stored text joined as it stands (`pgnFileOf`) — nothing is
  * re-serialised, so a record this build cannot read still exports byte for
  * byte. A file with no games in it is not written. File names are slugified
  * ({@link slugify}; a name with no ASCII falls back to the record's id, or
- * `folder`) and made unique inside their directory with `-2`, `-3`, ….
+ * `folder`) and made unique inside their directory with `-2`, `-3`, …. A
+ * Library folder's directory is its name the same way, unique among its
+ * siblings; `built-in` is reserved at the top of `collections/` for the
+ * shipped collections' Built-in folder.
  *
  * ## The manifest
  *
@@ -84,6 +88,8 @@ export type ExportSource = {
   repertoires: readonly SavedRepertoire[];
   repertoireFolders: readonly RepertoireFolder[];
   collections: readonly ExportCollection[];
+  /** The Library's folders (CTA-88) — the ones the uploaded collections are filed in. */
+  collectionFolders: readonly GameFolder[];
 };
 
 /** Where a record sits in its file. */
@@ -129,7 +135,18 @@ type ExportFileEntry =
   | {
       path: string;
       kind: "collection";
-      collection: { id: string; name: string; source: CollectionSource; games: number };
+      collection: {
+        id: string;
+        name: string;
+        source: CollectionSource;
+        games: number;
+        /**
+         * An upload's Library folder, names from the top down; `[]` is the top
+         * level, as is a folder that is gone. Absent for a shipped collection,
+         * which is always in Built-in.
+         */
+        folderPath?: readonly string[];
+      };
     }
   | {
       path: string;
@@ -153,6 +170,8 @@ export type ExportManifest = {
     analyses?: string[][];
     /** Every repertoire folder's name (one level), in name order. */
     repertoires?: string[];
+    /** Every Library folder as its path of names, parents before children (Built-in is not one). */
+    collections?: string[][];
   };
   files: ExportFileEntry[];
 };
@@ -236,10 +255,13 @@ const repertoireEntry = (saved: SavedRepertoire, place: Placed): RepertoireEntry
   updatedAt: saved.updatedAt,
 });
 
-/** Every analysis folder as its path of names, parents first, siblings by name. */
-const analysisFolderPaths = (folders: readonly AnalysisFolder[]): string[][] =>
+/** The shipped collections' directory — their Built-in folder, reserved at the top of `collections/`. */
+const BUILT_IN_DIRECTORY = "built-in";
+
+/** Every folder of a nested tree as its path of names, parents first, siblings by name. */
+const folderPaths = (folders: readonly GameFolder[]): string[][] =>
   folders
-    .map((folder) => analysisFolderPath(folders, folder.id).map((step) => step.name))
+    .map((folder) => gameFolderPath(folders, folder.id).map((step) => step.name))
     .sort((a, b) => {
       for (let at = 0; at < Math.min(a.length, b.length); at += 1) {
         const order = a[at].localeCompare(b[at]);
@@ -247,6 +269,35 @@ const analysisFolderPaths = (folders: readonly AnalysisFolder[]): string[][] =>
       }
       return a.length - b.length;
     });
+
+/**
+ * Where each Library folder's collections go: its directory under
+ * `collections/` — its ancestors' directories, then its own name, unique
+ * among its siblings (`built-in` reserved at the top) — and its path of names.
+ * Parents before children, so a parent's place is known first; a folder the
+ * tree cannot reach (a hand-made cycle) has none, and its collections go to
+ * the top level.
+ */
+const libraryFolderPlaces = (
+  folders: readonly GameFolder[],
+): Map<string, { directory: string; names: readonly string[] }> => {
+  const places = new Map<string, { directory: string; names: readonly string[] }>();
+  const minters = new Map<string, ReturnType<typeof uniqueNames>>();
+  for (const { folder } of flattenGameFolders(folders)) {
+    const parent = folder.parentId === null ? undefined : places.get(folder.parentId);
+    const within = parent?.directory ?? "collections";
+    let mint = minters.get(within);
+    if (mint === undefined) {
+      mint = uniqueNames(parent === undefined ? [BUILT_IN_DIRECTORY] : []);
+      minters.set(within, mint);
+    }
+    places.set(folder.id, {
+      directory: `${within}/${mint(folder.name, "folder")}`,
+      names: [...(parent?.names ?? []), folder.name],
+    });
+  }
+  return places;
+};
 
 /**
  * **The export, built** — the files and the manifest for what the reader
@@ -290,24 +341,45 @@ export const buildExport = (
       savedAt: analysis.savedAt,
       updatedAt: analysis.updatedAt,
     }));
-    folders.analyses = analysisFolderPaths(source.analysisFolders);
+    folders.analyses = folderPaths(source.analysisFolders);
     if (records.length > 0) {
       add(pgnFileOf(pgns), { path: "analyses.pgn", kind: "analyses", records });
     }
   }
 
   if (selection.collections) {
-    const name = uniqueNames();
+    const places = libraryFolderPlaces(source.collectionFolders);
+    // One file-name minter per directory.
+    const minters = new Map<string, ReturnType<typeof uniqueNames>>();
+    const name = (directory: string, text: string, fallback: string) => {
+      let mint = minters.get(directory);
+      if (mint === undefined) minters.set(directory, (mint = uniqueNames()));
+      return mint(text, fallback);
+    };
     const wanted = new Set(exportedCollections(source.collections.map((c) => c.summary), selection));
     for (const { summary, games } of source.collections.filter((c) => wanted.has(c.summary))) {
       const kept = games.filter((game) => game.trim() !== "");
       if (kept.length === 0) continue;
+      const place =
+        summary.source === "shipped"
+          ? { directory: `collections/${BUILT_IN_DIRECTORY}`, names: undefined }
+          : ((summary.folderId != null ? places.get(summary.folderId) : undefined) ?? {
+              directory: "collections",
+              names: [],
+            });
       add(pgnFileOf(kept), {
-        path: `collections/${name(summary.name, summary.id)}.pgn`,
+        path: `${place.directory}/${name(place.directory, summary.name, summary.id)}.pgn`,
         kind: "collection",
-        collection: { id: summary.id, name: summary.name, source: summary.source, games: kept.length },
+        collection: {
+          id: summary.id,
+          name: summary.name,
+          source: summary.source,
+          games: kept.length,
+          ...(place.names === undefined ? {} : { folderPath: place.names }),
+        },
       });
     }
+    folders.collections = folderPaths(source.collectionFolders);
   }
 
   if (selection.repertoires) {
