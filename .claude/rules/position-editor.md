@@ -9,10 +9,11 @@ paths:
 # The position editor — `views/shared/positionEditor/`
 
 A board a **position** is set up on, piece by piece, as one screen-agnostic
-component. The Lobby's new-game form hosts it in its **Board editor**
-tab; the Analysis Board is the next host. This file is the whole reference:
-the contract, the invariants, how a screen embeds it, how to test it and how
-to extend it. It loads when you work on the files in its `paths:` list.
+component. The Lobby's new-game form hosts it in its **Board editor** tab;
+the Analysis Board hosts it in its **Position** tab (CTA-87). This file is
+the whole reference: the contract, the invariants, how a screen embeds it,
+how to test it and how to extend it. It loads when you work on the files in
+its `paths:` list.
 
 [`chessboard.md`](./chessboard.md) is the authority on what a board *is*
 (spare pieces and `ChessboardProvider` §2 and §5, testing a board §8).
@@ -35,6 +36,7 @@ as `?fen=`, which each validates with `parseFen` and takes as initial state.
 | `src/lib/positionEditor.ts` | Pure: `fenFields` / `fenFromFields`, `enPassantOptions`, `positionProblems`, `START_POSITION` / `EMPTY_POSITION`. |
 | `src/views/shared/positionEditor/PositionEditor.test.tsx` | The component's tests, in a bare host (§5). |
 | `src/views/engine/games/NewGameForm.tsx` | **The first host** — the Lobby's form (§3). |
+| `src/views/tools/analysis/AnalysisBoard.tsx` | **The second host** — the Analysis Board's Position tab (§4). |
 | `src/lib/newGameLink.ts` | `newGameParams(settings, side, evalBar, fen?)` — Start's link, `fen` included for a custom position. |
 
 Locale keys: `positionEditor.*` in `src/locales/en.ts` / `he.ts` — top level,
@@ -140,14 +142,20 @@ switches off itself is the FEN tab's copy button.
 - Precedence on arrival is `arrivalOf`'s, unchanged: the Lobby always writes a
   `side`, which beats the position's side to move.
 
-## 4. The next host — the Analysis Board
+## 4. The second host — the Analysis Board's Position tab
 
-The intended shape, not built: a *Set up position* action (a Load-tab mode or
-a dialog) holding `usePositionEditor(core.fen)` and, on confirm, calling the
-core's `loadFen(editor.fen)` — the Analysis Board's own `?fen=` arrival does
-the same. Gate the confirm on `isValid` plus `parseFen`, exactly as the Lobby
-gates Start. The editor needs no change for it; if the host wants the board
-larger, `boardMaxWidth` is the knob.
+Built (CTA-87): a `BoardPanel` tab (Moves · Map · Load · **Position** ·
+Export · Engine) holding `usePositionEditor(core.fen)` — the position on
+screen, seeded on the first render only — and a **Set position and analyze**
+confirm. The hook's state is the screen's, so a switch of tab (the editor
+unmounts; only Moves and Map stay mounted) loses nothing. The confirm loads
+the edited FEN through the session's `loadFen` (`useAnalysisBoard`: a new
+unsaved analysis, like any Load) and clears the arrival's URL — and a
+position turns the board, so it faces the position's side to move, whatever
+the board faced before. The gate is the Lobby's — `isValid` plus `parseFen`:
+while the position cannot be analyzed, the confirm is a plain disabled button
+with a warning above it listing the problems. `boardMaxWidth` 360. Nothing
+in this folder changed for it.
 
 ---
 
@@ -167,6 +175,15 @@ larger, `boardMaxWidth` is the knob.
   mounts the form in its right panel): the two tabs with Start on both, the
   edited FEN on Start's link beside the Game tab's options, the Game tab's
   note and reset, Start off and why.
+- **The second host** — `AnalysisBoard.test.tsx`'s *Position tab* block: the
+  editor seeded from the position on screen (and only from it), the confirm
+  loading the edited FEN as a new analysis that turns the board and clears
+  the arrival's URL, the engine reading the confirmed position, the confirm
+  off with the problems listed while the position cannot be analyzed, and
+  the state surviving a switch of tab. The shared board stub keeps the
+  editor's provider options while its tab is open — a spare-piece board
+  renders with no options of its own (`boardTestHarness.tsx`,
+  `chessboard.md` §8).
 - `newGameLink.test.ts` — `newGameParams` with and without a `fen`.
 - The board's actual drawing, palette sizing and drag are a browser check.
 

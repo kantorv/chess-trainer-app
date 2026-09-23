@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
+import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import IconButton from "@mui/material/IconButton";
 import Switch from "@mui/material/Switch";
@@ -41,6 +43,8 @@ import BoardShell from "../../board/core/BoardShell";
 import { useVariationsExplorer } from "../../explorer/useVariationsExplorer";
 import RepertoireChangesBar from "../../repertoires/RepertoireChangesBar";
 import CurrentOpening from "../../shared/CurrentOpening";
+import PositionEditor from "../../shared/positionEditor/PositionEditor";
+import { usePositionEditor } from "../../shared/positionEditor/usePositionEditor";
 import AnalysisExport from "./AnalysisExport";
 import EngineThinking from "./EngineThinking";
 import PlayToggleButton from "./PlayToggleButton";
@@ -70,10 +74,15 @@ import { useAnalysisBoard, type AnalysisBoardStart } from "./useAnalysisBoard";
  * | Tree view | `useVariationsExplorer` | Moves (side lines, comment marks, evals, the move menu), Map, the comment block, the next-moves bar and arrows — editing on, *Play chances…* off (nothing here plays by chance) |
  * | Saving | `useAnalysisBoard` — explicit | no autosave: the header's Save lights while the board differs from its record, and opens the changes strip (Update / Save as copy / Discard); a board with no record yet saves through a name-and-folder dialog |
  *
- * **Tabs: Moves · Map · Load · Export · Engine.** Load brings a PGN (a file or
- * a paste — several games are merged onto the board or split into a folder of
- * saved analyses) or a FEN; Export copies the FEN, and copies or downloads the
- * PGN with or without comments, NAGs and side lines.
+ * **Tabs: Moves · Map · Load · Position · Export · Engine.** Load brings a
+ * PGN (a file or a paste — several games are merged onto the board or split
+ * into a folder of saved analyses) or a FEN; **Position** hosts the shared
+ * position editor
+ * ([`position-editor.md`](../../../../.claude/rules/position-editor.md) §4,
+ * CTA-87) — its state the screen's, seeded from the position on screen, and
+ * its confirm loads the edited FEN as a new unsaved analysis, turning the
+ * board to its side to move; Export copies the FEN, and copies or downloads
+ * the PGN with or without comments, NAGs and side lines.
  *
  * **Arrivals, read once** (arriving at the URL is what mounts the screen, and
  * the screen writes its own URL as the reader moves): `?fen=` (a position —
@@ -175,6 +184,25 @@ function AnalysisBoard() {
   });
   const boardOptions: ChessboardOptions = { arrows: explorer.arrows };
   const topLine = engine.analysis.lines.find((line) => line !== undefined);
+
+  /*
+    The Position tab's editor (CTA-87), its state the screen's — seeded from
+    the position on screen on the first render only, kept across switches of
+    tab. Confirming is gated exactly as the Lobby gates Start: the editor's
+    own `problems`, plus `parseFen` — the arrival's own gate, which a `?fen=`
+    it refused would be dropped silently by, so it is asked here too, a
+    safety net under `positionProblems`.
+  */
+  const editor = usePositionEditor(core.fen);
+  const analyzable = useMemo(() => {
+    if (!editor.isValid) return false;
+    try {
+      parseFen(editor.fen);
+      return true;
+    } catch {
+      return false;
+    }
+  }, [editor.isValid, editor.fen]);
 
   /*
     The URL, derived and written back with history replace: what the board
@@ -399,6 +427,42 @@ function AnalysisBoard() {
                     navigate(`/tools/analysis/saved?folder=${encodeURIComponent(folderId)}`)
                   }
                 />
+              ),
+            },
+            {
+              id: "position",
+              label: t("analysis.tabs.position"),
+              content: (
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 1, p: 1 }}>
+                  <PositionEditor editor={editor} testId="analysis-editor" boardMaxWidth={360} />
+                  {/* Off, it is a plain disabled button saying why — as the Lobby's Start. */}
+                  {!analyzable && (
+                    <Alert severity="warning" data-testid="analysis-editor-illegal" sx={{ py: 0.5 }}>
+                      {t("analysis.editor.illegal")}
+                      {editor.problems.length > 0 && (
+                        <Box component="ul" sx={{ m: 0, pl: 2 }}>
+                          {editor.problems.map((problem) => (
+                            <li key={problem}>{t(`positionEditor.problems.${problem}`)}</li>
+                          ))}
+                        </Box>
+                      )}
+                    </Alert>
+                  )}
+                  <Button
+                    size="small"
+                    variant="contained"
+                    disabled={!analyzable}
+                    onClick={() => {
+                      // The Load tab's FEN route: a new unsaved analysis, the
+                      // URL no longer naming what arrived.
+                      state.loadFen(editor.fen);
+                      clearArrivalUrl();
+                    }}
+                    data-testid="analysis-editor-confirm"
+                  >
+                    {t("analysis.editor.confirm")}
+                  </Button>
+                </Box>
               ),
             },
             {

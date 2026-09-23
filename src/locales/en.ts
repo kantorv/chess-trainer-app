@@ -498,11 +498,12 @@ const en = {
     },
   },
   analysis: {
-    /** The Analysis Board's tabs (CTA-73). */
+    /** The Analysis Board's tabs (CTA-73; the Position tab CTA-87). */
     tabs: {
       moves: "Moves",
       map: "Map",
       load: "Load",
+      position: "Position",
       export: "Export",
       engine: "Engine",
     },
@@ -655,6 +656,13 @@ const en = {
       errors: {
         fen: "Could not read this FEN. {{detail}}",
       },
+    },
+    /** The Position tab (CTA-87): the shared editor, and the confirm that takes its position to the board. */
+    editor: {
+      /** The confirm — a new unsaved analysis of the editor's position, facing its side to move. */
+      confirm: "Set position and analyze",
+      /** Above the confirm while the position in the editor cannot be analyzed. */
+      illegal: "Set position is off until the position in the editor can be analyzed.",
     },
   },
   /**

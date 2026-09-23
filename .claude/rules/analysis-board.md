@@ -51,7 +51,7 @@ explorer's hand-off). The board core, the engine protocol and testing are
 | `src/lib/analysisSettings.ts` | `AnalysisSettings`, the defaults, `ANALYSIS_UCI_OPTION`, `analysisSettingsFrom`. |
 | `src/lib/gameReference.ts` + `gameCatalog.ts` | **The `?game=` carrier** (§3). |
 | `src/lib/pgnExport.ts` | `downloadPgn` — several stored PGN records joined with a blank line (`pgnFileOf`), saved as a file. Also Settings' Export's (`downloadBinaryFile`, [`settings.md`](./settings.md)). |
-| Tests | `AnalysisBoard.test.tsx` (every arrival, Save, Load, Export, Play, the hand-off), `useTreeNavigation.test.ts`, `EngineThinking.test.tsx`, `nextMoveArrows.test.ts`, `saved/SavedAnalyses.test.tsx`, `saved/AnalysisSettingsScreen.test.tsx`, `src/lib/savedAnalyses.test.ts`, `savedAnalysisStore.test.ts`, `savedAnalysisFolderStore.test.ts`, `savedGameFolders.test.ts`, `gameReference.test.ts`, and the propagation tests in `src/views/board/`. |
+| Tests | `AnalysisBoard.test.tsx` (every arrival, Save, Load, the Position tab, Export, Play, the hand-off), `useTreeNavigation.test.ts`, `EngineThinking.test.tsx`, `nextMoveArrows.test.ts`, `saved/SavedAnalyses.test.tsx`, `saved/AnalysisSettingsScreen.test.tsx`, `src/lib/savedAnalyses.test.ts`, `savedAnalysisStore.test.ts`, `savedAnalysisFolderStore.test.ts`, `savedGameFolders.test.ts`, `gameReference.test.ts`, and the propagation tests in `src/views/board/`. |
 
 Routes and nav: the **Analysis** folder is `singleEntry` and renders as one
 row to `/tools/analysis/saved`; the board itself has no nav entry and is the
@@ -69,9 +69,9 @@ screen).
   moves a piece only while the header's **Play** is on (`usePlayToggle`, off
   at the start, disabled while the engine is off, paused by any step that is
   not one move forward), and then only for the side not at the bottom.
-- **Tabs: Moves · Map · Load · Export · Engine.** Moves and Map are kept
-  mounted. The footer holds the comment block, the changes strip, Play's
-  status line and the next-moves bar (on the Moves tab).
+- **Tabs: Moves · Map · Load · Position · Export · Engine.** Moves and Map
+  are kept mounted. The footer holds the comment block, the changes strip,
+  Play's status line and the next-moves bar (on the Moves tab).
 - **The explorer**: editing on (the move menu and the comment block —
   `core.replaceTree`), *Play chances…* off, the moves added since the baseline
   tinted in the list and ringed on the map, every map dot a link.
@@ -81,6 +81,12 @@ screen).
   per game, saved into a new folder named after the text — `addAnalyses`, all
   or nothing — and the reader is taken to `/tools/analysis/saved?folder=<id>`).
   A FEN is a position: it turns the board.
+- **Position hosts the shared editor** ([`position-editor.md`](./position-editor.md)
+  §4): its state the screen's, seeded from the position on screen, kept
+  across switches of tab. **Set position and analyze** loads the edited FEN
+  as a new unsaved analysis — the arrival's URL cleared, like any Load — and,
+  a position turning the board, faces its side to move. It is off, with the
+  problems listed above it, while the position cannot be analyzed.
 - **Export** writes the FEN, and the PGN with or without comments, NAGs and
   side lines (`treeToPgn`'s `PgnExportOptions`).
 
@@ -225,5 +231,5 @@ validated, ignored when it does not resolve, taken as *initial* state.
 - **A new tab**: a `tabs` entry in `AnalysisBoard.tsx` and
   `analysis.tabs.<id>` in both catalogs; keep the `moves` and `engine` ids,
   which the propagation tests expect.
-- **Hosting the position editor** (a *Set up position* action): see
+- **The Position tab** (the shared position editor, a second host of it):
   [`position-editor.md`](./position-editor.md) §4.
