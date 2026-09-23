@@ -7,6 +7,7 @@ import { Link as RouterLink, Navigate, useParams } from "react-router";
 import { useTranslation } from "react-i18next";
 
 import ExportTab from "./ExportTab";
+import ImportTab from "./ImportTab";
 
 /**
  * **Settings** (`/settings/<tab>`, CTA-86) — the app's own settings, one tab
@@ -17,6 +18,7 @@ import ExportTab from "./ExportTab";
  */
 const SETTINGS_TABS: readonly { id: string; content: () => ReactNode }[] = [
   { id: "export", content: () => <ExportTab /> },
+  { id: "import", content: () => <ImportTab /> },
 ];
 
 function SettingsScreen() {

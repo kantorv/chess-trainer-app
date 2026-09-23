@@ -1,6 +1,6 @@
 import { sameAnalysisSettings } from "./analysisSettings";
 import type { CatalogGame } from "./gameCatalog";
-import { idbRecordStore } from "./idbRecordStore";
+import { idbRecordStore, mergedNewestFirst } from "./idbRecordStore";
 import {
   MAX_ANALYSIS_DESCRIPTION_CHARS,
   SAVED_ANALYSES_PATH,
@@ -130,6 +130,30 @@ export const addAnalyses = async (
       return current;
     }
     return [...records, ...rest];
+  });
+  return tooMany ? "too-many" : problem;
+};
+
+/**
+ * **An import's analyses** (CTA-89, Settings' Import): the `remove` ids go,
+ * then `add` comes in — each replacing a stored analysis with its id — merged
+ * by date (`mergedNewestFirst`), in one write. All or nothing, as
+ * {@link addAnalyses}: past the cap it is refused with `"too-many"`.
+ */
+export const importAnalyses = async (
+  add: readonly SavedAnalysis[],
+  remove: readonly string[] = [],
+): Promise<SavedAnalysisProblem | undefined> => {
+  let tooMany = false;
+  const problem = await write((current) => {
+    const gone = new Set([...remove, ...add.map((record) => record.id)]);
+    const kept = current.filter((row) => !gone.has(row.id));
+    if (add.length === 0 && kept.length === current.length) return current;
+    if (kept.length + add.length > MAX_SAVED_ANALYSES) {
+      tooMany = true;
+      return current;
+    }
+    return mergedNewestFirst(kept, add);
   });
   return tooMany ? "too-many" : problem;
 };

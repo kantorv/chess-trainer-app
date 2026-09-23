@@ -89,6 +89,27 @@ export const createAnalysisFolder = async (
   return made && problem === undefined ? folder : undefined;
 };
 
+/**
+ * **An import's folders** (CTA-89, Settings' Import), made whole elsewhere —
+ * ids, names and parents — and added at the end in one write, parents before
+ * children as given. All or nothing: past the cap it is refused with
+ * `"too-many"`.
+ */
+export const addAnalysisFolders = async (
+  added: readonly AnalysisFolder[],
+): Promise<AnalysisFolderProblem | "too-many" | undefined> => {
+  if (added.length === 0) return undefined;
+  let tooMany = false;
+  const problem = await write((current) => {
+    if (current.length + added.length > MAX_ANALYSIS_FOLDERS) {
+      tooMany = true;
+      return current;
+    }
+    return [...current, ...added];
+  });
+  return tooMany ? "too-many" : problem;
+};
+
 /** Rename one folder in place. An empty or unchanged name is a no-op. */
 export const renameAnalysisFolder = (
   id: string,

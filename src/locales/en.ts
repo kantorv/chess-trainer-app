@@ -31,6 +31,8 @@ const en = {
     addCollection: "Add collection",
     /** Settings' Export tab (CTA-86), in the Settings folder. */
     settingsExport: "Export",
+    /** Settings' Import tab (CTA-89), in the Settings folder. */
+    settingsImport: "Import",
     /** Sidebar folders — groupings over the routes, never routes themselves. */
     folders: {
       engine: "Engine",
@@ -1335,6 +1337,7 @@ const en = {
     title: "Settings",
     tabs: {
       export: "Export",
+      import: "Import",
     },
     /** The Export tab: the reader's data as PGN files and a manifest, in one zip. */
     export: {
@@ -1355,6 +1358,82 @@ const en = {
       unreadable: "The games of “{{name}}” could not be read. Nothing was downloaded.",
       panel:
         "Games and Analyses are one PGN file each; every collection is a file of its own; repertoires are one file per folder, plus one for the unfiled ones. Your uploaded collections always go with Collections — the ones the app ships only when you ask. Nothing is changed or removed.",
+    },
+    /** The Import tab (CTA-89): an Export's zip read back into the app. */
+    import: {
+      intro:
+        "Bring back a .zip made by Export — here or in another browser. You choose what to import and what happens where a folder is already here; nothing is written until you confirm.",
+      choose: "Choose a .zip",
+      reading: "Reading the file…",
+      working: "Importing…",
+      indexing: "Indexing “{{name}}”: {{done}} of {{total}} games",
+      panel:
+        "A clash is a folder that is both in the file and here (Unfiled always is; played games clash as a whole). Merge puts the file's items into it and keeps an item that is already here as it is — importing the same file twice changes nothing. Override replaces what the folder holds with the file's. Skip leaves the folder as it is. Folders that are not here yet are created, empty ones too.",
+      /** The choice dialog. */
+      dialog: {
+        title: "Import {{fileName}}",
+        from: "Exported on {{date}} by version {{version}}.",
+        run: "Import",
+        cancel: "Cancel",
+        shipped_one: "The file holds {{count}} built-in collection. It is not imported: it ships with the app.",
+        shipped_other: "The file holds {{count}} built-in collections. They are not imported: they ship with the app.",
+        conflicts_one: "{{count}} folder is already here:",
+        conflicts_other: "{{count}} folders are already here:",
+        counts: "{{incoming}} in the file · {{existing}} here",
+        folderChoice: "For this folder:",
+        toggle: "Choose for this folder",
+        preview: "Will add {{added}}, replace {{replaced}}, skip {{skipped}}, create {{folders}} folders.",
+        refusedRecords: "Not imported: it would come to {{total}}, past the limit of {{max}}.",
+        refusedFolders: "Not imported: it would need {{total}} folders, past the limit of {{max}}.",
+        dropsOldest_one: "Played games are kept up to {{max}}: the oldest game will be dropped.",
+        dropsOldest_other: "Played games are kept up to {{max}}: the {{count}} oldest games will be dropped.",
+      },
+      choices: {
+        merge: "Merge",
+        override: "Override",
+        skip: "Skip",
+      },
+      choiceHelp: {
+        merge: "The file's items go into the folder; an item already here stays as it is.",
+        override: "What the folder holds is replaced by the file's items.",
+        skip: "Nothing from the file goes into the folder.",
+      },
+      /** How the top level is named in each category's clash list. */
+      top: {
+        collections: "Top level",
+        games: "Your played games",
+        analyses: "Unfiled",
+        repertoires: "Unfiled",
+      },
+      /** The report, one line per category. */
+      result: {
+        done: "{{category}}: {{added}} added, {{replaced}} replaced, {{skipped}} skipped, {{folders}} folders created.",
+        refusedRecords: "{{category}}: not imported — it would come to {{total}}, past the limit of {{max}}.",
+        refusedFolders: "{{category}}: not imported — it would need {{total}} folders, past the limit of {{max}}.",
+        storage: "{{category}}: the browser refused to store it. Part of it may have been written.",
+        tooMany: "{{category}}: not imported — the limit was reached while importing.",
+        indexing: "{{category}}: a collection's games could not be indexed. The collections before it were imported.",
+      },
+      /** The dialog for a file that cannot be imported. */
+      incompatible: {
+        title: "This file cannot be imported",
+        problem: {
+          "not-zip": "“{{fileName}}” is not a .zip file.",
+          "no-manifest": "“{{fileName}}” has no manifest.json, so it was not made by Export.",
+          malformed: "The manifest.json in “{{fileName}}” cannot be read.",
+          foreign: "The manifest.json in “{{fileName}}” is not this app's.",
+          newer: "“{{fileName}}” was made by a newer version of the app (format {{version}}). Update the app to import it.",
+          "missing-file": "“{{fileName}}” does not hold {{path}}, which its manifest names.",
+          unreadable: "{{path}} in “{{fileName}}” does not match its manifest.",
+        },
+        advice: "You can still bring its PGN files in by hand:",
+        collections: "a collection — the Library's upload",
+        analyses: "analyses and played games — the Analysis Board's Load tab",
+        repertoires: "repertoires — Add repertoire",
+        files: "The PGN files in it:",
+        noFiles: "It holds no PGN files.",
+        close: "Close",
+      },
     },
   },
   footer: {

@@ -213,10 +213,16 @@ not decide "missing" (or "start a new game") before the store has been read:
 | `/engine/games` | `PlayedGames` | the hook's `undefined` → `played-games-loading` |
 | `/tools/analysis/saved` | `SavedAnalyses` | `saved-analyses-loading` |
 
-A screen that reads **every** store at once — Settings' Export
-(`lib/dataExportSource.ts`, [`settings.md`](./settings.md)) — calls each
-ticked store's `load()` before it builds, rather than trusting a snapshot a
-subscription may not have filled yet. It only reads.
+A screen that reads **every** store at once — Settings' Export and Import
+(`lib/dataExportSource.ts`, `lib/dataImportTarget.ts`,
+[`import-export.md`](./import-export.md)) — calls each store's `load()`
+before it plans, rather than trusting a snapshot a subscription may not have
+filled yet. The Import then writes through each store's own operations — the
+bulk ones added for it (`importPlayedGames`, `importAnalyses`,
+`importRepertoires`: removals and additions in one write, merged by date with
+`mergedNewestFirst`; `addAnalysisFolders`, `addRepertoireFolders`,
+`addLibraryFolders`: all or nothing under the cap) — and never IndexedDB
+directly.
 
 The reading line's words are the catalog's `*.loading` keys
 (`playedGames.loading`, `repertoires.loading`, `savedAnalyses.loading`).

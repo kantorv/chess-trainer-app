@@ -74,6 +74,28 @@ export type IdbRecordStoreOptions<Row> = {
   channel: string;
 };
 
+/**
+ * Rows arriving from elsewhere (an import) merged into a newest-first list
+ * **by date**: the arriving rows newest first among themselves (a stable
+ * sort, so rows of one date keep the order they came in), each going before
+ * the first kept row last changed earlier than it. The kept rows are never
+ * re-ordered.
+ */
+export const mergedNewestFirst = <Row extends { updatedAt: string }>(
+  kept: readonly Row[],
+  incoming: readonly Row[],
+): Row[] => {
+  const arriving = [...incoming].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  const merged: Row[] = [];
+  let at = 0;
+  for (const row of kept) {
+    while (at < arriving.length && arriving[at].updatedAt > row.updatedAt) merged.push(arriving[at++]);
+    merged.push(row);
+  }
+  while (at < arriving.length) merged.push(arriving[at++]);
+  return merged;
+};
+
 const isStored = (value: unknown): value is Stored => {
   if (typeof value !== "object" || value === null) return false;
   const row = value as Record<string, unknown>;

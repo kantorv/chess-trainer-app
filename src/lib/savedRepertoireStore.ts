@@ -1,4 +1,4 @@
-import { idbRecordStore } from "./idbRecordStore";
+import { idbRecordStore, mergedNewestFirst } from "./idbRecordStore";
 import {
   sameRepertoireSettings,
   type RepertoireSettings,
@@ -119,6 +119,30 @@ export const addRepertoires = async (
     }
     const insertAt = at === -1 ? 0 : at;
     return [...kept.slice(0, insertAt), ...records, ...kept.slice(insertAt)];
+  });
+  return tooMany ? "too-many" : problem;
+};
+
+/**
+ * **An import's repertoires** (CTA-89, Settings' Import): the `remove` ids
+ * go, then `add` comes in — each replacing a stored repertoire with its id —
+ * merged by date (`mergedNewestFirst`), in one write. All or nothing, as
+ * {@link addRepertoires}: past the cap it is refused with `"too-many"`.
+ */
+export const importRepertoires = async (
+  add: readonly SavedRepertoire[],
+  remove: readonly string[] = [],
+): Promise<SavedRepertoireProblem | undefined> => {
+  let tooMany = false;
+  const problem = await write((current) => {
+    const gone = new Set([...remove, ...add.map((record) => record.id)]);
+    const kept = current.filter((row) => !gone.has(row.id));
+    if (add.length === 0 && kept.length === current.length) return current;
+    if (kept.length + add.length > MAX_SAVED_REPERTOIRES) {
+      tooMany = true;
+      return current;
+    }
+    return mergedNewestFirst(kept, add);
   });
   return tooMany ? "too-many" : problem;
 };
