@@ -5,13 +5,22 @@ import type { CollectionRow } from "./libraryCollections";
  * into one tree, what the Library table's opening-moves board is drawn from:
  * the continuations of the position on it, each with the games that played it.
  *
- * It is built **in memory from the index's rows** — each row's `line`, the
- * first 30 plies of its mainline as SAN, written once when the collection came
- * in (`lib/collectionIndex.ts`) — so nothing is parsed and no `chess.js` runs:
- * 10,000 games merge in under 10 ms, so the table rebuilds it whenever its
- * other filters change. Keyed by SAN,
+ * It is built **in memory from the index's rows** — each row's `line`, its
+ * whole mainline as SAN (uncapped by CTA-92), written once when the collection
+ * came in (`lib/collectionIndex.ts`) — so nothing is parsed and no `chess.js`
+ * runs: 10,000 games of ~90-ply lines merge in about 150 ms (the 7,818-game
+ * fixture measured), so the table rebuilds it whenever its other filters
+ * change. Keyed by SAN,
  * as `mergeTrees` (`lib/gameTree.ts`) merges a repertoire, but a node records
  * the games through it instead of annotations.
+ *
+ * **The tree is cut where the games stop branching** (CTA-92): a node a single
+ * game passed keeps no children, so the tree extends exactly as far as there
+ * is a choice to offer and no further — a lone game's tail draws no lone
+ * arrow. A tree holding one game — a one-game collection, or filters narrowed
+ * to a single game — is kept whole, so the board stays walkable to its end.
+ * The cut is why lines are stored whole: it is a rule over the collection's
+ * branching, which no single row can know.
  *
  * **Which games pass through a node** is not stored as a list: they are the
  * rows whose `line` begins with the path to it — `filteredRows`' `line`
@@ -33,8 +42,20 @@ export type OpeningTreeNode = {
   /** How many games passed through it. */
   count: number;
   results: OpeningResults;
-  /** The continuations, the most played first (ties in the order they first appeared). */
+  /**
+   * The continuations, the most played first (ties in the order they first
+   * appeared) — **cut where the games stop branching** (CTA-92): a node a
+   * single game passed keeps none, so the tree offers a choice exactly as
+   * far as there is one, and a lone game's tail draws no lone arrow. A tree
+   * holding one game is kept whole — see {@link openingTreeOf}.
+   */
   children: readonly OpeningTreeNode[];
+  /**
+   * Where the cut landed: one game goes on past this position, alone, so the
+   * tree stops here rather than drawing a lone arrow for the rest of it. The
+   * board's caption says so. Present only on a leaf the cut made.
+   */
+  continues?: true;
 };
 
 type Building = {
@@ -58,13 +79,26 @@ const tally = (node: Building, result: string) => {
   else if (result === "1/2-1/2") node.results.draw += 1;
 };
 
-const finished = (node: Building): OpeningTreeNode => ({
-  san: node.san,
-  count: node.count,
-  results: node.results,
-  // A stable sort, and a Map iterates in insertion order — ties stay first-seen.
-  children: [...node.children.values()].sort((a, b) => b.count - a.count).map(finished),
-});
+/**
+ * The building node as its finished shape. In a tree of more games than one,
+ * a node a single game passed is the cut: it keeps no children, and
+ * {@link OpeningTreeNode.continues} says where that stopped the walk. A tree
+ * of one game (`single`) is kept whole — with nothing to branch from, the
+ * walk is the game, and the board stays walkable to its end.
+ */
+const finished = (node: Building, single: boolean): OpeningTreeNode => {
+  const cut = !single && node.count === 1 && node.children.size > 0;
+  return {
+    san: node.san,
+    count: node.count,
+    results: node.results,
+    // A stable sort, and a Map iterates in insertion order — ties stay first-seen.
+    children: cut
+      ? []
+      : [...node.children.values()].sort((a, b) => b.count - a.count).map((child) => finished(child, single)),
+    ...(cut ? { continues: true } : {}),
+  };
+};
 
 /** The rows' lines merged into one tree, from the standard start. */
 export const openingTreeOf = (rows: readonly Pick<CollectionRow, "line" | "result">[]): OpeningTreeNode => {
@@ -83,13 +117,15 @@ export const openingTreeOf = (rows: readonly Pick<CollectionRow, "line" | "resul
       node = child;
     }
   }
-  return finished(root);
+  return finished(root, root.count === 1);
 };
 
 /**
  * Walk `sans` down from the root **as far as the tree follows them** — the
  * matched moves and the node they reach. A move no game played ends the walk,
- * so a stale link still lands on the last position it shares with the games.
+ * and so does the cut, past which the tree holds nothing although a game
+ * continues — so a stale link still lands on the last position it shares
+ * with the games.
  */
 export const openingNodeAt = (
   tree: OpeningTreeNode,

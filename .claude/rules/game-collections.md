@@ -45,9 +45,9 @@ for the Analysis Board and Saved analyses it hands games to.
 | Path | What lives there |
 | --- | --- |
 | `src/lib/libraryCollections.ts` | **The model, pure**: `CollectionSource`, `CollectionSummary`, `LibraryCollection`, `CollectionRow`, `COLLECTION_COLUMNS`, `collectionRowOf` (the tag half of a row, no `chess.js`), `sortedRows`, `RowFilter` / `filteredRows`, `CollectionFilterValues` / `COLLECTION_FILTER_PARAMS`, `collectionFacetsOf`, `openingLabelOf`, `dateBounds`, `activeFilterSummary` / `batchFolderNameOf` (the Analyse folder name), `collectionNameOfStem` / `collectionIdOfStem`, `collectionGamesOf` (**the one rule for cutting a text into games**), `readCollectionText` (a file or a paste), `MAX_COLLECTION_CHARS`. |
-| `src/lib/collectionIndex.ts` | **The index**: `IndexedRow`, `indexedRowOf` (tags + a `parsePgnTree` pass), `indexGame` (one game, with the app's book), `buildCollectionIndex` / `buildCollectionIndexAsync`, `numberedRows`, `textHash`, `LINE_PLIES`, `OpeningLookup` / `loadOpeningLookup`, and the file format: `encodeCollectionIndex` / `decodeCollectionIndex`, `COLLECTION_INDEX_FORMAT` / `COLLECTION_INDEX_VERSION`. |
+| `src/lib/collectionIndex.ts` | **The index**: `IndexedRow`, `indexedRowOf` (tags + a `parsePgnTree` pass), `indexGame` (one game, with the app's book), `buildCollectionIndex` / `buildCollectionIndexAsync`, `numberedRows`, `textHash`, `OpeningLookup` / `loadOpeningLookup`, and the file format: `encodeCollectionIndex` / `decodeCollectionIndex`, `COLLECTION_INDEX_FORMAT` / `COLLECTION_INDEX_VERSION`. |
 | `src/lib/collectionIndex.worker.ts` | The index pass for an upload, off the main thread. |
-| `src/lib/openingTree.ts` | **The opening tree**: `openingTreeOf` (rows' `line`s merged by SAN), `openingNodeAt` / `openingNodeOn`, `OPENING_LINE_PARAM` (`line`), `openingLineParamOf` / `openingLineOfParam`. Pure, with no `chess.js`. |
+| `src/lib/openingTree.ts` | **The opening tree**: `openingTreeOf` (rows' `line`s merged by SAN, **cut where the games stop branching**, CTA-92), `openingNodeAt` / `openingNodeOn`, `OPENING_LINE_PARAM` (`line`), `openingLineParamOf` / `openingLineOfParam`. Pure, with no `chess.js`. |
 | `src/lib/shippedCollections.ts` | **Shipped collections**: the manifest (a static import) and two lazy globs (`*.pgn`, `*.index.json`, `?raw`). `shippedCollectionsOf` (takes its inputs as parameters, for tests), `shippedCollections`, `findShippedCollection`, `peekShippedRows` / `peekShippedGames`, `subscribeShipped`. |
 | `src/lib/libraryDb.ts` | **The database**, `chessapp.library` (version 2): its four object store names, the channel, `openLibraryDb` and `deleteLibraryDb`. Both stores below open it. |
 | `src/lib/libraryCollectionStore.ts` | **Uploaded collections, in IndexedDB** (`chessapp.library`). Reads: `uploadedCollectionsSnapshot`, `subscribeUploadedCollections`, `loadUploadedCollections`, `peekUploadedRows` / `loadUploadedRows`, `peekUploadedGames` / `loadUploadedGames`. Writes: `addCollection` (into a folder, optionally), `removeCollection`, `moveCollection` (Move to…), `refileCollectionsIn` (a folder deleted), `replaceCollectionGame` (Update), `insertCollectionGame` (Save as copy), `appendCollectionGames` (Add games), `removeCollectionGames` (delete picked). Also `newCollectionId` and `resetLibraryCollectionStore` (for tests). |
@@ -113,11 +113,12 @@ a collection =   ──▶ rows:  CollectionRow[]  (its INDEX, one per game)    
   "Save as copy" goes to Saved analyses. An **uploaded** collection (made from
   a file, a paste, or empty) is the reader's own and takes every write.
 - **Sizing target: 5,000–10,000 games per collection.** A 10,000-game index is
-  about 1.4 MB (one JSON parse), and its PGN is about 9.5 MB. One text read in
-  is capped at `MAX_COLLECTION_CHARS` = 30,000,000 characters (about 30,000
-  games). The cap protects the tab's memory, not storage. The real 7,818-game
-  fixture `src/test/fixtures/pgn/Carlsen.pgn` is the scale every performance
-  claim below was measured at.
+  about 4.8 MB (one JSON parse; 3.7 MB measured over the 7,818-game fixture,
+  whose `line`s are whole games since CTA-92), and its PGN is about 9.5 MB.
+  One text read in is capped at `MAX_COLLECTION_CHARS` = 30,000,000
+  characters (about 30,000 games). The cap protects the tab's memory, not
+  storage. The real 7,818-game fixture `src/test/fixtures/pgn/Carlsen.pgn` is
+  the scale every performance claim below was measured at.
 
 ### 1.1 A row — `CollectionRow`
 
@@ -131,7 +132,7 @@ a collection =   ──▶ rows:  CollectionRow[]  (its INDEX, one per game)    
 | `eco` | `ECO` tag | Or, when the tags lack it, from eco.json. **A tag always wins.** |
 | `moves` | parsed mainline | Full moves: 41 plies → 21. (`collectionRowOf` counts it from the text; the index replaces that with the parsed count.) |
 | `unreadable` | index pass | `parsePgnTree` threw. The table marks it; Analyse skips it. |
-| `line` | index pass | The first `LINE_PLIES` (30) plies of the parsed mainline as SAN. **Absent** for unreadable games, games not from the standard start, and indexes from before the column. |
+| `line` | index pass | The parsed mainline **in full**, as SAN (CTA-92; CTA-76's first cut stopped at 30 plies). **Absent** for unreadable games, games not from the standard start, and indexes from before the column; an index from between the two holds only each game's first 30 plies, which the tree follows as far as they go. |
 
 **The table never parses a game.** A row is built **once**, when the
 collection comes in, and read afterwards.
@@ -235,7 +236,7 @@ Three collections ship: `WorldCup2023` (674 games), `Bucharest2023` (45) and
 | Cost | When | Size (World Cup / 10k games) |
 | --- | --- | --- |
 | manifest | static import, in the bundle | a few hundred bytes |
-| index | lazy chunk, when the table opens | ~90 KB / ~1.4 MB |
+| index | lazy chunk, when the table opens | ~350 KB / ~4.8 MB |
 | PGN | lazy chunk, when a game opens or the collection downloads | ~620 KB / ~9.5 MB |
 
 Each is fetched **once** and kept. A failed fetch is kept as `null`, which
@@ -361,7 +362,9 @@ the game's board opens it with:
 - `eco` / `opening` from eco.json (`OpeningLookup`: the deepest named
   position along the mainline, `openingOfLine`), but only where the tags are
   missing. This is how Morphy's games, which have no `Opening` tag, get one;
-- `line`: the first 30 plies as SAN, only from the standard start.
+- `line`: the whole mainline as SAN, only from the standard start — stored
+  deep (a game averages about 90 plies) and cut at view time by
+  `openingTreeOf`, where the collection's branching is known.
 
 The cost is about 8 ms a game (`chess.js` matching SAN). It is **paid once**,
 when a collection is wired, uploaded or added to, and **never when the table
@@ -539,23 +542,35 @@ carries the filter, not a hand-made selection.
 
 - The tree is merged **from the rows the other filters leave**
   (`openingTreeOf(narrowed)`), so filtering by a player and side shows that
-  player's openings. It is rebuilt whenever those filters change, in under
-  10 ms for 10,000 rows, with no `chess.js`.
+  player's openings. It is rebuilt whenever those filters change — about
+  150 ms for 10,000 full-length rows (§7), with no `chess.js`.
 - A node keeps only its counts (`count`, and `results` for White / draw /
   Black). **Which games pass through a node is not stored**: they are the
   rows whose `line` starts with the path, which is exactly `filteredRows`'
   `line` filter. So edits to a collection can never leave the tree stale.
-- From the position shown: arrows through the shared `nextMoveArrowsOf` (the
-  most played move in the mainline colour) and a lichess-explorer-style list
-  (each move's games, share and W/D/B bar; click to play it, hover to draw its
+- **The tree is cut where the games stop branching** (CTA-92): a node a
+  single game passed keeps no children, so the walk ends exactly where there
+  is nothing to choose, and a lone game's tail draws no lone arrow. The cut
+  node is marked (`continues`), and the board's caption there says one game
+  goes on — not the games' own-end wording. A tree holding one game (a
+  one-game collection, or filters narrowed to a single game) is kept whole,
+  so the board stays walkable to its end.
+- From the position shown: the continuations as **play-chance arrows** over
+  the board (`ChanceArrows`, white with a magenta border, the wider the more
+  of the position's games played the move, the hovered one red — the
+  repertoires' own encoding, CTA-92) and a lichess-explorer-style list (each
+  move's games, share and W/D/B bar; click to play it, hover to draw its
   arrow). **Only moves some game played are accepted**; any other drop snaps
   back. A promotion the games made in more than one way asks for the piece.
   There are back, reset and flip controls. The board is pinned LTR.
-- `?line=e4,c5,Nf3` uses the `?at=` encoding. It is cut back **only where no
-  game in the whole collection follows it** (a stale link). When only the
-  other filters leave no game on it, it stays as written, the table is empty,
-  and the board says so.
+- `?line=e4,c5,Nf3` uses the `?at=` encoding. It is cut back **where no game
+  in the whole collection follows it** (a stale link) **and where the tree's
+  cut stops** — a line past the cut lands on the last shared position. When
+  only the other filters leave no game on it, it stays as written, the table
+  is empty, and the board says so.
 - No game has a `line` (an index from before the column) → no board.
+- The board's `chess.js` replay of the line runs up to a game's full length
+  (once at most 30 plies), memoized on the line and the node.
 
 ### 6.5 Picks, export, delete, Analyse
 
@@ -636,8 +651,8 @@ reads the upload. It waits the same way for the saved analyses.
 | What | Budget | Why it holds |
 | --- | --- | --- |
 | Opening `/library` | no fetch | the manifest is in the bundle; uploads read summaries only |
-| Opening a 10k table | one JSON parse (~1.4 MB) | the index; no game parsed |
-| Rebuilding the opening tree | < 10 ms / 10k rows | SAN merge, no `chess.js` |
+| Opening a 10k table | one JSON parse (~4.8 MB) | the index; no game parsed |
+| Rebuilding the opening tree | ~150 ms / 10k rows | SAN merge of whole-game lines, no `chess.js`; the cut prunes as it finishes |
 | Filter lists (7.8k games) | ~100–170 ms to open, no virtualization | plain sets |
 | Indexing | ~8–12 ms / game, off the main thread | worker; paid once |
 | Analyse 7.8k picks | no re-parse | PGN stored as is |

@@ -50,27 +50,70 @@ describe("openingTreeOf", () => {
     expect(openingTreeOf([row(undefined)])).toMatchObject({ count: 0, children: [] });
   });
 
-  it("goes as deep as the lines do — the index caps them at 30 plies", () => {
-    const line = Array.from({ length: 30 }, (_, index) => (index % 2 === 0 ? "Nf3" : "Nf6"));
+  it("keeps a tree of one game whole — the board stays walkable to its end", () => {
+    const line = Array.from({ length: 40 }, (_, index) => (index % 2 === 0 ? "Nf3" : "Nf6"));
     let node = openingTreeOf([{ line, result: "*" }]);
     let depth = 0;
     while (node.children.length > 0) {
       node = node.children[0];
       depth += 1;
     }
-    expect(depth).toBe(30);
+    expect(depth).toBe(40); // past the old 30-ply cap, and nothing is cut
+    expect(node.continues).toBeUndefined();
   });
 
-  it("merges 10,000 games of 30 plies quickly", () => {
+  it("extends past the old 30-ply cap, offering the choice where the games part", () => {
+    const shared = Array.from({ length: 34 }, (_, index) => (index % 2 === 0 ? "Nf3" : "Nf6"));
+    const tree = openingTreeOf([
+      { line: [...shared, "d4", "d5"], result: "*" },
+      { line: [...shared, "c4", "c5"], result: "*" },
+    ]);
+    // The 34 shared plies are two games' choice all the way; the parting move is each one's alone.
+    expect(openingNodeAt(tree, shared).node.children.map((child) => child.san)).toEqual(["d4", "c4"]);
+    const { line, node } = openingNodeAt(tree, [...shared, "d4", "d5"]);
+    expect(line).toHaveLength(35); // the walk reaches past ply 30, then the tree stops
+    expect(node.continues).toBe(true); // one game goes on, alone
+  });
+
+  it("cuts where a single game continues — a node one game passed keeps no children", () => {
+    const tree = openingTreeOf([row("e4 e5 Nf3 Nc6"), row("e4 e5 Nc6 a6"), row("e4 c5 d6")]);
+    const e4 = tree.children[0];
+    expect(e4.count).toBe(3);
+    // e5 is still a choice of two games, so its moves are offered…
+    const e5 = e4.children[0];
+    expect(e5.count).toBe(2);
+    expect(e5.children.map((child) => child.san)).toEqual(["Nf3", "Nc6"]);
+    // …but each of them is one game's alone from there, so the tree stops and says so.
+    for (const alone of [...e5.children, e4.children[1]]) {
+      expect(alone.children).toEqual([]);
+      expect(alone.continues).toBe(true);
+    }
+    // The walk follows the games only as far as the tree holds them.
+    expect(openingNodeAt(tree, ["e4", "e5", "Nf3", "Nc6"]).line).toEqual(["e4", "e5", "Nf3"]);
+    expect(openingNodeAt(tree, ["e4", "c5", "d6"]).line).toEqual(["e4", "c5"]);
+  });
+
+  it("does not mark a game's own last move — the cut is only where one goes on", () => {
+    const tree = openingTreeOf([row("e4 e5 Nf3 Nc6"), row("e4 c5")]);
+    const e5 = tree.children[0].children[0];
+    expect(e5).toMatchObject({ count: 1, children: [], continues: true }); // game 1 goes on past e5
+    const c5 = tree.children[0].children[1];
+    expect(c5).toMatchObject({ count: 1, children: [] }); // game 2 ends here
+    expect(c5.continues).toBeUndefined();
+  });
+
+  it("merges 10,000 full-length games quickly", () => {
     const moves = ["e4", "d4", "c4", "Nf3", "g3", "b3"];
     const rows = Array.from({ length: 10_000 }, (_, game) => ({
-      line: Array.from({ length: 30 }, (_, ply) => moves[(game * (ply + 1)) % moves.length] + ply),
+      line: Array.from({ length: 80 }, (_, ply) => moves[(game * (ply + 1)) % moves.length] + ply),
       result: "1-0",
     }));
     const started = performance.now();
     const tree = openingTreeOf(rows);
     expect(tree.count).toBe(10_000);
-    // ~50 ms in a browser; generous here for a loaded CI machine.
+    // ~30 ms in a browser; generous here for a loaded CI machine. (The real
+    // 7,818-game fixture, whose lines branch rather than repeat, measures
+    // ~150 ms — the budgets table in game-collections.md §7 carries that.)
     expect(performance.now() - started).toBeLessThan(1500);
   });
 });

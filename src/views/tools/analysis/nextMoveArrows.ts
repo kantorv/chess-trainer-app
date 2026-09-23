@@ -56,8 +56,10 @@ export const REQUIRED_MOVE_ARROW_COLOR = "#9c27b0";
  * {@link NEXT_MOVE_ARROW_COLOR}; the rest are side lines. A hovered
  * continuation takes {@link HOVERED_NEXT_MOVE_ARROW_COLOR} whichever it is.
  *
- * Only a node's `id`, `from` and `to` are read, so a list that is not a
- * tree's — the Library's opening-moves filter (CTA-76) — draws through it too.
+ * Only a node's `id`, `from` and `to` are read, so any list shaped like a
+ * tree's continuations can draw through it. (The Library's opening-moves
+ * filter board drew through it until CTA-92 moved it to the play-chance
+ * overlay, `ChanceArrows`, whose width carries what colour could not.)
  *
  * The one place every board builds its next-move arrows, so a change of
  * colour reaches them all.

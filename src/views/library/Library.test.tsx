@@ -39,6 +39,8 @@ import {
 import { downloadPgn } from "../../lib/pgnExport";
 import AppThemeWithLang from "../../theme/AppThemeWithLang";
 import { boardOptions, FakeEngine } from "../board/boardTestHarness";
+import { CHANCE_ARROW_BORDER_COLOR, CHANCE_ARROW_FILL_COLOR } from "../explorer/chanceArrows";
+import { HOVERED_NEXT_MOVE_ARROW_COLOR } from "../tools/analysis/nextMoveArrows";
 import { RightPanelOutlet, RightPanelProvider } from "../main/rightPanel";
 
 vi.mock("../../lib/engine", async () => ({
@@ -740,6 +742,14 @@ describe("the opening-moves filter", () => {
     '[Event "Spring Open"]\n[White "Nepo"]\n[Black "Carlsen"]\n[Result "0-1"]\n\n1. e4 c5 0-1',
     '[Event "Autumn Cup"]\n[White "Ding"]\n[Black "Carlsen"]\n[Result "1/2-1/2"]\n\n1. d4 d5 1/2-1/2',
   ];
+  // Two games that share 32 plies before they part — past the 15-move cap the
+  // index used to cut lines at (CTA-92), so the tree has to hold them.
+  const SHARED_LINE = Array.from({ length: 32 }, (_, index) => ["Nf3", "Nf6", "Ng1", "Ng8"][index % 4]);
+  const SHARED_TEXT = `${"1. Nf3 Nf6 2. Ng1 Ng8 ".repeat(8)}17. `;
+  const LONG = [
+    `[Event "Long"]\n[White "A"]\n[Black "B"]\n[Result "1-0"]\n\n${SHARED_TEXT}e4 e5 *`,
+    `[Event "Long"]\n[White "C"]\n[Black "D"]\n[Result "0-1"]\n\n${SHARED_TEXT}d4 d5 *`,
+  ];
   const moves = () => within(screen.getByTestId("library-filter-moves"));
   const dropOn = (from: string, to: string) => {
     let accepted: boolean | undefined;
@@ -748,21 +758,30 @@ describe("the opening-moves filter", () => {
     });
     return accepted;
   };
+  /** One continuation's arrow, from the play-chance overlay over the board. */
+  const arrowOn = (from: string) =>
+    screen.getByTestId("library-filter-arrows").querySelector(`path[data-from="${from}"]`)!;
 
-  it("draws the whole collection's continuations, most played first, with their games", async () => {
+  it("draws the whole collection's continuations as play-chance arrows, wide by their share", async () => {
     const rich = await keep("Rich", RICH);
     await mountTable(`/library/${rich.id}`);
     expect(boardOptions().id).toBe("library-filter-board");
-    expect(boardOptions().arrows?.map((arrow) => [arrow.startSquare, arrow.endSquare])).toEqual([
-      ["e2", "e4"],
-      ["d2", "d4"],
-    ]);
+    expect(boardOptions().arrows).toBeUndefined(); // the overlay draws them now (CTA-92)
+    expect(arrowOn("e2").getAttribute("data-to")).toBe("e4");
+    expect(arrowOn("d2").getAttribute("data-to")).toBe("d4");
+    // White with the play-chance border — the encoding the repertoires taught.
+    expect(arrowOn("e2")).toHaveAttribute("fill", CHANCE_ARROW_FILL_COLOR);
+    expect(arrowOn("e2")).toHaveAttribute("stroke", CHANCE_ARROW_BORDER_COLOR);
+    // 2 of 3 games played e4: the wider border.
+    expect(Number(arrowOn("e2").getAttribute("stroke-width"))).toBeGreaterThan(
+      Number(arrowOn("d2").getAttribute("stroke-width")),
+    );
     expect(moves().getByTestId("library-filter-move-count-e4")).toHaveTextContent("2 games · 67%");
     expect(moves().getByTestId("library-filter-move-count-d4")).toHaveTextContent("1 game · 33%");
-    // Hovering a move recolours its arrow.
-    const before = boardOptions().arrows?.[1].color;
+    // Hovering a move takes the hover colour.
+    expect(arrowOn("d2")).toHaveAttribute("stroke", CHANCE_ARROW_BORDER_COLOR);
     fireEvent.mouseEnter(moves().getByTestId("library-filter-move-d4"));
-    expect(boardOptions().arrows?.[1].color).not.toBe(before);
+    expect(arrowOn("d2")).toHaveAttribute("stroke", HOVERED_NEXT_MOVE_ARROW_COLOR);
   });
 
   it("narrows the rows to the games that began with the moves played, in the URL", async () => {
@@ -790,12 +809,14 @@ describe("the opening-moves filter", () => {
     const position = boardOptions().position;
     expect(dropOn("e7", "e6")).toBe(false);
     expect(dropOn("e7", "e5")).toBe(true);
-    expect(dropOn("g1", "f3")).toBe(true);
     expect(rowNumbers()).toEqual(["1"]);
     expect(boardOptions().position).not.toBe(position);
+    // Past e5 only game 1 continues, so the tree stops there — the cut (CTA-92):
+    // its move is no longer offered, even though the game played it.
+    expect(dropOn("g1", "f3")).toBe(false);
     expect(dropOn("b8", null as unknown as string)).toBe(false);
     expect(dropOn("b8", "c6")).toBe(false);
-    expect(where()).toContain("line=e4%2Ce5%2CNf3");
+    expect(where()).toContain("line=e4%2Ce5");
   });
 
   it("sits under the player and side, with the other filters under it", async () => {
@@ -819,8 +840,10 @@ describe("the opening-moves filter", () => {
     expect(moves().getByTestId("library-filter-move-count-e4")).toHaveTextContent("1 game · 50%");
     fireEvent.click(moves().getByTestId("library-filter-move-e4"));
     expect(rowNumbers()).toEqual(["2"]);
-    expect(moves().getByTestId("library-filter-move-c5")).toBeInTheDocument();
+    // Past e4 only game 2 continues, so the tree stops — the cut's caption.
+    expect(moves().queryByTestId("library-filter-move-c5")).toBeNull();
     expect(moves().queryByTestId("library-filter-move-e5")).toBeNull();
+    expect(moves().getByTestId("library-filter-moves-end")).toHaveTextContent("Only one game");
     // Only the moves these games played are taken.
     expect(dropOn("e7", "e5")).toBe(false);
     fireEvent.click(within(screen.getByTestId("library-filters")).getByTestId("library-filter-clear"));
@@ -835,10 +858,35 @@ describe("the opening-moves filter", () => {
     expect(where()).toContain("line=e4,e5");
     expect(moves().getByTestId("library-filter-moves-line")).toHaveTextContent("1. e4 e5");
     expect(moves().getByTestId("library-filter-moves-end")).toHaveTextContent("No game the other filters leave");
-    expect(boardOptions().arrows).toEqual([]);
+    expect(boardOptions().arrows).toBeUndefined();
+    expect(screen.getByTestId("library-filter-arrows").querySelectorAll("path")).toHaveLength(0);
     // Taking the player off brings the line's games back.
     typeInto("library-filter-player", "");
     expect(rowNumbers()).toEqual(["1"]);
+  });
+
+  it("offers continuations past the 15-move cap, and says where the cut lands", async () => {
+    const long = await keep("Long", LONG);
+    await mountTable(`/library/${long.id}?line=${SHARED_LINE.join(",")}`);
+    // 32 plies in — past the cap the lines used to stop at — the games still branch.
+    expect(moves().getByTestId("library-filter-moves-line")).toHaveTextContent("16. Ng1 Ng8");
+    expect(moves().getByTestId("library-filter-move-e4")).toBeInTheDocument();
+    expect(moves().getByTestId("library-filter-move-d4")).toBeInTheDocument();
+    expect(moves().getByTestId("library-filter-move-count-e4")).toHaveTextContent("1 game · 50%");
+    // One of the two games continues from there, so the tree stops and says so.
+    fireEvent.click(moves().getByTestId("library-filter-move-e4"));
+    expect(rowNumbers()).toEqual(["1"]);
+    expect(moves().queryByTestId("library-filter-move-e5")).toBeNull();
+    expect(moves().getByTestId("library-filter-moves-end")).toHaveTextContent(
+      "Only one game in the collection goes further here",
+    );
+  });
+
+  it("still says where the games themselves stopped — no game goes further", async () => {
+    const rich = await keep("Rich", RICH);
+    await mountTable(`/library/${rich.id}?line=e4,c5`);
+    expect(rowNumbers()).toEqual(["2"]);
+    expect(moves().getByTestId("library-filter-moves-end")).toHaveTextContent("No game in the collection");
   });
 
   it("follows a stale line from the URL as far as the games go", async () => {
