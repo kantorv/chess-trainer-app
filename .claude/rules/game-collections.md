@@ -339,10 +339,14 @@ renamed, moved or deleted, no picker offers it, and a collection naming it is
 read as the top level.
 
 **The export keeps the tree.** Settings' Export (`lib/dataExport.ts`,
-[`settings.md`](./settings.md) §2.2) writes each collection into a directory
+[`import-export.md`](./import-export.md) §1) writes each collection into a directory
 per folder under `collections/` (the shipped ones in `collections/built-in/`),
 and its manifest carries each upload's `folderPath` and the whole folder tree
-(`folders.collections`), so an empty folder survives.
+(`folders.collections`), so an empty folder survives. Settings' Import
+(CTA-89, `lib/dataImport.ts`) puts it back: folders matched by their path of
+names (created when not here, `addLibraryFolders`), each upload indexed with
+`indexCollection` and written with `addCollection` under its own id and
+folder, the shipped ones never — [`import-export.md`](./import-export.md) §4–5.
 
 ---
 

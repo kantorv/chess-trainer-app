@@ -4,7 +4,8 @@ A Vite + React 19 + TypeScript chess trainer. Its board screens — Play with
 Engine and Masked Pieces, the Analysis Board, the Openings explorer, the
 repertoire player and the Library's game board — sit inside one app shell,
 reached from a plain landing page at `/`, beside a Settings section whose
-Export tab downloads the reader's data as one zip. The boards are
+Export tab downloads the reader's data as one zip and whose Import tab puts
+such a zip back. The boards are
 `react-chessboard` v5 driven by `chess.js` and a Stockfish WASM worker, and
 every one is composed from one **board core** (`src/views/board/core/`).
 
@@ -69,7 +70,8 @@ uses can look unused — check `scripts/` before removing one.
 | **Openings explorer** | `/openings` | `views/openings/`, `lib/openings.ts`, `lib/analysisHandOff.ts` | [`openings-explorer.md`](.claude/rules/openings-explorer.md) |
 | **Repertoires** | `/repertoires`, `/repertoires/<id>`, `/…/games/<game>` | `views/repertoires/`, `lib/savedRepertoire*`, `lib/repertoire*`, `lib/playChance.ts` | [`repertoires.md`](.claude/rules/repertoires.md) |
 | **Library** (game collections) | `/library`, `/library/<c>`, `/library/<c>/<n>` | `views/library/`, `lib/library*`, `lib/collectionIndex.ts`, `src/data/library/` | [`game-collections.md`](.claude/rules/game-collections.md) |
-| **Settings** (Export today) | `/settings/<tab>` (`/settings/export`) | `views/settings/`, `lib/dataExport*.ts`, `lib/pgnExport.ts` | [`settings.md`](.claude/rules/settings.md) |
+| **Settings** (Export, Import) | `/settings/<tab>` (`/settings/export`, `/settings/import`) | `views/settings/` | [`settings.md`](.claude/rules/settings.md) |
+| **Import / Export** (the reader's data as one zip) | `/settings/export`, `/settings/import` | `lib/dataExport*.ts`, `lib/dataImport*.ts`, `lib/pgnExport.ts`, `views/settings/ExportTab.tsx`, `ImportTab.tsx`, `ImportDialog.tsx`, `IncompatibleImportDialog.tsx` | [`import-export.md`](.claude/rules/import-export.md) |
 | **Position editor** (a component, hosted by the Lobby) | — | `views/shared/positionEditor/`, `lib/positionEditor.ts` | [`position-editor.md`](.claude/rules/position-editor.md) |
 | **Tree views** (how a board shows its game tree) | — | `views/explorer/`, `lib/treeMap.ts` | [`tree-views.md`](.claude/rules/tree-views.md) |
 | **The board core** | — | `views/board/core/` | [`chessboard.md`](.claude/rules/chessboard.md) §9 |
