@@ -46,7 +46,8 @@ import { usePlayToggle } from "../../board/core/usePlayToggle";
  *    `?fen=` hand-off (a position with Black to move sets the reader to Black
  *    and turns the board) — with the reader on the side at the bottom and the
  *    engine answering. The Lobby's Start link (CTA-82) adds the options —
- *    the settings, the side (which beats the FEN's) and the eval bar. Everything that pauses Play on the Analysis Board
+ *    the settings, the side (which beats the FEN's), the eval bar and the
+ *    pinned lines' start (CTA-90). Everything that pauses Play on the Analysis Board
  *    pauses it here (`usePlayToggle`): a step that is not one move forward,
  *    the reader switching side (the flip, or the header's side toggle), the
  *    engine off, the game over. Pressing Play goes on from wherever the reader
@@ -84,7 +85,8 @@ export type PlayGameStart = {
   /**
    * A new game's options — the Lobby's Start link (`lib/newGameLink.ts`,
    * CTA-82): settings over the defaults, the reader's side (beats the side to
-   * move of `fen`) and the eval bar. Ignored when `resume` opens.
+   * move of `fen`), the eval bar and whether the pinned lines start shown
+   * (CTA-90). Ignored when `resume` opens.
    */
   request?: NewGameRequest;
 };
@@ -93,13 +95,10 @@ export type PlayGameStart = {
  * Everything the URL hands a play screen, read once by its route — `?fen=`
  * (validated; an unreadable one starts an ordinary game), `?saved=`, and a
  * new game's options (`side`, `skill`, `depth`, `movetime`, `lines`,
- * `threads`, `hash`, `evalbar` — `newGameRequestOf`, each field validated on
- * its own). `random` draws a `side=random`.
+ * `threads`, `hash`, `evalbar`, `variations` — `newGameRequestOf`, each field
+ * validated on its own).
  */
-export const arrivalOf = (
-  params: URLSearchParams,
-  random: () => number = Math.random,
-): PlayGameStart => {
+export const arrivalOf = (params: URLSearchParams): PlayGameStart => {
   let fen: string | undefined;
   const requestedFen = params.get("fen");
   if (requestedFen !== null) {
@@ -113,7 +112,7 @@ export const arrivalOf = (
   return {
     fen,
     resume: findPlayedGame(params.get("saved")),
-    request: newGameRequestOf(params, random),
+    request: newGameRequestOf(params),
   };
 };
 
@@ -143,6 +142,7 @@ export const usePlayGame = (
         resigned: resume.resigned,
         stored: true,
         showEvalBar: true,
+        showLines: true,
       };
     }
     /*
@@ -162,6 +162,7 @@ export const usePlayGame = (
       resigned: undefined,
       stored: false,
       showEvalBar: request?.evalBar ?? true,
+      showLines: request?.variations ?? true,
     };
   });
 
@@ -174,6 +175,13 @@ export const usePlayGame = (
   const [settings, setSettings] = useState<EngineSettings>(start.settings);
   const [engineOn, setEngineOn] = useState(true);
   const [showEvalBar, setShowEvalBar] = useState(start.showEvalBar);
+  /*
+    What the pinned engine lines start as (CTA-90): the Lobby's Variations
+    choice, seeded once. The block's own header checkbox is the live control
+    from here on, so nothing writes this again — and a resumed game keeps the
+    default, the choice not being part of the record.
+  */
+  const [showLines] = useState(start.showLines);
 
   const onUciOptionsReady = useCallback(
     // The same object when nothing moved: a new one would re-run the search effect for nothing.
@@ -334,6 +342,7 @@ export const usePlayGame = (
     setEngineOn,
     showEvalBar,
     setShowEvalBar,
+    showLines,
     playing: play.playing,
     thinking: play.thinking,
     togglePlaying: () => play.toggle(engine.analysis, evalsByFen),

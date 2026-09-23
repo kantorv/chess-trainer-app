@@ -634,6 +634,7 @@ BoardShell
 | `onPlayVariation` | `((sans) => void)?` | Present ⇒ the lines are clickable. |
 | `mask` | `PieceMask?` | Masked notation in the block (Masked Pieces). |
 | `showVariations` | `boolean?` | Whether the block shows at all — on by default. |
+| `initialShowLines` | `boolean?` | The seed for the block's own show-lines checkbox (CTA-90) — what a new game starts with; the header checkbox stays the live control. |
 | `tabs` | `readonly { id, label, content, disabled? }[]` | One is rendered at a time unless `keepMounted` names it; the screen keeps `activeTab` off a disabled tab. |
 | `keepMounted` | `readonly string[]?` | Tabs that mount on first open and stay mounted, hidden — for a body whose mount is the cost (a 9,000-move list). Showing one again scrolls its current move into view. |
 | `activeTab` / `onTabChange` | | The screen's state. |

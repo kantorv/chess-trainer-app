@@ -108,6 +108,13 @@ type BestVariationsProps = {
    * (see the component note).
    */
   onSelectMove?: (san: readonly string[]) => void;
+  /**
+   * What `showLines` starts as (CTA-90) — the new-game form's Variations
+   * choice, threaded through `BoardPanel` from the session. The header
+   * checkbox stays the live control; this is read once, at mount. Absent:
+   * `true`, today's behaviour.
+   */
+  initialShowLines?: boolean;
 };
 
 const sanSx = {
@@ -194,6 +201,7 @@ function BestVariations({
   requested,
   mask,
   onSelectMove,
+  initialShowLines,
 }: BestVariationsProps) {
   const { t } = useTranslation();
 
@@ -202,8 +210,10 @@ function BestVariations({
     mode rather than an expansion: hiding the lines is about the reader, not
     the position, so unlike the expansion set below it is *not* keyed to the
     FEN — a new analysed position must not bring back what they put away.
+    Seeded, not synced: `initialShowLines` (CTA-90) is what a new game starts
+    with, and the checkbox is the live control from there.
   */
-  const [showLines, setShowLines] = useState(true);
+  const [showLines, setShowLines] = useState(initialShowLines ?? true);
 
   const [expansion, setExpansion] = useState<Expansion>(() => ({
     fen: analysis.fen,

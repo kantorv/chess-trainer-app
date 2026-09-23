@@ -274,7 +274,7 @@ const he: typeof en = {
       side: "לשחק בתור",
       white: "לבן",
       black: "שחור",
-      random: "אקראי",
+      variations: "וריאציות",
       start: "התחל",
       tabs: {
         game: "משחק",

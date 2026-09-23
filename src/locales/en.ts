@@ -372,7 +372,12 @@ const en = {
       side: "Play as",
       white: "White",
       black: "Black",
-      random: "Random",
+      /**
+       * The Variations checkbox under the eval bar (CTA-90) — the same choice
+       * as the pinned block's own header checkbox: whether the new game
+       * starts with the engine's lines shown.
+       */
+      variations: "Variations",
       start: "Start",
       /** The form's two tabs (CTA-83). */
       tabs: {

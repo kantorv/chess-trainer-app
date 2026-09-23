@@ -83,8 +83,8 @@ prefixed `play-with-engine-`. Locale keys: `playEngine.*` (the screen) and
 | --- | --- |
 | `?saved=<id>` | Resume a stored game: the tree, the node the reader was on, the side, the settings, the evals, a resignation. **Beats everything else.** Waits for the store's first read (`PlayedGameRead`). |
 | `?fen=` | A start position (`parseFen`; ignored if it does not pass). With no `side`, Black to move sets the reader to Black and turns the board — otherwise the engine would move the instant the screen opened. It is also what Replay returns to. |
-| `side` | `white` / `black` / `random` (drawn on arrival). **Beats the side to move of a `?fen=`.** |
-| `skill` (0–20), `depth` (1–24), `movetime` (ms, 0–10000), `lines` (1–10), `threads` (1–4), `hash` (1–256), `evalbar` (`1`/`0`) | The Lobby's engine options. **Each field on its own**: absent or unreadable is its default, out of range is clamped (and the engine module re-clamps the UCI options to what the build declares). |
+| `side` | `white` / `black`. **Beats the side to move of a `?fen=`.** |
+| `skill` (0–20), `depth` (1–24), `movetime` (ms, 0–10000), `lines` (1–10), `threads` (1–4), `hash` (1–256), `evalbar` (`1`/`0`), `variations` (`1`/`0`) | The Lobby's engine options. **Each field on its own**: absent or unreadable is its default, out of range is clamped (and the engine module re-clamps the UCI options to what the build declares). `variations` is the pinned lines' start (CTA-90): `0`, the game opens with them hidden — the block's own header checkbox is the live control from there. |
 
 No parameters is the plain game with the defaults. A masked `?saved=` here is
 sent to `/engine/masked` (history replace) — a game belongs to the screen it
@@ -98,7 +98,9 @@ was begun on.
   titled by its pairing, White first ("Human - Stockfish level 10"), with its
   length, side lines, result as PGN writes it (`1-0`, `0-1`, `1/2-1/2`, `*`)
   and date; **Continue** (`?saved=<id>` — on `/engine/masked` for a masked
-  game, which carries a *Masked* chip), **Analysis**
+  game, which carries a *Masked* chip; **only while the game is still on** —
+  a row whose result is decided, a resignation or the mainline's final
+  position through `playedGameResult`, shows none, CTA-90), **Analysis**
   (`/tools/analysis?game=play/games/<id>`, the true PGN, unmasked) and a
   delete that asks first.
 - **Filters**, combined and in the URL: **colour** (`?color=`, the side the
@@ -106,12 +108,15 @@ was begun on.
   along each mainline — `openingOfLine`, the book loaded lazily).
 - **The panel: the new-game form** (`NewGameForm.tsx`), from the defaults on
   every visit, in two tabs:
-  - **Game** — the side (White / Black / Random) over `EngineSettings`
+  - **Game** — the side (White / Black, since CTA-90) over `EngineSettings`
     itself, fed by a `useEngineModule` with `enabled: false`: it handshakes
-    for the options and never searches.
+    for the options and never searches. Under the eval bar, a **Variations**
+    checkbox (CTA-90) — the same choice as the pinned block's own header
+    checkbox, deciding what the game starts with; the block's checkbox is
+    the live control on the game view.
   - **Board editor** — the shared position editor
     ([`position-editor.md`](./position-editor.md)), its state the form's and
-    its orientation pinned to the chosen side (Random pins nothing).
+    its orientation pinned to the chosen side.
   - **Start**, full width below both tabs: `/engine/play?` +
     `newGameParams(settings, side, evalBar, fen?)`. A position other than the
     standard start rides along as `fen` (the Game tab says so, with *Edit* and

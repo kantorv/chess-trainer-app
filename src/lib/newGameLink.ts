@@ -11,7 +11,7 @@ import {
  *
  * | Param | Setting | Values |
  * | --- | --- | --- |
- * | `side` | the reader's side | `white`, `black`, or `random` (drawn once, on arrival) |
+ * | `side` | the reader's side | `white` / `black` |
  * | `skill` | `skillLevel` | 0–20 |
  * | `depth` | `depth` | 1–24 |
  * | `movetime` | `moveTimeMs` | 0–10000 (ms; 0 is no limit) |
@@ -19,6 +19,7 @@ import {
  * | `threads` | `threads` | 1–4 |
  * | `hash` | `hashMb` | 1–256 |
  * | `evalbar` | the eval bar | `1` / `0` |
+ * | `variations` | the pinned engine lines at the start (CTA-90) | `1` / `0` |
  * | `fen` | the starting position | a FEN — written only for a position other than the standard start (CTA-83: the Lobby's Board editor tab) |
  *
  * **Each field on its own**, as `engineSettingsFrom` reads a stored record: an
@@ -35,8 +36,8 @@ import {
  * Black to move still sets the reader to Black. No params, today's game.
  */
 
-/** The reader's side as the Lobby offers it — `random` is drawn on arrival. */
-export type NewGameSide = "white" | "black" | "random";
+/** The reader's side as the Lobby offers it. */
+export type NewGameSide = "white" | "black";
 
 /** The numeric settings a link carries — everything but the side. */
 export type NewGameSettings = Omit<EngineSettings, "playAs">;
@@ -46,6 +47,11 @@ export type NewGameRequest = {
   settings: Partial<NewGameSettings>;
   side?: "white" | "black";
   evalBar?: boolean;
+  /**
+   * Whether the game starts with the pinned engine lines shown (CTA-90) — the
+   * form's Variations checkbox, seeding the block's own header checkbox.
+   */
+  variations?: boolean;
 };
 
 /** Each numeric setting's query parameter. */
@@ -69,11 +75,13 @@ export const newGameParams = (
   settings: NewGameSettings,
   side: NewGameSide,
   evalBar: boolean,
+  variations: boolean,
   fen?: string,
 ): URLSearchParams => {
   const params = new URLSearchParams({ side });
   for (const key of SETTING_KEYS) params.set(NEW_GAME_PARAM[key], String(settings[key]));
   params.set("evalbar", evalBar ? "1" : "0");
+  params.set("variations", variations ? "1" : "0");
   if (fen !== undefined) params.set("fen", fen);
   return params;
 };
@@ -89,14 +97,16 @@ const numberParam = (
   return Math.min(Math.max(Math.round(value), min), max);
 };
 
+/** A `1`/`0` flag, or `undefined` for anything else (absent included). */
+const flagParam = (text: string | null): boolean | undefined =>
+  text === "1" ? true : text === "0" ? false : undefined;
+
 /**
- * What a link asks of a new game. Never throws. `random` decides a
- * `side=random` (injectable, so a test is deterministic).
+ * What a link asks of a new game. Never throws. A `side` the form no longer
+ * writes — `random`, removed with CTA-90 — reads as no side at all, like any
+ * other value the reader cannot have meant.
  */
-export const newGameRequestOf = (
-  params: URLSearchParams,
-  random: () => number = Math.random,
-): NewGameRequest => {
+export const newGameRequestOf = (params: URLSearchParams): NewGameRequest => {
   const settings: Partial<NewGameSettings> = {};
   for (const key of SETTING_KEYS) {
     const value = numberParam(params.get(NEW_GAME_PARAM[key]), ENGINE_SETTING_BOUNDS[key]);
@@ -104,21 +114,15 @@ export const newGameRequestOf = (
   }
 
   const sideParam = params.get("side");
-  const side =
-    sideParam === "white" || sideParam === "black"
-      ? sideParam
-      : sideParam === "random"
-        ? random() < 0.5
-          ? "white"
-          : "black"
-        : undefined;
+  const side = sideParam === "white" || sideParam === "black" ? sideParam : undefined;
 
-  const evalBarParam = params.get("evalbar");
-  const evalBar = evalBarParam === "1" ? true : evalBarParam === "0" ? false : undefined;
+  const evalBar = flagParam(params.get("evalbar"));
+  const variations = flagParam(params.get("variations"));
 
   return {
     settings,
     ...(side === undefined ? {} : { side }),
     ...(evalBar === undefined ? {} : { evalBar }),
+    ...(variations === undefined ? {} : { variations }),
   };
 };

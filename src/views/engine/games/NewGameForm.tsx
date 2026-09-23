@@ -2,6 +2,8 @@ import { useCallback, useMemo, useState } from "react";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import Checkbox from "@mui/material/Checkbox";
+import FormControlLabel from "@mui/material/FormControlLabel";
 import Tab from "@mui/material/Tab";
 import Tabs from "@mui/material/Tabs";
 import ToggleButton from "@mui/material/ToggleButton";
@@ -28,10 +30,13 @@ import EngineSettings from "../play/EngineSettings";
 
 /**
  * **The Lobby's new-game form** (CTA-82) — the right-hand panel of
- * `/engine/games`: the reader's side (White, Black or Random) over the
- * in-game Engine tab itself (`EngineSettings`, not a copy of its controls),
- * and a full-width **Start** that opens `/engine/play` with the choice as
- * query parameters (`lib/newGameLink.ts`), which `arrivalOf` reads once.
+ * `/engine/games`: the reader's side (White or Black) over the in-game
+ * Engine tab itself (`EngineSettings`, not a copy of its controls), a
+ * **Variations** checkbox under its eval bar (CTA-90: the same choice as the
+ * pinned block's own header checkbox — what the new game starts with, the
+ * engine's lines shown or hidden), and a full-width **Start** that opens
+ * `/engine/play` with the choice as query parameters (`lib/newGameLink.ts`),
+ * which `arrivalOf` reads once.
  *
  * The form starts from `DEFAULT_ENGINE_SETTINGS` on every visit — nothing is
  * remembered. **An engine is handshaken but never searches**
@@ -41,15 +46,15 @@ import EngineSettings from "../play/EngineSettings";
  * the handshake lands every control is adjustable within its fallback
  * bounds, which are the bounds the link is clamped into on arrival.
  *
- * **Two tabs** (CTA-83): **Game** — the side and the Engine tab — and
- * **Board editor** — the shared `PositionEditor`, whose state
- * (`usePositionEditor`) is the form's, so it survives a switch of tab. Start
- * and the storage note sit below the tabs, on both. Whenever the editor holds
- * a position other than the standard start, Start carries it as `?fen=`
- * (from either tab — the Game tab says so, with a way back to the standard
- * start), and Start is off while that position cannot be played from. The
- * editor's board faces the side chosen on the Game tab (Random: its own). A
- * `side` on the link still beats the position's side to move (`arrivalOf`).
+ * **Two tabs** (CTA-83): **Game** — the side, the Variations checkbox and
+ * the Engine tab — and **Board editor** — the shared `PositionEditor`, whose
+ * state (`usePositionEditor`) is the form's, so it survives a switch of tab.
+ * Start and the storage note sit below the tabs, on both. Whenever the
+ * editor holds a position other than the standard start, Start carries it as
+ * `?fen=` (from either tab — the Game tab says so, with a way back to the
+ * standard start), and Start is off while that position cannot be played
+ * from. The editor's board faces the side chosen on the Game tab. A `side`
+ * on the link still beats the position's side to move (`arrivalOf`).
  */
 
 const FORM_TABS = ["game", "editor"] as const;
@@ -63,11 +68,12 @@ function NewGameForm() {
   const [settings, setSettings] = useState<EngineSettingsValues>(DEFAULT_ENGINE_SETTINGS);
   const [side, setSide] = useState<NewGameSide>("white");
   const [evalBar, setEvalBar] = useState(true);
+  // What the new game's pinned lines start as (CTA-90) — the block's own
+  // header checkbox is the live control once the game is under way.
+  const [variations, setVariations] = useState(true);
   const [tab, setTab] = useState<FormTab>("game");
-  // The editor faces the side the reader will play; Random leaves it its own.
-  const editor = usePositionEditor(undefined, {
-    orientation: side === "random" ? undefined : side,
-  });
+  // The editor faces the side the reader will play.
+  const editor = usePositionEditor(undefined, { orientation: side });
 
   /*
     The position Start carries: none for the standard start, so an ordinary
@@ -112,7 +118,7 @@ function NewGameForm() {
     onUciOptionsReady,
   });
 
-  const href = `/engine/play?${newGameParams(settings, side, evalBar, customFen)}`;
+  const href = `/engine/play?${newGameParams(settings, side, evalBar, variations, customFen)}`;
 
   return (
     <Box
@@ -214,9 +220,6 @@ function NewGameForm() {
                 <ToggleButton value="black" data-testid="new-game-side-black">
                   {t("playedGames.newGame.black")}
                 </ToggleButton>
-                <ToggleButton value="random" data-testid="new-game-side-random">
-                  {t("playedGames.newGame.random")}
-                </ToggleButton>
               </ToggleButtonGroup>
             </Box>
 
@@ -226,6 +229,24 @@ function NewGameForm() {
               engineOptions={engineOptions}
               showEvalBar={evalBar}
               onShowEvalBarChange={setEvalBar}
+            />
+
+            {/*
+              The Variations choice (CTA-90), directly under the eval bar:
+              what the new game starts with the pinned engine lines at. The
+              same choice as the block's own header checkbox on the game view,
+              which remains the live control there.
+            */}
+            <FormControlLabel
+              sx={{ mt: 2 }}
+              control={
+                <Checkbox
+                  checked={variations}
+                  data-testid="new-game-variations"
+                  onChange={(event) => setVariations(event.target.checked)}
+                />
+              }
+              label={t("playedGames.newGame.variations")}
             />
           </>
         )}
