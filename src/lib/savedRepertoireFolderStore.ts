@@ -93,6 +93,27 @@ export const createRepertoireFolder = async (
 };
 
 /**
+ * **An import's folders** (CTA-89, Settings' Import), made whole elsewhere —
+ * ids, names and parents — and added at the end in one write, parents before
+ * children as given. All or nothing: past the cap it is refused with
+ * `"too-many"`.
+ */
+export const addRepertoireFolders = async (
+  added: readonly RepertoireFolder[],
+): Promise<RepertoireFolderProblem | "too-many" | undefined> => {
+  if (added.length === 0) return undefined;
+  let tooMany = false;
+  const problem = await write((current) => {
+    if (current.length + added.length > MAX_REPERTOIRE_FOLDERS) {
+      tooMany = true;
+      return current;
+    }
+    return [...current, ...added];
+  });
+  return tooMany ? "too-many" : problem;
+};
+
+/**
  * Rename one folder in place. A name that trims to nothing is a no-op rather
  * than a wipe, and so is one that has not changed.
  */

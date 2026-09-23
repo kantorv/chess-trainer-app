@@ -8,7 +8,7 @@ import {
   type PlayedGame,
 } from "./playedGames";
 import { idbDatabase } from "./idb";
-import { idbRecordStore } from "./idbRecordStore";
+import { idbRecordStore, mergedNewestFirst } from "./idbRecordStore";
 
 /**
  * Where the games against the engine are kept (CTA-74; Masked Pieces' too
@@ -117,6 +117,23 @@ export const savePlayedGame = (game: PlayedGame): Promise<PlayedGameProblem | un
     return movesChanged
       ? [next, ...current.filter((row) => row.id !== game.id)]
       : current.map((row) => (row.id === game.id ? next : row));
+  });
+
+/**
+ * **An import's games** (CTA-89, Settings' Import): the `remove` ids go, then
+ * `add` comes in — each replacing a stored game with its id — merged by date
+ * (`mergedNewestFirst`), in one write. The cap is kept as {@link savePlayedGame}
+ * keeps it, the oldest falling off; nothing to change is a no-op.
+ */
+export const importPlayedGames = (
+  add: readonly PlayedGame[],
+  remove: readonly string[] = [],
+): Promise<PlayedGameProblem | undefined> =>
+  write((current) => {
+    const gone = new Set([...remove, ...add.map((game) => game.id)]);
+    const kept = current.filter((row) => !gone.has(row.id));
+    if (add.length === 0 && kept.length === current.length) return current;
+    return mergedNewestFirst(kept, add).slice(0, MAX_PLAYED_GAMES);
   });
 
 /**

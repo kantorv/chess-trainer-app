@@ -55,11 +55,15 @@ import type { RepertoireStats, SavedRepertoire } from "./savedRepertoires";
  * folder trees ride along whole under `folders`, so an empty folder survives.
  */
 
-/** The manifest's shape. Bumped on any change a reader of an older one would misread. */
-const EXPORT_FORMAT_VERSION = 1;
+/**
+ * The manifest's shape. Bumped on any change a reader of an older one would
+ * misread — and every bump brings a migration from the version before it
+ * (`lib/dataImport.ts`'s `MANIFEST_MIGRATIONS`), so an older zip still imports.
+ */
+export const EXPORT_FORMAT_VERSION = 1;
 
 /** What the manifest calls itself — how an import tells it from any other JSON. */
-const EXPORT_FORMAT = "chessapp-export";
+export const EXPORT_FORMAT = "chessapp-export";
 
 type CollectionSource = CollectionSummary["source"];
 
@@ -182,7 +186,7 @@ type ExportFile = { path: string; text: string };
 export type ExportBundle = { manifest: ExportManifest; files: ExportFile[] };
 
 /** Where the manifest sits in the zip. */
-const MANIFEST_PATH = "manifest.json";
+export const MANIFEST_PATH = "manifest.json";
 
 /** What the download is called. */
 export const exportFileName = (now: Date = new Date()): string =>
