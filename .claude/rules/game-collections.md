@@ -115,8 +115,8 @@ a collection =   ──▶ rows:  CollectionRow[]  (its INDEX, one per game)    
 - **Sizing target: 5,000–10,000 games per collection.** A 10,000-game index is
   about 4.8 MB (one JSON parse; 3.7 MB measured over the 7,818-game fixture,
   whose `line`s are whole games since CTA-92), and its PGN is about 9.5 MB.
-  One text read in is capped at `MAX_COLLECTION_CHARS` = 30,000,000
-  characters (about 30,000 games). The cap protects the tab's memory, not
+  One text read in is capped at `MAX_COLLECTION_CHARS` = 100,000,000
+  characters (about 100,000 games). The cap protects the tab's memory, not
   storage. The real 7,818-game fixture `src/test/fixtures/pgn/Carlsen.pgn` is
   the scale every performance claim below was measured at.
 

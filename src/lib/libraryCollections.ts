@@ -33,13 +33,13 @@ import { slugify } from "./pgnText";
 type CollectionSource = "shipped" | "uploaded";
 
 /**
- * **The most text one collection may be** — 30,000,000 characters, about
- * 30,000 games of the World Cup file's ~950 characters each. An upload is kept
+ * **The most text one collection may be** — 100,000,000 characters, about
+ * 100,000 games of the World Cup file's ~950 characters each. An upload is kept
  * in IndexedDB (`lib/libraryCollectionStore.ts`), whose quota is a share of
  * the disk rather than `localStorage`'s few megabytes, so this is a guard on
  * the tab's memory (a text is held twice while it is read), not on storage.
  */
-export const MAX_COLLECTION_CHARS = 30_000_000;
+export const MAX_COLLECTION_CHARS = 100_000_000;
 
 /**
  * What is known of a collection **without its games** — enough for the
