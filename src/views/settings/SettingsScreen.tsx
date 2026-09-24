@@ -8,6 +8,7 @@ import { useTranslation } from "react-i18next";
 
 import ExportTab from "./ExportTab";
 import ImportTab from "./ImportTab";
+import StorageTab from "./StorageTab";
 
 /**
  * **Settings** (`/settings/<tab>`, CTA-86) — the app's own settings, one tab
@@ -19,6 +20,7 @@ import ImportTab from "./ImportTab";
 const SETTINGS_TABS: readonly { id: string; content: () => ReactNode }[] = [
   { id: "export", content: () => <ExportTab /> },
   { id: "import", content: () => <ImportTab /> },
+  { id: "storage", content: () => <StorageTab /> },
 ];
 
 function SettingsScreen() {

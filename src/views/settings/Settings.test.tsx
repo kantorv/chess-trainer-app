@@ -127,6 +127,8 @@ describe("the Settings section", () => {
   it("names every tab by its own route", async () => {
     renderAt("/settings/nope");
     expect(await screen.findByTestId("settings-tab-export")).toHaveAttribute("href", "/settings/export");
+    expect(screen.getByTestId("settings-tab-import")).toHaveAttribute("href", "/settings/import");
+    expect(screen.getByTestId("settings-tab-storage")).toHaveAttribute("href", "/settings/storage");
   });
 });
 
