@@ -33,18 +33,20 @@ panel go in a `RightPanel`.
 `/settings/storage` (CTA-94) — how much space the app's data takes on this
 device, per the research in `docs/indexed-db.md`:
 
-- **Browser storage**: the origin's usage and quota and, where the browser
-  reports it, the IndexedDB portion — all `navigator.storage.estimate()`
-  figures, every label marked as an estimate. A number the browser does not
-  report reads "not available", never zero.
-- **The reader's data, per category**: played games, analyses and their
-  folders, repertoires and their folders, Library collections, their games
-  and their folders — each with its exact record count and its **estimated
-  payload** (`lib/storageDiagnostics.ts`), never presented as a disk or
-  IndexedDB size: the browser may compress, deduplicate and add index
-  overhead, so payloads do not sum to what it reports. The shipped
-  collections are fetched over HTTP, not stored: they belong to the origin
-  estimate only.
+- **Browser storage**: the origin's usage and, where the browser reports it,
+  the IndexedDB portion — all `navigator.storage.estimate()` figures, every
+  label marked as an estimate. A number the browser does not report reads
+  "not available", never zero. The quota is not shown; a note says it is in
+  the browser's developer tools.
+- **The reader's data, four sections** — one per database's heavy store:
+  Engine games, Analyses, Repertoires, Library games — separated by a bolder
+  line, each with its exact record count and its **estimated payload**
+  (`lib/storageDiagnostics.ts`), never presented as a disk or IndexedDB
+  size: the browser may compress, deduplicate and add index overhead, so
+  payloads do not sum to what it reports. The folders and the collections'
+  summaries are tiny beside what they file, and the shipped collections are
+  fetched over HTTP, not stored: none of them is listed — the origin
+  estimate's business only.
 
 The counts and payloads are the stores' snapshots (the Export tab's pattern —
 a subscription starts each read) and the Library's summaries, so nothing is

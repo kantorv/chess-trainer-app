@@ -1464,7 +1464,8 @@ const en = {
         title: "Browser storage",
         usage: "Origin usage (estimate)",
         indexedDb: "IndexedDB usage (estimate)",
-        quota: "Quota (estimate)",
+        /** Where the quota went: the reader's own look-up. */
+        quotaNote: "The storage quota is not shown here; to see it, open your browser's developer tools.",
       },
       /** Where the browser reports no number at all. */
       notAvailable: "Not available",
@@ -1474,14 +1475,10 @@ const en = {
         records: "Records",
         payload: "Estimated payload",
         categories: {
-          playedGames: "Played games",
+          playedGames: "Engine games",
           analyses: "Analyses",
-          analysisFolders: "Analysis folders",
           repertoires: "Repertoires",
-          repertoireFolders: "Repertoire folders",
-          collections: "Library collections",
           collectionGames: "Library games",
-          libraryFolders: "Library folders",
         },
       },
       note:

@@ -5,30 +5,23 @@ import { MemoryRouter, Route, Routes } from "react-router";
 import i18n from "../../i18n";
 import { DEFAULT_ANALYSIS_SETTINGS } from "../../lib/analysisSettings";
 import { indexedRowOf } from "../../lib/collectionIndex";
+import { DEFAULT_ENGINE_SETTINGS } from "../../lib/engineSettings";
 import {
   addCollection,
-  loadUploadedCollections,
   resetLibraryCollectionStore,
 } from "../../lib/libraryCollectionStore";
-import { createLibraryFolder, loadLibraryFolders } from "../../lib/libraryFolderStore";
+import { createLibraryFolder } from "../../lib/libraryFolderStore";
 import { loadPlayedGames, savePlayedGame } from "../../lib/playedGameStore";
 import { DEFAULT_REPERTOIRE_SETTINGS } from "../../lib/repertoireSettings";
-import {
-  createAnalysisFolder,
-  loadAnalysisFolders,
-} from "../../lib/savedAnalysisFolderStore";
+import { createAnalysisFolder } from "../../lib/savedAnalysisFolderStore";
 import { loadSavedAnalyses, saveAnalysis } from "../../lib/savedAnalysisStore";
-import {
-  createRepertoireFolder,
-  loadRepertoireFolders,
-} from "../../lib/savedRepertoireFolderStore";
+import { createRepertoireFolder } from "../../lib/savedRepertoireFolderStore";
 import { loadSavedRepertoires, saveRepertoire } from "../../lib/savedRepertoireStore";
 import {
   estimatedGamePgnBytes,
   estimatedPayloadBytes,
   formatBytes,
 } from "../../lib/storageDiagnostics";
-import { DEFAULT_ENGINE_SETTINGS } from "../../lib/engineSettings";
 import AppThemeWithLang from "../../theme/AppThemeWithLang";
 import { RightPanelOutlet, RightPanelProvider } from "../main/rightPanel";
 import SettingsScreen from "./SettingsScreen";
@@ -51,8 +44,12 @@ const stubEstimate = (estimate?: Record<string, unknown>) => {
   });
 };
 
-/** Every category, once each: a played game, two analyses (one filed), three
- * repertoires (one filed), two collections (three games), two Library folders. */
+/**
+ * A seeded app: a played game, two analyses (one in a folder), three
+ * repertoires (one in a folder), two collections (three games), and two
+ * Library folders — the folders and summaries are seeded too, so the tests
+ * can assert the table counts just the heavy stores.
+ */
 const seed = async () => {
   await savePlayedGame({
     id: "g1",
@@ -138,19 +135,19 @@ describe("the Storage tab", () => {
 
     expect(await screen.findByText("Origin usage (estimate)")).toBeInTheDocument();
     expect(screen.getByText("IndexedDB usage (estimate)")).toBeInTheDocument();
-    expect(screen.getByText("Quota (estimate)")).toBeInTheDocument();
     expect(await screen.findByTestId("settings-storage-usage")).toHaveTextContent(formatBytes(25_000_000));
     expect(screen.getByTestId("settings-storage-indexeddb")).toHaveTextContent(formatBytes(23_000_000));
-    expect(screen.getByTestId("settings-storage-quota")).toHaveTextContent(formatBytes(2_000_000_000));
+    // The quota is the developer tools' business, said beside the numbers.
+    expect(screen.getByText(/developer tools/)).toBeInTheDocument();
+    expect(screen.queryByTestId("settings-storage-quota")).toBeNull();
   });
 
   it("reads a portion the browser does not report as not available, never as zero", async () => {
-    stubEstimate({ usage: 1000, quota: 2048 });
+    stubEstimate({ usage: 1000 });
     renderAt("/settings/storage");
 
     expect(await screen.findByTestId("settings-storage-indexeddb")).toHaveTextContent("Not available");
     expect(screen.getByTestId("settings-storage-usage")).toHaveTextContent("1000 B");
-    expect(screen.getByTestId("settings-storage-quota")).toHaveTextContent("2.0 KB");
   });
 
   it("says nothing is available where the browser has no Storage API", async () => {
@@ -159,53 +156,59 @@ describe("the Storage tab", () => {
 
     expect(await screen.findByTestId("settings-storage-usage")).toHaveTextContent("Not available");
     expect(screen.getByTestId("settings-storage-indexeddb")).toHaveTextContent("Not available");
-    expect(screen.getByTestId("settings-storage-quota")).toHaveTextContent("Not available");
   });
 
-  it("counts and sizes every category over the real stores", async () => {
+  it("counts and sizes the four sections over the real stores", async () => {
     const gamesRows = await seed();
     renderAt("/settings/storage");
 
     await landed("playedGames", "1");
     await landed("analyses", "2");
-    await landed("analysisFolders", "1");
     await landed("repertoires", "3");
-    await landed("repertoireFolders", "1");
-    await landed("collections", "2");
     await landed("collectionGames", "3");
-    await landed("libraryFolders", "2");
-    // The shipped collections are fetched over the network, not stored: the
-    // reader's two uploads are all the collections row counts.
 
-    // What the stores hold, measured by the same helpers the tab shows.
-    const [played, analyses, analysisFolders, repertoires, repertoireFolders, libraryFolders, collections] =
-      await Promise.all([
-        loadPlayedGames(),
-        loadSavedAnalyses(),
-        loadAnalysisFolders(),
-        loadSavedRepertoires(),
-        loadRepertoireFolders(),
-        loadLibraryFolders(),
-        loadUploadedCollections(),
-      ]);
+    // The folders and the collections' summaries are seeded, and the shipped
+    // collections are files fetched over the network: the table counts just
+    // the heavy stores, so none of them is listed.
+    expect(screen.queryByTestId("settings-storage-analysisFolders-records")).toBeNull();
+    expect(screen.queryByTestId("settings-storage-repertoireFolders-records")).toBeNull();
+    expect(screen.queryByTestId("settings-storage-libraryFolders-records")).toBeNull();
+    expect(screen.queryByTestId("settings-storage-collections-records")).toBeNull();
+
+    const [played, analyses, repertoires] = await Promise.all([
+      loadPlayedGames(),
+      loadSavedAnalyses(),
+      loadSavedRepertoires(),
+    ]);
     const payload = (rows: readonly unknown[]) =>
       formatBytes(rows.reduce<number>((total, row) => total + estimatedPayloadBytes(row), 0));
 
     expect(screen.getByTestId("settings-storage-playedGames-payload")).toHaveTextContent(payload(played));
     expect(screen.getByTestId("settings-storage-analyses-payload")).toHaveTextContent(payload(analyses));
-    expect(screen.getByTestId("settings-storage-analysisFolders-payload")).toHaveTextContent(payload(analysisFolders));
     expect(screen.getByTestId("settings-storage-repertoires-payload")).toHaveTextContent(payload(repertoires));
-    expect(screen.getByTestId("settings-storage-repertoireFolders-payload")).toHaveTextContent(
-      payload(repertoireFolders),
-    );
-    expect(screen.getByTestId("settings-storage-collections-payload")).toHaveTextContent(payload(collections));
-    expect(screen.getByTestId("settings-storage-libraryFolders-payload")).toHaveTextContent(payload(libraryFolders));
 
     // The Library's games are estimated from their index rows, never read.
     const gamesPayload = formatBytes(gamesRows.reduce((total, row) => total + estimatedGamePgnBytes(row), 0));
     await waitFor(() =>
       expect(screen.getByTestId("settings-storage-collectionGames-payload")).toHaveTextContent(gamesPayload),
     );
+  });
+
+  it("separates the four sections with a bolder line", async () => {
+    await seed();
+    renderAt("/settings/storage");
+
+    await landed("collectionGames", "3");
+    for (const id of ["playedGames", "analyses", "repertoires"]) {
+      expect(screen.getByTestId(`settings-storage-${id}-records`)).toHaveStyle({ borderBottomWidth: "2px" });
+    }
+    // The last row closes the table, not a section. (MUI's default 1px
+    // border hides behind a CSS variable jsdom's parser drops —
+    // `chessboard.md` §8 — so the absence of the separator is what is
+    // asserted, not the default's width.)
+    expect(screen.getByTestId("settings-storage-collectionGames-records")).not.toHaveStyle({
+      borderBottomWidth: "2px",
+    });
   });
 
   it("labels the sizes as estimated payloads, never as disk usage", async () => {

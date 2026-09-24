@@ -1148,7 +1148,8 @@ const he: typeof en = {
         title: "אחסון הדפדפן",
         usage: "שימוש במקור (הערכה)",
         indexedDb: "שימוש ב־IndexedDB (הערכה)",
-        quota: "מכסה (הערכה)",
+        /** לאן נעלמה המכסה: הבדיקה של הקורא בעצמו. */
+        quotaNote: "מכסת האחסון אינה מוצגת כאן; כדי לראות אותה, פתחו את כלי הפיתוח של הדפדפן.",
       },
       /** כשהדפדפן אינו מדווח מספר כלל. */
       notAvailable: "לא זמין",
@@ -1158,14 +1159,10 @@ const he: typeof en = {
         records: "רשומות",
         payload: "נפח מוערך",
         categories: {
-          playedGames: "משחקים ששוחקו",
+          playedGames: "משחקים נגד המנוע",
           analyses: "ניתוחים",
-          analysisFolders: "תיקיות ניתוחים",
           repertoires: "רפרטוארים",
-          repertoireFolders: "תיקיות רפרטוארים",
-          collections: "אוספי הספרייה",
           collectionGames: "משחקי הספרייה",
-          libraryFolders: "תיקיות הספרייה",
         },
       },
       note:

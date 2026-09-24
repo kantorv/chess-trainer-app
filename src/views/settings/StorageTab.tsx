@@ -12,11 +12,8 @@ import {
   subscribeUploadedCollections,
   uploadedCollectionsSnapshot,
 } from "../../lib/libraryCollectionStore";
-import { libraryFoldersSnapshot, subscribeLibraryFolders } from "../../lib/libraryFolderStore";
 import { playedGamesSnapshot, subscribePlayedGames } from "../../lib/playedGameStore";
-import { analysisFoldersSnapshot, subscribeAnalysisFolders } from "../../lib/savedAnalysisFolderStore";
 import { savedAnalysesSnapshot, subscribeSavedAnalyses } from "../../lib/savedAnalysisStore";
-import { repertoireFoldersSnapshot, subscribeRepertoireFolders } from "../../lib/savedRepertoireFolderStore";
 import { savedRepertoiresSnapshot, subscribeSavedRepertoires } from "../../lib/savedRepertoireStore";
 import {
   estimatedLibraryGamesPayload,
@@ -30,16 +27,22 @@ import { RightPanel } from "../main/rightPanel";
 /**
  * **Storage** (`/settings/storage`, CTA-94) — how much space the app's data
  * takes on this device: the browser's own estimates for the whole origin
- * (`navigator.storage.estimate()`), and the reader's records per category —
- * counted exactly, sized by the app's own payload estimate
+ * (`navigator.storage.estimate()`), and the reader's records — counted
+ * exactly, sized by the app's own payload estimate
  * (`lib/storageDiagnostics.ts`; the research is `docs/indexed-db.md`).
  *
  * Every number says what it is: the browser's figures are estimates, the
  * sizes are **estimated payloads** — never disk or IndexedDB sizes — and a
- * number the browser does not report reads "not available", never zero. The
- * built-in collections are files fetched over the network, not records in
- * the reader's browser, so they belong to the origin usage only and are not
- * listed as stored records.
+ * number the browser does not report reads "not available", never zero.
+ * The quota is not shown; a note says it is in the browser's developer
+ * tools.
+ *
+ * The reader's data is **four sections, one per database's heavy store** —
+ * Engine games, Analyses, Repertoires and Library games — separated by a
+ * bolder line. The folders and the collections' summaries are tiny beside
+ * what they file, and the shipped collections are fetched over the
+ * network, not stored: none of them is listed — the origin usage's business
+ * only.
  *
  * The counts and payloads are the stores' snapshots (the Export tab's
  * pattern: a subscription starts each read), so nothing is read twice. The
@@ -69,19 +72,14 @@ function StorageTab() {
 
   const playedGames = useRows(subscribePlayedGames, playedGamesSnapshot);
   const analyses = useRows(subscribeSavedAnalyses, savedAnalysesSnapshot);
-  const analysisFolders = useRows(subscribeAnalysisFolders, analysisFoldersSnapshot);
   const repertoires = useRows(subscribeSavedRepertoires, savedRepertoiresSnapshot);
-  const repertoireFolders = useRows(subscribeRepertoireFolders, repertoireFoldersSnapshot);
-  const libraryFolders = useRows(subscribeLibraryFolders, libraryFoldersSnapshot);
+  // The summaries are not shown — they are tiny beside their games — but the
+  // games row counts and sizes are derived from them.
   const collections = useRows(subscribeUploadedCollections, uploadedCollectionsSnapshot);
 
   const playedPayload = usePayload(playedGames);
   const analysesPayload = usePayload(analyses);
-  const analysisFoldersPayload = usePayload(analysisFolders);
   const repertoiresPayload = usePayload(repertoires);
-  const repertoireFoldersPayload = usePayload(repertoireFolders);
-  const libraryFoldersPayload = usePayload(libraryFolders);
-  const collectionsPayload = usePayload(collections);
 
   const [browser, setBrowser] = useState<BrowserStorageEstimate | undefined>();
   // The Library's games, estimated from the indexes — kept beside the
@@ -116,20 +114,17 @@ function StorageTab() {
   const gamesPayload = games !== undefined && games.collections === collections ? games.payload : undefined;
 
   /*
-    The reader's data, per category: played games (chessapp.engine), analyses
-    and their folders (chessapp.analyses), repertoires and their folders
-    (chessapp.repertoires), Library collections, their games and their
-    folders (chessapp.library).
+    The reader's data, four sections — one per database's heavy store: the
+    engine's played games (chessapp.engine), the analyses
+    (chessapp.analyses), the repertoires (chessapp.repertoires) and the
+    Library's games (chessapp.library). The folders and the collections'
+    summaries are tiny beside what they file, and are not listed.
   */
   const categories = [
-    { id: "playedGames", records: playedGames?.length, payload: playedPayload },
-    { id: "analyses", records: analyses?.length, payload: analysesPayload },
-    { id: "analysisFolders", records: analysisFolders?.length, payload: analysisFoldersPayload },
-    { id: "repertoires", records: repertoires?.length, payload: repertoiresPayload },
-    { id: "repertoireFolders", records: repertoireFolders?.length, payload: repertoireFoldersPayload },
-    { id: "collections", records: collections?.length, payload: collectionsPayload },
-    { id: "collectionGames", records: gamesCount, payload: gamesPayload },
-    { id: "libraryFolders", records: libraryFolders?.length, payload: libraryFoldersPayload },
+    { id: "playedGames", section: "engine", records: playedGames?.length, payload: playedPayload },
+    { id: "analyses", section: "analyses", records: analyses?.length, payload: analysesPayload },
+    { id: "repertoires", section: "repertoires", records: repertoires?.length, payload: repertoiresPayload },
+    { id: "collectionGames", section: "library", records: gamesCount, payload: gamesPayload },
   ] as const;
 
   /** One browser figure: "…" while the estimate is out, "not available" where the browser reports none. */
@@ -161,9 +156,11 @@ function StorageTab() {
                 "settings.storage.browser.indexedDb",
                 browser?.indexedDB,
               )}
-              {browserRow("settings-storage-quota", "settings.storage.browser.quota", browser?.quota)}
             </TableBody>
           </Table>
+          <Typography variant="caption" sx={{ color: "text.secondary", display: "block" }}>
+            {t("settings.storage.browser.quotaNote")}
+          </Typography>
         </Box>
 
         <Box data-testid="settings-storage-data">
@@ -179,8 +176,22 @@ function StorageTab() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {categories.map((category) => (
-                <TableRow key={category.id}>
+              {categories.map((category, index) => (
+                <TableRow
+                  key={category.id}
+                  sx={
+                    index + 1 < categories.length && categories[index + 1].section !== category.section
+                      ? {
+                          // A section ends: a bolder line than the rows within one.
+                          "& .MuiTableCell-root": {
+                            borderBottomWidth: 2,
+                            borderBottomStyle: "solid",
+                            borderBottomColor: "divider",
+                          },
+                        }
+                      : undefined
+                  }
+                >
                   <TableCell>{t(`settings.storage.data.categories.${category.id}`)}</TableCell>
                   <TableCell align="right" data-testid={`settings-storage-${category.id}-records`}>
                     {category.records === undefined ? "…" : category.records}
