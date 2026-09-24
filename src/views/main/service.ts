@@ -1,11 +1,11 @@
-import { setup, assign, assertEvent } from 'xstate';
+import { setup } from 'xstate';
 import { createActorContext } from '@xstate/react';
 
 import { type UIMatch, type Location } from 'react-router'
 
 interface MachineContext {
 
-    data: Record<string, any>
+    data: Record<string, unknown>
 
 
     //  files: ActorRefFrom<typeof fetchFileMachine>[];
@@ -37,9 +37,6 @@ type MachineEvent =
 
 const boardWidgetMachine = setup({
     types: {} as {
-        input: {
-
-        },
         context: MachineContext,
         events: MachineEvent
     },
@@ -56,20 +53,20 @@ const boardWidgetMachine = setup({
 
 }).createMachine({
     id: "mainsvc",
-    context: ({ input }) => ({
+    context: () => ({
         data: {}
     }),
 
 
     // ...
-    entry: ({ context, event }) => console.log("mainsvc.entry", event),
+    entry: ({ event }) => console.log("mainsvc.entry", event),
     exit: ({ event }) => console.log("mainsvc.exit", event),
     initial: "idle",
     on: {
 
         'EVENTS.NAVIGATION.ROUTER.MATCH.UPDATE': [
             {
-                guard: ({ context, event }) => event.match.pathname === "/board/",
+                guard: ({ event }) => event.match.pathname === "/board/",
                 //target: ".catalogs_list.main",
                 actions: [
                     ({ event }) => console.log("[mainsvc] EVENTS.NAVIGATION.ROUTER.MATCH.UPDATE::2-0", event)

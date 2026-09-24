@@ -11,7 +11,9 @@ export default defineConfig([
   // the story files even import from the upstream repo's own `src/`, which
   // does not exist here — so linting it only adds ~94 findings we would never
   // act on. tsc already skips it: every tsconfig project includes only `src`.
-  globalIgnores(['dist', 'docs/vendor']),
+  // `coverage` is what `npx vitest run --coverage` writes — generated output,
+  // like `dist`, never hand-edited.
+  globalIgnores(['dist', 'docs/vendor', 'coverage']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [

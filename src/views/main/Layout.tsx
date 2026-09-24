@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import AppBar from '@mui/material/AppBar';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
@@ -221,24 +221,30 @@ const DefaultLayoutViewport = () => {
 
 
     const matches = useMatches();
-    const [curPath, setCurPath] = useState<string>("");
 
-    const updateLocationFn = (match:UIMatch)=>svc.send({
+    const updateLocationFn = useCallback((match:UIMatch)=>svc.send({
         type:"EVENTS.NAVIGATION.ROUTER.MATCH.UPDATE",
         match:match
-    })
+    }),[svc])
 
+
+    // The last pathname the service was told about. A ref, not state: nothing
+    // renders from it — it only keeps the effect from telling the service
+    // about the same route twice — and holding it in state needed a setState
+    // inside the effect (react-hooks/set-state-in-effect).
+    const lastSentPathRef = useRef<string>("");
 
     useEffect(()=>{
         console.log("[TemplatesReadonlyWidgetLayout] matches update", matches);
-        const last_match =  matches.pop()
+        // Read the leaf match; do not pop it out of the router's array.
+        const last_match = matches[matches.length - 1]
         if(undefined === last_match) return
-        if (curPath === last_match.pathname) return
-        setCurPath(last_match.pathname)
+        if (lastSentPathRef.current === last_match.pathname) return
+        lastSentPathRef.current = last_match.pathname
 
         console.log("[TemplatesReadonlyWidgetLayout][updateLocationFn] called", last_match);
         updateLocationFn(last_match)
-    },[matches])
+    },[matches, updateLocationFn])
 
 
 
