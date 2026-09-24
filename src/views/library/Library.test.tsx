@@ -645,6 +645,11 @@ describe("the table's filters", () => {
     expect(within(screen.getByTestId("library-filter-color")).getByTestId("library-filter-color-black")).toBeDisabled();
 
     typeInto("library-filter-player", "carl");
+    // Enter commits the typed part of a name — a chip, not a whole facet value (CTA-95).
+    fireEvent.keyDown(within(screen.getByTestId("library-filter-player")).getByRole("combobox"), {
+      key: "Enter",
+    });
+    expect(within(screen.getByTestId("library-filter-player")).getByText("carl")).toBeInTheDocument();
     // Newest first: "2023.10" is after April.
     expect(rowNumbers()).toEqual(["3", "2", "1"]);
     fireEvent.click(panel().getByTestId("library-filter-color-black"));
@@ -652,6 +657,30 @@ describe("the table's filters", () => {
     expect(where()).toContain("player=carl");
     expect(where()).toContain("color=black");
     expect(screen.getByTestId("library-table-count")).toHaveTextContent("2 of 3 games");
+  });
+
+  it("gathers two spellings of one player, the URL carrying both (CTA-95)", async () => {
+    const mixed = await keep("Spellings", [
+      '[Event "Mixed"]\n[Date "2023.06.01"]\n[White "Carlsen, Magnus"]\n[Black "Nepo"]\n[Result "1-0"]\n\n1. e4 e5 1-0',
+      '[Event "Mixed"]\n[Date "2023.05.01"]\n[White "Ding"]\n[Black "Carlsen,M"]\n[Result "1-0"]\n\n1. d4 d5 1-0',
+      '[Event "Mixed"]\n[Date "2023.04.01"]\n[White "Nepo"]\n[Black "Ding"]\n[Result "1/2-1/2"]\n\n1. c4 1/2-1/2',
+    ]);
+    await mountTable(`/library/${mixed.id}`);
+    const box = within(screen.getByTestId("library-filter-player")).getByRole("combobox");
+    fireEvent.keyDown(box, { key: "ArrowDown" });
+    fireEvent.click(await screen.findByRole("option", { name: "Carlsen, Magnus" }));
+    fireEvent.click(await screen.findByRole("option", { name: "Carlsen,M" }));
+    expect(rowNumbers()).toEqual(["1", "2"]);
+    expect(screen.getByTestId("library-table-count")).toHaveTextContent("2 of 3 games");
+    // Every name its own repeated param — a link, or a reload, carries them all.
+    const url = `/library/${mixed.id}?player=${encodeURIComponent("Carlsen, Magnus").replace(/%20/g, "+")}&player=${encodeURIComponent("Carlsen,M")}`;
+    expect(where()).toBe(url);
+    cleanupAndMount(where());
+    await screen.findByTestId("library-table");
+    expect(rowNumbers()).toEqual(["1", "2"]);
+    // The side any of them had: of the two spellings, only "Carlsen,M" was Black.
+    fireEvent.click(panel().getByTestId("library-filter-color-black"));
+    expect(rowNumbers()).toEqual(["2"]);
   });
 
   it("narrows by opening name or ECO, event and dates, all from the URL", async () => {
@@ -860,8 +889,8 @@ describe("the opening-moves filter", () => {
     expect(moves().getByTestId("library-filter-moves-end")).toHaveTextContent("No game the other filters leave");
     expect(boardOptions().arrows).toBeUndefined();
     expect(screen.getByTestId("library-filter-arrows").querySelectorAll("path")).toHaveLength(0);
-    // Taking the player off brings the line's games back.
-    typeInto("library-filter-player", "");
+    // Taking the player off (the chip's ×) brings the line's games back.
+    fireEvent.click(screen.getByTestId("library-filter-player").querySelector(".MuiChip-deleteIcon")!);
     expect(rowNumbers()).toEqual(["1"]);
   });
 

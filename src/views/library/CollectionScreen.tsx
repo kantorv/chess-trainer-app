@@ -82,13 +82,14 @@ import { loadCollectionGames, useCollectionRows } from "./useLibraryCollections"
  * one row per game, the columns `lib/libraryCollections.ts` reads off the
  * tags (and the length it counts), **sorted** by a click on any header and
  * **filtered** by words (matched against every text column, the box over the
- * table) and by the right-hand panel's filters — player and side, opening,
+ * table) and by the right-hand panel's filters — players (several names at
+ * once, OR'd, CTA-95) and side, opening,
  * event, dates, result (`CollectionFilters.tsx`; each shown only where the
  * collection has its field) — and, under the player and side, the **opening moves** played
  * on a small board (`OpeningFilterBoard.tsx`, CTA-76): the opening tree
  * (`lib/openingTree.ts`, merged from the index's `line` column) of **the
- * games the other filters leave** — filter by a player and side, and the
- * board shows that player's openings — rebuilt as they change (a few ms for
+ * games the other filters leave** — filter by players and side, and the
+ * board shows their openings — rebuilt as they change (a few ms for
  * 10,000 games). Its line narrows the table last, and is kept as written
  * when the other filters leave no game on it (the board then says so); only
  * a line no game of the whole collection plays is cut back, where they part.
@@ -186,8 +187,15 @@ function CollectionTable({
     [collectionTree, requestedLine],
   );
   const isoDate = (value: string | null) => (/^\d{4}-\d{2}-\d{2}$/.test(value ?? "") ? (value as string) : "");
+  // The player filter's chosen names — the URL's repeated `?player=` params,
+  // blanks dropped. Memoized on `params`: it stays one object until the search
+  // changes, so a re-render the URL did not cause does not re-filter the rows.
+  const player = useMemo(
+    () => params.getAll("player").filter((name) => name.trim() !== ""),
+    [params],
+  );
   const filters: CollectionFilterValues = {
-    player: params.get("player") ?? "",
+    player,
     color: requestedColor === "white" || requestedColor === "black" ? requestedColor : "",
     opening: params.get("opening") ?? "",
     event: params.get("event") ?? "",
@@ -202,7 +210,7 @@ function CollectionTable({
     : ROWS_PER_PAGE[0];
 
   const facets = useMemo(() => collectionFacetsOf(rows), [rows]);
-  const { player, color, event, from, to, result } = filters;
+  const { color, event, from, to, result } = filters;
   const openingName = filters.opening;
   // Every filter but the line: the rows the board's tree is merged from.
   const narrowed = useMemo(
@@ -315,14 +323,29 @@ function CollectionTable({
   const page = Math.min(Math.max(0, Number(params.get("page")) || 0), lastPage);
   const pageRows = shown.slice(page * rowsPerPage, (page + 1) * rowsPerPage);
 
-  /** Change some of the table's URL state; a new filter or sort starts at page 0. */
-  const setState = (patch: Record<string, string | null>, keepPage = false) =>
+  /**
+   * Change some of the table's URL state; a new filter or sort starts at page
+   * 0. A string writes one param (`""` removing it); an array writes a
+   * repeated param — the player filter's names, `?player=a&player=b` (names
+   * hold commas, so joining them into one value is not safe), an empty array
+   * removing every one; `null` removes whatever the key holds.
+   */
+  const setState = (patch: Record<string, string | readonly string[] | null>, keepPage = false) =>
     setParams(
       (current) => {
         const next = new URLSearchParams(current);
         for (const [key, value] of Object.entries(patch)) {
-          if (value === null || value === "") next.delete(key);
-          else next.set(key, value);
+          if (typeof value === "string") {
+            if (value === "") next.delete(key);
+            else next.set(key, value);
+          } else if (value === null) {
+            next.delete(key);
+          } else {
+            next.delete(key);
+            for (const name of value) {
+              if (name !== "") next.append(key, name);
+            }
+          }
         }
         if (!keepPage) next.delete("page");
         return next;

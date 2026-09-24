@@ -19,18 +19,20 @@ import OpeningFilterBoard from "./OpeningFilterBoard";
 
 /**
  * **A collection table's filters** (CTA-75) — the right-hand panel of
- * `/library/<collection>`: player (and the side they had), opening, event,
- * a date range and the result. Presentational: the values are the table's
- * URL state, and every change goes back through `onChange`.
+ * `/library/<collection>`: players (several names at once, CTA-95) and the
+ * side any of them had, opening, event, a date range and the result.
+ * Presentational: the values are the table's URL state, and every change
+ * goes back through `onChange`.
  *
  * **A filter is shown only where the collection has its field**
  * (`collectionFacetsOf`): a PGN carries what its source wrote, so an upload
  * with no dates gets no date range, one event gets no event picker. The lists
  * offer **everything** the games hold — every player, every event, every
  * opening (labelled with its ECO code first, in ECO order) — and the player
- * and opening boxes also take any text: part of a name, or an ECO code's start.
+ * and opening boxes also take any text: part of a name, committed as a chip
+ * (`freeSolo`, `multiple`, CTA-95), or an ECO code's start.
  *
- * **The order**: the player and their side at the top, then **the opening
+ * **The order**: the players and their side at the top, then **the opening
  * moves** (CTA-76) — a small board over the opening tree of the games the
  * other filters leave (`OpeningFilterBoard.tsx`), shown once some game has a
  * `line` in the index (an index from before the column has none) — and under
@@ -68,7 +70,11 @@ function CollectionFilters({
   onLine,
 }: CollectionFiltersProps) {
   const { t } = useTranslation();
-  const active = COLLECTION_FILTER_PARAMS.some((key) => values[key] !== "");
+  // Any filter on: the player filter holds its names as an array, the rest are strings.
+  const active = COLLECTION_FILTER_PARAMS.some((key) => {
+    const value = values[key];
+    return typeof value === "string" ? value !== "" : value.length > 0;
+  });
 
   return (
     <Box data-testid="library-filters" sx={{ display: "grid", gap: 2 }}>
@@ -83,16 +89,23 @@ function CollectionFilters({
 
       {facets.players.length > 0 && (
         <Box sx={{ display: "grid", gap: 1 }}>
+          {/*
+            Several names at once (CTA-95): `multiple` renders the names as
+            chips, `freeSolo` lets part of a name — not a whole facet value —
+            join them (Enter commits the typed text; MUI discards it on blur),
+            and `limitTags` truncates the chips in this narrow panel until the
+            box is focused. `disableCloseOnSelect` keeps the list open for the
+            next name. The names are the URL's repeated `?player=` params.
+          */}
           <Autocomplete
+            multiple
             freeSolo
             size="small"
+            limitTags={1}
+            disableCloseOnSelect
             options={facets.players}
             value={values.player}
-            inputValue={values.player}
-            onChange={(_event, value) => onChange({ player: value ?? "" })}
-            onInputChange={(_event, value, reason) => {
-              if (reason === "input" || reason === "clear") onChange({ player: value });
-            }}
+            onChange={(_event, value) => onChange({ player: value })}
             data-testid="library-filter-player"
             renderInput={(params) => <TextField {...params} label={t("library.filters.player")} />}
           />
@@ -101,7 +114,7 @@ function CollectionFilters({
             fullWidth
             size="small"
             value={values.color}
-            disabled={values.player.trim() === ""}
+            disabled={values.player.length === 0}
             onChange={(_event, value: PlayerColor | "" | null) => onChange({ color: value ?? "" })}
             aria-label={t("library.filters.color")}
             data-testid="library-filter-color"

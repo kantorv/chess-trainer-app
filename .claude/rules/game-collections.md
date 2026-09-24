@@ -60,7 +60,7 @@ for the Analysis Board and Saved analyses it hands games to.
 | `src/views/shared/folders/FolderTreeTable.tsx` | The details view itself — sticky header, sortable columns, indented rows with chevrons, hover actions. Presentational and reusable; the Library is its one consumer. |
 | `src/views/library/LibraryUpload.tsx` | `/library/new`: a new collection (file, paste, or empty), filed in a folder (`?folder=<id>`, the picker), and `?into=<id>` to add games to an existing one. |
 | `src/views/library/CollectionScreen.tsx` | `/library/<collection>`: the table, the picks, the export bar, Analyse, Add games, and deleting games. |
-| `src/views/library/CollectionFilters.tsx` | The table's right-hand panel: player and side, the opening board, then opening, event, dates and result. |
+| `src/views/library/CollectionFilters.tsx` | The table's right-hand panel: players (several names at once, OR'd — CTA-95) and side, the opening board, then opening, event, dates and result. |
 | `src/views/library/OpeningFilterBoard.tsx` | The opening-moves board (`options.id` `library-filter-board`). |
 | `src/views/library/LibraryGameScreen.tsx` → `LibraryGameBoard.tsx` | `/library/<collection>/<n>`: resolve and parse the game, then the analysis board. |
 | `src/views/library/useLibraryCollections.ts` | The React bindings: `useUploadedCollections`, `useLibraryFolders`, `useCollectionSummary`, `useCollectionRows`, `useCollectionGames`, `loadCollectionGames`. |
@@ -515,8 +515,10 @@ column's default).
 **Filters.** The words box `?q=` requires every word to appear in some text
 column. The panel (`CollectionFilters`) holds, **in this order**:
 
-1. **player** (`?player=`, part of a name, suggested from the games) and the
-   **side** they had (`?color=white|black`, enabled once a player is typed);
+1. **players** (`?player=`, one repeated param per name — names hold commas,
+   so they are not joined into one value; several parts of names OR'd, each
+   suggested from the games or typed free as a chip — CTA-95) and the **side**
+   any of them had (`?color=white|black`, enabled once a name is chosen);
 2. the **opening-moves board** (§6.4.1), `?line=`;
 3. **opening** (`?opening=`, matched against `openingLabelOf` =
    "`ECO` name", so `B9` or `najdorf` both work; listed in ECO order),
