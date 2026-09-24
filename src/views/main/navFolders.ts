@@ -116,9 +116,9 @@ export const navFolders = (): readonly NavFolder[] => [
   },
   /*
     The app's own settings (CTA-86), one screen per tab of `/settings/<tab>`
-    — Export today. A folder rather than a single entry, so a tab added later
-    is one more `navItems()` entry here; pinned to the sidebar's foot, apart
-    from the screens.
+    — Export, Import and Storage. A folder rather than a single entry, so a
+    tab added later is one more `navItems()` entry here; pinned to the
+    sidebar's foot, apart from the screens.
   */
   {
     id: "settings",

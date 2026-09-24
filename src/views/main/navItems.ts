@@ -4,6 +4,7 @@ import UploadRoundedIcon from "@mui/icons-material/UploadRounded";
 import HistoryRoundedIcon from "@mui/icons-material/HistoryRounded";
 import MenuBookRoundedIcon from "@mui/icons-material/MenuBookRounded";
 import SportsEsportsRoundedIcon from "@mui/icons-material/SportsEsportsRounded";
+import StorageRoundedIcon from "@mui/icons-material/StorageRounded";
 import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
 import ViewListRoundedIcon from "@mui/icons-material/ViewListRounded";
 import TravelExploreRoundedIcon from "@mui/icons-material/TravelExploreRounded";
@@ -109,6 +110,12 @@ export const navItems = (): readonly NavItem[] => [
     to: "/settings/import",
     labelKey: "nav.settingsImport",
     icon: UploadRoundedIcon,
+    folder: "settings",
+  },
+  {
+    to: "/settings/storage",
+    labelKey: "nav.settingsStorage",
+    icon: StorageRoundedIcon,
     folder: "settings",
   },
 ];

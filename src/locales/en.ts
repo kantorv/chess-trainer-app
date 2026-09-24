@@ -33,6 +33,8 @@ const en = {
     settingsExport: "Export",
     /** Settings' Import tab (CTA-89), in the Settings folder. */
     settingsImport: "Import",
+    /** Settings' Storage tab (CTA-94), in the Settings folder. */
+    settingsStorage: "Storage",
     /** Sidebar folders — groupings over the routes, never routes themselves. */
     folders: {
       engine: "Engine",
@@ -1356,6 +1358,7 @@ const en = {
     tabs: {
       export: "Export",
       import: "Import",
+      storage: "Storage",
     },
     /** The Export tab: the reader's data as PGN files and a manifest, in one zip. */
     export: {
@@ -1452,6 +1455,39 @@ const en = {
         noFiles: "It holds no PGN files.",
         close: "Close",
       },
+    },
+    /** The Storage tab (CTA-94): how much space the app's data takes. */
+    storage: {
+      intro:
+        "How much space this app's data takes on this device: the browser's own estimates for the whole origin, and your records — counted exactly, and sized by this app's own estimate, per category.",
+      browser: {
+        title: "Browser storage",
+        usage: "Origin usage (estimate)",
+        indexedDb: "IndexedDB usage (estimate)",
+        quota: "Quota (estimate)",
+      },
+      /** Where the browser reports no number at all. */
+      notAvailable: "Not available",
+      data: {
+        title: "Your data",
+        category: "Category",
+        records: "Records",
+        payload: "Estimated payload",
+        categories: {
+          playedGames: "Played games",
+          analyses: "Analyses",
+          analysisFolders: "Analysis folders",
+          repertoires: "Repertoires",
+          repertoireFolders: "Repertoire folders",
+          collections: "Library collections",
+          collectionGames: "Library games",
+          libraryFolders: "Library folders",
+        },
+      },
+      note:
+        "Payload sizes are this app's own estimate of what its records hold — not disk usage. The browser may compress, deduplicate and add index overhead, so they do not sum to the storage it reports.",
+      panel:
+        "Nothing here is written or removed. The browser's figures are its own estimates for the whole origin; the per-category sizes are this app's estimate of what your records hold, which the browser may store differently on disk. The built-in collections are files fetched over the network, not records in your browser, so they count towards the origin usage only.",
     },
   },
   footer: {
