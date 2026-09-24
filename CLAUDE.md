@@ -50,10 +50,6 @@ must leave `setImmediate` real). Board screens stub `<Chessboard>` and the
 engine with the shared harness, `src/views/board/boardTestHarness.tsx`
 ([`chessboard.md`](.claude/rules/chessboard.md) §8).
 
-`yarn lint` exits non-zero on pre-existing findings in `views/main/Layout.tsx`
-and the XState `views/main/service.ts`. Judge a change by whether it *adds* to
-that count, not by the exit code.
-
 `npx knip` reports unused code. Expected in its output: the vendored stories,
 the Stockfish worker, and the stores' `settled…` / `delete…Db` helpers, which
 only `src/test/setup.ts` uses (through namespace imports knip does not
