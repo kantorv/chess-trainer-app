@@ -283,9 +283,14 @@ export type RowFilter = {
   text: string;
   /** One of {@link RESULTS}, or `""` for any. */
   result: string;
-  /** Part of a player's name, case aside — White's or Black's, as `color` says. */
-  player?: string;
-  /** The side `player` had; `""` / absent for either. Nothing without a `player`. */
+  /**
+   * Parts of players' names, case aside — a game is kept when **any** name is
+   * in White's or Black's, as `color` says (CTA-95: several spellings of one
+   * player chosen together). Each name is a substring match exactly as one
+   * name always was; an empty list narrows nothing.
+   */
+  player?: readonly string[];
+  /** The side one of `player` had; `""` / absent for either. Nothing without a `player`. */
   color?: PlayerColor | "";
   /**
    * Part of the opening's label — its ECO code, then its name
@@ -308,10 +313,12 @@ export type RowFilter = {
 
 /**
  * The side panel's filters as the table's URL holds them — every field a
- * string, `""` for none (dates as `YYYY-MM-DD`).
+ * string, `""` for none (dates as `YYYY-MM-DD`), but `player`: the chosen
+ * names, the URL's repeated `?player=` params in the order they were chosen
+ * (mutable, as the panel's Autocomplete takes them).
  */
 export type CollectionFilterValues = {
-  player: string;
+  player: string[];
   color: PlayerColor | "";
   opening: string;
   event: string;
@@ -389,9 +396,12 @@ const numberedLine = (line: readonly string[]): string =>
  */
 export const activeFilterSummary = (filter: RowFilter, labels: BatchNameLabels): string[] => {
   const parts: string[] = [];
-  const player = filter.player?.trim() ?? "";
-  if (player !== "") parts.push(player);
-  if (player !== "" && (filter.color === "white" || filter.color === "black")) {
+  // The names as one phrase, "/" for the either-spelling the filter means.
+  const players = (filter.player ?? [])
+    .map((name) => name.trim())
+    .filter((name) => name !== "");
+  if (players.length > 0) parts.push(players.join(" / "));
+  if (players.length > 0 && (filter.color === "white" || filter.color === "black")) {
     parts.push(labels[filter.color]);
   }
   const opening = filter.opening?.trim() ?? "";
@@ -458,7 +468,10 @@ export const filteredRows = (
   filter: RowFilter,
 ): CollectionRow[] => {
   const words = filter.text.toLowerCase().split(/\s+/).filter(Boolean);
-  const player = filter.player?.trim().toLowerCase() ?? "";
+  // Every name a substring match exactly as one name always was; OR across them (CTA-95).
+  const players = (filter.player ?? [])
+    .map((name) => name.trim().toLowerCase())
+    .filter((name) => name !== "");
   const opening = filter.opening?.trim().toLowerCase() ?? "";
   const event = filter.event ?? "";
   const from = filter.from ?? "";
@@ -470,9 +483,13 @@ export const filteredRows = (
       if (line.some((san, index) => row.line?.[index] !== san)) return false;
     }
     if (filter.result !== "" && row.result !== filter.result) return false;
-    if (player !== "") {
-      const asWhite = filter.color !== "black" && (row.white?.toLowerCase().includes(player) ?? false);
-      const asBlack = filter.color !== "white" && (row.black?.toLowerCase().includes(player) ?? false);
+    if (players.length > 0) {
+      // Any selected player had the side `color` leaves open — with White or
+      // Black chosen, any of them on that side; one name, today's behaviour.
+      const asWhite =
+        filter.color !== "black" && players.some((name) => row.white?.toLowerCase().includes(name) ?? false);
+      const asBlack =
+        filter.color !== "white" && players.some((name) => row.black?.toLowerCase().includes(name) ?? false);
       if (!asWhite && !asBlack) return false;
     }
     if (opening !== "" && !(openingLabelOf(row)?.toLowerCase().includes(opening) ?? false)) {

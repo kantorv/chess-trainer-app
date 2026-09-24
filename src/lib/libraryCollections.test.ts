@@ -110,11 +110,28 @@ describe("the side panel's filters", () => {
     filteredRows(rows, { text: "", result: "", ...filter }).map((r) => r.number);
 
   it("finds a player's games, either side or the one asked for", () => {
-    expect(numbers({ player: "carlsen" })).toEqual([1, 3]);
-    expect(numbers({ player: "Carlsen", color: "white" })).toEqual([1]);
-    expect(numbers({ player: "carlsen", color: "black" })).toEqual([3]);
+    expect(numbers({ player: ["carlsen"] })).toEqual([1, 3]);
+    expect(numbers({ player: ["Carlsen"], color: "white" })).toEqual([1]);
+    expect(numbers({ player: ["carlsen"], color: "black" })).toEqual([3]);
     // A side alone narrows nothing.
     expect(numbers({ color: "black" })).toEqual([1, 2, 3]);
+  });
+
+  it("keeps a game any of several players is in, on the side asked for (CTA-95)", () => {
+    // Two spellings of one player, or several players: a game is kept when
+    // any name is in it.
+    expect(numbers({ player: ["carlsen", "morphy"] })).toEqual([1, 2, 3]);
+    expect(numbers({ player: ["nepo", "morphy"] })).toEqual([1, 2]);
+    // A side narrows to the games any selected player had it.
+    expect(numbers({ player: ["carlsen", "anderssen"], color: "black" })).toEqual([2, 3]);
+    expect(numbers({ player: ["nepo", "zed"], color: "white" })).toEqual([3]);
+    // A name no game carries narrows nothing on its own...
+    expect(numbers({ player: ["kasparov"] })).toEqual([]);
+    // ...but joins the others with OR.
+    expect(numbers({ player: ["kasparov", "morphy"] })).toEqual([2]);
+    // An empty list, or only blank names, narrows nothing.
+    expect(numbers({ player: [] })).toEqual([1, 2, 3]);
+    expect(numbers({ player: ["  "] })).toEqual([1, 2, 3]);
   });
 
   it("keeps the games whose line begins with the moves played, with the other filters on top", () => {
@@ -129,7 +146,7 @@ describe("the side panel's filters", () => {
     expect(by({ line: ["e4", "e5", "Nf3"] })).toEqual([1]);
     // Longer than a game's line: not a game that began that way.
     expect(by({ line: ["e4", "c5", "Nf3"] })).toEqual([]);
-    expect(by({ line: ["e4"], player: "carlsen" })).toEqual([1]);
+    expect(by({ line: ["e4"], player: ["carlsen"] })).toEqual([1]);
     // A row without a line (an old index) is out once a line is set.
     expect(numbers({ line: ["e4"] })).toEqual([]);
   });
@@ -257,7 +274,7 @@ describe("batchFolderNameOf — where the table's Analyse files a batch (CTA-77)
         {
           text: " najdorf ",
           result: "1-0",
-          player: "Carlsen",
+          player: ["Carlsen"],
           color: "white",
           opening: "B90 Sicilian Defense: Najdorf Variation",
           event: "FIDE World Cup 2023",
@@ -273,18 +290,24 @@ describe("batchFolderNameOf — where the table's Analyse files a batch (CTA-77)
     );
   });
 
+  it("lists several players as one phrase — the names joined, then the side", () => {
+    expect(
+      activeFilterSummary({ ...none, player: ["Carlsen,Magnus", " Carlsen,M "], color: "white" }, labels),
+    ).toEqual(["Carlsen,Magnus / Carlsen,M", "white"]);
+  });
+
   it("names a side only with a player, and an opening typed without a code as typed", () => {
     expect(activeFilterSummary({ ...none, color: "black", opening: "najdorf" }, labels)).toEqual([
       "najdorf",
     ]);
-    expect(activeFilterSummary({ ...none, player: "Nepo", color: "black" }, labels)).toEqual([
+    expect(activeFilterSummary({ ...none, player: ["Nepo"], color: "black" }, labels)).toEqual([
       "Nepo",
       "black",
     ]);
   });
 
   it("cuts the filter summary, never the collection or the count, to fit", () => {
-    const filter = { ...none, player: "Carlsen", event: "A very long event name ".repeat(6).trim() };
+    const filter = { ...none, player: ["Carlsen"], event: "A very long event name ".repeat(6).trim() };
     const name = batchFolderNameOf("World Cup 2023", filter, labels, 100);
     expect(name).toHaveLength(100);
     expect(name.startsWith("World Cup 2023 — 12 games (Carlsen, A very long")).toBe(true);
@@ -293,7 +316,7 @@ describe("batchFolderNameOf — where the table's Analyse files a batch (CTA-77)
 
   it("drops a summary there is no room left for, and cuts only a name too long on its own", () => {
     const long = "A collection with a name that goes on for a long while";
-    expect(batchFolderNameOf(long, { ...none, player: "Carlsen" }, labels, 70)).toBe(
+    expect(batchFolderNameOf(long, { ...none, player: ["Carlsen"] }, labels, 70)).toBe(
       `${long} — 12 games`,
     );
     const cut = batchFolderNameOf("x".repeat(120), none, labels, 100);
