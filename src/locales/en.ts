@@ -1011,14 +1011,14 @@ const en = {
       intoSave: "Add games",
       save: "Add collection",
       pastedName: "Pasted collection",
-      storage: "Collections you add are kept in this browser only. Clearing site data removes them, and they do not follow you to another device. Every game is checked when it is added — a few seconds for a tournament, a minute or more for 10,000 games.",
+      storage: "Collections you add are kept in this browser only. Clearing site data removes them, and they do not follow you to another device. Every game is checked when it is added — a few seconds for a tournament, a minute or more for 10,000 games, and some twenty minutes for the largest collections.",
       /** The index pass over an upload's games, before it is kept. */
       indexing: "Checking games… {{done}} of {{total}}",
       cancel: "Cancel",
       problem: {
         empty: "There is no PGN in that.",
         unreadable: "No game could be read in that.",
-        "too-large": "That is too large — a collection can be up to about 30 million characters (some 30,000 games).",
+        "too-large": "That is too large — a collection can be up to about 100 million characters (some 100,000 games).",
         index: "The games could not be checked. Nothing was added.",
         storage: "It could not be saved — this browser's storage is full or unavailable.",
         missing: "That collection is gone.",
