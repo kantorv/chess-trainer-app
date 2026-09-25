@@ -4,6 +4,8 @@ import { parsePgnTree } from "../../../lib/pgn";
 import {
   HOVERED_NEXT_MOVE_ARROW_COLOR,
   NEXT_MOVE_ARROW_COLOR,
+  NEXT_MOVE_ARROW_PALETTES,
+  UNTAGGED_NEXT_MOVE_ARROW_COLOR,
   SIDELINE_NEXT_MOVE_ARROW_COLOR,
   nextMoveArrowsOf,
 } from "./nextMoveArrows";
@@ -33,5 +35,26 @@ describe("nextMoveArrowsOf", () => {
 
   it("draws nothing where there is nothing to play", () => {
     expect(nextMoveArrowsOf([])).toEqual([]);
+  });
+
+  it("draws in a palette's colours when given one (CTA-98)", () => {
+    const [, d4] = tree.moves;
+    const { lichess } = NEXT_MOVE_ARROW_PALETTES;
+    expect(nextMoveArrowsOf(tree.moves, d4.id, lichess).map((arrow) => arrow.color)).toEqual([
+      lichess.mainline,
+      lichess.hovered,
+      lichess.sideline,
+    ]);
+    // Classic is what every board already draws.
+    expect(nextMoveArrowsOf(tree.moves, null, NEXT_MOVE_ARROW_PALETTES.classic)).toEqual(
+      nextMoveArrowsOf(tree.moves),
+    );
+  });
+
+  it("keeps every palette's three colours apart, and apart from the untagged gray", () => {
+    for (const colors of Object.values(NEXT_MOVE_ARROW_PALETTES)) {
+      const all = [colors.mainline, colors.sideline, colors.hovered, UNTAGGED_NEXT_MOVE_ARROW_COLOR];
+      expect(new Set(all.map((color) => color.toLowerCase())).size).toBe(4);
+    }
   });
 });
