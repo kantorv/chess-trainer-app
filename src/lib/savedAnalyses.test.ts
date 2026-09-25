@@ -302,6 +302,26 @@ describe("a saved analysis' name and folder (CTA-73)", () => {
     });
   });
 
+  it("draws its arrows unsized and classic unless it says otherwise (CTA-98)", () => {
+    const written = savedAnalysisOf("a", tree, [], DEFAULT_ANALYSIS_SETTINGS, "white");
+    expect(written).toMatchObject({ arrowWidthSource: "none", arrowPalette: "classic" });
+
+    // A record from before the fields, and one naming values this build does not know.
+    const legacy: Record<string, unknown> = { ...written };
+    delete legacy.arrowWidthSource;
+    delete legacy.arrowPalette;
+    expect(savedAnalysisFrom(legacy)).toMatchObject({
+      arrowWidthSource: "none",
+      arrowPalette: "classic",
+    });
+    expect(
+      savedAnalysisFrom({ ...legacy, arrowWidthSource: "thickness", arrowPalette: 3 }),
+    ).toMatchObject({ arrowWidthSource: "none", arrowPalette: "classic" });
+    expect(
+      savedAnalysisFrom({ ...legacy, arrowWidthSource: "games", arrowPalette: "lichess" }),
+    ).toMatchObject({ arrowWidthSource: "games", arrowPalette: "lichess" });
+  });
+
   it("names a catalog entry by the record's name", () => {
     const saved = {
       ...savedAnalysisOf("a", tree, [], DEFAULT_ANALYSIS_SETTINGS, "white"),

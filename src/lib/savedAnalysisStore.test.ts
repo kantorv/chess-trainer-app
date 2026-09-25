@@ -344,7 +344,12 @@ describe("the saved-analyses store, saved explicitly (CTA-73)", () => {
 describe("a saved analysis' settings (CTA-73)", () => {
   it("reads an older record with no description, arrows on", async () => {
     await saveAnalysis(save("a", ["e4"]));
-    expect(findSavedAnalysis("a")).toMatchObject({ description: "", showArrows: true });
+    expect(findSavedAnalysis("a")).toMatchObject({
+      description: "",
+      showArrows: true,
+      arrowWidthSource: "none",
+      arrowPalette: "classic",
+    });
   });
 
   it("writes every setting at once, in place, trimmed", async () => {
@@ -355,6 +360,8 @@ describe("a saved analysis' settings (CTA-73)", () => {
       description: "  Main line only. ",
       orientation: "black",
       showArrows: false,
+      arrowWidthSource: "games",
+      arrowPalette: "lichess",
       folderId: "f1",
     });
     expect(await ids()).toEqual(["new", "old"]);
@@ -363,6 +370,8 @@ describe("a saved analysis' settings (CTA-73)", () => {
       description: "Main line only.",
       orientation: "black",
       showArrows: false,
+      arrowWidthSource: "games",
+      arrowPalette: "lichess",
       folderId: "f1",
     });
   });
@@ -376,6 +385,8 @@ describe("a saved analysis' settings (CTA-73)", () => {
       description: "",
       orientation: "white",
       showArrows: true,
+      arrowWidthSource: "none",
+      arrowPalette: "classic",
       folderId: null,
     });
     expect(savedAnalysesSnapshot()).toBe(before);

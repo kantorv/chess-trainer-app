@@ -2,6 +2,14 @@ import {
   analysisSettingsFrom,
   type AnalysisSettings,
 } from "./analysisSettings";
+import {
+  arrowPaletteFrom,
+  arrowWidthSourceFrom,
+  DEFAULT_ARROW_PALETTE,
+  DEFAULT_ARROW_WIDTH_SOURCE,
+  type ArrowPaletteId,
+  type ArrowWidthSource,
+} from "./arrowSettings";
 import { gameTag, type Game, type GameHeaders } from "./gameModel";
 import {
   countVariations,
@@ -69,8 +77,11 @@ import { parsePgnGame, parsePgnTree, readPgnTags } from "./pgn";
  * **description**, the **side** the board opens facing (`orientation` — the
  * repertoire's main colour, so a flip on the board is the session's and an
  * Update does not write it), and whether the board opens **showing the
- * next-move arrows** (`showArrows`, on by default). Each reads as its default
- * on a record from before it.
+ * next-move arrows** (`showArrows`, on by default) — and how it draws them
+ * (CTA-98): what sizes each arrow (`arrowWidthSource`, `"none"` by default)
+ * and in which colours (`arrowPalette`, `"classic"`). Each reads as its
+ * default on a record from before it, or on one naming a value this build
+ * does not know.
  */
 
 /** How long a description may be. */
@@ -95,6 +106,13 @@ export type SavedAnalysis = {
   description: string;
   /** Whether the board opens drawing the next-move arrows. */
   showArrows: boolean;
+  /**
+   * What sizes the next-move arrows (CTA-98). Kept as chosen even when the
+   * tree no longer carries its tag — the board then draws as `"none"`.
+   */
+  arrowWidthSource: ArrowWidthSource;
+  /** The next-move arrows' colours (CTA-98). */
+  arrowPalette: ArrowPaletteId;
   /**
    * The reader's name for it. May be empty — a row then names it by its
    * players, or by the generic "Analysis board".
@@ -216,6 +234,8 @@ export const savedAnalysisOf = (
   folderId: null,
   description: "",
   showArrows: true,
+  arrowWidthSource: DEFAULT_ARROW_WIDTH_SOURCE,
+  arrowPalette: DEFAULT_ARROW_PALETTE,
   savedAt,
   updatedAt: now.toISOString(),
 });
@@ -290,13 +310,21 @@ export const savedAnalysisFrom = (value: unknown): SavedAnalysis | undefined => 
         ? row.description.slice(0, MAX_ANALYSIS_DESCRIPTION_CHARS)
         : "",
     showArrows: typeof row.showArrows === "boolean" ? row.showArrows : true,
+    arrowWidthSource: arrowWidthSourceFrom(row.arrowWidthSource),
+    arrowPalette: arrowPaletteFrom(row.arrowPalette),
   };
 };
 
 /** What the settings screen edits — every field of it, written at once. */
 export type SavedAnalysisSettingsEdit = Pick<
   SavedAnalysis,
-  "name" | "description" | "orientation" | "showArrows" | "folderId"
+  | "name"
+  | "description"
+  | "orientation"
+  | "showArrows"
+  | "arrowWidthSource"
+  | "arrowPalette"
+  | "folderId"
 >;
 
 /** What a row shows about an analysis without opening it. Pure, so it is testable. */
@@ -436,6 +464,8 @@ export const batchAnalysesOf = (
     orientation: "white",
     description: "",
     showArrows: true,
+    arrowWidthSource: DEFAULT_ARROW_WIDTH_SOURCE,
+    arrowPalette: DEFAULT_ARROW_PALETTE,
     name: game.name,
     folderId,
     savedAt: now.toISOString(),

@@ -69,6 +69,8 @@ const seed = async () => {
       orientation: "white",
       description: "",
       showArrows: true,
+      arrowWidthSource: "none",
+      arrowPalette: "classic",
       name: id,
       folderId,
       savedAt: AT,
