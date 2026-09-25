@@ -49,8 +49,12 @@ function AnalysisLoad({
   /** The engine knobs a split's analyses are saved under — the board's own. */
   settings: AnalysisSettings;
   onLoadTree: (tree: GameTree) => void;
-  /** Throws on a FEN that will not parse. */
-  onLoadFen: (fen: string) => void;
+  /**
+   * Throws on a FEN that will not parse. Absent, there is no FEN form — a
+   * host whose board a position reaches another way (the analyses Lobby's
+   * editor and Start, CTA-96) loads games only.
+   */
+  onLoadFen?: (fen: string) => void;
   /**
    * A split was saved into this folder. Absent, a text of several games can
    * only be merged — the Openings explorer keeps nothing (CTA-78).
@@ -152,6 +156,7 @@ function AnalysisLoad({
   };
 
   const setPosition = () => {
+    if (onLoadFen === undefined) return;
     try {
       onLoadFen(fenText);
       setFenProblem(null);
@@ -246,37 +251,41 @@ function AnalysisLoad({
         />
       )}
 
-      <Typography variant="subtitle2" sx={{ fontWeight: 700, mt: 1 }}>
-        {t("analysis.position.fenTitle")}
-      </Typography>
-      <TextField
-        size="small"
-        label={t("analysis.position.fenLabel")}
-        value={fenText}
-        onChange={(event) => setFenText(event.target.value)}
-        onKeyDown={(event) => {
-          if (event.key === "Enter") {
-            event.preventDefault();
-            setPosition();
-          }
-        }}
-        slotProps={{ htmlInput: { "data-testid": "analysis-load-fen-input", dir: "ltr" } }}
-      />
-      <Box>
-        <Button
-          size="small"
-          variant="outlined"
-          disabled={fenText.trim() === ""}
-          onClick={setPosition}
-          data-testid="analysis-load-fen"
-        >
-          {t("analysis.position.loadFen")}
-        </Button>
-      </Box>
-      {fenProblem !== null && (
-        <Alert severity="error" data-testid="analysis-load-fen-problem">
-          {fenProblem}
-        </Alert>
+      {onLoadFen !== undefined && (
+        <>
+          <Typography variant="subtitle2" sx={{ fontWeight: 700, mt: 1 }}>
+            {t("analysis.position.fenTitle")}
+          </Typography>
+          <TextField
+            size="small"
+            label={t("analysis.position.fenLabel")}
+            value={fenText}
+            onChange={(event) => setFenText(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                setPosition();
+              }
+            }}
+            slotProps={{ htmlInput: { "data-testid": "analysis-load-fen-input", dir: "ltr" } }}
+          />
+          <Box>
+            <Button
+              size="small"
+              variant="outlined"
+              disabled={fenText.trim() === ""}
+              onClick={setPosition}
+              data-testid="analysis-load-fen"
+            >
+              {t("analysis.position.loadFen")}
+            </Button>
+          </Box>
+          {fenProblem !== null && (
+            <Alert severity="error" data-testid="analysis-load-fen-problem">
+              {fenProblem}
+            </Alert>
+          )}
+        </>
       )}
     </Box>
   );

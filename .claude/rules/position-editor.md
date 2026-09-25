@@ -153,7 +153,11 @@ not the standard start — and a position turns the board there, so the
 analysis opens facing the side to move. The gate is the Lobby's — `isValid`
 plus `parseFen`: while the position cannot be analyzed, Start is a plain
 disabled button with a warning above it listing the problems.
-`boardMaxWidth` 360. Nothing in this folder changed for it.
+`boardMaxWidth` 360. Nothing in this folder changed for it. Under the editor
+the form also hosts **Load a game** (CTA-96) — the Analysis Board's Load
+tab's PGN route, handing a whole game to the board — which is the form's own
+and changed nothing here either; the editor's PGN tab still takes a game's
+final position.
 
 ---
 

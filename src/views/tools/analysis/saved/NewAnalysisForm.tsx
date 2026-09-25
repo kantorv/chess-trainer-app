@@ -2,15 +2,19 @@ import { useMemo } from "react";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import Divider from "@mui/material/Divider";
 import Typography from "@mui/material/Typography";
 import PlayArrowRoundedIcon from "@mui/icons-material/PlayArrowRounded";
-import { Link as RouterLink } from "react-router";
+import { Link as RouterLink, useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 
+import { analysisHandOffState } from "../../../../lib/analysisHandOff";
+import { DEFAULT_ANALYSIS_SETTINGS } from "../../../../lib/analysisSettings";
 import { parseFen } from "../../../../lib/fen";
 import { START_POSITION } from "../../../../lib/positionEditor";
 import PositionEditor from "../../../shared/positionEditor/PositionEditor";
 import { usePositionEditor } from "../../../shared/positionEditor/usePositionEditor";
+import AnalysisLoad from "../AnalysisLoad";
 
 /**
  * **The Lobby of analyses' new-analysis form** (CTA-87) — the right-hand
@@ -22,11 +26,21 @@ import { usePositionEditor } from "../../../shared/positionEditor/usePositionEdi
  * move.
  *
  * There is no Game tab: nothing rides along to the Analysis Board — its
- * engine and its settings are its own tabs — so the editor is the whole form,
- * from the standard start on every visit, facing White until Flip says
+ * engine and its settings are its own tabs — so the editor is the form's
+ * board, from the standard start on every visit, facing White until Flip says
  * otherwise. Start is **off**, saying why, while the editor's position cannot
  * be analyzed, exactly as the engine Lobby's Start is off while one cannot be
  * played from.
+ *
+ * Under the editor, **Load a game** (CTA-96) is the Analysis Board's Load
+ * tab's PGN half — the same `AnalysisLoad`, without its FEN form (a position
+ * here is the editor's and Start's job). A PGN, picked or pasted, is read as
+ * a **whole game** (side lines, comments, NAGs kept): one game (or a merge of
+ * several) opens the Analysis Board with the tree handed over as location
+ * state — a new unsaved analysis, facing White, because a game does not turn
+ * the board; a split saves one analysis per game into a new folder and lands
+ * the reader in it. The editor's own PGN tab is unchanged: it keeps taking a
+ * game's **final position** onto the board.
  */
 
 /** The widest the editor's board grows in the panel — a small board, beside the list. */
@@ -34,6 +48,7 @@ const EDITOR_BOARD_MAX_PX = 360;
 
 function NewAnalysisForm() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const editor = usePositionEditor();
 
   /*
@@ -75,6 +90,23 @@ function NewAnalysisForm() {
           editor={editor}
           testId="new-analysis-editor"
           boardMaxWidth={EDITOR_BOARD_MAX_PX}
+        />
+        <Divider sx={{ my: 2 }} />
+        {/*
+          Load a game (CTA-96): the Load tab's PGN route, hosted here. A whole
+          game (or a merge) is handed to the Analysis Board as location state —
+          a new unsaved analysis, facing White: a game does not turn the board.
+          A split is saved into a new folder, which the reader lands in. No FEN
+          form: a position is the editor's and Start's job.
+        */}
+        <AnalysisLoad
+          settings={DEFAULT_ANALYSIS_SETTINGS}
+          onLoadTree={(tree) =>
+            navigate("/tools/analysis", { state: analysisHandOffState(tree, "white") })
+          }
+          onSplit={(folderId) =>
+            navigate(`/tools/analysis/saved?folder=${encodeURIComponent(folderId)}`)
+          }
         />
       </Box>
 
