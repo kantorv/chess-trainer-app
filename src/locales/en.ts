@@ -1037,6 +1037,19 @@ const en = {
         /** Where the tree's cut landed (CTA-92): one game does go on, alone. */
         single: "Only one game in the collection goes further here",
         none: "No game the other filters leave was played this way",
+        /** Save tree as PGN (CTA-99): the tree below the board's position, as one PGN file. */
+        save: "Save tree as PGN",
+        saveDialog: {
+          title: "Should we add games number as tag?",
+          no: "No",
+          tags: "Add tags",
+          games: "\"games\" tag",
+          gamesHelp: "How many of the games played each move: [%games 12]",
+          prc: "\"prc\" tag",
+          prcHelp: "Each move's share of its position's games, in percent: [%prc 40]",
+          cancel: "Cancel",
+          save: "Save",
+        },
       },
     },
     confirmDelete: {

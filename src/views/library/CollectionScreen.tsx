@@ -614,6 +614,7 @@ function CollectionTable({
             openingNode={openingNode}
             line={line}
             onLine={(next) => setState({ [OPENING_LINE_PARAM]: openingLineParamOf(next) })}
+            collectionName={collection.name}
             onClear={() =>
               setState(Object.fromEntries(COLLECTION_FILTER_PARAMS.map((key) => [key, null])))
             }

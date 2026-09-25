@@ -57,6 +57,8 @@ type CollectionFiltersProps = {
   openingNode: OpeningTreeNode;
   line: readonly string[];
   onLine: (line: string[]) => void;
+  /** The collection's name, for the opening board's saved tree. */
+  collectionName: string;
 };
 
 function CollectionFilters({
@@ -68,6 +70,7 @@ function CollectionFilters({
   openingNode,
   line,
   onLine,
+  collectionName,
 }: CollectionFiltersProps) {
   const { t } = useTranslation();
   // Any filter on: the player filter holds its names as an array, the rest are strings.
@@ -131,7 +134,7 @@ function CollectionFilters({
       )}
 
       {openingTree.count > 0 && (
-        <OpeningFilterBoard node={openingNode} line={line} onLine={onLine} />
+        <OpeningFilterBoard node={openingNode} line={line} onLine={onLine} collectionName={collectionName} />
       )}
 
       {facets.openings.length > 0 && (
