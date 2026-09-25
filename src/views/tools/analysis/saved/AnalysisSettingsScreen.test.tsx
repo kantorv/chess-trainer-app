@@ -69,6 +69,10 @@ describe("a saved analysis' settings screen", () => {
       "true",
     );
     expect(screen.getByTestId("analysis-settings-show-arrows")).toBeChecked();
+    // CTA-98: unsized and classic; every source offered — the board says what its tree carries.
+    expect(screen.getByTestId("analysis-settings-arrows-width-none")).toBeChecked();
+    expect(screen.getByTestId("analysis-settings-arrows-width-games")).toBeEnabled();
+    expect(screen.getByTestId("analysis-settings-arrows-palette-classic")).toBeChecked();
   });
 
   it("writes title, description, side, arrows and folder on Save, and goes to the board", async () => {
@@ -85,6 +89,8 @@ describe("a saved analysis' settings screen", () => {
     });
     fireEvent.click(screen.getByTestId("analysis-settings-color-black"));
     fireEvent.click(screen.getByTestId("analysis-settings-show-arrows"));
+    fireEvent.click(screen.getByTestId("analysis-settings-arrows-width-eval"));
+    fireEvent.click(screen.getByTestId("analysis-settings-arrows-palette-lichess"));
     fireEvent.click(screen.getByTestId(`analysis-settings-folder-picker-${folder.id}`));
     fireEvent.click(screen.getByTestId("analysis-settings-save"));
 
@@ -96,6 +102,8 @@ describe("a saved analysis' settings screen", () => {
       description: "Giuoco piano ideas.",
       orientation: "black",
       showArrows: false,
+      arrowWidthSource: "eval",
+      arrowPalette: "lichess",
       folderId: folder.id,
     });
     // In place: the list's order is kept.

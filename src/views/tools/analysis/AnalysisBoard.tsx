@@ -19,6 +19,10 @@ import { useTranslation } from "react-i18next";
 import type { ChessboardOptions } from "react-chessboard";
 
 import { analysisHandOffOf } from "../../../lib/analysisHandOff";
+import {
+  DEFAULT_ARROW_PALETTE,
+  DEFAULT_ARROW_WIDTH_SOURCE,
+} from "../../../lib/arrowSettings";
 import { parseFen } from "../../../lib/fen";
 import { initialPlyOf, parseMoveParam } from "../../../lib/gameNavigation";
 import {
@@ -28,6 +32,7 @@ import {
   resolveGameReference,
 } from "../../../lib/gameReference";
 import type { GameTree } from "../../../lib/gameTree";
+import { arrowWidthSourcesIn } from "../../../lib/nextMoveWeights";
 import { parsePgnTree } from "../../../lib/pgn";
 import { slugify } from "../../../lib/pgnText";
 import { atParamOf, REPERTOIRE_AT_PARAM } from "../../../lib/repertoireLink";
@@ -41,6 +46,7 @@ import BoardShell from "../../board/core/BoardShell";
 import { useVariationsExplorer } from "../../explorer/useVariationsExplorer";
 import RepertoireChangesBar from "../../repertoires/RepertoireChangesBar";
 import CurrentOpening from "../../shared/CurrentOpening";
+import AnalysisArrows from "./AnalysisArrows";
 import AnalysisExport from "./AnalysisExport";
 import EngineThinking from "./EngineThinking";
 import PlayToggleButton from "./PlayToggleButton";
@@ -70,10 +76,13 @@ import { useAnalysisBoard, type AnalysisBoardStart } from "./useAnalysisBoard";
  * | Tree view | `useVariationsExplorer` | Moves (side lines, comment marks, evals, the move menu), Map, the comment block, the next-moves bar and arrows — editing on, *Play chances…* off (nothing here plays by chance) |
  * | Saving | `useAnalysisBoard` — explicit | no autosave: the header's Save lights while the board differs from its record, and opens the changes strip (Update / Save as copy / Discard); a board with no record yet saves through a name-and-folder dialog |
  *
- * **Tabs: Moves · Map · Load · Export · Engine.** Load brings a PGN (a file
+ * **Tabs: Moves · Map · Load · Export · Engine · Arrows.** Load brings a PGN (a file
  * or a paste — several games are merged onto the board or split into a
  * folder of saved analyses) or a FEN; Export copies the FEN, and copies or
- * downloads the PGN with or without comments, NAGs and side lines. The
+ * downloads the PGN with or without comments, NAGs and side lines; Arrows
+ * (CTA-98) switches the next-move arrows, picks what sizes them — a tag in
+ * each move's comment (`[%eval]`, `[%games]`, `prc`), offered only while the
+ * tree carries it, or the lines ahead — and their colours. The
  * saved list's panel hosts the position editor that starts a new analysis
  * from a custom position
  * ([`position-editor.md`](../../../../.claude/rules/position-editor.md) §4).
@@ -146,9 +155,17 @@ function AnalysisBoard() {
   const { core, engine, record } = state;
 
   const [tab, setTab] = useState("moves");
-  // Opens as the record's settings say (on for a new board); the Engine tab's
-  // switch is the session's.
+  // Opens as the record's settings say (on, colour only, classic for a new
+  // board); the Arrows tab's choices are the session's.
   const [showArrows, setShowArrows] = useState(record?.showArrows ?? true);
+  const [arrowWidthSource, setArrowWidthSource] = useState(
+    record?.arrowWidthSource ?? DEFAULT_ARROW_WIDTH_SOURCE,
+  );
+  const [arrowPalette, setArrowPalette] = useState(record?.arrowPalette ?? DEFAULT_ARROW_PALETTE);
+  // A tag no move in the tree carries is offered greyed out, and a choice of
+  // one is kept but drawn as None — until a load or an edit brings it back.
+  const availableWidthSources = useMemo(() => arrowWidthSourcesIn(core.tree), [core.tree]);
+  const drawnWidthSource = availableWidthSources.has(arrowWidthSource) ? arrowWidthSource : "none";
   const [changesOpen, setChangesOpen] = useState(false);
   const [saveOpen, setSaveOpen] = useState(false);
   // The strip closes itself once the changes are kept or dropped — adjusted
@@ -173,7 +190,7 @@ function AnalysisBoard() {
     onEditTree: core.replaceTree,
     playChances: false,
     annotations: true,
-    arrows: { show: showArrows },
+    arrows: { show: showArrows, widthSource: drawnWidthSource, palette: arrowPalette },
     map: { addedIds: state.extensionIds, linked: true },
   });
   const boardOptions: ChessboardOptions = { arrows: explorer.arrows };
@@ -419,32 +436,33 @@ function AnalysisBoard() {
               id: "engine",
               label: t("analysis.tabs.engine"),
               content: (
-                <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                  <FormControlLabel
-                    sx={{ m: 0, px: 1 }}
-                    control={
-                      <Switch
-                        size="small"
-                        checked={showArrows}
-                        data-testid="analysis-arrows"
-                        onChange={(event) => setShowArrows(event.target.checked)}
-                      />
-                    }
-                    label={t("analysis.settings.arrows")}
-                  />
-                  <AnalysisSettingsPanel
-                    settings={state.settings}
-                    onChange={state.updateSettings}
-                    engineOptions={engine.engineOptions}
-                    engineOn={state.engineOn}
-                    showEvalBar={state.showEvalBar}
-                    onShowEvalBarChange={state.setShowEvalBar}
-                    onClear={() => {
-                      state.clearBoard();
-                      clearArrivalUrl();
-                    }}
-                  />
-                </Box>
+                <AnalysisSettingsPanel
+                  settings={state.settings}
+                  onChange={state.updateSettings}
+                  engineOptions={engine.engineOptions}
+                  engineOn={state.engineOn}
+                  showEvalBar={state.showEvalBar}
+                  onShowEvalBarChange={state.setShowEvalBar}
+                  onClear={() => {
+                    state.clearBoard();
+                    clearArrivalUrl();
+                  }}
+                />
+              ),
+            },
+            {
+              id: "arrows",
+              label: t("analysis.tabs.arrows"),
+              content: (
+                <AnalysisArrows
+                  showArrows={showArrows}
+                  onShowArrowsChange={setShowArrows}
+                  widthSource={arrowWidthSource}
+                  onWidthSourceChange={setArrowWidthSource}
+                  available={availableWidthSources}
+                  palette={arrowPalette}
+                  onPaletteChange={setArrowPalette}
+                />
               ),
             },
           ],
@@ -492,7 +510,11 @@ function AnalysisBoard() {
         open={saveOpen}
         initialName={savedAnalysisDerivedName(core.tree.headers)}
         onSave={async (typed, folderId) => {
-          const saved = await state.saveNew(typed, folderId, showArrows);
+          const saved = await state.saveNew(typed, folderId, {
+            showArrows,
+            arrowWidthSource,
+            arrowPalette,
+          });
           if (saved !== undefined) pointUrlAt(saved.id);
         }}
         onClose={() => setSaveOpen(false)}

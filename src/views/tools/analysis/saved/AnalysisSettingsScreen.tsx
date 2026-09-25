@@ -20,6 +20,7 @@ import {
 import { updateSavedAnalysisSettings } from "../../../../lib/savedAnalysisStore";
 import type { AnalysisFolder } from "../../../../lib/savedAnalysisFolders";
 import FolderPicker from "../../../shared/folders/FolderPicker";
+import { ArrowPaletteField, ArrowWidthSourceField } from "../ArrowSettingsFields";
 import { RightPanel } from "../../../main/rightPanel";
 import { useAnalysisFolders } from "./useAnalysisFolders";
 import { useSavedAnalyses } from "./useSavedAnalyses";
@@ -30,9 +31,12 @@ import { useSavedAnalyses } from "./useSavedAnalyses";
  * draft, three sections, written on Save.
  *
  * - **General** — the title (the record's `name`) and a description.
- * - **Board** — the side the board opens facing (`orientation`) and whether
- *   it opens drawing the next-move arrows (`showArrows`). A flip or the
- *   arrows switch on the board is the session's; these are what it opens on.
+ * - **Board** — the side the board opens facing (`orientation`), whether
+ *   it opens drawing the next-move arrows (`showArrows`), what sizes them
+ *   (`arrowWidthSource`) and their colours (`arrowPalette`, CTA-98). A flip
+ *   or the board's Arrows tab is the session's; these are what it opens on.
+ *   Every width source is offered here: whether the tree carries its tag is
+ *   the board's to say.
  * - **Folder** — where it is filed: Unfiled, or any folder of the nested tree.
  *
  * Save writes the whole draft at once (`updateSavedAnalysisSettings`, in
@@ -123,6 +127,8 @@ function SettingsForm({
     description: saved.description,
     orientation: saved.orientation,
     showArrows: saved.showArrows,
+    arrowWidthSource: saved.arrowWidthSource,
+    arrowPalette: saved.arrowPalette,
     folderId:
       saved.folderId !== null && folders.some((folder) => folder.id === saved.folderId)
         ? saved.folderId
@@ -235,6 +241,16 @@ function SettingsForm({
               {t("analysis.settingsScreen.arrowsHelp")}
             </Typography>
           </Box>
+          <ArrowWidthSourceField
+            idPrefix="analysis-settings-arrows"
+            value={draft.arrowWidthSource}
+            onChange={(arrowWidthSource) => change({ arrowWidthSource })}
+          />
+          <ArrowPaletteField
+            idPrefix="analysis-settings-arrows"
+            value={draft.arrowPalette}
+            onChange={(arrowPalette) => change({ arrowPalette })}
+          />
         </Section>
 
         <Section id="folder" label={t("analysis.settingsScreen.sections.folder")}>

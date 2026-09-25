@@ -329,6 +329,7 @@ const en = {
       cal: "Arrows",
       csl: "Squares",
       prc: "Play chance",
+      games: "Games",
     },
   },
   moveList: {
@@ -588,6 +589,7 @@ const en = {
       load: "Load",
       export: "Export",
       engine: "Engine",
+      arrows: "Arrows",
     },
     /**
      * The header's Play toggle (CTA-73): the engine plays the side not at
@@ -702,6 +704,41 @@ const en = {
       nags: "Move marks (NAGs)",
       variations: "Side lines",
       download: "Download .pgn",
+    },
+    /**
+     * The Arrows tab (CTA-98): the next-move arrows switch, what sizes them and
+     * their colours. The same fields sit on a saved analysis' settings screen.
+     */
+    arrows: {
+      showHelp:
+        "Show or hide the arrows of the moves that follow the position on screen. Off, only the move you point at in the next-moves bar gets one.",
+      widthSource: "Next move arrows width source",
+      sources: {
+        none: "None",
+        eval: "Evaluation",
+        games: "Games",
+        prc: "Play chance",
+        lines: "Lines ahead",
+      },
+      sourceHelp: {
+        none: "Colour only — the arrows every board draws.",
+        eval: "The [%eval] in each move's comment: the best move is the widest, the others narrower by what they give up.",
+        games: "The [%games N] in each move's comment: each move's share of the games.",
+        prc: "The prc:N in each move's comment: the play chances, scaled to 100%.",
+        lines: "How many lines follow each move within the next 8 plies — no tag needed.",
+      },
+      /** Under a width source no move in the tree carries. */
+      unavailable: "No move in this analysis carries this tag.",
+      drawnAsNone:
+        "No move in this analysis carries the chosen tag, so the arrows are drawn as None until one does.",
+      palette: "Next move arrows colours",
+      palettes: {
+        classic: "Classic",
+        lichess: "Lichess",
+        colorblind: "Colour-blind safe",
+      },
+      paletteHelp:
+        "The main line, the side lines and the move you point at. A move without the chosen tag, where others have it, is drawn gray.",
     },
     /** The pinned next-moves bar under the moves list — a fork's choices (CTA-54). */
     nextMoves: "Next moves",
