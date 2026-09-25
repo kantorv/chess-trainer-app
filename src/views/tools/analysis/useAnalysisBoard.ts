@@ -69,10 +69,10 @@ import { useAnalysisSession } from "./useAnalysisSession";
  * the list and ringed on the map (`extensionIdsOf`, recomputed, never tracked).
  *
  * **A record's settings are the settings screen's** — its name, description,
- * side (`orientation`), arrows and folder. Update keeps the stored ones: a
- * flip or an arrows switch on the board is the session's. A new board's first
- * save takes the side it faces and the arrows switch as it is; a copy takes
- * the original's.
+ * side (`orientation`), arrows (shown, sized and coloured — CTA-98) and
+ * folder. Update keeps the stored ones: a flip or the Arrows tab on the board
+ * is the session's. A new board's first save takes the side it faces and the
+ * arrows as it draws them; a copy takes the original's.
  */
 
 export type AnalysisBoardStart = {
@@ -93,6 +93,12 @@ export type AnalysisBoardStart = {
   /** A permanent link's position, SAN from the start — `?at=`. Beats `ply` and the record's own place. */
   at?: string | null;
 };
+
+/** How the board draws its next-move arrows — what a new board's first save keeps (CTA-98). */
+export type AnalysisArrowChoices = Pick<
+  SavedAnalysis,
+  "showArrows" | "arrowWidthSource" | "arrowPalette"
+>;
 
 /** A tree that is nothing yet — the standard start, no moves. */
 const isBlankTree = (tree: GameTree): boolean =>
@@ -196,6 +202,8 @@ export const useAnalysisBoard = ({
           orientation: stored.orientation,
           description: stored.description,
           showArrows: stored.showArrows,
+          arrowWidthSource: stored.arrowWidthSource,
+          arrowPalette: stored.arrowPalette,
         };
   };
 
@@ -214,9 +222,9 @@ export const useAnalysisBoard = ({
   const saveNew = (
     name: string,
     folderId: string | null,
-    showArrows: boolean,
+    arrows: AnalysisArrowChoices,
   ): Promise<SavedAnalysis | undefined> =>
-    write({ ...recordOf(newSavedAnalysisId()), name: name.trim(), folderId, showArrows });
+    write({ ...recordOf(newSavedAnalysisId()), name: name.trim(), folderId, ...arrows });
 
   /**
    * The write, and the session settled on it once it has landed — against the

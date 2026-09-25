@@ -17,6 +17,7 @@ import {
 import AppThemeWithLang from "../../../theme/AppThemeWithLang";
 import { boardOptions, FakeEngine } from "../../board/boardTestHarness";
 import { RightPanelOutlet, RightPanelProvider } from "../../main/rightPanel";
+import { NEXT_MOVE_ARROW_PALETTES, UNTAGGED_NEXT_MOVE_ARROW_COLOR } from "./nextMoveArrows";
 
 vi.mock("../../../lib/engine", async () => ({
   default: (await import("../../board/boardTestHarness")).FakeEngine,
@@ -629,5 +630,111 @@ describe("Play — the engine's thinking, shown", () => {
     expect(screen.getByTestId("analysis-play-status")).toBeInTheDocument();
     fireEvent.click(screen.getByTestId("analysis-play"));
     expect(screen.queryByTestId("analysis-play-status")).toBeNull();
+  });
+});
+
+describe("the Arrows tab (CTA-98)", () => {
+  const radio = (kind: "width" | "palette", id: string) =>
+    screen.getByTestId(`analysis-arrows-${kind}-${id}`);
+
+  it("holds the next-move arrows switch, which the Engine tab no longer does", async () => {
+    await stored("a1", "1. e4 e5 (1... c5) *", ["e4"]);
+    mount("/tools/analysis?analysis=a1");
+    openTab("engine");
+    expect(screen.queryByTestId("analysis-arrows")).toBeNull();
+
+    openTab("arrows");
+    expect(boardOptions().arrows).toHaveLength(2);
+    fireEvent.click(within(screen.getByTestId("analysis-arrows")).getByRole("switch"));
+    expect(boardOptions().arrows).toEqual([]);
+  });
+
+  it("offers a tag only while some move in the tree carries it", async () => {
+    await stored("a1", "1. e4 e5 (1... c5) *", ["e4"]);
+    mount("/tools/analysis?analysis=a1");
+    openTab("arrows");
+    expect(radio("width", "none")).toBeEnabled();
+    expect(radio("width", "lines")).toBeEnabled();
+    expect(radio("width", "eval")).toBeDisabled();
+    expect(radio("width", "games")).toBeDisabled();
+    expect(radio("width", "prc")).toBeDisabled();
+
+    // A comment carrying a count, written through the move menu: offered at once.
+    fireEvent.contextMenu(screen.getByTestId("move-ply-2"), { clientX: 40, clientY: 60 });
+    fireEvent.click(screen.getByTestId("move-menu-comment"));
+    fireEvent.change(screen.getByTestId("comment-dialog-text"), {
+      target: { value: "Most played. games:120" },
+    });
+    fireEvent.click(screen.getByTestId("comment-dialog-save"));
+    expect(radio("width", "games")).toBeEnabled();
+    expect(radio("width", "eval")).toBeDisabled();
+  });
+
+  it("sizes the arrows by the chosen tag, over the board, the untagged move gray", async () => {
+    await stored("a1", "1. e4 e5 {[%eval 0.3]} (1... c5 {[%eval 0.4]}) (1... a5) *", ["e4"]);
+    mount("/tools/analysis?analysis=a1");
+    openTab("arrows");
+    expect(screen.queryByTestId("analysis-width-arrows-overlay")).toBeNull();
+
+    fireEvent.click(radio("width", "eval"));
+    expect(boardOptions().arrows).toEqual([]);
+    const overlay = screen.getByTestId("analysis-width-arrows-overlay");
+    expect(overlay.querySelectorAll("path")).toHaveLength(3);
+    expect(overlay.querySelector('path[data-to="a5"]')).toHaveAttribute(
+      "fill",
+      UNTAGGED_NEXT_MOVE_ARROW_COLOR,
+    );
+  });
+
+  it("recolours every arrow by the palette", async () => {
+    await stored("a1", "1. e4 e5 (1... c5) *", ["e4"]);
+    mount("/tools/analysis?analysis=a1");
+    openTab("arrows");
+    fireEvent.click(radio("palette", "colorblind"));
+    const { colorblind } = NEXT_MOVE_ARROW_PALETTES;
+    expect(boardOptions().arrows?.map((arrow) => arrow.color)).toEqual([
+      colorblind.mainline,
+      colorblind.sideline,
+    ]);
+  });
+
+  it("opens as the record says, keeping a tag the tree lacks but drawing as None", async () => {
+    await stored("a1", "1. e4 e5 (1... c5) *", ["e4"], {
+      arrowWidthSource: "prc",
+      arrowPalette: "lichess",
+    });
+    mount("/tools/analysis?analysis=a1");
+    openTab("arrows");
+    expect(radio("width", "prc")).toBeChecked();
+    expect(radio("width", "prc")).toBeDisabled();
+    expect(screen.getByTestId("analysis-arrows-width-drawn-as-none")).toBeInTheDocument();
+    expect(radio("palette", "lichess")).toBeChecked();
+    // Drawn as None: the library arrows, in the record's palette.
+    expect(screen.queryByTestId("analysis-width-arrows-overlay")).toBeNull();
+    expect(boardOptions().arrows?.[0].color).toBe(NEXT_MOVE_ARROW_PALETTES.lichess.mainline);
+
+    // The record keeps the choice across an Update.
+    drag("g8", "f6");
+    fireEvent.click(screen.getByTestId("analysis-save"));
+    fireEvent.click(screen.getByTestId("analysis-changes-update"));
+    await waitFor(() => expect(findSavedAnalysis("a1")?.path).toEqual(["e4", "Nf6"]));
+    expect(findSavedAnalysis("a1")).toMatchObject({ arrowWidthSource: "prc", arrowPalette: "lichess" });
+  });
+
+  it("keeps a new board's choices on its first save", async () => {
+    mount();
+    drag("e2", "e4");
+    openTab("arrows");
+    fireEvent.click(radio("width", "lines"));
+    fireEvent.click(radio("palette", "colorblind"));
+    fireEvent.click(screen.getByTestId("analysis-save"));
+    fireEvent.change(screen.getByTestId("analysis-save-name"), { target: { value: "Mine" } });
+    fireEvent.click(screen.getByTestId("analysis-save-confirm"));
+    await waitFor(() => expect(listed()).toHaveLength(1));
+    expect(listed()[0]).toMatchObject({
+      showArrows: true,
+      arrowWidthSource: "lines",
+      arrowPalette: "colorblind",
+    });
   });
 });

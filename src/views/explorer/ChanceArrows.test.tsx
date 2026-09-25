@@ -7,6 +7,7 @@ import ChanceArrows from "./ChanceArrows";
 import {
   CHANCE_ARROW_BORDER_COLOR,
   CHANCE_ARROW_FILL_COLOR,
+  type ChanceArrowColors,
 } from "./chanceArrows";
 import { HOVERED_NEXT_MOVE_ARROW_COLOR } from "../tools/analysis/nextMoveArrows";
 
@@ -28,6 +29,7 @@ const renderArrows = (
     chances?: readonly (number | undefined)[];
     hoveredId?: string;
     orientation?: "white" | "black";
+    colors?: readonly (ChanceArrowColors | undefined)[];
   } = {},
 ) =>
   render(
@@ -88,6 +90,19 @@ describe("ChanceArrows", () => {
     const overlay = screen.getByTestId("chance-arrows");
     expect(overlay.querySelectorAll("path")).toHaveLength(1);
     expect(overlay.querySelector('path[data-from="g1"]')).toBeNull();
+  });
+
+  it("takes each arrow's own colours when given them, and the defaults where not (CTA-98)", () => {
+    renderArrows({ colors: [{ fill: "#0072B2", border: "#0072B2" }, undefined] });
+    const overlay = screen.getByTestId("chance-arrows");
+    const likelyArrow = overlay.querySelector('path[data-from="g1"]')!;
+    expect(likelyArrow.getAttribute("fill")).toBe("#0072B2");
+    expect(likelyArrow.getAttribute("stroke")).toBe("#0072B2");
+    // No opacity of its own: still the sharper-the-likelier one.
+    expect(Number(likelyArrow.getAttribute("opacity"))).toBeLessThan(1);
+    const rareArrow = overlay.querySelector('path[data-from="f1"]')!;
+    expect(rareArrow.getAttribute("fill")).toBe(CHANCE_ARROW_FILL_COLOR);
+    expect(rareArrow.getAttribute("stroke")).toBe(CHANCE_ARROW_BORDER_COLOR);
   });
 
   it("draws facing the side the board faces", () => {

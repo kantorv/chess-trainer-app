@@ -3,6 +3,7 @@ import {
   CHANCE_ARROW_FILL_COLOR,
   chanceArrowPath,
   chanceArrowSpec,
+  type ChanceArrowColors,
 } from "./chanceArrows";
 
 /**
@@ -45,6 +46,12 @@ type ChanceArrowsProps = {
   /** The hovered continuation's id, or none — hover answers in red. */
   hoveredId: string | null;
   orientation: "white" | "black";
+  /**
+   * Each arrow's own colours, in `nodes` order (CTA-98 — the Analysis Board's
+   * width-sized arrows in its palette, an untagged move gray). Absent, or an
+   * `undefined` entry: lichess's white fill and magenta border.
+   */
+  colors?: readonly (ChanceArrowColors | undefined)[];
 };
 
 function ChanceArrows({
@@ -53,6 +60,7 @@ function ChanceArrows({
   chances,
   hoveredId,
   orientation,
+  colors,
 }: ChanceArrowsProps) {
   return (
     <svg
@@ -78,18 +86,19 @@ function ChanceArrows({
           chance,
           node.id === hoveredId,
         );
+        const own = colors?.[index];
         return (
           <path
             key={node.id}
             data-from={node.from}
             data-to={node.to}
             d={chanceArrowPath(spec.points)}
-            fill={CHANCE_ARROW_FILL_COLOR}
-            stroke={spec.borderColor}
+            fill={own?.fill ?? CHANCE_ARROW_FILL_COLOR}
+            stroke={own?.border ?? spec.borderColor}
             strokeWidth={spec.borderWidth * 2}
             strokeLinejoin="round"
             strokeLinecap="round"
-            opacity={spec.opacity}
+            opacity={own?.opacity ?? spec.opacity}
           />
         );
       })}

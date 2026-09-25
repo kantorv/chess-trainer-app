@@ -88,14 +88,18 @@ What the seam decides, and why:
 
 ```ts
 const parts = useVariationsExplorer({
-  testId: string,                         // root of every test id: `${testId}-map`, `-annotations`, `-chance-arrows-overlay`
+  testId: string,                         // root of every test id: `${testId}-map`, `-annotations`, `-chance-arrows-overlay`, `-width-arrows-overlay`
   source: TreeViewSource,                 // `core`
   evalsByFen?: ReadonlyMap<string, Score>,
   extensionIds?: ReadonlySet<string>,
   onEditTree?: (next: GameTree) => void,  // the one switch for every edit — `core.replaceTree`
   playChances?: boolean,                  // the menu's *Play chances…* (default on); off where no trainer plays by them
   annotations?: boolean,                  // the comment block
-  arrows?: { show: boolean; chances?: boolean; required?: readonly VariationNode[] },
+  arrows?: {
+    show: boolean; chances?: boolean; required?: readonly VariationNode[];
+    widthSource?: ArrowWidthSource,       // CTA-98: what sizes the arrows — absent/"none", colour only
+    palette?: ArrowPaletteId,             // CTA-98: the arrows' colours — absent, "classic"
+  },
   map?: { tree?: GameTree; nodeId?: string | null; coverage?: MapCoverage; addedIds?: ReadonlySet<string>; linked?: boolean },
   mask?: PieceMask,                       // a masked board's notation
 });
@@ -120,6 +124,8 @@ const parts = useVariationsExplorer({
 | **Next-moves bar**: the continuations at a branch; hovering one draws its arrow | `nextMoves` | always (nothing where there is no choice) | `views/tools/analysis/NextMovesBar.tsx` |
 | **Next-move arrows**: mainline green, side lines blue, the hovered move red | `arrows` | `arrows.show` (off: only a hovered move's arrow) | `views/tools/analysis/nextMoveArrows.ts` |
 | **Play-chance arrows**: white with a magenta border, width by chance, a percentage per move in the bar | `overlay` (+ `nextMoves`) | `arrows.chances`, and only where the branch carries a `prc` mark | `ChanceArrows` over `chanceArrows.ts` |
+| **Width-sized arrows** (CTA-98): each continuation sized by a tag in its comment (`eval`, `games`, `prc`) or by the lines ahead, filled in the palette's colours; a move without the tag, where others have it, gray and half-transparent; a branch where none has it draws the ordinary arrows | `overlay` | `arrows.widthSource`, only while `arrows.show` | `ChanceArrows` with its `colors` (`weightedArrowColors`), over `lib/nextMoveWeights.ts` |
+| **Arrow palette** (CTA-98): the mainline / side-line / hovered colours of every next-move arrow, library or overlay | `arrows`, `overlay` | `arrows.palette` | `NEXT_MOVE_ARROW_PALETTES` (`nextMoveArrows.ts`) |
 | **Required moves**: purple, in place of every other arrow | `arrows` | `arrows.required` | `REQUIRED_MOVE_ARROW_COLOR` |
 | **Map**: the tree as an SVG — tab and full screen, zoom, pan, fit, "where am I", following the reader, move labels, dots coloured by side | `map` | `map` | `TreeMap` over `lib/treeMap.ts` |
 | Map **coverage** (covered lines green, a progress bar, "N left"), **added moves** ringed, **links** (a dot goes to its position), drawn from **another tree** | `map` | `map.coverage`, `map.addedIds`, `map.linked`, `map.tree` / `map.nodeId` | |
@@ -147,15 +153,19 @@ repertoire games pass nothing; a game never writes.
   menu and the comment block uses `dir="ltr"`, comment prose `dir="auto"`.
   The glyphs sit inside the SAN's own `dir="ltr"` token.
 - **One set of arrows at a time**: required moves beat the chance overlay,
-  which beats the library arrows. The chances and the bar's percentages come
-  from one array, so the number and the width never disagree.
+  which beats the width-sized overlay, which beats the library arrows. The
+  screen passes `widthSource: "none"` for a tag its tree does not carry —
+  availability is the screen's, not the view's. The chances and the bar's
+  percentages come from one array, so the number and the width never
+  disagree.
 
 ### How each board attaches it
 
 | Board | Options | Placement |
 | --- | --- | --- |
 | **Repertoire player** | `onEditTree` (player only), `annotations` (player, once read), `arrows: { show, chances, required }`, `map: { tree, nodeId, coverage, addedIds, linked }` (none in Get to the end), `extensionIds` | `moves` behind "reading…", `map` once read, `nextMoves` on the Moves tab with Autoplay off |
-| **Analysis Board**, **Library game** | `onEditTree: core.replaceTree`, `playChances: false`, `annotations: true`, `arrows: { show }`, `map: { addedIds, linked: true }`, `extensionIds` (the same set) | Moves and Map tabs (kept mounted); footer: `annotations`, the changes strip, Play's status line, `nextMoves` (Moves tab) |
+| **Analysis Board** | `onEditTree: core.replaceTree`, `playChances: false`, `annotations: true`, `arrows: { show, widthSource, palette }` (its Arrows tab, CTA-98), `map: { addedIds, linked: true }`, `extensionIds` (the same set) | Moves and Map tabs (kept mounted); footer: `annotations`, the changes strip, Play's status line, `nextMoves` (Moves tab) |
+| **Library game** | as the Analysis Board, with `arrows: { show }` — classic, colour only | as the Analysis Board |
 | **Openings explorer** | the same without `addedIds` / `extensionIds` — nothing is added against a record | as above, without the strip |
 | **Play with Engine** | the same without `addedIds` / `extensionIds`, and without `map` — nothing is added against a record, and (CTA-91) no Map is drawn or offered | Moves tab only (kept mounted); footer: `annotations`, Play's status line, the game-over result and its *Open in analysis* button (CTA-91), `nextMoves` (Moves tab) |
 | **Masked Pieces** | Play with Engine's, plus `mask` while its notation switch is on | Play with Engine's |
@@ -225,7 +235,7 @@ const parts = usePuzzleView({
 | `src/views/explorer/MoveContextMenu.tsx`, `CommentDialog.tsx`, `NagDialog.tsx`, `PlayChanceDialog.tsx` | The right-click menu and its three dialogs. |
 | `src/views/explorer/TreeMap.tsx` | The map: `MapViewport`, the full-screen dialog, links and the menu. The pure layout and viewport arithmetic are `src/lib/treeMap.ts`, with `MapCoverage`. |
 | `src/views/explorer/AnnotationsBar.tsx` | The comment block, presentational; the reading is `lib/moveAnnotations.ts`. |
-| `src/views/explorer/ChanceArrows.tsx` + `chanceArrows.ts` (+ tests) | The play-chance overlay and its geometry. |
+| `src/views/explorer/ChanceArrows.tsx` + `chanceArrows.ts` (+ tests) | The play-chance overlay and its geometry; its optional per-arrow `colors` and `weightedArrowColors` draw the width-sized arrows (CTA-98). |
 | `src/views/tools/analysis/nextMoveArrows.ts`, `NextMovesBar.tsx` | The next-move arrows and bar, imported by the explorer. |
 | `src/views/shared/MoveList.tsx`, `VariationLine.tsx`, `moveSelection.ts`, `moveContextMenu.ts`, `moveTokenSx.ts` | The shared tokens under every list. |
 | `src/views/shared/NagGlyphs.tsx`, `nagToneSx.ts` | A move's glyphs after its SAN, and the move marks' colours (the map's labels share them). |

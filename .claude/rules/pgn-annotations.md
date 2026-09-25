@@ -4,6 +4,8 @@ paths:
   - "src/lib/gameTree*.ts"
   - "src/lib/moveAnnotations*"
   - "src/lib/playChance*"
+  - "src/lib/gamesTag*"
+  - "src/lib/nextMoveWeights*"
   - "src/views/explorer/AnnotationsBar.tsx"
   - "src/views/explorer/CommentDialog.tsx"
   - "src/views/explorer/NagDialog*"
@@ -94,16 +96,18 @@ exports write them. `readComment` takes every one out of the prose and shows
 it as a **chip** in the comment block (`AnnotationsBar`): the key's label,
 then the value, pinned LTR. The value is **shown as written, never
 interpreted** — nothing draws `[%cal]` arrows on the board or feeds `[%eval]`
-into the eval bar today.
+into the eval bar today. The one reading beyond the chip is the Analysis
+Board's arrows, which can be sized by `[%eval]` (CTA-98, §3).
 
 | Command | Example | Chip label (`annotations.keys.*`) | Does anything else read it? |
 | --- | --- | --- | --- |
-| `%eval` | `[%eval 6.91]`, `[%eval #-3]` | Eval | no |
+| `%eval` | `[%eval 6.91]`, `[%eval #-3]` | Eval | **yes** — the Analysis Board's *Evaluation* arrow widths (§3) |
 | `%clk` | `[%clk 0:22:33]` | Clock | no |
 | `%emt` | `[%emt 0:00:12]` | Time spent | no |
 | `%cal` | `[%cal Ge2e4,Rd7d5]` | Arrows | no — not drawn |
 | `%csl` | `[%csl Gd4,Re5]` | Squares | no — not drawn |
 | `%prc` | `[%prc 40]` | Play chance | **yes** — the trainer and the arrows (§3) |
+| `%games` | `[%games 12]` | Games | **yes** — the Analysis Board's *Games* arrow widths (§3) |
 | any other `%key` | `[%foo bar]` | the key itself | no — kept and written back |
 
 A key must start with a letter (`[A-Za-z][\w-]*`). Commands are part of the
@@ -119,11 +123,12 @@ Two plain-text shapes are also read out of the prose, into chips:
 | `-+ mate-in-12` — anywhere | Assessment `-+`, Mate in `12` |
 
 The assessment is optional; it is one of `+-` `-+` `+/-` `-/+` `+/=` `=/+`
-`=` `∞`.
+`=` `∞`. The trailing shape's eval counts as the move's evaluation for the
+Analysis Board's arrows, as `[%eval]` does (`evalOf`, `lib/nextMoveWeights.ts`).
 
 ---
 
-## 3. Our tags — `prc` (and `games`, planned: §6)
+## 3. Our tags — `prc` and `games`
 
 A **tag** is a `name:value` token in plain comment text — the form the
 lichess-tools browser extension writes, which a lichess study carries without
@@ -143,7 +148,17 @@ from either convention reads the same.
 | **Offered on** | Boards where a trainer plays by it; the Analysis Board turns the menu item off (`playChances: false`, CTA-73). |
 | **Also written by** | The Library opening board's *Save tree as PGN* (CTA-99), as `[%prc P]` — each move's share of its position's games, `round(child / parent × 100)`, in one comment after `[%games N]` when both are asked for. |
 
-### The arrows these weigh — one overlay, two sources today
+### `games` — how many games went through a move (CTA-98), `lib/gamesTag.ts`
+
+| | |
+| --- | --- |
+| **Written** | `games:12` (whole token, case-insensitive, `games: 12` too) or `[%games 12]`. A whole number. Written as `[%games N]` by the Library opening board's *Save tree as PGN* (CTA-99, below); `mergeTrees` does not write it yet (§6). |
+| **On which move** | The move it counts — the candidate at a branch — as `prc`. |
+| **Read** | `gamesOf(node)`: its `comments`, then `preComments`; **the first one wins**. |
+| **Shown** | A *Games* chip (`annotations.keys.games`), never as prose (`withoutGames`). |
+| **Means** | With the Analysis Board's width source on *Games*, each tagged move's arrow is its share of the tagged moves' games at the branch. |
+
+### The arrows these weigh — one overlay, three kinds of source
 
 `ChanceArrows` (`views/explorer/`) takes **one number per continuation** and
 knows nothing of where it came from:
@@ -152,9 +167,7 @@ knows nothing of where it came from:
 | --- | --- | --- |
 | Repertoire player | the move's play chance | `prc` marks → `playChances` (`useVariationsExplorer`, `arrows.chances`) |
 | Library collection lobby's opening board | the share of the position's games that played the move | `child.count / node.count`, counted from the collection's rows (`lib/openingTree.ts`, `OpeningFilterBoard.tsx`, CTA-92) — **not** from any PGN annotation |
-
-That seam — a weight per move, the overlay drawing it — is where a second
-tag plugs in (§6).
+| Analysis Board (CTA-98) | the chosen width source's weight | `nextMoveWeights` (`lib/nextMoveWeights.ts`, `arrows.widthSource`): `[%eval]` as loss vs the best tagged move, `games` as a share, `prc` scaled among the tagged moves, or the lines within 8 plies; the arrows in the Arrows tab's palette, an untagged move gray ([`analysis-board.md`](./analysis-board.md) §1.1) |
 
 ### Written today: the Library's `[%games N]` (CTA-99)
 
@@ -163,9 +176,10 @@ The Library opening board's *Save tree as PGN*
 already **writes** `[%games N]` — the games of the (filtered) collection that
 played the move from that position — on every move below the board's position,
 in the command form, first in the move's one comment
-(`{ [%games 12] [%prc 40] }` when `prc` is asked for too). Nothing **reads** it
-as a weight yet: it shows as a generic *games* chip (§2's "any other `%key`"),
-and §6 is still the plan for the rest.
+(`{ [%games 12] [%prc 40] }` when `prc` is asked for too). It is **read** by
+`gamesOf` (CTA-98): a *Games* chip in the comment block, and — opened on the
+Analysis Board with its width source on *Games* — each move's arrow sized by
+its share. §6 is still the plan for writing it at merge time.
 
 ---
 
@@ -238,8 +252,10 @@ touched by it:
 | `src/lib/pgn.ts` | The tokenizer and `parsePgnTree(s)`: comments, `;` comments, `$N`, suffixes onto the node. |
 | `src/lib/gameTree.ts` | The node fields; `setComments` / `commentsAt`, `setNags`; `mergeTrees`' joining; `treeToPgn` and `PgnExportOptions`; `moveTreeToPgn` — the same writer over moves with no board (`PgnMove`: SAN, ply, annotations). |
 | `src/lib/openingTreePgn.ts` | The Library's *Save tree as PGN*: an opening tree's counts written as `[%games N]` / `[%prc P]` (§3). |
-| `src/lib/moveAnnotations.ts` | `readComment` (commands, the eval shapes, `prc` → chips), `annotationsAt`; the NAG table and its rules. |
+| `src/lib/moveAnnotations.ts` | `readComment` (commands, the eval shapes, `prc` and `games` → chips), `annotationsAt`; the NAG table and its rules. |
 | `src/lib/playChance.ts` | `prc`: reading, writing, the chance rules. |
+| `src/lib/gamesTag.ts` | `games`: `gamesInText`, `withoutGames`, `gamesOf`. |
+| `src/lib/nextMoveWeights.ts` | The Analysis Board's arrow widths from `[%eval]`, `games`, `prc` or the lines ahead; which of them a tree carries. |
 | `src/lib/pgnComments.ts` | `reflowComment` — hard-wrapped comment text back into paragraphs. |
 | `src/views/explorer/AnnotationsBar.tsx` | The comment block: prose, chips, glyphs. |
 | `src/views/explorer/CommentDialog.tsx`, `NagDialog.tsx`, `PlayChanceDialog.tsx` | The three editors, opened from the move menu. |
@@ -248,11 +264,16 @@ touched by it:
 
 Tests: `lib/pgnAnnotations.test.ts` (parse, write, merge, edits),
 `lib/moveAnnotations.test.ts`, `lib/playChance.test.ts`,
+`lib/nextMoveWeights.test.ts` (the `games` and `[%eval]` readers, the widths),
 `views/explorer/NagDialog.test.tsx`.
 
 ---
 
-## 6. Planned — the `games` tag (not built)
+## 6. Planned — writing the `games` tag at merge time (not built)
+
+The **reader** is built (§3, CTA-98), and the Analysis Board sizes its arrows
+by it. What follows — `mergeTrees` writing the counts, and the questions it
+raises — is still planned.
 
 **The need.** A merged tree (§1, *Merging*) forgets how many of its games went
 through each move. The Library's opening board knows those counts — but from
@@ -267,9 +288,9 @@ source beside `prc`.
 | | |
 | --- | --- |
 | **Written** | `games:N` in the move's comment, `[%games N]` read too; `N` a whole number ≥ 1 — the games of the merge that played this move from this position. |
-| **Written by** | `mergeTrees`, on every node, as it folds the games — and already, as `[%games N]`, by the Library's *Save tree as PGN* (§3). |
-| **Read** | A `lib/` helper beside `playChanceOf` (`gamesOf(node)`), shown as a *Games* chip (`annotations.keys.games`), never as prose. |
-| **Arrows** | At a branch, `games` weights → shares (`N / Σ N` of the siblings) → `ChanceArrows`, exactly as the Library's opening board does with its row counts. Which weight a board draws becomes a parameter of the explorer's arrows (today `arrows.chances: boolean`, prc only) — e.g. `arrows.weights: "prc" \| "games"` — so the repertoire player keeps `prc` and a merged analysis draws `games`. |
+| **Written by** | `mergeTrees`, on every node, as it folds the games — and already, as `[%games N]`, by the Library's *Save tree as PGN* (§3, CTA-99). |
+| **Read** | *Built* — `gamesOf(node)` (`lib/gamesTag.ts`), a *Games* chip. |
+| **Arrows** | *Built on the Analysis Board* — `arrows.widthSource: "games"` (CTA-98). The repertoire player still sizes by `prc` only (`arrows.chances`). |
 
 **To decide before building:**
 
@@ -284,5 +305,5 @@ source beside `prc`.
 5. **The Library** — whether its opening board keeps counting rows (always
    exact, filter-aware) or can also read `games` from a shipped merged PGN.
 
-When built, move this section into §3 as a second tag and add its tests to
-`lib/pgnAnnotations.test.ts`.
+When the writing is built, fold what is left of this section into §3 and add
+its tests to `lib/pgnAnnotations.test.ts`.

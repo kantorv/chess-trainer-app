@@ -62,7 +62,7 @@ uses can look unused — check `scripts/` before removing one.
 | --- | --- | --- | --- |
 | **Play with Engine** and the **Lobby** | `/engine/play`, `/engine/games` | `views/engine/play/`, `views/engine/games/`, `lib/playedGame*`, `lib/engineSettings.ts`, `lib/newGameLink.ts` | [`play-with-engine.md`](.claude/rules/play-with-engine.md) |
 | **Masked Pieces** | `/engine/masked` | `views/engine/masked/`, `lib/pieceMask.ts` | [`masked-pieces.md`](.claude/rules/masked-pieces.md) |
-| **Analysis Board** and **Saved analyses** | `/tools/analysis`, `/tools/analysis/saved` | `views/tools/analysis/`, `lib/savedAnalys*`, `lib/gameReference.ts` | [`analysis-board.md`](.claude/rules/analysis-board.md) |
+| **Analysis Board** and **Saved analyses** | `/tools/analysis`, `/tools/analysis/saved` | `views/tools/analysis/`, `lib/savedAnalys*`, `lib/gameReference.ts`, `lib/arrowSettings.ts`, `lib/nextMoveWeights.ts` | [`analysis-board.md`](.claude/rules/analysis-board.md) |
 | **Openings explorer** | `/openings` | `views/openings/`, `lib/openings.ts`, `lib/analysisHandOff.ts` | [`openings-explorer.md`](.claude/rules/openings-explorer.md) |
 | **Repertoires** | `/repertoires`, `/repertoires/<id>`, `/…/games/<game>` | `views/repertoires/`, `lib/savedRepertoire*`, `lib/repertoire*`, `lib/playChance.ts` | [`repertoires.md`](.claude/rules/repertoires.md) |
 | **Library** (game collections) | `/library`, `/library/<c>`, `/library/<c>/<n>` | `views/library/`, `lib/library*`, `lib/collectionIndex.ts`, `src/data/library/` | [`game-collections.md`](.claude/rules/game-collections.md) |
@@ -70,7 +70,7 @@ uses can look unused — check `scripts/` before removing one.
 | **Import / Export** (the reader's data as one zip) | `/settings/export`, `/settings/import` | `lib/dataExport*.ts`, `lib/dataImport*.ts`, `lib/pgnExport.ts`, `views/settings/ExportTab.tsx`, `ImportTab.tsx`, `ImportDialog.tsx`, `IncompatibleImportDialog.tsx` | [`import-export.md`](.claude/rules/import-export.md) |
 | **Position editor** (a component, hosted by the Lobby) | — | `views/shared/positionEditor/`, `lib/positionEditor.ts` | [`position-editor.md`](.claude/rules/position-editor.md) |
 | **Tree views** (how a board shows its game tree) | — | `views/explorer/`, `lib/treeMap.ts` | [`tree-views.md`](.claude/rules/tree-views.md) |
-| **PGN annotations** (comments, `[%cmd]`s, the `prc` tag, NAG glyphs) | — | `lib/pgn.ts`, `lib/gameTree.ts`, `lib/moveAnnotations.ts`, `lib/playChance.ts` | [`pgn-annotations.md`](.claude/rules/pgn-annotations.md) |
+| **PGN annotations** (comments, `[%cmd]`s, the `prc` and `games` tags, NAG glyphs) | — | `lib/pgn.ts`, `lib/gameTree.ts`, `lib/moveAnnotations.ts`, `lib/playChance.ts`, `lib/gamesTag.ts` | [`pgn-annotations.md`](.claude/rules/pgn-annotations.md) |
 | **The board core** | — | `views/board/core/` | [`chessboard.md`](.claude/rules/chessboard.md) §9 |
 | **Stores** (every one IndexedDB) | — | `lib/idb.ts`, `lib/idbRecordStore.ts`, `lib/*Store.ts`, `lib/*Db.ts` | [`database.md`](.claude/rules/database.md) |
 

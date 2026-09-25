@@ -8,8 +8,13 @@ import {
   chanceArrowSpec,
   chanceArrowWidth,
   squareCenterOf,
+  weightedArrowColors,
 } from "./chanceArrows";
-import { HOVERED_NEXT_MOVE_ARROW_COLOR } from "../tools/analysis/nextMoveArrows";
+import {
+  HOVERED_NEXT_MOVE_ARROW_COLOR,
+  NEXT_MOVE_ARROW_PALETTES,
+  UNTAGGED_NEXT_MOVE_ARROW_COLOR,
+} from "../tools/analysis/nextMoveArrows";
 
 // The width of an arrow's shaft, read straight off its tail's two flank points.
 const tailWidthOf = (points: readonly { x: number; y: number }[]) =>
@@ -125,5 +130,32 @@ describe("chanceArrowPath", () => {
 
   it("rounds to the millesimal, so the paths stay short", () => {
     expect(chanceArrowPath([{ x: 0.12345, y: 2 }])).toBe("M0.123,2 Z");
+  });
+});
+
+describe("weightedArrowColors (CTA-98)", () => {
+  const { colorblind } = NEXT_MOVE_ARROW_PALETTES;
+
+  it("fills a sized arrow in the palette's mainline or side-line colour", () => {
+    expect(weightedArrowColors(0.8, 0, false, colorblind)).toEqual({
+      fill: colorblind.mainline,
+      border: colorblind.mainline,
+    });
+    expect(weightedArrowColors(0.2, 2, false, colorblind)).toEqual({
+      fill: colorblind.sideline,
+      border: colorblind.sideline,
+    });
+  });
+
+  it("draws an untagged move gray and half-transparent, a hovered one in the hover colour", () => {
+    expect(weightedArrowColors(null, 1, false, colorblind)).toMatchObject({
+      fill: UNTAGGED_NEXT_MOVE_ARROW_COLOR,
+      opacity: 1,
+    });
+    expect(weightedArrowColors(null, 1, true, colorblind)).toEqual({
+      fill: colorblind.hovered,
+      border: colorblind.hovered,
+      opacity: 1,
+    });
   });
 });
