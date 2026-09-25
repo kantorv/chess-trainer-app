@@ -614,19 +614,21 @@ describe("the new-analysis form (CTA-87)", () => {
     expect(screen.getByTestId("new-analysis-illegal")).toHaveTextContent("White has no king.");
 
     // Back to the standard start, and Start is back.
-    fireEvent.click(screen.getByTestId("new-analysis-editor-reset-start"));
+    fireEvent.click(screen.getByTestId("new-analysis-new"));
     expect(screen.queryByTestId("new-analysis-illegal")).toBeNull();
     expect(screen.getByTestId("new-analysis-start")).toBeEnabled();
     expect(startHref()).toBe("/tools/analysis");
   });
 
   /*
-    Load a game (CTA-96): the Load tab's route hosted in the form, its FEN
-    form beside its PGN one — the form's one load place, the editor offering
-    no tabs of its own. A whole game (several merged or split exactly as on
-    the board's own Load tab) is handed to the Analysis Board as location
-    state; a PGN that is really a position — a single move, or none — and a
-    pasted FEN set the editor up, which Start then carries.
+    Load a game (CTA-96): the Load route's pipeline (`useAnalysisLoad`) placed
+    by hand — the quick loads (a FEN field and a `.pgn` pick) in the editor's
+    controls row, the paste box in its own section below, and the editor's
+    resets (New, Clear, Flip) up in the form's header. A whole game (several
+    merged or split exactly as on the board's own Load tab) is handed to the
+    Analysis Board as location state; a PGN that is really a position — a
+    single move, or none — and a FEN set the editor up, which Start then
+    carries.
   */
   describe("loads a PGN as a whole game (CTA-96)", () => {
     const ONE_GAME = '[Event "Solo"]\n\n1. e4 e5 (1... c5 {sicilian}) 2. Nf3 *\n';
@@ -635,22 +637,34 @@ describe("the new-analysis form (CTA-87)", () => {
     // turns the editor's board.
     const AFTER_MOVE_E4 = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1";
     const KINGS = "4k3/8/8/8/8/8/8/4K3 w - - 0 1";
+    const EMPTY = "8/8/8/8/8/8/8/8 w - - 0 1";
 
     const pasteAndLoad = async (text: string) => {
-      fireEvent.change(screen.getByTestId("analysis-load-paste"), {
+      fireEvent.change(screen.getByTestId("new-analysis-paste"), {
         target: { value: text },
       });
-      fireEvent.click(screen.getByTestId("analysis-load-text"));
+      fireEvent.click(screen.getByTestId("new-analysis-load-text"));
       await act(async () => {
         await Promise.resolve();
       });
     };
 
-    const loadFen = async (fen: string) => {
-      fireEvent.change(screen.getByTestId("analysis-load-fen-input"), {
+    const pickAndLoad = async (text: string) => {
+      fireEvent.change(screen.getByTestId("new-analysis-pgn-input"), {
+        target: {
+          files: [new File([text], "game.pgn", { type: "application/x-chess-pgn" })],
+        },
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+    };
+
+    const applyFen = async (fen: string) => {
+      fireEvent.change(screen.getByTestId("new-analysis-fen-input"), {
         target: { value: fen },
       });
-      fireEvent.click(screen.getByTestId("analysis-load-fen"));
+      fireEvent.keyDown(screen.getByTestId("new-analysis-fen-input"), { key: "Enter" });
       await act(async () => {
         await Promise.resolve();
       });
@@ -659,17 +673,47 @@ describe("the new-analysis form (CTA-87)", () => {
     const editorPosition = () =>
       screen.getByTestId("board-editor").getAttribute("data-position");
 
-    it("offers one load place — the PGN and the FEN of the Load route, no editor tabs", async () => {
+    const editorOrientation = () =>
+      screen.getByTestId("board-editor").getAttribute("data-orientation");
+
+    it("keeps the resets in the header, and the quick loads in the editor's row", async () => {
       await renderScreen();
-      expect(screen.getByTestId("analysis-load-paste")).toBeInTheDocument();
-      expect(screen.getByTestId("analysis-load-pick")).toBeInTheDocument();
-      // The FEN input lives here now: the Load section is the form's one load
-      // place, and the editor — its fields always shown — offers no tabs at all.
-      expect(screen.getByTestId("analysis-load-fen-input")).toBeInTheDocument();
+
+      // New, Clear, Flip — beside the title, not under the board.
+      expect(screen.getByTestId("new-analysis-new")).toBeInTheDocument();
+      expect(screen.getByTestId("new-analysis-clear")).toBeInTheDocument();
+      expect(screen.getByTestId("new-analysis-flip")).toBeInTheDocument();
+      expect(screen.queryByTestId("new-analysis-editor-reset-start")).toBeNull();
+
+      // The quick loads sit in the editor's controls row, side by side: the
+      // FEN field at the left, the `.pgn` pick beside it. The editor offers no
+      // tabs and its fields are always shown; the section below is the paste
+      // box alone — no file button, no help line.
+      const editor = within(screen.getByTestId("new-analysis-editor"));
+      expect(editor.getByTestId("new-analysis-fen-input")).toBeInTheDocument();
+      expect(editor.getByTestId("new-analysis-pgn")).toBeInTheDocument();
       expect(screen.queryByTestId("new-analysis-editor-tab-position")).toBeNull();
       expect(screen.queryByTestId("new-analysis-editor-tab-fen")).toBeNull();
       expect(screen.queryByTestId("new-analysis-editor-tab-pgn")).toBeNull();
       expect(screen.getByTestId("new-analysis-editor-position-fields")).toBeInTheDocument();
+      expect(screen.getByTestId("new-analysis-paste")).toBeInTheDocument();
+      expect(screen.queryByTestId("analysis-load-pick")).toBeNull();
+      expect(screen.queryByText(/opens as a new analysis/)).toBeNull();
+    });
+
+    it("the header's New, Clear and Flip do what the editor's row once did", async () => {
+      await renderScreen();
+      editorDrag("wP", "e2", "e4");
+
+      fireEvent.click(screen.getByTestId("new-analysis-flip"));
+      expect(editorOrientation()).toBe("black");
+
+      fireEvent.click(screen.getByTestId("new-analysis-clear"));
+      expect(editorPosition()).toBe(EMPTY);
+
+      fireEvent.click(screen.getByTestId("new-analysis-new"));
+      expect(editorPosition()).toBe(START);
+      expect(startHref()).toBe("/tools/analysis");
     });
 
     it.each([{ how: "paste" as const }, { how: "file" as const }])(
@@ -679,14 +723,7 @@ describe("the new-analysis form (CTA-87)", () => {
         if (how === "paste") {
           await pasteAndLoad(ONE_GAME);
         } else {
-          fireEvent.change(screen.getByTestId("analysis-load-input"), {
-            target: {
-              files: [new File([ONE_GAME], "game.pgn", { type: "application/x-chess-pgn" })],
-            },
-          });
-          await act(async () => {
-            await Promise.resolve();
-          });
+          await pickAndLoad(ONE_GAME);
         }
 
         expect(where.current?.pathname).toBe("/tools/analysis");
@@ -707,13 +744,10 @@ describe("the new-analysis form (CTA-87)", () => {
       // the side that has to answer it — and Start carries it. Nothing
       // navigated, and there is no "loaded" line to say.
       expect(editorPosition()).toBe(AFTER_MOVE_E4);
-      expect(screen.getByTestId("board-editor")).toHaveAttribute(
-        "data-orientation",
-        "black",
-      );
+      expect(editorOrientation()).toBe("black");
       expect(startHref()).toBe(`/tools/analysis?fen=${encodeURIComponent(AFTER_MOVE_E4)}`);
       expect(where.current?.pathname).toBe("/tools/analysis/saved");
-      expect(screen.queryByTestId("analysis-load-done")).toBeNull();
+      expect(screen.queryByTestId("new-analysis-done")).toBeNull();
     });
 
     it("a PGN of a position and no moves sets the editor up from it", async () => {
@@ -727,16 +761,16 @@ describe("the new-analysis form (CTA-87)", () => {
 
     it("the FEN field sets the editor up too, and a bad one says so and goes nowhere", async () => {
       await renderScreen();
-      await loadFen("not a fen");
+      await applyFen("not a fen");
 
-      expect(screen.getByTestId("analysis-load-fen-problem")).toBeInTheDocument();
+      expect(screen.getByTestId("new-analysis-fen-problem")).toBeInTheDocument();
       expect(editorPosition()).toBe(START);
       expect(where.current?.pathname).toBe("/tools/analysis/saved");
 
-      await loadFen(AFTER_MOVE_E4);
+      await applyFen(AFTER_MOVE_E4);
 
       expect(editorPosition()).toBe(AFTER_MOVE_E4);
-      expect(screen.queryByTestId("analysis-load-fen-problem")).toBeNull();
+      expect(screen.queryByTestId("new-analysis-fen-problem")).toBeNull();
       expect(startHref()).toBe(`/tools/analysis?fen=${encodeURIComponent(AFTER_MOVE_E4)}`);
     });
 
@@ -744,10 +778,10 @@ describe("the new-analysis form (CTA-87)", () => {
       await renderScreen();
       await pasteAndLoad(TWO_GAMES);
 
-      expect(screen.getByTestId("analysis-choice")).toBeInTheDocument();
+      expect(screen.getByTestId("new-analysis-choice")).toBeInTheDocument();
       expect(where.current?.pathname).toBe("/tools/analysis/saved"); // nothing navigated yet
 
-      fireEvent.click(screen.getByTestId("analysis-choice-merge"));
+      fireEvent.click(screen.getByTestId("new-analysis-choice-merge"));
       await act(async () => {
         await Promise.resolve();
       });
@@ -762,7 +796,7 @@ describe("the new-analysis form (CTA-87)", () => {
     it("a split saves one analysis per game into a new folder and lands in it", async () => {
       await renderScreen();
       await pasteAndLoad(TWO_GAMES);
-      fireEvent.click(screen.getByTestId("analysis-choice-split"));
+      fireEvent.click(screen.getByTestId("new-analysis-choice-split"));
 
       await waitFor(() => expect(where.current?.search).toMatch(/^\?folder=/));
       const folderId = new URLSearchParams(where.current!.search).get("folder")!;
@@ -778,7 +812,7 @@ describe("the new-analysis form (CTA-87)", () => {
       await renderScreen();
       await pasteAndLoad("this is not a pgn");
 
-      expect(screen.getByTestId("analysis-load-problem")).toHaveTextContent(
+      expect(screen.getByTestId("new-analysis-problem")).toHaveTextContent(
         "could not be read as PGN",
       );
       expect(where.current?.pathname).toBe("/tools/analysis/saved");

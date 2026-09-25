@@ -3,6 +3,7 @@ import {
   type ChangeEvent,
   type DragEvent,
   type FormEvent,
+  type ReactNode,
 } from "react";
 import Alert from "@mui/material/Alert";
 import AlertTitle from "@mui/material/AlertTitle";
@@ -96,9 +97,25 @@ type PositionEditorProps = {
    * is always shown.
    */
   forms?: readonly FormTabId[];
+  /**
+   * The row under the board. Absent: the built-in resets (New board, Reset,
+   * Clear board, Flip) — today's behaviour. Provided: this instead — a host
+   * that lays its own controls out elsewhere (the analyses Lobby's form keeps
+   * New, Clear and Flip in its header and puts the FEN and PGN inputs here,
+   * CTA-96) takes the row over. The state's callbacks
+   * (`setStartingPosition`, `clearBoard`, `flipBoard`) are the host's either
+   * way.
+   */
+  controls?: ReactNode;
 };
 
-function PositionEditor({ editor, testId, boardMaxWidth, forms }: PositionEditorProps) {
+function PositionEditor({
+  editor,
+  testId,
+  boardMaxWidth,
+  forms,
+  controls,
+}: PositionEditorProps) {
   const { t } = useTranslation();
   const tabs = forms ?? FORM_TAB_IDS;
   const [tab, setTab] = useState<FormTabId>("position");
@@ -348,22 +365,31 @@ function PositionEditor({ editor, testId, boardMaxWidth, forms }: PositionEditor
         </ChessboardProvider>
       </ForceLTR>
 
+      {/*
+        The row under the board: the built-in resets, or the host's node —
+        which brings its own layout with it.
+      */}
       <Box
         data-testid={`${testId}-controls`}
-        sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}
+        sx={
+          controls === undefined
+            ? { display: "flex", flexWrap: "wrap", gap: 1 }
+            : undefined
+        }
       >
-        {resets.map((reset) => (
-          <Button
-            key={reset.key}
-            size="small"
-            variant="outlined"
-            startIcon={reset.icon}
-            data-testid={`${testId}-reset-${reset.key}`}
-            onClick={reset.onClick}
-          >
-            {reset.label}
-          </Button>
-        ))}
+        {controls ??
+          resets.map((reset) => (
+            <Button
+              key={reset.key}
+              size="small"
+              variant="outlined"
+              startIcon={reset.icon}
+              data-testid={`${testId}-reset-${reset.key}`}
+              onClick={reset.onClick}
+            >
+              {reset.label}
+            </Button>
+          ))}
       </Box>
 
       <Typography

@@ -101,14 +101,21 @@ const dropSpare = (pieceType: string, to: string | null) => {
 function Host({
   initialFen,
   forms,
+  controls,
 }: {
   initialFen?: string;
   forms?: ComponentProps<typeof PositionEditor>["forms"];
+  controls?: ComponentProps<typeof PositionEditor>["controls"];
 }) {
   const editor = usePositionEditor(initialFen);
   return (
     <>
-      <PositionEditor editor={editor} testId="editor" forms={forms} />
+      <PositionEditor
+        editor={editor}
+        testId="editor"
+        forms={forms}
+        controls={controls}
+      />
       <div
         data-testid="host"
         data-fen={editor.fen}
@@ -122,10 +129,11 @@ function Host({
 const renderEditor = (
   initialFen?: string,
   forms?: ComponentProps<typeof PositionEditor>["forms"],
+  controls?: ComponentProps<typeof PositionEditor>["controls"],
 ) =>
   render(
     <AppThemeWithLang>
-      <Host initialFen={initialFen} forms={forms} />
+      <Host initialFen={initialFen} forms={forms} controls={controls} />
     </AppThemeWithLang>,
   );
 
@@ -405,6 +413,16 @@ describe("PositionEditor — resets", () => {
       "black",
     );
     expect(position()).toBe(before);
+  });
+
+  it("a host can take the row over: its node renders there, the built-in resets do not (the analyses Lobby, CTA-96)", () => {
+    renderEditor(undefined, undefined, <div data-testid="host-row" />);
+
+    expect(screen.getByTestId("editor-controls")).toBeInTheDocument();
+    expect(screen.getByTestId("host-row")).toBeInTheDocument();
+    expect(screen.queryByTestId("editor-reset-start")).toBeNull();
+    expect(screen.queryByTestId("editor-reset-clear")).toBeNull();
+    expect(screen.queryByTestId("editor-reset-flip")).toBeNull();
   });
 });
 

@@ -31,7 +31,7 @@ as `?fen=`, which each validates with `parseFen` and takes as initial state.
 
 | Path | What lives there |
 | --- | --- |
-| `src/views/shared/positionEditor/PositionEditor.tsx` | **The component**: the legality report, the two palettes and the board inside a `ChessboardProvider` (pinned LTR), the resets, and the Position / FEN / PGN forms with their ingestion state (typed text, the multi-game picker, the two errors, the `.pgn` drop). |
+| `src/views/shared/positionEditor/PositionEditor.tsx` | **The component**: the legality report, the two palettes and the board inside a `ChessboardProvider` (pinned LTR), the resets (or the host's own node in their place — the `controls` slot), and the Position / FEN / PGN forms with their ingestion state (typed text, the multi-game picker, the two errors, the `.pgn` drop). |
 | `src/views/shared/positionEditor/usePositionEditor.ts` | **The state** — the host's: the `chess.js` container, the FEN fields, the orientation, and every edit (`onPieceDrop`, `clearColor`, `setTurn`, `setCastlingRight`, `setEnPassant`, the resets, `loadFen`, `loadPosition`, `flipBoard`). Returns `fen`, `fields`, `problems`, `isValid`, `orientation`, `initialFen`. |
 | `PositionFields.tsx`, `FenSetup.tsx`, `PgnSetup.tsx`, `PiecePalette.tsx` (same folder) | The Position form (FEN fields 2–4), the FEN form (paste in, copy out), the PGN form (a game's final position), one palette row with its trash. Presentational; each takes the host's `testId`. |
 | `src/lib/positionEditor.ts` | Pure: `fenFields` / `fenFromFields`, `enPassantOptions`, `positionProblems`, `START_POSITION` / `EMPTY_POSITION`. |
@@ -63,6 +63,7 @@ editor.isValid    // problems.length === 0
 | `testId` | `string` | The root `data-testid`, the prefix of every id under it (`${testId}-tab-fen`, `${testId}-turn-b`, `${testId}-reset-start`, `${testId}-problem-noWhiteKing`, …) and of the board's `options.id` (`${testId}-board`). Unique on the page. |
 | `boardMaxWidth` | `number?` | The widest the board grows, in px. Absent, the column's full width. |
 | `forms` | `readonly ("position" \| "fen" \| "pgn")[]?` | Which forms the tab strip offers. Absent: all three. A form left out is not offered, and the `.pgn` drop goes with the PGN tab. **One form is not a choice**: the strip goes and the form is always shown — the analyses Lobby's form passes `["position"]` (its FEN and PGN ride its own Load route, CTA-96). |
+| `controls` | `ReactNode?` | The row under the board: the built-in resets when absent — today's behaviour — or the host's node instead. The state's callbacks (`setStartingPosition`, `clearBoard`, `flipBoard`) are the host's either way; the analyses Lobby's form keeps New, Clear and Flip in its header and puts the FEN and PGN inputs here (CTA-96). |
 
 `usePositionEditor(initialFen?)` — the first render's value only, already
 validated by the host (`parseFen`). Given: the board and fields start there,
@@ -154,16 +155,17 @@ not the standard start — and a position turns the board there, so the
 analysis opens facing the side to move. The gate is the Lobby's — `isValid`
 plus `parseFen`: while the position cannot be analyzed, Start is a plain
 disabled button with a warning above it listing the problems.
-`boardMaxWidth` 360. Nothing in this folder changed for it. Under the editor
-the form also hosts **Load a game** (CTA-96) — the Analysis Board's Load
-tab's `AnalysisLoad`, with its FEN form beside its PGN one, so the form has
-**one load place**: a PGN of more than one move (or a merge of several) is
-handed to the board as a whole game; a PGN of a single move or none, and a
-pasted FEN, set the editor up instead (`onLoadPosition` / `onLoadFen`) — a
-position is the editor's and Start's job. So *this* form's editor offers no
-tabs at all (`forms={["position"]}`, the fields always shown): its FEN and
-final-position-PGN forms ride the Load route. Everywhere else the editor's
-tabs are unchanged.
+`boardMaxWidth` 360. Nothing in this folder changed for it. The form's header
+carries the editor's resets — **New, Clear, Flip** — and the editor's
+`controls` row holds the **quick loads**: a FEN field and a `.pgn` pick, side
+by side, feeding `useAnalysisLoad` (CTA-96 — the Load route's pipeline,
+[`analysis-board.md`](./analysis-board.md)), with the paste box as its own
+section under the editor. A PGN of more than one move (or a merge of several)
+opens the Analysis Board with the whole tree; a PGN of a single move or
+none, and a FEN, set the editor up instead — a position is the editor's and
+Start's job. So *this* form's editor offers no tabs at all
+(`forms={["position"]}`, the fields always shown) and no resets of its own.
+Everywhere else the editor's resets and tabs are unchanged.
 
 ---
 
@@ -187,9 +189,10 @@ tabs are unchanged.
   Start opening the plain board for the standard start, the edited position
   riding along as `?fen=`, and Start off with the problems listed while the
   position cannot be analyzed, then back on at a reset; and the Load route
-  (CTA-96): one load place with the editor offering no tabs, a whole game
-  handed over, a single-move or move-less PGN and a pasted FEN setting the
-  editor up, merge-or-split, the error that goes nowhere. The screen stubs the
+  (CTA-96): the resets in the header and the quick loads in the editor's row,
+  a whole game handed over by paste and by pick, a single-move or move-less
+  PGN and a FEN setting the editor up, merge-or-split, the error that goes
+  nowhere. The screen stubs the
   spare-piece trio with the provider holding the options — a spare-piece board
   renders with no options of its own (`chessboard.md` §8), and the list's
   preview boards pass their own.

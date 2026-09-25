@@ -38,6 +38,8 @@ describe("translation catalogs", () => {
       "library.table.columns.eco",
       "positionEditor.tabs.fen",
       "positionEditor.tabs.pgn",
+      // The quick-load row's file pick: the initialism is the whole label.
+      "savedAnalyses.newAnalysis.pgnFile",
       // A pairing, "White - Black": only the two names inside it translate.
       "playedGames.players",
     ]);
