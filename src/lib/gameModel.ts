@@ -39,6 +39,11 @@ export type GameMove = {
    * also is: the promoted piece is a new man on the board, not a captured one.
    */
   captured?: string;
+  /**
+   * The move's NAGs, as its tree node carries them (CTA-97) — what the move
+   * list prints after the SAN. Only `mainlineGame` fills it; absent elsewhere.
+   */
+  nags?: readonly number[];
 };
 
 /** A single game: its tag pairs, and its moves in order. */

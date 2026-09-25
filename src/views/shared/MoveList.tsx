@@ -18,6 +18,7 @@ import {
   useScrollWhenCurrent,
 } from "./moveSelection";
 import { VariationBlock } from "./VariationLine";
+import NagGlyphs from "./NagGlyphs";
 import {
   menuAnchorOf,
   type ContextMenuNodeHandler,
@@ -286,6 +287,7 @@ function FilledCell({
       }}
     >
       {text}
+      <NagGlyphs nags={move.nags} testId={`move-nags-${move.ply}`} />
       {hasComment && (
         <ChatBubbleOutlineRoundedIcon
           aria-hidden

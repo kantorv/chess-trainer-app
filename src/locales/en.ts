@@ -188,6 +188,7 @@ const en = {
     deleteFrom: "Delete from here",
     copyPgn: "Copy variation PGN",
     addComment: "Add comment",
+    addAnnotation: "Add annotation…",
     playChances: "Play chances…",
     copied: "Variation PGN copied",
     copyFailed: "Could not copy — the clipboard is not available here.",
@@ -221,6 +222,50 @@ const en = {
     cancel: "Cancel",
   },
   /** Adding or editing one comment on a move (CTA-69). */
+  /**
+   * The move menu's *Add annotation…* (CTA-97) — a move's NAG glyphs in three
+   * tabs, one per section of `lib/moveAnnotations.ts`'s table. `meaning.*` is
+   * keyed by each choice's `id` there.
+   */
+  nagDialog: {
+    title: "Annotate",
+    help: "One move assessment and one evaluation at a time; pick the active one again to remove it. Features are toggled one by one. Saved with the changes, as NAGs in the PGN.",
+    close: "Close",
+    tabs: {
+      move: "Move Assessment",
+      position: "Position Evaluation",
+      features: "Positional Features & Commentary",
+    },
+    meaning: {
+      good: "Good move",
+      mistake: "Poor move or mistake",
+      brilliant: "Very good or brilliant move",
+      blunder: "Very poor move or blunder",
+      interesting: "Interesting or speculative move",
+      dubious: "Questionable or dubious move",
+      forced: "Only move / forced move",
+      worst: "Worst move",
+      equal: "Equal position",
+      unclear: "Unclear or volatile position",
+      whiteSlight: "White has a slight advantage",
+      blackSlight: "Black has a slight advantage",
+      whiteModerate: "White has a moderate advantage",
+      blackModerate: "Black has a moderate advantage",
+      whiteDecisive: "White has a decisive advantage",
+      blackDecisive: "Black has a decisive advantage",
+      zugzwangWhite: "Zugzwang (White)",
+      zugzwangBlack: "Zugzwang (Black)",
+      initiativeWhite: "Initiative (White)",
+      initiativeBlack: "Initiative (Black)",
+      attackWhite: "Attack (White)",
+      attackBlack: "Attack (Black)",
+      compensation: "Compensation",
+      counterplay: "Counterplay",
+      zeitnot: "Zeitnot (severe time pressure)",
+      withIdea: "With the idea of…",
+      novelty: "Opening novelty",
+    },
+  },
   commentDialog: {
     addTitle: "Comment on",
     editTitle: "Edit the comment on",

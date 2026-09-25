@@ -10,6 +10,7 @@ import {
   useScrollWhenCurrent,
 } from "./moveSelection";
 import { menuAnchorOf, type ContextMenuNodeHandler } from "./moveContextMenu";
+import NagGlyphs from "./NagGlyphs";
 
 /**
  * The pieces a side line is drawn with: one clickable move token, and the
@@ -190,6 +191,7 @@ const MoveToken = memo(function MoveToken({
       }
     >
       {`${prefix}${maskNodeSan(mask, node)}`}
+      <NagGlyphs nags={node.nags} testId={`tree-nags-${node.id}`} />
       {hasComment && (
         <CommentIcon aria-hidden data-testid={`tree-comment-icon-${node.id}`} />
       )}

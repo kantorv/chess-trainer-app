@@ -107,42 +107,168 @@ export const annotationsAt = (
 };
 
 /**
- * The glyph a NAG is printed as (the PGN standard's numbering): the move
- * marks, the position assessments and the commonest commentary symbols.
- * `undefined` for one with no common glyph, which a reader prints as `$N`.
+ * **The annotation glyphs a reader sets** (CTA-97) — the PGN standard's NAGs,
+ * in the three sections the move menu's *Add annotation…* dialog shows, each
+ * choice with its glyph and the locale id of its meaning
+ * (`nagDialog.meaning.<id>`).
+ *
+ * A choice may stand for **two codes** (`$7`/`$8` only move, `$10`/`$11`
+ * equal): one choice in the dialog, which writes the first and shows either
+ * as active. Everything else a PGN may carry is outside the table — kept,
+ * written back, and printed by {@link nagGlyph}.
  */
-const NAG_GLYPHS: Readonly<Record<number, string>> = {
-  1: "!",
-  2: "?",
-  3: "!!",
-  4: "??",
-  5: "!?",
-  6: "?!",
-  7: "□",
-  10: "=",
-  13: "∞",
-  14: "⩲",
-  15: "⩱",
-  16: "±",
-  17: "∓",
-  18: "+−",
-  19: "−+",
-  22: "⨀",
-  23: "⨀",
-  32: "⟳",
-  33: "⟳",
-  36: "→",
-  37: "→",
-  40: "↑",
-  41: "↑",
-  132: "⇆",
-  133: "⇆",
-  138: "⊕",
-  139: "⊕",
-  146: "N",
+export type NagSection = "move" | "position" | "features";
+
+export type NagChoice = {
+  /** The codes this choice stands for; the first is the one written. */
+  codes: readonly number[];
+  glyph: string;
+  /** Its meaning's locale id, under `nagDialog.meaning`. */
+  id: string;
 };
 
-export const nagGlyph = (nag: number): string => NAG_GLYPHS[nag] ?? `$${nag}`;
+const choice = (codes: readonly number[], glyph: string, id: string): NagChoice => ({
+  codes,
+  glyph,
+  id,
+});
 
-/** Whether a NAG marks the move itself (`!`, `?`, …) rather than the position. */
-export const isMoveMark = (nag: number): boolean => nag >= 1 && nag <= 6;
+/** The three sections, in the dialog's order — which is also the order glyphs print in. */
+export const NAG_SECTIONS: readonly { section: NagSection; choices: readonly NagChoice[] }[] = [
+  {
+    section: "move",
+    choices: [
+      choice([1], "!", "good"),
+      choice([2], "?", "mistake"),
+      choice([3], "!!", "brilliant"),
+      choice([4], "??", "blunder"),
+      choice([5], "!?", "interesting"),
+      choice([6], "?!", "dubious"),
+      choice([7, 8], "□", "forced"),
+      choice([9], "⊗", "worst"),
+    ],
+  },
+  {
+    section: "position",
+    choices: [
+      choice([10, 11], "=", "equal"),
+      choice([13], "∞", "unclear"),
+      choice([14], "⩲", "whiteSlight"),
+      choice([15], "⩱", "blackSlight"),
+      choice([16], "±", "whiteModerate"),
+      choice([17], "∓", "blackModerate"),
+      choice([18], "+−", "whiteDecisive"),
+      choice([19], "−+", "blackDecisive"),
+    ],
+  },
+  {
+    section: "features",
+    choices: [
+      choice([22], "⨀", "zugzwangWhite"),
+      choice([23], "⨀", "zugzwangBlack"),
+      choice([36], "↑", "initiativeWhite"),
+      choice([37], "↑", "initiativeBlack"),
+      choice([40], "→", "attackWhite"),
+      choice([41], "→", "attackBlack"),
+      choice([44], "…", "compensation"),
+      choice([132], "⇆", "counterplay"),
+      choice([138], "⊕", "zeitnot"),
+      choice([140], "Δ", "withIdea"),
+      choice([146], "N", "novelty"),
+    ],
+  },
+];
+
+/** Each code in the table, with its section and glyph. */
+const NAG_TABLE: ReadonlyMap<number, { section: NagSection; glyph: string }> = new Map(
+  NAG_SECTIONS.flatMap(({ section, choices }) =>
+    choices.flatMap(({ codes, glyph }) => codes.map((code) => [code, { section, glyph }] as const)),
+  ),
+);
+
+/**
+ * Glyphs for codes outside the table that a PGN commonly carries — printed
+ * as they always were, never offered in the dialog.
+ */
+const EXTRA_GLYPHS: Readonly<Record<number, string>> = {
+  32: "⟳",
+  33: "⟳",
+  133: "⇆",
+  139: "⊕",
+};
+
+/** The glyph a NAG is printed as; `$N` for one with no common glyph. */
+export const nagGlyph = (nag: number): string =>
+  NAG_TABLE.get(nag)?.glyph ?? EXTRA_GLYPHS[nag] ?? `$${nag}`;
+
+/** The section a NAG is set from, or `undefined` for one outside the table. */
+export const nagSection = (nag: number): NagSection | undefined => NAG_TABLE.get(nag)?.section;
+
+/** Whether a NAG marks the move itself (`!`, `?`, `□`, …) rather than the position. */
+export const isMoveMark = (nag: number): boolean => nagSection(nag) === "move";
+
+const PRINT_RANK: Readonly<Record<NagSection, number>> = { move: 0, position: 1, features: 2 };
+
+const printRank = (nag: number): number => {
+  const section = nagSection(nag);
+  return section === undefined ? 3 : PRINT_RANK[section];
+};
+
+/**
+ * A move's NAGs in the order they print: the move marks right after the SAN,
+ * then the evaluation, the features, and last anything outside the table —
+ * each group in the order the move carries it.
+ */
+export const nagsInPrintOrder = (nags: readonly number[]): number[] =>
+  nags
+    .map((nag, index) => ({ nag, index, rank: printRank(nag) }))
+    .sort((a, b) => a.rank - b.rank || a.index - b.index)
+    .map(({ nag }) => nag);
+
+/** Whether a choice is active on a move carrying `nags` — either of its codes. */
+export const isNagChoiceActive = (nags: readonly number[], picked: NagChoice): boolean =>
+  picked.codes.some((code) => nags.includes(code));
+
+/**
+ * **The selection rule** (lichess's): what a move's NAGs become when the
+ * reader picks `picked` in `section`.
+ *
+ * - Move Assessment and Position Evaluation are **single-choice**: picking a
+ *   glyph replaces that section's glyph, and picking the active one removes it.
+ * - Positional Features are **multi-select**: each glyph toggles on its own.
+ * - Codes outside the table are never touched.
+ *
+ * Pure; a new array every time (compare with `setNags`'s no-op rule, which
+ * hands the tree back when the list comes out the same).
+ */
+export const toggleNag = (
+  nags: readonly number[],
+  section: NagSection,
+  picked: NagChoice,
+): number[] => {
+  const active = isNagChoiceActive(nags, picked);
+  if (section === "features") {
+    return active
+      ? nags.filter((nag) => !picked.codes.includes(nag))
+      : [...nags, picked.codes[0]];
+  }
+  const rest = nags.filter((nag) => nagSection(nag) !== section);
+  return active ? rest : [...rest, picked.codes[0]];
+};
+
+/**
+ * The lichess colour family a move mark is drawn in — `!`/`!!` good, `?`/`??`
+ * bad, `!?` and `?!` their own; `undefined` for a glyph drawn plain.
+ */
+export type NagTone = "good" | "brilliant" | "mistake" | "blunder" | "interesting" | "dubious";
+
+const NAG_TONES: Readonly<Record<number, NagTone>> = {
+  1: "good",
+  2: "mistake",
+  3: "brilliant",
+  4: "blunder",
+  5: "interesting",
+  6: "dubious",
+};
+
+export const nagTone = (nag: number): NagTone | undefined => NAG_TONES[nag];

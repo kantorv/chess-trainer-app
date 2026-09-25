@@ -126,6 +126,17 @@ describe("the repertoire map layout", () => {
     });
   });
 
+  it("carries each move's glyphs on its label (CTA-97)", () => {
+    const annotated = parsePgnTree("1. e4! e5 (1... c5?! $14) *");
+    const everything = { left: -Infinity, top: -Infinity, right: Infinity, bottom: Infinity };
+    const labels = mapLabelsIn(mapLayoutOf(annotated), everything);
+    expect(labels.map((label) => [label.san, label.nags])).toEqual([
+      ["e4", [1]],
+      ["e5", undefined],
+      ["c5", [6, 14]],
+    ]);
+  });
+
   it("lays out an empty tree without dividing by nothing", () => {
     const layout = mapLayoutOf(parsePgnTree("*"));
     expect(layout.rows).toBe(1);

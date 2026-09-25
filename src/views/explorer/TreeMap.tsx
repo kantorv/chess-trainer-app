@@ -23,7 +23,9 @@ import type { SxProps, Theme } from "@mui/material/styles";
 import { useTranslation } from "react-i18next";
 
 import { findNode, pathTo, type GameTree } from "../../lib/gameTree";
+import { isMoveMark, nagGlyph, nagsInPrintOrder, nagTone } from "../../lib/moveAnnotations";
 import { maskNodeSan, type PieceMask } from "../../lib/pieceMask";
+import { nagToneStyles } from "../shared/nagToneSx";
 import MoveContextMenu, { type MoveMenuTarget } from "./MoveContextMenu";
 import { menuAnchorOf, type ContextMenuNodeHandler } from "../shared/moveContextMenu";
 import {
@@ -135,6 +137,8 @@ const drawingSx: SxProps<Theme> = {
     strokeWidth: 1,
     paintOrder: "stroke",
   },
+  // A move mark's lichess colour (CTA-97); evaluations and features stay the label's.
+  "& .map-nag": (theme: Theme) => nagToneStyles(theme, "fill", "&"),
   "& .map-label-trail": {
     fill: (theme: Theme) => (theme.vars ?? theme).palette.primary.main,
     fontWeight: 700,
@@ -811,6 +815,17 @@ function MapViewport({
                       data-testid={`${testId}-label-${label.id}`}
                     >
                       {drawing.labelOf(label.id, label.san)}
+                      {label.nags !== undefined &&
+                        nagsInPrintOrder(label.nags).map((nag) => (
+                          <tspan
+                            key={nag}
+                            className="map-nag"
+                            data-tone={nagTone(nag)}
+                            dx={isMoveMark(nag) ? undefined : MAP_LABEL_FONT * 0.2}
+                          >
+                            {nagGlyph(nag)}
+                          </tspan>
+                        ))}
                     </text>
                   );
                   if (onSelectNode === undefined && onContextMenuNode === undefined) {

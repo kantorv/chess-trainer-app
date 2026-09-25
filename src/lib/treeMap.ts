@@ -263,7 +263,14 @@ export const MAP_LABEL_MIN_K = 1.5;
 /** The most labels drawn at once — a guard for a wide view of a huge tree. */
 const MAP_LABEL_LIMIT = 2000;
 
-export type MapLabel = { id: string; san: string; px: number; py: number };
+/** One label: the move, its SAN and glyphs (CTA-97, `nags` as the node has them), and where. */
+export type MapLabel = {
+  id: string;
+  san: string;
+  nags?: readonly number[];
+  px: number;
+  py: number;
+};
 
 /**
  * The moves whose dots fall inside `rect` (drawing coordinates), in the
@@ -279,7 +286,7 @@ export const mapLabelsIn = (
   for (const node of layout.order) {
     const { px, py } = mapPixel(layout.points.get(node.id)!);
     if (px < rect.left || px > rect.right || py < rect.top || py > rect.bottom) continue;
-    labels.push({ id: node.id, san: node.san, px, py });
+    labels.push({ id: node.id, san: node.san, nags: node.nags, px, py });
     if (labels.length >= limit) break;
   }
   return labels;

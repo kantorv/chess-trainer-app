@@ -19,6 +19,10 @@ implements it, and every board that shows a game tree is built on it: the
 Analysis Board, Play with Engine and Masked Pieces, the Library's game board,
 the Openings explorer and the repertoire player with its games.
 
+What a move's annotations *are* — comments, `[%cmd]`s, the `prc` tag, NAG
+glyphs — and how they are read and written is
+[`pgn-annotations.md`](./pgn-annotations.md); this file only places them.
+
 [`chessboard.md`](./chessboard.md) §9 owns the board core a tree view reads
 from (`useBoardCore`) and the shell and panel its parts are placed into
 (`BoardShell`, `BoardPanel`). This file says only what a *tree view* is.
@@ -105,10 +109,12 @@ const parts = useVariationsExplorer({
 | **Move list**: numbered mainline pairs, the current move highlighted and scrolled into view, a click to any move | `moves` | always | `TreeMoveList` over the shared `MoveList` |
 | **Side lines hung under their move**, clickable | `moves` | always | `TreeMoveList` → `VariationLine` |
 | **Comment marker** on a commented move | `moves` | always | `hasComments`, `annotatedPlies`, `markCommentedNodes` |
+| **Annotation glyphs** (NAGs, CTA-97) after the SAN — in the mainline's cells, the side lines and the map's labels, on every board, read-only ones included: the move mark first (`!` `!!` green, `?` orange, `??` red, `!?` magenta, `?!` blue, a shade per scheme), then the evaluation and the features, plain; a code outside the table as `$N` | `moves`, `map` | always | `NagGlyphs` + `nagToneSx.ts` (`views/shared/`), the map's `.map-nag` tspans, over `lib/moveAnnotations.ts`'s table (`nagGlyph`, `nagsInPrintOrder`, `nagTone`); a mainline cell reads `GameMove.nags` (`mainlineGame` carries it), a side-line token and a map label their node's |
 | **Evals** on the mainline's cells only | `moves` | `evalsByFen` | `MoveList`'s `mainlineEvalsOnly` |
 | **Masked notation** — every printed move in coordinates when the mask hides its piece | all but `arrows` / `overlay` | `mask` | `maskSanLine` / `maskNodeSan`; [`masked-pieces.md`](./masked-pieces.md) §4 |
 | **Extension tint** on moves added this session | `moves` | `extensionIds` | the selection store |
-| **Right-click move menu**: promote variation, make main line, delete from here (confirmed, with a count), copy variation PGN, add comment, play chances… | `moves`, `map` | `onEditTree` (*Play chances…* also `playChances`) | `MoveContextMenu`, `CommentDialog`, `PlayChanceDialog`, over the pure edits in `lib/gameTree.ts` and `lib/playChance.ts` |
+| **Right-click move menu**: promote variation, make main line, delete from here (confirmed, with a count), copy variation PGN, add comment, add annotation…, play chances… | `moves`, `map` | `onEditTree` (*Play chances…* also `playChances`) | `MoveContextMenu`, `CommentDialog`, `NagDialog`, `PlayChanceDialog`, over the pure edits in `lib/gameTree.ts` and `lib/playChance.ts` |
+| **Add annotation…** (CTA-97): three tabs — Move Assessment, Position Evaluation, Positional Features & Commentary — each glyph a toggle with its meaning, the move's current ones selected. Lichess's rule: one move assessment, one evaluation (picking the active one removes it), any number of features; codes outside the table untouched. **Each toggle is an edit** (`setNags`), so the list shows it at once and the changes strip offers to keep it | `moves`, `map` | `onEditTree` | `NagDialog` over `toggleNag` / `NAG_SECTIONS` (`lib/moveAnnotations.ts`) and `setNags` (`lib/gameTree.ts`) |
 | **Comment block**: the move with its marks, the comment opening its line, the comments after it, their attributes as chips | `annotations` | `annotations` | `AnnotationsBar` over `lib/moveAnnotations.ts` |
 | **Comment editing** in the block (add, edit, delete) | `annotations` | `onEditTree` | `CommentDialog` + `setComments` |
 | **Next-moves bar**: the continuations at a branch; hovering one draws its arrow | `nextMoves` | always (nothing where there is no choice) | `views/tools/analysis/NextMovesBar.tsx` |
@@ -129,14 +135,17 @@ repertoire games pass nothing; a game never writes.
   node, ply and FEN), so a step re-renders two tokens and an engine message
   none. The list gets the source's stable `goToNode` and `onEditTree`; the
   menu is a sibling of the memoised list, so opening it re-renders no token.
-  **Keep new per-token state in that store, not in the list's props.** The map
-  is a few path strings: a ~9,000-node tree lays out in ~10 ms, and its labels
-  are drawn only for the dots in view (`mapLabelsIn` / `visibleRect`).
+  **Keep new per-token state in that store, not in the list's props.** A
+  token's glyphs are read off the move it already holds, so they add nothing
+  to either. The map is a few path strings: a ~9,000-node tree lays out in
+  ~10 ms, and its labels are drawn only for the dots in view (`mapLabelsIn` /
+  `visibleRect`).
 - **An edit is `replaceTree`.** Every edit returns a new tree, id-preserving,
   through `onEditTree`; a no-op returns the same tree, so a screen's
   `tree !== original` stays the whole test for "changed".
 - **Notation never mirrors.** The map is pinned LTR with `dir`, SAN in the
   menu and the comment block uses `dir="ltr"`, comment prose `dir="auto"`.
+  The glyphs sit inside the SAN's own `dir="ltr"` token.
 - **One set of arrows at a time**: required moves beat the chance overlay,
   which beats the library arrows. The chances and the bar's percentages come
   from one array, so the number and the width never disagree.
@@ -213,12 +222,13 @@ const parts = usePuzzleView({
 | `src/views/explorer/treeView.ts` | §1: `TreeViewSource`, `TreeViewParts`. |
 | `src/views/explorer/useVariationsExplorer.tsx` (+ `.test.tsx`) | §2: the explorer mode and its contract test. |
 | `src/views/explorer/TreeMoveList.tsx` (+ test) | The variations list over `MoveList` / `VariationLine`: the ply↔node seam, comment markers, the tint, the mask, the opt-in menu. |
-| `src/views/explorer/MoveContextMenu.tsx`, `CommentDialog.tsx`, `PlayChanceDialog.tsx` | The right-click menu and its two dialogs. |
+| `src/views/explorer/MoveContextMenu.tsx`, `CommentDialog.tsx`, `NagDialog.tsx`, `PlayChanceDialog.tsx` | The right-click menu and its three dialogs. |
 | `src/views/explorer/TreeMap.tsx` | The map: `MapViewport`, the full-screen dialog, links and the menu. The pure layout and viewport arithmetic are `src/lib/treeMap.ts`, with `MapCoverage`. |
 | `src/views/explorer/AnnotationsBar.tsx` | The comment block, presentational; the reading is `lib/moveAnnotations.ts`. |
 | `src/views/explorer/ChanceArrows.tsx` + `chanceArrows.ts` (+ tests) | The play-chance overlay and its geometry. |
 | `src/views/tools/analysis/nextMoveArrows.ts`, `NextMovesBar.tsx` | The next-move arrows and bar, imported by the explorer. |
 | `src/views/shared/MoveList.tsx`, `VariationLine.tsx`, `moveSelection.ts`, `moveContextMenu.ts`, `moveTokenSx.ts` | The shared tokens under every list. |
+| `src/views/shared/NagGlyphs.tsx`, `nagToneSx.ts` | A move's glyphs after its SAN, and the move marks' colours (the map's labels share them). |
 
 Locale keys are top-level, like every shared piece's: `treeMap.*`,
-`annotations.*`, `moveMenu.*`, `commentDialog.*`, `playChance.*`.
+`annotations.*`, `moveMenu.*`, `commentDialog.*`, `nagDialog.*`, `playChance.*`.

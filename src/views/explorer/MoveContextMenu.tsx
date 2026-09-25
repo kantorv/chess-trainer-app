@@ -16,6 +16,7 @@ import ArrowUpwardRoundedIcon from "@mui/icons-material/ArrowUpwardRounded";
 import CasinoOutlinedIcon from "@mui/icons-material/CasinoOutlined";
 import ContentCopyRoundedIcon from "@mui/icons-material/ContentCopyRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
+import PriorityHighRoundedIcon from "@mui/icons-material/PriorityHighRounded";
 import VerticalAlignTopRoundedIcon from "@mui/icons-material/VerticalAlignTopRounded";
 import { useTranslation } from "react-i18next";
 import {
@@ -34,6 +35,7 @@ import {
 } from "../../lib/gameTree";
 import { maskNodeSan, type PieceMask } from "../../lib/pieceMask";
 import CommentDialog, { type CommentDraft } from "./CommentDialog";
+import NagDialog, { type NagTarget } from "./NagDialog";
 import PlayChanceDialog, { type PlayChanceTarget } from "./PlayChanceDialog";
 import type { MenuAnchor } from "../shared/moveContextMenu";
 
@@ -47,7 +49,8 @@ export type MoveMenuTarget = { nodeId: string; anchor: MenuAnchor };
  * the move (`CommentDialog`; `setComments`, appended after the ones it has),
  * and, on a move with alternatives, set the **play chances** of the branch
  * it belongs to (`PlayChanceDialog`; lichess-tools' `prc:N`,
- * `lib/playChance.ts`).
+ * `lib/playChance.ts`) — and, since CTA-97, annotate it with NAG glyphs
+ * (`NagDialog`; `setNags`).
  *
  * Opened by `TreeMoveList` when its consumer passes `onEditTree`, at the
  * pointer (`anchorReference="anchorPosition"`). Every edit is a pure tree
@@ -92,6 +95,7 @@ function MoveContextMenu({
   const [copyNoticeOpen, setCopyNoticeOpen] = useState(false);
   const [commenting, setCommenting] = useState<string | null>(null);
   const [chancesAt, setChancesAt] = useState<PlayChanceTarget | null>(null);
+  const [annotating, setAnnotating] = useState<NagTarget | null>(null);
 
   // A target the tree no longer holds (an edit landed first) opens nothing.
   const node = target === null ? null : findNode(tree, target.nodeId);
@@ -203,6 +207,19 @@ function MoveContextMenu({
           </ListItemIcon>
           <ListItemText>{t("moveMenu.addComment")}</ListItemText>
         </MenuItem>
+        <MenuItem
+          data-testid="move-menu-annotate"
+          onClick={() => {
+            if (node === null) return;
+            setAnnotating({ nodeId: node.id, label: moveText(node) });
+            onClose();
+          }}
+        >
+          <ListItemIcon>
+            <PriorityHighRoundedIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>{t("moveMenu.addAnnotation")}</ListItemText>
+        </MenuItem>
         {playChances && branchSize > 1 && (
           <MenuItem
             data-testid="move-menu-chances"
@@ -262,6 +279,12 @@ function MoveContextMenu({
       </Dialog>
 
       <CommentDialog draft={commentDraft} onClose={() => setCommenting(null)} />
+      <NagDialog
+        tree={tree}
+        target={annotating}
+        onClose={() => setAnnotating(null)}
+        onEditTree={onEditTree}
+      />
       <PlayChanceDialog
         tree={tree}
         target={chancesAt}
