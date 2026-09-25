@@ -3,6 +3,7 @@ import {
   type ChangeEvent,
   type DragEvent,
   type FormEvent,
+  type ReactNode,
 } from "react";
 import Alert from "@mui/material/Alert";
 import AlertTitle from "@mui/material/AlertTitle";
@@ -75,7 +76,7 @@ import type { PositionEditorState } from "./usePositionEditor";
  */
 
 const FORM_TAB_IDS = ["position", "fen", "pgn"] as const;
-type FormTabId = (typeof FORM_TAB_IDS)[number];
+export type FormTabId = (typeof FORM_TAB_IDS)[number];
 
 type PositionEditorProps = {
   /** The state, from `usePositionEditor` — the host's. */
@@ -87,11 +88,43 @@ type PositionEditorProps = {
   testId: string;
   /** The widest the board grows, in pixels; absent, the column's full width. */
   boardMaxWidth?: number;
+  /**
+   * Which forms the tab strip offers. Absent: all three — Position, FEN and
+   * PGN — today's behaviour everywhere. A form left out is not offered, and
+   * the `.pgn` drop goes with the PGN tab; the analyses Lobby's new-analysis
+   * form, whose PGN and FEN ride its own Load route instead (CTA-96), passes
+   * `["position"]`. **One form is not a choice**: the strip goes and the form
+   * is always shown.
+   */
+  forms?: readonly FormTabId[];
+  /**
+   * The row under the board. Absent: the built-in resets (New board, Reset,
+   * Clear board, Flip) — today's behaviour. Provided: this instead — a host
+   * that lays its own controls out elsewhere (the analyses Lobby's form keeps
+   * New, Clear and Flip in its header and puts the FEN and PGN inputs here,
+   * CTA-96) takes the row over. The state's callbacks
+   * (`setStartingPosition`, `clearBoard`, `flipBoard`) are the host's either
+   * way.
+   */
+  controls?: ReactNode;
 };
 
-function PositionEditor({ editor, testId, boardMaxWidth }: PositionEditorProps) {
+function PositionEditor({
+  editor,
+  testId,
+  boardMaxWidth,
+  forms,
+  controls,
+}: PositionEditorProps) {
   const { t } = useTranslation();
+  const tabs = forms ?? FORM_TAB_IDS;
   const [tab, setTab] = useState<FormTabId>("position");
+  /** A `forms` without the current tab reads as its first — the host's list wins. */
+  const activeTab = tabs.includes(tab) ? tab : (tabs[0] ?? "position");
+  /** The PGN tab and the `.pgn` drop are one feature: a host either has both or neither. */
+  const pgnEnabled = tabs.includes("pgn");
+  /** One form is not a choice: no strip, and the form is always shown. */
+  const strip = tabs.length > 1;
 
   /*
     Ingestion state: what the reader has typed, what came out of the last
@@ -203,6 +236,8 @@ function PositionEditor({ editor, testId, boardMaxWidth }: PositionEditorProps) 
   const onDrop = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     setIsDragOver(false);
+    // The drop is the PGN form's shortcut; a host without it drops nothing.
+    if (!pgnEnabled) return;
     const file = event.dataTransfer?.files?.[0];
     if (file) loadFromFile(file);
   };
@@ -330,22 +365,31 @@ function PositionEditor({ editor, testId, boardMaxWidth }: PositionEditorProps) 
         </ChessboardProvider>
       </ForceLTR>
 
+      {/*
+        The row under the board: the built-in resets, or the host's node —
+        which brings its own layout with it.
+      */}
       <Box
         data-testid={`${testId}-controls`}
-        sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}
+        sx={
+          controls === undefined
+            ? { display: "flex", flexWrap: "wrap", gap: 1 }
+            : undefined
+        }
       >
-        {resets.map((reset) => (
-          <Button
-            key={reset.key}
-            size="small"
-            variant="outlined"
-            startIcon={reset.icon}
-            data-testid={`${testId}-reset-${reset.key}`}
-            onClick={reset.onClick}
-          >
-            {reset.label}
-          </Button>
-        ))}
+        {controls ??
+          resets.map((reset) => (
+            <Button
+              key={reset.key}
+              size="small"
+              variant="outlined"
+              startIcon={reset.icon}
+              data-testid={`${testId}-reset-${reset.key}`}
+              onClick={reset.onClick}
+            >
+              {reset.label}
+            </Button>
+          ))}
       </Box>
 
       <Typography
@@ -356,34 +400,41 @@ function PositionEditor({ editor, testId, boardMaxWidth }: PositionEditorProps) 
         {t("positionEditor.palette.removeHint")}
       </Typography>
 
-      <Tabs
-        value={tab}
-        onChange={(_event, next: FormTabId) => setTab(next)}
-        variant="fullWidth"
-        sx={{
-          minHeight: 36,
-          borderBottom: "1px solid",
-          borderColor: "divider",
-          "& .MuiTab-root": {
+      {strip && (
+        <Tabs
+          value={activeTab}
+          onChange={(_event, next: FormTabId) => setTab(next)}
+          variant="fullWidth"
+          sx={{
             minHeight: 36,
-            textTransform: "none",
-            minWidth: 0,
-            px: 1,
-          },
-        }}
-      >
-        {FORM_TAB_IDS.map((id) => (
-          <Tab
-            key={id}
-            value={id}
-            label={t(`positionEditor.tabs.${id}`)}
-            data-testid={`${testId}-tab-${id}`}
-          />
-        ))}
-      </Tabs>
+            borderBottom: "1px solid",
+            borderColor: "divider",
+            "& .MuiTab-root": {
+              minHeight: 36,
+              textTransform: "none",
+              minWidth: 0,
+              px: 1,
+            },
+          }}
+        >
+          {tabs.map((id) => (
+            <Tab
+              key={id}
+              value={id}
+              label={t(`positionEditor.tabs.${id}`)}
+              data-testid={`${testId}-tab-${id}`}
+            />
+          ))}
+        </Tabs>
+      )}
 
-      <Box role="tabpanel" data-testid={`${testId}-tab-content-${tab}`}>
-        {tab === "position" && (
+      {/* No strip, no tabpanel: with one form there is nothing it would be a
+          panel *of*. The test id stays, so a host's tests read the same either way. */}
+      <Box
+        role={strip ? "tabpanel" : undefined}
+        data-testid={`${testId}-tab-content-${activeTab}`}
+      >
+        {activeTab === "position" && (
           <PositionFields
             testId={testId}
             fields={editor.fields}
@@ -392,7 +443,7 @@ function PositionEditor({ editor, testId, boardMaxWidth }: PositionEditorProps) 
             onEnPassantChange={editor.setEnPassant}
           />
         )}
-        {tab === "fen" && (
+        {activeTab === "fen" && (
           <FenSetup
             testId={testId}
             fenText={fenText}
@@ -403,7 +454,7 @@ function PositionEditor({ editor, testId, boardMaxWidth }: PositionEditorProps) 
             canCopy={editor.isValid}
           />
         )}
-        {tab === "pgn" && (
+        {activeTab === "pgn" && (
           <PgnSetup
             testId={testId}
             games={games}

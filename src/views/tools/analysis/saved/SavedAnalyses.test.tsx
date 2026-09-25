@@ -1,18 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router";
-import type { ReactNode } from "react";
+import { MemoryRouter, useLocation } from "react-router";
+import { useEffect, type ReactNode } from "react";
 import { Chess } from "chess.js";
 
 import i18n from "../../../../i18n";
 import AppThemeWithLang from "../../../../theme/AppThemeWithLang";
+import { analysisHandOffOf } from "../../../../lib/analysisHandOff";
 import { DEFAULT_ANALYSIS_SETTINGS } from "../../../../lib/analysisSettings";
 import {
   addMove,
   emptyTree,
   fenAtNode,
   nodeAtSanPath,
+  treeToPgn,
   type GameTree,
 } from "../../../../lib/gameTree";
 import { savedAnalysisOf, type SavedAnalysis } from "../../../../lib/savedAnalyses";
@@ -24,6 +26,7 @@ import {
   addAnalyses,
   findSavedAnalysis,
   saveAnalysis,
+  savedAnalysesSnapshot,
 } from "../../../../lib/savedAnalysisStore";
 import { cardSizeTrack } from "../../../shared/cardSize";
 import { RightPanelOutlet, RightPanelProvider } from "../../../main/rightPanel";
@@ -132,6 +135,27 @@ const save = (
     now,
   );
 
+/*
+  Where navigation has taken the screen — the form's Load hands a whole game
+  to the Analysis Board as location state (CTA-96), which the probe records,
+  as `OpeningsBoard.test.tsx`'s does. The screen is mounted without routes, so
+  a navigation changes the recorded location and leaves the screen mounted.
+*/
+const where = vi.hoisted(() => ({
+  current: null as { pathname: string; search: string; state: unknown } | null,
+}));
+const Where = () => {
+  const location = useLocation();
+  useEffect(() => {
+    where.current = {
+      pathname: location.pathname,
+      search: location.search,
+      state: location.state,
+    };
+  }, [location]);
+  return null;
+};
+
 /** Mount the screen, and wait for the store's first read — the list's first frame. */
 const renderScreen = async (entry = "/tools/analysis/saved") => {
   const rendered = render(
@@ -140,6 +164,7 @@ const renderScreen = async (entry = "/tools/analysis/saved") => {
         <RightPanelProvider>
           <SavedAnalyses />
           <RightPanelOutlet />
+          <Where />
         </RightPanelProvider>
       </MemoryRouter>
     </AppThemeWithLang>,
@@ -589,9 +614,209 @@ describe("the new-analysis form (CTA-87)", () => {
     expect(screen.getByTestId("new-analysis-illegal")).toHaveTextContent("White has no king.");
 
     // Back to the standard start, and Start is back.
-    fireEvent.click(screen.getByTestId("new-analysis-editor-reset-start"));
+    fireEvent.click(screen.getByTestId("new-analysis-new"));
     expect(screen.queryByTestId("new-analysis-illegal")).toBeNull();
     expect(screen.getByTestId("new-analysis-start")).toBeEnabled();
     expect(startHref()).toBe("/tools/analysis");
+  });
+
+  /*
+    Load a game (CTA-96): the Load route's pipeline (`useAnalysisLoad`) placed
+    by hand — the quick loads (a FEN field and a `.pgn` pick) in the editor's
+    controls row, the paste box in its own section below, and the editor's
+    resets (New, Clear, Flip) up in the form's header. A whole game (several
+    merged or split exactly as on the board's own Load tab) is handed to the
+    Analysis Board as location state; a PGN that is really a position — a
+    single move, or none — and a FEN set the editor up, which Start then
+    carries.
+  */
+  describe("loads a PGN as a whole game (CTA-96)", () => {
+    const ONE_GAME = '[Event "Solo"]\n\n1. e4 e5 (1... c5 {sicilian}) 2. Nf3 *\n';
+    const TWO_GAMES = '[Event "One"]\n\n1. e4 e5 *\n\n[Event "Two"]\n\n1. d4 d5 *\n';
+    // The position after a real 1. e4 — Black to answer it, so a load of it
+    // turns the editor's board.
+    const AFTER_MOVE_E4 = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1";
+    const KINGS = "4k3/8/8/8/8/8/8/4K3 w - - 0 1";
+    const EMPTY = "8/8/8/8/8/8/8/8 w - - 0 1";
+
+    const pasteAndLoad = async (text: string) => {
+      fireEvent.change(screen.getByTestId("new-analysis-paste"), {
+        target: { value: text },
+      });
+      fireEvent.click(screen.getByTestId("new-analysis-load-text"));
+      await act(async () => {
+        await Promise.resolve();
+      });
+    };
+
+    const pickAndLoad = async (text: string) => {
+      fireEvent.change(screen.getByTestId("new-analysis-pgn-input"), {
+        target: {
+          files: [new File([text], "game.pgn", { type: "application/x-chess-pgn" })],
+        },
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+    };
+
+    const applyFen = async (fen: string) => {
+      fireEvent.change(screen.getByTestId("new-analysis-fen-input"), {
+        target: { value: fen },
+      });
+      fireEvent.keyDown(screen.getByTestId("new-analysis-fen-input"), { key: "Enter" });
+      await act(async () => {
+        await Promise.resolve();
+      });
+    };
+
+    const editorPosition = () =>
+      screen.getByTestId("board-editor").getAttribute("data-position");
+
+    const editorOrientation = () =>
+      screen.getByTestId("board-editor").getAttribute("data-orientation");
+
+    it("keeps the resets in the header, and the quick loads in the editor's row", async () => {
+      await renderScreen();
+
+      // New, Clear, Flip — beside the title, not under the board.
+      expect(screen.getByTestId("new-analysis-new")).toBeInTheDocument();
+      expect(screen.getByTestId("new-analysis-clear")).toBeInTheDocument();
+      expect(screen.getByTestId("new-analysis-flip")).toBeInTheDocument();
+      expect(screen.queryByTestId("new-analysis-editor-reset-start")).toBeNull();
+
+      // The quick loads sit in the editor's controls row, side by side: the
+      // FEN field at the left, the `.pgn` pick beside it. The editor offers no
+      // tabs and its fields are always shown; the section below is the paste
+      // box alone — no file button, no help line.
+      const editor = within(screen.getByTestId("new-analysis-editor"));
+      expect(editor.getByTestId("new-analysis-fen-input")).toBeInTheDocument();
+      expect(editor.getByTestId("new-analysis-pgn")).toBeInTheDocument();
+      expect(screen.queryByTestId("new-analysis-editor-tab-position")).toBeNull();
+      expect(screen.queryByTestId("new-analysis-editor-tab-fen")).toBeNull();
+      expect(screen.queryByTestId("new-analysis-editor-tab-pgn")).toBeNull();
+      expect(screen.getByTestId("new-analysis-editor-position-fields")).toBeInTheDocument();
+      expect(screen.getByTestId("new-analysis-paste")).toBeInTheDocument();
+      expect(screen.queryByTestId("analysis-load-pick")).toBeNull();
+      expect(screen.queryByText(/opens as a new analysis/)).toBeNull();
+    });
+
+    it("the header's New, Clear and Flip do what the editor's row once did", async () => {
+      await renderScreen();
+      editorDrag("wP", "e2", "e4");
+
+      fireEvent.click(screen.getByTestId("new-analysis-flip"));
+      expect(editorOrientation()).toBe("black");
+
+      fireEvent.click(screen.getByTestId("new-analysis-clear"));
+      expect(editorPosition()).toBe(EMPTY);
+
+      fireEvent.click(screen.getByTestId("new-analysis-new"));
+      expect(editorPosition()).toBe(START);
+      expect(startHref()).toBe("/tools/analysis");
+    });
+
+    it.each([{ how: "paste" as const }, { how: "file" as const }])(
+      "opens one game on the Analysis Board as a new unsaved analysis, facing White ($how)",
+      async ({ how }) => {
+        await renderScreen();
+        if (how === "paste") {
+          await pasteAndLoad(ONE_GAME);
+        } else {
+          await pickAndLoad(ONE_GAME);
+        }
+
+        expect(where.current?.pathname).toBe("/tools/analysis");
+        // The whole game handed over as location state: a game does not turn the board.
+        const handOff = analysisHandOffOf(where.current?.state);
+        expect(handOff?.orientation).toBe("white");
+        // The side line and its comment ride along — not just the final position.
+        expect(nodeAtSanPath(handOff!.tree, ["e4", "c5"])).not.toBeNull();
+        expect(treeToPgn(handOff!.tree)).toContain("sicilian");
+      },
+    );
+
+    it("a PGN of a single move sets the editor up from the position after it", async () => {
+      await renderScreen();
+      await pasteAndLoad("1. e4 *");
+
+      // Not a game: the editor takes the position after the move — turned to
+      // the side that has to answer it — and Start carries it. Nothing
+      // navigated, and there is no "loaded" line to say.
+      expect(editorPosition()).toBe(AFTER_MOVE_E4);
+      expect(editorOrientation()).toBe("black");
+      expect(startHref()).toBe(`/tools/analysis?fen=${encodeURIComponent(AFTER_MOVE_E4)}`);
+      expect(where.current?.pathname).toBe("/tools/analysis/saved");
+      expect(screen.queryByTestId("new-analysis-done")).toBeNull();
+    });
+
+    it("a PGN of a position and no moves sets the editor up from it", async () => {
+      await renderScreen();
+      await pasteAndLoad(`[SetUp "1"]\n[FEN "${KINGS}"]\n*`);
+
+      expect(editorPosition()).toBe(KINGS);
+      expect(startHref()).toBe(`/tools/analysis?fen=${encodeURIComponent(KINGS)}`);
+      expect(where.current?.pathname).toBe("/tools/analysis/saved");
+    });
+
+    it("the FEN field sets the editor up too, and a bad one says so and goes nowhere", async () => {
+      await renderScreen();
+      await applyFen("not a fen");
+
+      expect(screen.getByTestId("new-analysis-fen-problem")).toBeInTheDocument();
+      expect(editorPosition()).toBe(START);
+      expect(where.current?.pathname).toBe("/tools/analysis/saved");
+
+      await applyFen(AFTER_MOVE_E4);
+
+      expect(editorPosition()).toBe(AFTER_MOVE_E4);
+      expect(screen.queryByTestId("new-analysis-fen-problem")).toBeNull();
+      expect(startHref()).toBe(`/tools/analysis?fen=${encodeURIComponent(AFTER_MOVE_E4)}`);
+    });
+
+    it("asks merge or split for several games, and a merge hands one tree to the board", async () => {
+      await renderScreen();
+      await pasteAndLoad(TWO_GAMES);
+
+      expect(screen.getByTestId("new-analysis-choice")).toBeInTheDocument();
+      expect(where.current?.pathname).toBe("/tools/analysis/saved"); // nothing navigated yet
+
+      fireEvent.click(screen.getByTestId("new-analysis-choice-merge"));
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(where.current?.pathname).toBe("/tools/analysis");
+      const handOff = analysisHandOffOf(where.current?.state);
+      // One merged tree: the first game's line is the mainline, the second a side line.
+      expect(nodeAtSanPath(handOff!.tree, ["e4", "e5"])).not.toBeNull();
+      expect(nodeAtSanPath(handOff!.tree, ["d4", "d5"])).not.toBeNull();
+    });
+
+    it("a split saves one analysis per game into a new folder and lands in it", async () => {
+      await renderScreen();
+      await pasteAndLoad(TWO_GAMES);
+      fireEvent.click(screen.getByTestId("new-analysis-choice-split"));
+
+      await waitFor(() => expect(where.current?.search).toMatch(/^\?folder=/));
+      const folderId = new URLSearchParams(where.current!.search).get("folder")!;
+      const folder = (analysisFoldersSnapshot() ?? []).find((f) => f.id === folderId);
+      // Named after the text, as the Load tab's split names it.
+      expect(folder?.name).toBe("One");
+      expect(
+        (savedAnalysesSnapshot() ?? []).filter((a) => a.folderId === folderId),
+      ).toHaveLength(2);
+    });
+
+    it("says so, and goes nowhere, for a PGN that will not read", async () => {
+      await renderScreen();
+      await pasteAndLoad("this is not a pgn");
+
+      expect(screen.getByTestId("new-analysis-problem")).toHaveTextContent(
+        "could not be read as PGN",
+      );
+      expect(where.current?.pathname).toBe("/tools/analysis/saved");
+      expect(savedAnalysesSnapshot() ?? []).toEqual([]);
+    });
   });
 });

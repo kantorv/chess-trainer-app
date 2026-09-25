@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { act, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { ComponentProps } from "react";
 import i18n from "../../../i18n";
 import AppThemeWithLang from "../../../theme/AppThemeWithLang";
 import PositionEditor from "./PositionEditor";
@@ -97,11 +98,24 @@ const dropSpare = (pieceType: string, to: string | null) => {
 };
 
 /** A host: owns the state, renders the editor, and prints what it reads. */
-function Host({ initialFen }: { initialFen?: string }) {
+function Host({
+  initialFen,
+  forms,
+  controls,
+}: {
+  initialFen?: string;
+  forms?: ComponentProps<typeof PositionEditor>["forms"];
+  controls?: ComponentProps<typeof PositionEditor>["controls"];
+}) {
   const editor = usePositionEditor(initialFen);
   return (
     <>
-      <PositionEditor editor={editor} testId="editor" />
+      <PositionEditor
+        editor={editor}
+        testId="editor"
+        forms={forms}
+        controls={controls}
+      />
       <div
         data-testid="host"
         data-fen={editor.fen}
@@ -112,10 +126,14 @@ function Host({ initialFen }: { initialFen?: string }) {
   );
 }
 
-const renderEditor = (initialFen?: string) =>
+const renderEditor = (
+  initialFen?: string,
+  forms?: ComponentProps<typeof PositionEditor>["forms"],
+  controls?: ComponentProps<typeof PositionEditor>["controls"],
+) =>
   render(
     <AppThemeWithLang>
-      <Host initialFen={initialFen} />
+      <Host initialFen={initialFen} forms={forms} controls={controls} />
     </AppThemeWithLang>,
   );
 
@@ -396,6 +414,16 @@ describe("PositionEditor — resets", () => {
     );
     expect(position()).toBe(before);
   });
+
+  it("a host can take the row over: its node renders there, the built-in resets do not (the analyses Lobby, CTA-96)", () => {
+    renderEditor(undefined, undefined, <div data-testid="host-row" />);
+
+    expect(screen.getByTestId("editor-controls")).toBeInTheDocument();
+    expect(screen.getByTestId("host-row")).toBeInTheDocument();
+    expect(screen.queryByTestId("editor-reset-start")).toBeNull();
+    expect(screen.queryByTestId("editor-reset-clear")).toBeNull();
+    expect(screen.queryByTestId("editor-reset-flip")).toBeNull();
+  });
 });
 
 describe("PositionEditor — an initial position", () => {
@@ -564,6 +592,41 @@ describe("PositionEditor — PGN in", () => {
     await userEvent.click(screen.getByRole("button", { name: "Load game" }));
 
     expect(screen.getByTestId("editor-pgn-error")).toBeInTheDocument();
+  });
+
+  it("a host can leave the PGN form out, drop and all", async () => {
+    renderEditor(undefined, ["position", "fen"]);
+
+    expect(screen.getByTestId("editor-tab-position")).toBeInTheDocument();
+    expect(screen.getByTestId("editor-tab-fen")).toBeInTheDocument();
+    expect(screen.queryByTestId("editor-tab-pgn")).toBeNull();
+
+    // A `.pgn` dropped on the editor is the PGN form's shortcut: no form, no load.
+    fireEvent.drop(screen.getByTestId("editor"), {
+      dataTransfer: {
+        files: [new File(["1. e4 e5"], "game.pgn", { type: "application/x-chess-pgn" })],
+      },
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(placement()).toBe("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR");
+  });
+
+  it("a forms list of one is not a choice: no strip, the form always shown (the analyses Lobby, CTA-96)", () => {
+    renderEditor(undefined, ["position"]);
+
+    expect(screen.queryByTestId("editor-tab-position")).toBeNull();
+    expect(screen.queryByTestId("editor-tab-fen")).toBeNull();
+    expect(screen.getByTestId("editor-position-fields")).toBeInTheDocument();
+  });
+
+  it("a single form can be any of them — the FEN form alone, the fields gone", () => {
+    renderEditor(undefined, ["fen"]);
+
+    expect(screen.queryByTestId("editor-tab-fen")).toBeNull();
+    expect(screen.getByTestId("editor-fen-setup")).toBeInTheDocument();
+    expect(screen.queryByTestId("editor-position-fields")).toBeNull();
   });
 });
 

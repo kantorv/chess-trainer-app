@@ -485,6 +485,14 @@ const en = {
       start: "Start",
       /** Above Start while the position in the editor cannot be analyzed. */
       illegal: "Start is off until the position in the board editor can be analyzed.",
+      /** The editor's resets, in the form's header — the panel says "board", the buttons need not. */
+      new: "New",
+      clear: "Clear",
+      flip: "Flip",
+      /** The `.pgn` file pick beside the FEN field. */
+      pgnFile: "PGN",
+      /** The paste box under the editor — the file pick is above it, so no "or". */
+      pasteLabel: "Paste PGN text",
     },
     /** Picking analyses and taking them out as one `.pgn`, side lines and all. */
     select: "Select this analysis",
