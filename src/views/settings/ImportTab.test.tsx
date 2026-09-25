@@ -26,6 +26,7 @@ import {
   deleteEngineDb,
   importPlayedGames,
   loadPlayedGames,
+  MAX_PLAYED_GAMES,
   playedGamesSnapshot,
   resetPlayedGameStore,
   savePlayedGame,
@@ -393,7 +394,12 @@ describe("the Import tab", () => {
     await addRepertoireFolders(
       Array.from({ length: 100 }, (_, n) => ({ id: `f${n}`, name: `Folder ${n}`, savedAt: AT, updatedAt: AT })),
     );
-    await importPlayedGames(Array.from({ length: 100 }, (_, n) => played(`old${n}`)));
+    // A full store, one write — each game a minute apart, so the oldest is one game.
+    await importPlayedGames(
+      Array.from({ length: MAX_PLAYED_GAMES }, (_, n) =>
+        played(`old${n}`, new Date(Date.parse(AT) + n * 60_000).toISOString()),
+      ),
+    );
     const bytes = built({
       playedGames: [played("new", "2026-09-20T00:00:00.000Z")],
       repertoires: [repertoire("r1", "w")],
@@ -407,7 +413,7 @@ describe("the Import tab", () => {
       "Not imported: it would need 101 folders, past the limit of 100.",
     );
     expect(screen.getByTestId("settings-import-games-drops")).toHaveTextContent(
-      "Played games are kept up to 100: the oldest game will be dropped.",
+      "Played games are kept up to 500: the oldest game will be dropped.",
     );
 
     const done = await importAndWait();
@@ -415,8 +421,11 @@ describe("the Import tab", () => {
     expect(await loadSavedRepertoires()).toEqual([]);
     expect(await loadRepertoireFolders()).toHaveLength(100);
     const games = await loadPlayedGames();
-    expect(games).toHaveLength(100);
+    expect(games).toHaveLength(MAX_PLAYED_GAMES);
     expect(games[0].id).toBe("new");
+    // The store dropped its oldest to take the new game.
+    expect(games.at(-1)?.id).toBe("old1");
+    expect(games.some((game) => game.id === "old0")).toBe(false);
   });
 
   it.each([

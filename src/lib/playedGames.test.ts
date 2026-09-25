@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { Chess } from "chess.js";
 
-import { DEFAULT_ENGINE_SETTINGS } from "./engineSettings";
+import { approximateElo, DEFAULT_ENGINE_SETTINGS } from "./engineSettings";
 import { isReferenceRead, loadReferencedGames, resolveGameReference } from "./gameReference";
 import { parsePgnTree } from "./pgn";
 import {
   findPlayedGame,
+  importPlayedGames,
   loadPlayedGames,
   MAX_PLAYED_GAMES,
   playedGamesSnapshot,
@@ -22,6 +23,8 @@ import {
   playedGameOf,
   playedGameSummary,
   playedGameToTree,
+  sortedPlayedGames,
+  type PlayedGameRow,
 } from "./playedGames";
 
 const AFTER_E4 = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1";
@@ -115,6 +118,27 @@ describe("a played game, written down and read back", () => {
     });
     expect(playedGameSummary(game, playedGameToTree(game)).result).toBe("*");
   });
+
+  it("names each side for the table, with the engine's Elo estimate on its own side (CTA-100)", () => {
+    const settings = { ...DEFAULT_ENGINE_SETTINGS, playAs: "white" as const, skillLevel: 5 };
+    const asWhite = playedGameOf("w", parsePgnTree("1. e4 *"), [], settings);
+    const white = playedGameSummary(asWhite, playedGameToTree(asWhite));
+    expect(white.whiteName).toBe("human");
+    expect(white.blackName).toBe("engine");
+    expect(white.whiteElo).toBeUndefined();
+    expect(white.blackElo).toBe(approximateElo(5));
+
+    const asBlack = playedGameOf("b", parsePgnTree("1. e4 *"), [], { ...settings, playAs: "black" });
+    const black = playedGameSummary(asBlack, playedGameToTree(asBlack));
+    expect(black.whiteName).toBe("engine");
+    expect(black.blackName).toBe("human");
+    expect(black.whiteElo).toBe(approximateElo(5));
+    expect(black.blackElo).toBeUndefined();
+
+    // The sides and the settings are the record's, so an unreadable game keeps them.
+    expect(playedGameSummary(asWhite, undefined).whiteName).toBe("human");
+    expect(playedGameSummary(asWhite, undefined).blackElo).toBe(approximateElo(5));
+  });
 });
 
 describe("the played games' store", () => {
@@ -169,11 +193,25 @@ describe("the played games' store", () => {
   });
 
   it("drops the oldest past the cap", async () => {
-    for (let index = 0; index <= MAX_PLAYED_GAMES; index += 1) {
-      await savePlayedGame(record(`g${index}`, "1. e4 *"));
-    }
+    // The bulk arrives in one write (the import's own path), so the cap costs
+    // two transactions rather than five hundred saves.
+    const many = (count: number) =>
+      Array.from({ length: count }, (_, index) =>
+        record(
+          `g${index}`,
+          "1. e4 *",
+          [],
+          new Date(Date.parse("2026-01-01T10:00:00Z") + index * 1000).toISOString(),
+        ),
+      );
+    await importPlayedGames(many(MAX_PLAYED_GAMES + 1));
     expect(playedGamesSnapshot()).toHaveLength(MAX_PLAYED_GAMES);
     expect(findPlayedGame("g0")).toBeUndefined();
+    // A save into a full store drops the oldest the same way.
+    await savePlayedGame(record("new", "1. d4 *", [], "2026-02-01T10:00:00Z"));
+    expect(playedGamesSnapshot()).toHaveLength(MAX_PLAYED_GAMES);
+    expect(ids()?.[0]).toBe("new");
+    expect(findPlayedGame("g1")).toBeUndefined();
   });
 
   it("forgets one", async () => {
@@ -192,6 +230,98 @@ describe("the played games' store", () => {
     expect(item?.id).toBe("a");
     expect(item?.pgn).toContain("(1. d4)");
     expect(resolveGameReference("play/games/missing")).toBeUndefined();
+  });
+});
+
+/** One row of the sort's tests — a game as the table built it. */
+const tableRow = (id: string, over: Partial<PlayedGameRow> = {}): PlayedGameRow => ({
+  id,
+  white: "Human",
+  whiteElo: undefined,
+  black: "Stockfish level 10",
+  blackElo: 2100,
+  result: "*",
+  opening: undefined,
+  moves: 1,
+  variations: 0,
+  masked: false,
+  savedAt: "2026-01-01T10:00:00.000Z",
+  readable: true,
+  ...over,
+});
+
+describe("the Lobby table's sort (CTA-100)", () => {
+  const ids = (rows: readonly PlayedGameRow[]) => rows.map((row) => row.id);
+
+  it("sorts by the date, the moment it names and not its wording", () => {
+    const rows = [
+      tableRow("old", { savedAt: "2026-01-01T10:00:00.000Z" }),
+      tableRow("new", { savedAt: "2026-03-01T10:00:00.000Z" }),
+      tableRow("mid", { savedAt: "2026-02-01T10:00:00.000Z" }),
+    ];
+    expect(ids(sortedPlayedGames(rows, "date", "desc"))).toEqual(["new", "mid", "old"]);
+    expect(ids(sortedPlayedGames(rows, "date", "asc"))).toEqual(["old", "mid", "new"]);
+  });
+
+  it("reads an Elo numerically, and one that is unknown goes last either way", () => {
+    const rows = [
+      tableRow("none", { blackElo: undefined }),
+      tableRow("low", { blackElo: 1350 }),
+      tableRow("high", { blackElo: 2850 }),
+    ];
+    expect(ids(sortedPlayedGames(rows, "blackElo", "desc"))).toEqual(["high", "low", "none"]);
+    expect(ids(sortedPlayedGames(rows, "blackElo", "asc"))).toEqual(["low", "high", "none"]);
+  });
+
+  it("collates names numerically, so a level 3 comes before a level 20", () => {
+    const rows = [
+      tableRow("e20", { white: "Stockfish level 20", black: "Human" }),
+      tableRow("h", { white: "Human", black: "Stockfish level 20" }),
+      tableRow("e3", { white: "Stockfish level 3", black: "Human" }),
+    ];
+    expect(ids(sortedPlayedGames(rows, "white", "asc"))).toEqual(["h", "e3", "e20"]);
+    expect(ids(sortedPlayedGames(rows, "white", "desc"))).toEqual(["e20", "e3", "h"]);
+  });
+
+  it("sorts an opening that is not yet known last, either way", () => {
+    const rows = [
+      tableRow("unknown"),
+      tableRow("kings", { opening: "King's Pawn Game" }),
+      tableRow("queens", { opening: "Queen's Pawn Game" }),
+    ];
+    expect(ids(sortedPlayedGames(rows, "opening", "asc"))).toEqual(["kings", "queens", "unknown"]);
+    expect(ids(sortedPlayedGames(rows, "opening", "desc"))).toEqual(["queens", "kings", "unknown"]);
+  });
+
+  it("breaks ties by the date, following the direction", () => {
+    const rows = [
+      tableRow("old-tie", { moves: 2, savedAt: "2026-01-01T10:00:00.000Z" }),
+      tableRow("new-tie", { moves: 2, savedAt: "2026-02-01T10:00:00.000Z" }),
+      tableRow("few", { moves: 1, savedAt: "2026-03-01T10:00:00.000Z" }),
+    ];
+    expect(ids(sortedPlayedGames(rows, "moves", "desc"))).toEqual(["new-tie", "old-tie", "few"]);
+    expect(ids(sortedPlayedGames(rows, "moves", "asc"))).toEqual(["few", "old-tie", "new-tie"]);
+  });
+
+  it("sorts the Masked column, and a date that will not read is missing", () => {
+    const rows = [
+      tableRow("masked", { masked: true }),
+      tableRow("plain"),
+      tableRow("undated", { savedAt: "when?" }),
+    ];
+    expect(ids(sortedPlayedGames(rows, "masked", "asc"))).toEqual(["plain", "undated", "masked"]);
+    expect(ids(sortedPlayedGames(rows, "masked", "desc"))).toEqual(["masked", "plain", "undated"]);
+    expect(ids(sortedPlayedGames(rows, "date", "desc"))).toEqual(["masked", "plain", "undated"]);
+  });;
+
+  it("sorts the result as PGN writes it", () => {
+    const rows = [
+      tableRow("draw", { result: "1/2-1/2" }),
+      tableRow("black", { result: "0-1" }),
+      tableRow("on", { result: "*" }),
+      tableRow("white", { result: "1-0" }),
+    ];
+    expect(ids(sortedPlayedGames(rows, "result", "asc"))).toEqual(["on", "black", "white", "draw"]);
   });
 });
 

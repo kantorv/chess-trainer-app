@@ -3,7 +3,7 @@ import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter, useLocation } from "react-router";
 
 import i18n from "../../../i18n";
-import { DEFAULT_ENGINE_SETTINGS } from "../../../lib/engineSettings";
+import { approximateElo, DEFAULT_ENGINE_SETTINGS } from "../../../lib/engineSettings";
 import { parsePgnTree } from "../../../lib/pgn";
 import { playedGamesSnapshot, savePlayedGame } from "../../../lib/playedGameStore";
 import { playedGameOf } from "../../../lib/playedGames";
@@ -105,11 +105,20 @@ const mount = (entry = "/engine/games") =>
   );
 
 const listed = () =>
-  screen.queryAllByTestId(/^played-games-item-/).map((row) => row.dataset.testid?.slice(18));
+  screen.queryAllByTestId(/^played-games-row-/).map((row) => row.dataset.testid?.slice(17));
 
-const store = (id: string, pgn: string, playAs: "white" | "black" = "white") =>
+/** One row's cells, in the table's column order. */
+const cells = (id: string) =>
+  within(screen.getByTestId(`played-games-row-${id}`)).getAllByRole("cell");
+
+const store = (
+  id: string,
+  pgn: string,
+  playAs: "white" | "black" = "white",
+  when = "2026-09-20T10:00:00Z",
+) =>
   savePlayedGame(
-    playedGameOf(id, parsePgnTree(pgn), [], { ...DEFAULT_ENGINE_SETTINGS, playAs, skillLevel: 5 }),
+    playedGameOf(id, parsePgnTree(pgn), [], { ...DEFAULT_ENGINE_SETTINGS, playAs, skillLevel: 5 }, undefined, new Date(when)),
   );
 
 beforeEach(async () => {
@@ -128,32 +137,39 @@ describe("Lobby — the list", () => {
     expect(screen.getByTestId("played-games-count")).toHaveTextContent("Games: 0");
   });
 
-  it("lists the games newest first, titled by the pairing, White first", async () => {
-    await store("a", "1. e4 (1. d4) 1... e5 *");
-    await store("b", "1. d4 d5 *", "black");
+  it("lists the games newest first, the pairing White-first in its columns", async () => {
+    await store("a", "1. e4 (1. d4) 1... e5 *", "white", "2026-09-01T10:00:00Z");
+    await store("b", "1. d4 d5 *", "black", "2026-09-20T10:00:00Z");
     mount();
 
-    const rows = screen.getAllByTestId(/^played-games-item-/);
-    expect(rows.map((row) => row.dataset.testid)).toEqual([
-      "played-games-item-b",
-      "played-games-item-a",
-    ]);
-    expect(screen.getByTestId("played-games-title-a")).toHaveTextContent(
-      "Human - Stockfish level 5",
-    );
-    expect(screen.getByTestId("played-games-title-b")).toHaveTextContent(
-      "Stockfish level 5 - Human",
-    );
+    expect(listed()).toEqual(["b", "a"]);
+    const a = cells("a");
+    expect(a[0]).toHaveTextContent("Human");
+    expect(a[1]).toHaveTextContent("Unknown");
+    expect(a[2]).toHaveTextContent("Stockfish level 5");
+    expect(a[3]).toHaveTextContent(String(approximateElo(5)));
+    const b = cells("b");
+    expect(b[0]).toHaveTextContent("Stockfish level 5");
+    expect(b[1]).toHaveTextContent(String(approximateElo(5)));
+    expect(b[2]).toHaveTextContent("Human");
+    expect(b[3]).toHaveTextContent("Unknown");
   });
 
-  it("gives the length, the side lines and the result as PGN writes it", async () => {
-    await store("a", "1. e4 (1. d4) 1... e5 *");
-    await store("m", "1. f3 e5 2. g4 Qh4# 0-1");
+  it("gives the moves with the side lines, the result and the date", async () => {
+    await store("a", "1. e4 (1. d4) 1... e5 *", "white", "2026-09-01T10:00:00Z");
+    await store("m", "1. f3 e5 2. g4 Qh4# 0-1", "white", "2026-09-02T10:00:00Z");
     mount();
-    expect(screen.getByTestId("played-games-caption-a")).toHaveTextContent(
-      /^1 move · 1 side line · \* · /,
-    );
-    expect(screen.getByTestId("played-games-caption-m")).toHaveTextContent(/ · 0-1 · /);
+    const a = cells("a");
+    expect(a[6]).toHaveTextContent(/^1/);
+    expect(a[6]).toHaveTextContent("1 side line");
+    expect(a[4]).toHaveTextContent("*");
+    expect(a[8]).toHaveTextContent("Sep 1, 2026");
+    expect(cells("m")[4]).toHaveTextContent("0-1");
+    // The table mirrors under Hebrew; its notation and dates never do (the
+    // `dir` attribute, not a CSS direction the RTL plugin would flip).
+    expect(a[4]).toHaveAttribute("dir", "ltr");
+    expect(a[8]).toHaveAttribute("dir", "ltr");
+    expect(a[0]).toHaveAttribute("dir", "auto");
   });
 
   it("continues a game on Play with Engine, and hands it to the Analysis Board", async () => {
@@ -196,6 +212,106 @@ describe("Lobby — the list", () => {
     fireEvent.click(screen.getByTestId("played-games-delete-confirm"));
     expect(await screen.findByTestId("played-games-empty")).toBeInTheDocument();
     expect(playedGamesSnapshot()).toHaveLength(0);
+  });
+});
+
+describe("Lobby — the table (CTA-100)", () => {
+  /** Games whose lengths and dates differ, one a minute. */
+  const seed = async (count: number) => {
+    for (let index = 0; index < count; index += 1) {
+      const when = new Date(Date.parse("2026-09-01T10:00:00Z") + index * 60_000).toISOString();
+      const pgn = index % 2 === 0 ? "1. e4 *" : "1. e4 e5 2. Nf3 Nc6 3. Bb5 *";
+      await store(`g${String(index).padStart(2, "0")}`, pgn, "white", when);
+    }
+  };
+
+  it("heads its columns in order, every one a sort header", async () => {
+    await seed(1);
+    mount();
+    expect(
+      within(screen.getByTestId("played-games-table"))
+        .getAllByRole("columnheader")
+        .map((head) => head.textContent),
+    ).toEqual(["White", "Elo", "Black", "Elo", "Result", "Opening", "Moves", "Masked", "Date", ""]);
+  });
+
+  it("opens newest first; a click on a header sorts by it, and a second turns it", async () => {
+    await store("short", "1. e4 *", "white", "2026-09-03T10:00:00Z");
+    await store("long", "1. e4 e5 2. Nf3 Nc6 3. Bb5 *", "white", "2026-09-01T10:00:00Z");
+    await store("mid", "1. d4 d5 *", "white", "2026-09-02T10:00:00Z");
+    mount();
+    // The default: the day each game was begun, newest first.
+    expect(listed()).toEqual(["short", "mid", "long"]);
+
+    // A new column opens its own way — the numbers high first. The ties (two
+    // one-move games) break by date, following the direction.
+    fireEvent.click(screen.getByTestId("played-games-sort-moves"));
+    expect(listed()).toEqual(["long", "short", "mid"]);
+    expect(screen.getByTestId("where")).toHaveTextContent("/engine/games?sort=moves");
+
+    fireEvent.click(screen.getByTestId("played-games-sort-moves"));
+    expect(listed()).toEqual(["mid", "short", "long"]);
+    expect(screen.getByTestId("where")).toHaveTextContent("/engine/games?sort=moves&dir=asc");
+
+    // The default direction is not written; the default column is not either.
+    fireEvent.click(screen.getByTestId("played-games-sort-moves"));
+    expect(screen.getByTestId("where")).toHaveTextContent("/engine/games?sort=moves");
+    fireEvent.click(screen.getByTestId("played-games-sort-date"));
+    expect(screen.getByTestId("where")).toHaveTextContent("/engine/games");
+    expect(listed()).toEqual(["short", "mid", "long"]);
+  });
+
+  it("pages the table, and a new filter or a new rows-per-page starts at the first page", async () => {
+    await seed(28);
+    mount();
+    // 25 rows a default page holds, of 28.
+    expect(screen.getAllByTestId(/^played-games-row-/)).toHaveLength(25);
+    expect(screen.getByTestId("played-games-count")).toHaveTextContent("Games: 28");
+
+    fireEvent.click(screen.getByRole("button", { name: "Go to next page" }));
+    expect(screen.getAllByTestId(/^played-games-row-/)).toHaveLength(3);
+    expect(screen.getByTestId("where")).toHaveTextContent("/engine/games?page=1");
+
+    fireEvent.mouseDown(within(screen.getByTestId("played-games-pagination")).getByRole("combobox"));
+    fireEvent.click(within(screen.getByRole("listbox")).getByRole("option", { name: "10" }));
+    expect(screen.getAllByTestId(/^played-games-row-/)).toHaveLength(10);
+    expect(screen.getByTestId("where")).toHaveTextContent("/engine/games?rows=10");
+
+    // The filter starts the table over at its first page.
+    fireEvent.click(screen.getByTestId("played-games-filter-color-white"));
+    expect(screen.getByTestId("where")).toHaveTextContent("/engine/games?rows=10&color=white");
+    expect(listed()[0]).toBe("g27");
+  });
+
+  it("reads the sort, the rows and the page from the URL", async () => {
+    await seed(12);
+    const table = mount("/engine/games?sort=moves&dir=asc&rows=10&page=1");
+    expect(screen.getAllByTestId(/^played-games-row-/)).toHaveLength(2);
+    // Moves ascending: the one-move games first, so the page holds the last two.
+    expect(listed()).toEqual(["g09", "g11"]);
+
+    // A page past the end is clamped to the last one there is.
+    table.unmount();
+    mount("/engine/games?page=5");
+    expect(screen.getAllByTestId(/^played-games-row-/)).toHaveLength(12);
+  });
+
+  it("lists a record whose PGN will not parse, saying so, with only its delete", async () => {
+    await savePlayedGame({
+      id: "bad",
+      pgn: "1. e4 e5 2. Qxd5 *",
+      settings: DEFAULT_ENGINE_SETTINGS,
+      path: [],
+      savedAt: "2026-09-01T10:00:00.000Z",
+      updatedAt: "2026-09-01T10:00:00.000Z",
+    });
+    mount();
+    const row = screen.getByTestId("played-games-row-bad");
+    expect(within(row).getAllByRole("cell")).toHaveLength(2);
+    expect(row).toHaveTextContent("This game could not be read.");
+    expect(within(row).getByTestId("played-games-remove-bad")).toBeInTheDocument();
+    expect(within(row).queryByTestId("played-games-continue-bad")).not.toBeInTheDocument();
+    expect(within(row).queryByTestId("played-games-analysis-bad")).not.toBeInTheDocument();
   });
 });
 

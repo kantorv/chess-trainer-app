@@ -425,6 +425,28 @@ const en = {
       allOpenings: "All openings",
       openingLoading: "Reading the openings…",
     },
+    /**
+     * The games table (CTA-100): its sort headers, what a cell with nothing
+     * to say says, and its pagination — the Library table's own words.
+     */
+    table: {
+      /** The columns, left to right — every one a sort header. */
+      columns: {
+        white: "White",
+        whiteElo: "Elo",
+        black: "Black",
+        blackElo: "Elo",
+        result: "Result",
+        opening: "Opening",
+        moves: "Moves",
+        /** The Masked column — the chip's own word. */
+        masked: "Masked",
+        date: "Date",
+      },
+      /** The reader's side of an Elo cell — an estimate is the engine's alone. */
+      unknown: "Unknown",
+      rowsPerPage: "Rows per page",
+    },
     /** The right-hand panel: a new game's options, and the button that starts it. */
     newGame: {
       title: "New game",

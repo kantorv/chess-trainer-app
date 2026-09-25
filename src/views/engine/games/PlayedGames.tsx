@@ -7,9 +7,15 @@ import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogContentText from "@mui/material/DialogContentText";
 import DialogTitle from "@mui/material/DialogTitle";
-import List from "@mui/material/List";
-import ListItem from "@mui/material/ListItem";
 import MenuItem from "@mui/material/MenuItem";
+import Table from "@mui/material/Table";
+import TableBody from "@mui/material/TableBody";
+import TableCell from "@mui/material/TableCell";
+import TableContainer from "@mui/material/TableContainer";
+import TableHead from "@mui/material/TableHead";
+import TablePagination from "@mui/material/TablePagination";
+import TableRow from "@mui/material/TableRow";
+import TableSortLabel from "@mui/material/TableSortLabel";
 import TextField from "@mui/material/TextField";
 import ToggleButton from "@mui/material/ToggleButton";
 import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
@@ -23,15 +29,18 @@ import { mainline } from "../../../lib/gameTree";
 import { openingOfLine } from "../../../lib/openings";
 import { removePlayedGame } from "../../../lib/playedGameStore";
 import {
+  PLAYED_GAME_COLUMNS,
   PLAYED_GAMES_PATH,
   playedGameSummary,
   playedGameToTree,
-  type PlayedGame,
-  type PlayedGameSummary,
+  sortedPlayedGames,
+  type PlayedGameColumn,
+  type PlayedGameRow,
+  type SortDirection,
 } from "../../../lib/playedGames";
 import { RightPanel } from "../../main/rightPanel";
 import SavedListRemoveButton from "../../shared/SavedListRemoveButton";
-import { savedListDate, savedListLine } from "../../shared/savedList";
+import { savedListDate } from "../../shared/savedList";
 import { useOpeningBook } from "../../shared/useOpeningBook";
 import NewGameForm from "./NewGameForm";
 import { usePlayedGames } from "./usePlayedGames";
@@ -42,28 +51,46 @@ import { usePlayedGames } from "./usePlayedGames";
  * new-game form (`NewGameForm.tsx`), whose Start button is how Play with
  * Engine is reached.
  *
- * The list is the games of Play with Engine
- * and, since CTA-79, of Masked Pieces, as the store keeps them: **flat and newest first** (the game last
- * played on at the top), no folders. Each row is titled by its pairing,
- * White first ("Human - Stockfish level 10"), and says the mainline's length,
- * its side lines, the result as PGN writes it (`1-0`, `0-1`, `1/2-1/2`, `*`)
- * and when it was begun, and offers **Continue** (`?saved=<id>` on
- * `/engine/play` — at the node and on the side it was left — or, for a game
- * marked **Masked**, on `/engine/masked`, in the same disguise; only while
- * the game is still on — a result decided by `playedGameResult`, a
- * resignation or the final position, is a game that cannot go on, CTA-90),
- * **Analysis**
- * (`?game=play/games/<id>` on the Analysis Board, side lines and all — a
- * masked game unmasked, since its PGN is the true game) and a delete that
- * asks first.
+ * The games of Play with Engine and, since CTA-79, of Masked Pieces — flat,
+ * as the store keeps them — are a **sortable, paginated table** (CTA-100),
+ * the Library's collection table's own pattern: a sticky header every column
+ * of which sorts, `TablePagination` pinned beneath the one scrolling region,
+ * and the table's whole state in the URL beside the filters — `?sort=`,
+ * `?dir=`, `?page=`, `?rows=`, written with history replace, so a sorted or
+ * filtered table is a shareable link and coming back from a game finds it
+ * as it was left. A new sort or filter starts at the first page. The table
+ * opens **Date-descending, newest first** — the order the flat list opened
+ * in; a second click on a header turns it, a row missing the value sorts
+ * last either way, and ties break by date. The rows per page are 10 / 25 /
+ * 50, 25 the default.
+ *
+ * Columns, left to right: White, White Elo, Black, Black Elo, Result,
+ * Opening, Moves, Masked, Date, then the row's links. The names are the flat
+ * list's row titles kept — the reader's side the localized "Human", the
+ * engine's "Stockfish level N", by `settings.playAs` — and the engine's Elo
+ * is the strength slider's own estimate (`approximateElo`), an estimate and
+ * never a setting; the reader's side has none and says "unknown", which is
+ * also how any unreadable value reads. The side-lines count rides along as
+ * secondary text in the Moves cell. The book loads lazily
+ * (`useOpeningBook`): until it lands the Opening cell is empty and a sort
+ * by it applies to what is known, missing values last.
+ *
+ * The links are the flat list's row behaviour kept: **Continue**
+ * (`?saved=<id>` — on `/engine/play`, or `/engine/masked` for a masked
+ * game, in the same disguise; only while the game is still on — a result
+ * decided by `playedGameResult`, a resignation or the final position,
+ * CTA-90), **Analysis** (`?game=play/games/<id>` on the Analysis Board,
+ * side lines and all — a masked game unmasked, since its PGN is the true
+ * game) and a delete that asks first. A record whose PGN no longer parses
+ * keeps its row — it says so across the columns — and its delete.
  *
  * **Filters** (CTA-82), combined, in the URL (`?color=white|black`,
  * `?opening=<name>`, history replace): the side the reader played
  * (`settings.playAs`), and the opening each game reached — the deepest one
  * eco.json names along its mainline (`openingOfLine`), offered from the
- * openings the list holds. The ~3MB book loads lazily (`useOpeningBook`); until
- * it lands the opening filter is off and the list is not narrowed by it.
- * Masked games are filtered like any other.
+ * openings the list holds. The ~3MB book loads lazily (`useOpeningBook`);
+ * until it lands the opening filter is off and the table is not narrowed by
+ * it. Masked games are filtered like any other.
  */
 
 type ColorFilter = "all" | "white" | "black";
@@ -71,120 +98,117 @@ type ColorFilter = "all" | "white" | "black";
 const colorFilterOf = (value: string | null): ColorFilter =>
   value === "white" || value === "black" ? value : "all";
 
-function PlayedGameRow({
-  saved,
-  summary,
-  readable,
-  onDelete,
-}: {
-  saved: PlayedGame;
-  summary: PlayedGameSummary;
-  readable: boolean;
-  onDelete: (id: string) => void;
-}) {
+/** The rows a page can hold, and what a table opens with: the middle one. */
+const ROWS_PER_PAGE = [10, 25, 50] as const;
+const DEFAULT_ROWS_PER_PAGE = 25;
+/** The columns whose values are numbers — sorted high first on the first click. */
+const NUMERIC: ReadonlySet<PlayedGameColumn> = new Set(["date", "whiteElo", "blackElo", "moves"]);
+/** The sort a table opens with: the day each game was begun, newest first. */
+const DEFAULT_SORT: PlayedGameColumn = "date";
+/** Which way a column sorts until the reader turns it: the date and the numbers high first. */
+const defaultDirection = (column: PlayedGameColumn): SortDirection =>
+  column === DEFAULT_SORT || NUMERIC.has(column) ? "desc" : "asc";
+
+const isColumn = (value: string | null): value is PlayedGameColumn =>
+  (PLAYED_GAME_COLUMNS as readonly string[]).includes(value ?? "");
+
+function PlayedGameRow({ row, onDelete }: { row: PlayedGameRow; onDelete: (id: string) => void }) {
   const { t, i18n } = useTranslation();
   // The `?game=` reference `lib/gameReference.ts` resolves against the store's catalog.
-  const reference = encodeURIComponent(`${PLAY_REFERENCE_KEY}/${PLAYED_GAMES_PATH}/${saved.id}`);
-  const secondary = readable
-    ? savedListLine([
-        t("playedGames.moves", { count: summary.moves }),
-        summary.variations > 0 ? t("playedGames.variations", { count: summary.variations }) : "",
-        // PGN's own notation — 1-0, 0-1, 1/2-1/2, * while it is on.
-        summary.result,
-        savedListDate(saved.savedAt, i18n.language),
-      ])
-    : t("playedGames.unreadable");
-  // The row's title is the game's pairing, White first.
-  const human = t("playedGames.human");
-  const engine = t("playedGames.engine", { level: summary.skillLevel });
-
+  const reference = encodeURIComponent(`${PLAY_REFERENCE_KEY}/${PLAYED_GAMES_PATH}/${row.id}`);
   return (
-    <ListItem
-      disableGutters
-      data-testid={`played-games-item-${saved.id}`}
-      sx={{
-        display: "flex",
-        flexWrap: "wrap",
-        alignItems: "center",
-        gap: 1.5,
-        py: 1.25,
-        borderBottom: "1px solid",
-        borderColor: "divider",
-      }}
-    >
-      <Box sx={{ minWidth: 0, flex: "1 1 12rem" }}>
-        <Typography
-          variant="subtitle2"
-          data-testid={`played-games-title-${saved.id}`}
-          sx={{ fontWeight: 600, lineHeight: 1.3 }}
-        >
-          {t("playedGames.players", {
-            white: summary.playAs === "white" ? human : engine,
-            black: summary.playAs === "white" ? engine : human,
-          })}
-          {summary.masked && (
-            <Chip
-              size="small"
-              variant="outlined"
-              icon={<VisibilityOffRoundedIcon />}
-              label={t("masking.marker")}
-              data-testid={`played-games-masked-${saved.id}`}
-              sx={{ marginInlineStart: 1, height: 20, verticalAlign: "middle" }}
-            />
-          )}
-        </Typography>
-        <Typography
-          variant="caption"
-          data-testid={`played-games-caption-${saved.id}`}
-          sx={{
-            display: "block",
-            color: "text.secondary",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-          }}
-        >
-          {secondary}
-        </Typography>
-      </Box>
-      <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexShrink: 0 }}>
-        {readable && (
-          <>
-            {/*
-              Continue only while the game is on (CTA-90): the row's own
-              result says whether it can — anything but `*` (a resignation,
-              mate or a draw, `playedGameResult`) is a game that has ended.
-            */}
-            {summary.result === "*" && (
-              <Button
-                component={RouterLink}
-                to={`${summary.masked ? "/engine/masked" : "/engine/play"}?saved=${encodeURIComponent(saved.id)}`}
-                size="small"
-                variant="contained"
-                data-testid={`played-games-continue-${saved.id}`}
+    <TableRow data-testid={`played-games-row-${row.id}`}>
+      {row.readable ? (
+        <>
+          {/* The names are the old row titles: "Human" and "Stockfish level N", White first. */}
+          <TableCell dir="auto" sx={{ whiteSpace: "nowrap" }}>
+            {row.white}
+          </TableCell>
+          <TableCell>{row.whiteElo ?? t("playedGames.table.unknown")}</TableCell>
+          <TableCell dir="auto" sx={{ whiteSpace: "nowrap" }}>
+            {row.black}
+          </TableCell>
+          <TableCell>{row.blackElo ?? t("playedGames.table.unknown")}</TableCell>
+          {/* PGN's own notation — 1-0, 0-1, 1/2-1/2, * while it is on. */}
+          <TableCell dir="ltr" sx={{ whiteSpace: "nowrap" }}>
+            {row.result}
+          </TableCell>
+          <TableCell dir="auto" sx={{ minWidth: 160 }}>
+            {row.opening ?? ""}
+          </TableCell>
+          <TableCell>
+            {row.moves}
+            {row.variations > 0 && (
+              <Typography
+                variant="caption"
+                component="span"
+                sx={{ display: "block", color: "text.secondary" }}
               >
-                {t("playedGames.continue")}
-              </Button>
+                {t("playedGames.variations", { count: row.variations })}
+              </Typography>
             )}
+          </TableCell>
+          <TableCell>
+            {row.masked && (
+              <Chip
+                size="small"
+                variant="outlined"
+                icon={<VisibilityOffRoundedIcon />}
+                label={t("masking.marker")}
+                data-testid={`played-games-masked-${row.id}`}
+                sx={{ height: 20 }}
+              />
+            )}
+          </TableCell>
+          <TableCell dir="ltr" sx={{ whiteSpace: "nowrap" }}>
+            {savedListDate(row.savedAt, i18n.language)}
+          </TableCell>
+        </>
+      ) : (
+        // A record whose PGN will not parse: the row says so across the columns,
+        // and only the delete is offered — it cannot be opened.
+        <TableCell colSpan={PLAYED_GAME_COLUMNS.length} sx={{ color: "text.secondary" }}>
+          {t("playedGames.unreadable")}
+        </TableCell>
+      )}
+      <TableCell sx={{ whiteSpace: "nowrap" }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          {/*
+            Continue only while the game is on (CTA-90): the row's own
+            result says whether it can — anything but `*` (a resignation,
+            mate or a draw, `playedGameResult`) is a game that has ended.
+          */}
+          {row.readable && row.result === "*" && (
+            <Button
+              component={RouterLink}
+              to={`${row.masked ? "/engine/masked" : "/engine/play"}?saved=${encodeURIComponent(row.id)}`}
+              size="small"
+              variant="contained"
+              data-testid={`played-games-continue-${row.id}`}
+            >
+              {t("playedGames.continue")}
+            </Button>
+          )}
+          {row.readable && (
             <Button
               component={RouterLink}
               to={`/tools/analysis?game=${reference}`}
               size="small"
               variant="outlined"
-              data-testid={`played-games-analysis-${saved.id}`}
+              data-testid={`played-games-analysis-${row.id}`}
             >
               {t("playedGames.analyse")}
             </Button>
-          </>
-        )}
-        <SavedListRemoveButton
-          id={saved.id}
-          onRemove={onDelete}
-          labelKey="playedGames"
-          testIdPrefix="played-games"
-        />
-      </Box>
-    </ListItem>
+          )}
+          <SavedListRemoveButton
+            id={row.id}
+            onRemove={onDelete}
+            labelKey="playedGames"
+            testIdPrefix="played-games"
+          />
+        </Box>
+      </TableCell>
+    </TableRow>
   );
 }
 
@@ -196,7 +220,7 @@ function PlayedGames() {
   const color = colorFilterOf(searchParams.get("color"));
   const openingParam = searchParams.get("opening");
 
-  // Each record read once per change of the store: whether it parses, and its caption.
+  // Each record read once per change of the store: whether it parses, and its summary.
   const parsed = useMemo(
     () =>
       (games ?? []).map((saved) => {
@@ -227,27 +251,93 @@ function PlayedGames() {
     () => [...new Set(openings.values())].sort((a, b) => a.localeCompare(b)),
     [openings],
   );
-  // Only once the book has landed: until then the list is not narrowed by opening.
+  // Only once the book has landed: until then the table is not narrowed by opening.
   const opening = book !== null && openingParam !== null ? openingParam : null;
 
-  const rows = parsed.filter(
-    ({ saved, summary }) =>
-      (color === "all" || summary.playAs === color) &&
-      (opening === null || openings.get(saved.id) === opening),
-  );
-  const filtered = color !== "all" || opening !== null;
+  // The table's own state, in the URL beside the filters: the column it is
+  // sorted by and which way (absent is the column's default), the page, and
+  // the rows a page holds.
+  const requestedSort = searchParams.get("sort");
+  const sort: PlayedGameColumn = isColumn(requestedSort) ? requestedSort : DEFAULT_SORT;
+  const requestedDirection = searchParams.get("dir");
+  const direction: SortDirection =
+    requestedDirection === "asc" || requestedDirection === "desc"
+      ? requestedDirection
+      : defaultDirection(sort);
+  const requestedRows = Number(searchParams.get("rows"));
+  const rowsPerPage = (ROWS_PER_PAGE as readonly number[]).includes(requestedRows)
+    ? requestedRows
+    : DEFAULT_ROWS_PER_PAGE;
 
-  /** A filter written to the URL (history replace); `null` clears it. */
-  const setFilter = (name: "color" | "opening", value: string | null) =>
+  /**
+   * The table's rows — the summary's derivations with their words on (the
+   * names localized, the opening the book named), the filters applied and the
+   * URL's sort followed, in one memo because every input is cheap and the
+   * store is capped.
+   */
+  const shown = useMemo(() => {
+    const kept = parsed
+      .filter(({ summary }) => color === "all" || summary.playAs === color)
+      .filter(({ saved }) => opening === null || openings.get(saved.id) === opening);
+    return sortedPlayedGames(
+      kept.map(({ saved, readable, summary }) => ({
+        id: saved.id,
+        white:
+          summary.whiteName === "human"
+            ? t("playedGames.human")
+            : t("playedGames.engine", { level: summary.skillLevel }),
+        whiteElo: summary.whiteElo,
+        black:
+          summary.blackName === "human"
+            ? t("playedGames.human")
+            : t("playedGames.engine", { level: summary.skillLevel }),
+        blackElo: summary.blackElo,
+        result: summary.result,
+        opening: openings.get(saved.id),
+        moves: summary.moves,
+        variations: summary.variations,
+        masked: summary.masked,
+        savedAt: saved.savedAt,
+        readable,
+      })),
+      sort,
+      direction,
+    );
+  }, [parsed, openings, color, opening, sort, direction, t]);
+
+  const filtered = color !== "all" || opening !== null;
+  const lastPage = Math.max(0, Math.ceil(shown.length / rowsPerPage) - 1);
+  const page = Math.min(Math.max(0, Number(searchParams.get("page")) || 0), lastPage);
+  const pageRows = shown.slice(page * rowsPerPage, (page + 1) * rowsPerPage);
+
+  /**
+   * Change the table's URL state (history replace); a new sort or filter
+   * starts at the first page. `null` removes whatever the key holds, so the
+   * URL keeps only what differs from the default.
+   */
+  const setState = (patch: Record<string, string | null>, keepPage = false) =>
     setSearchParams(
       (current) => {
         const next = new URLSearchParams(current);
-        if (value === null) next.delete(name);
-        else next.set(name, value);
+        for (const [key, value] of Object.entries(patch)) {
+          if (value === null) next.delete(key);
+          else next.set(key, value);
+        }
+        if (!keepPage) next.delete("page");
         return next;
       },
       { replace: true },
     );
+
+  /** A new column opens its own way; a second click turns it. The URL keeps only what is not the default. */
+  const sortBy = (column: PlayedGameColumn) => {
+    if (column !== sort) {
+      setState({ sort: column === DEFAULT_SORT ? null : column, dir: null });
+      return;
+    }
+    const turned: SortDirection = direction === "asc" ? "desc" : "asc";
+    setState({ dir: turned === defaultDirection(column) ? null : turned });
+  };
 
   return (
     <>
@@ -275,7 +365,7 @@ function PlayedGames() {
             {games === undefined
               ? ""
               : filtered
-                ? t("playedGames.countFiltered", { shown: rows.length, count: games.length })
+                ? t("playedGames.countFiltered", { shown: shown.length, count: games.length })
                 : t("playedGames.count", { count: games.length })}
           </Typography>
           <Box
@@ -289,7 +379,7 @@ function PlayedGames() {
               aria-label={t("playedGames.filters.color")}
               data-testid="played-games-filter-color"
               onChange={(_event, next: ColorFilter | null) => {
-                if (next !== null) setFilter("color", next === "all" ? null : next);
+                if (next !== null) setState({ color: next === "all" ? null : next });
               }}
             >
               <ToggleButton value="all" data-testid="played-games-filter-color-all">
@@ -308,7 +398,9 @@ function PlayedGames() {
               label={t("playedGames.filters.opening")}
               disabled={book === null}
               value={opening ?? ""}
-              onChange={(event) => setFilter("opening", event.target.value === "" ? null : event.target.value)}
+              onChange={(event) =>
+                setState({ opening: event.target.value === "" ? null : event.target.value })
+              }
               helperText={book === null ? t("playedGames.filters.openingLoading") : undefined}
               slotProps={{
                 htmlInput: { "data-testid": "played-games-filter-opening" },
@@ -330,45 +422,71 @@ function PlayedGames() {
             </TextField>
           </Box>
         </Box>
-        {/* The one region that scrolls: the shell scrolls nothing in the square. */}
-        <Box
-          data-testid="played-games-body"
-          sx={{ flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden" }}
-        >
-          {games === undefined ? (
-            <Typography data-testid="played-games-loading" sx={{ color: "text.secondary", p: 2 }}>
-              {t("playedGames.loading")}
-            </Typography>
-          ) : games.length === 0 ? (
-            <Typography
-              data-testid="played-games-empty"
-              variant="body2"
-              sx={{ color: "text.secondary", textAlign: "center", py: 4 }}
-            >
-              {t("playedGames.empty")}
-            </Typography>
-          ) : rows.length === 0 ? (
-            <Typography
-              data-testid="played-games-no-match"
-              variant="body2"
-              sx={{ color: "text.secondary", textAlign: "center", py: 4 }}
-            >
-              {t("playedGames.noMatch")}
-            </Typography>
-          ) : (
-            <List disablePadding>
-              {rows.map(({ saved, readable, summary }) => (
-                <PlayedGameRow
-                  key={saved.id}
-                  saved={saved}
-                  readable={readable}
-                  summary={summary}
-                  onDelete={setDeleting}
-                />
-              ))}
-            </List>
-          )}
-        </Box>
+        {games === undefined ? (
+          <Typography data-testid="played-games-loading" sx={{ color: "text.secondary", p: 2 }}>
+            {t("playedGames.loading")}
+          </Typography>
+        ) : (
+          <>
+            {/* The one region that scrolls, both ways: the columns and the links in a square. */}
+            <TableContainer data-testid="played-games-body" sx={{ flex: 1, minHeight: 0 }}>
+              <Table size="small" stickyHeader data-testid="played-games-table">
+                <TableHead>
+                  <TableRow>
+                    {PLAYED_GAME_COLUMNS.map((column) => (
+                      <TableCell
+                        key={column}
+                        sortDirection={sort === column ? direction : false}
+                        sx={{ whiteSpace: "nowrap", fontWeight: 600 }}
+                      >
+                        <TableSortLabel
+                          active={sort === column}
+                          direction={sort === column ? direction : "asc"}
+                          onClick={() => sortBy(column)}
+                          data-testid={`played-games-sort-${column}`}
+                        >
+                          {t(`playedGames.table.columns.${column}`)}
+                        </TableSortLabel>
+                      </TableCell>
+                    ))}
+                    {/* The row's links: Continue, Analysis, delete. */}
+                    <TableCell padding="checkbox" />
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {pageRows.map((row) => (
+                    <PlayedGameRow key={row.id} row={row} onDelete={setDeleting} />
+                  ))}
+                </TableBody>
+              </Table>
+              {shown.length === 0 && (
+                <Typography
+                  data-testid={games.length === 0 ? "played-games-empty" : "played-games-no-match"}
+                  variant="body2"
+                  sx={{ color: "text.secondary", textAlign: "center", py: 4 }}
+                >
+                  {t(games.length === 0 ? "playedGames.empty" : "playedGames.noMatch")}
+                </Typography>
+              )}
+            </TableContainer>
+            <TablePagination
+              component="div"
+              sx={{ flexShrink: 0 }}
+              count={shown.length}
+              page={page}
+              rowsPerPage={rowsPerPage}
+              rowsPerPageOptions={[...ROWS_PER_PAGE]}
+              labelRowsPerPage={t("playedGames.table.rowsPerPage")}
+              onPageChange={(_event, next) => setState({ page: next === 0 ? null : String(next) }, true)}
+              onRowsPerPageChange={(event) =>
+                setState({
+                  rows: Number(event.target.value) === DEFAULT_ROWS_PER_PAGE ? null : event.target.value,
+                })
+              }
+              data-testid="played-games-pagination"
+            />
+          </>
+        )}
       </Box>
 
       <RightPanel>

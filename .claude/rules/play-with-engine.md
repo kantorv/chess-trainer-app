@@ -30,15 +30,15 @@ covers what it adds. The board core, the engine protocol and testing are
 | `src/views/engine/play/PlayWithEngine.tsx` | The route: the arrival, and a **masked** `?saved=` sent on to `/engine/masked`. |
 | `src/views/engine/play/PlayedGameRead.tsx` | The play routes' wait for the store's first read before `arrivalOf` (`?saved=`). |
 | `src/views/engine/play/EngineSettings.tsx` | The Engine tab — strength (Skill Level, the Elo estimate), depth, move time, lines, threads, hash, the eval bar — rendered from what the running engine declared (absent / pinned / adjustable). Also the body of the Lobby's Game tab. |
-| `src/views/engine/games/PlayedGames.tsx` | **The Lobby** (board square): the games, flat and newest first, with the colour and opening filters. |
+| `src/views/engine/games/PlayedGames.tsx` | **The Lobby** (board square): the games as a sortable, paginated table (CTA-100), with the colour and opening filters. |
 | `src/views/engine/games/NewGameForm.tsx` | The Lobby's right-hand panel: **Game** and **Board editor** tabs, and **Start**. |
 | `src/views/engine/games/usePlayedGames.ts` | The `useSyncExternalStore` binding (`undefined` until read). |
-| `src/lib/playedGames.ts` | **The record**, pure: `PlayedGame`, `playedGameOf`, `playedGameFrom` (the normaliser), `playedGameSummary`, `playedGameResult`, `resultOfFen`, `playedGameHeaders` (the PGN tags), `playedGameCatalogOf` (`?game=play/games/<id>`). |
-| `src/lib/playedGameStore.ts` | **The store** — `chessapp.engine`, object store `games`, over `idbRecordStore`; capped at `MAX_PLAYED_GAMES` (100). |
+| `src/lib/playedGames.ts` | **The record**, pure: `PlayedGame`, `playedGameOf`, `playedGameFrom` (the normaliser), `playedGameSummary` (with the per-side names and Elo the table's columns derive), `playedGameResult`, `resultOfFen`, `playedGameHeaders` (the PGN tags), `playedGameCatalogOf` (`?game=play/games/<id>`), and the table's own sort (CTA-100): `PLAYED_GAME_COLUMNS`, `PlayedGameRow`, `sortedPlayedGames`. |
+| `src/lib/playedGameStore.ts` | **The store** — `chessapp.engine`, object store `games`, over `idbRecordStore`; capped at `MAX_PLAYED_GAMES` (500, CTA-100). |
 | `src/lib/engineSettings.ts` | `EngineSettings`, the defaults, `ENGINE_SETTING_BOUNDS`, `SETTING_UCI_OPTION` / `uciOptionsOf` / `withClampedUciOptions`, `approximateElo`, the non-throwing `engineSettingsFrom`. |
 | `src/lib/newGameLink.ts` | The new-game link: `newGameParams` (the form → query) and its reader (query → options, each field validated and clamped on its own). |
 | `src/views/board/core/usePlayToggle.ts` | **Play** (`chessboard.md` §9.2.6), shared with the Analysis Board. |
-| Tests | `PlayWithEngine.test.tsx`, `EngineSettings.test.tsx`, `views/engine/games/PlayedGames.test.tsx` (the Lobby, the form, the Board editor tab), `src/lib/playedGames.test.ts` (the record and the store), `newGameLink.test.ts`, and the two propagation tests in `src/views/board/`. |
+| Tests | `PlayWithEngine.test.tsx`, `EngineSettings.test.tsx`, `views/engine/games/PlayedGames.test.tsx` (the Lobby's table, the form, the Board editor tab), `src/lib/playedGames.test.ts` (the record, the store and the table's sort), `newGameLink.test.ts`, and the two propagation tests in `src/views/board/`. |
 
 Routes and nav: `/engine/play` has **no nav entry** — it is reached from the
 Lobby's Start and Continue and from `?fen=` hand-offs (Openings' *Play from
@@ -105,15 +105,33 @@ was begun on.
 
 ## 3. The Lobby — `/engine/games`
 
-- **The square: the games**, flat and newest first, no folders. Each row is
-  titled by its pairing, White first ("Human - Stockfish level 10"), with its
-  length, side lines, result as PGN writes it (`1-0`, `0-1`, `1/2-1/2`, `*`)
-  and date; **Continue** (`?saved=<id>` — on `/engine/masked` for a masked
-  game, which carries a *Masked* chip; **only while the game is still on** —
-  a row whose result is decided, a resignation or the mainline's final
-  position through `playedGameResult`, shows none, CTA-90), **Analysis**
-  (`/tools/analysis?game=play/games/<id>`, the true PGN, unmasked) and a
-  delete that asks first.
+- **The square: the games**, flat in the store, drawn as a **sortable,
+  paginated table** (CTA-100) — the Library's collection table's own
+  pattern ([`game-collections.md`](./game-collections.md) §6.4): a sticky
+  header every column of which sorts, the pagination pinned beneath the one
+  scrolling region, and the table's whole state in the URL beside the
+  filters — `?sort=`, `?dir=`, `?page=`, `?rows=`, written with history
+  replace, so a sorted or filtered table is a shareable link and coming
+  back from a game finds it as it was left. A new sort or filter starts at
+  the first page. The table opens **Date-descending, newest first** — the
+  order the flat list opened in; a second click on a header turns it, a row
+  missing the value sorts last either way, and ties break by date.
+- **Columns**, left to right: White, White Elo, Black, Black Elo, Result,
+  Opening, Moves (the side lines as secondary text), Masked, Date, then the
+  row's links. The names are the flat list's row titles kept — the reader's
+  side the localized "Human", the engine's "Stockfish level N", by
+  `settings.playAs`, with the engine's Elo the strength slider's own
+  estimate (`approximateElo`, on the summary); the reader's side has none
+  and says "unknown", which is also how any unreadable value reads. The
+  book loads lazily: until it lands the Opening cell is empty and a sort by
+  it applies to what is known. A record whose PGN no longer parses keeps
+  its row — it says so across the columns — and its delete.
+- **Links**: **Continue** (`?saved=<id>` — on `/engine/masked` for a masked
+  game, which carries a *Masked* chip in its own column; **only while the
+  game is still on** — a row whose result is decided, a resignation or the
+  mainline's final position through `playedGameResult`, shows none,
+  CTA-90), **Analysis** (`/tools/analysis?game=play/games/<id>`, the true
+  PGN, unmasked) and a delete that asks first.
 - **Filters**, combined and in the URL: **colour** (`?color=`, the side the
   reader played) and **opening** (`?opening=`, the deepest eco.json match
   along each mainline — `openingOfLine`, the book loaded lazily).
@@ -184,9 +202,10 @@ was begun on.
 - Seed a stored game with `await savePlayedGame(record)` before mounting to
   test `?saved=`; wait on a write with `waitFor` (or `settledPlayedGames` under
   fake timers — [`database.md`](./database.md) §7).
-- The Lobby and its form: `PlayedGames.test.tsx` (the list, the filters,
-  Continue / Analysis / delete, Start's link from both tabs, Start off and
-  why).
+- The Lobby and its form: `PlayedGames.test.tsx` (the table — its columns,
+  a sort click, the pagination, the links, an unreadable row — the filters,
+  Start's link from both tabs, Start off and why). The sort's own orders are
+  `src/lib/playedGames.test.ts`'s, with the summary's per-side derivations.
 
 ---
 
@@ -204,3 +223,12 @@ was begun on.
   test.
 - **A new Lobby filter**: a URL param read in `PlayedGames.tsx`, applied in
   memory over the summaries (the store is read whole).
+- **A new Lobby table column**: add it to `PLAYED_GAME_COLUMNS` in
+  `lib/playedGames.ts` and to `playedGameCellOf`'s switch there, derive it
+  on `PlayedGameSummary` (or `PlayedGameRow` if the screen builds it), and
+  render its cell in `PlayedGames.tsx`; its label is
+  `playedGames.table.columns.<id>` in both catalogs, and a numeric column
+  joins the screen's `NUMERIC` set so it opens high first. A column that
+  needs the book (as Opening does) reads `openings` in the screen and
+  carries `undefined` until it lands — the sort already knows missing
+  values go last.

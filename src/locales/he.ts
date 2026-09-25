@@ -317,6 +317,21 @@ const he: typeof en = {
       allOpenings: "כל הפתיחות",
       openingLoading: "קורא את הפתיחות…",
     },
+    table: {
+      columns: {
+        white: "לבן",
+        whiteElo: "Elo",
+        black: "שחור",
+        blackElo: "Elo",
+        result: "תוצאה",
+        opening: "פתיחה",
+        moves: "מהלכים",
+        masked: "מוסווה",
+        date: "תאריך",
+      },
+      unknown: "לא ידוע",
+      rowsPerPage: "שורות בעמוד",
+    },
     newGame: {
       title: "משחק חדש",
       side: "לשחק בתור",
