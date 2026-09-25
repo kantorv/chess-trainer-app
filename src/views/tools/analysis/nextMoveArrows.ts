@@ -1,4 +1,5 @@
 import type { Arrow } from "react-chessboard";
+import type { ArrowPaletteId } from "../../../lib/arrowSettings";
 import type { VariationNode } from "../../../lib/gameTree";
 
 /**
@@ -49,12 +50,42 @@ export const HOVERED_NEXT_MOVE_ARROW_COLOR = "#f44336";
  */
 export const REQUIRED_MOVE_ARROW_COLOR = "#9c27b0";
 
+/** The three colours a board's next-move arrows are drawn in. */
+export type NextMoveArrowColors = { mainline: string; sideline: string; hovered: string };
+
+/**
+ * **The palettes** the Analysis Board's Arrows tab offers (CTA-98), each
+ * apart from {@link UNTAGGED_NEXT_MOVE_ARROW_COLOR}'s gray:
+ *
+ * - **Classic** — the colours above, what every board draws.
+ * - **Lichess** — its board brushes: green, blue, red.
+ * - **Colour-blind safe** — Okabe–Ito's blue, orange and reddish purple,
+ *   told apart under every common colour blindness.
+ */
+export const NEXT_MOVE_ARROW_PALETTES: Readonly<Record<ArrowPaletteId, NextMoveArrowColors>> = {
+  classic: {
+    mainline: NEXT_MOVE_ARROW_COLOR,
+    sideline: SIDELINE_NEXT_MOVE_ARROW_COLOR,
+    hovered: HOVERED_NEXT_MOVE_ARROW_COLOR,
+  },
+  lichess: { mainline: "#15781B", sideline: "#003088", hovered: "#882020" },
+  colorblind: { mainline: "#0072B2", sideline: "#E69F00", hovered: "#CC79A7" },
+};
+
+/**
+ * The arrow of a continuation that carries no tag, where others at its branch
+ * do and the arrows are sized by it (CTA-98) — gray and half-transparent, of
+ * a fixed modest width.
+ */
+export const UNTAGGED_NEXT_MOVE_ARROW_COLOR = "rgba(128, 128, 128, 0.5)";
+
 /**
  * The arrows for the continuations of the position on screen — the whole
  * external set, since the board never clears `options.arrows` itself
  * (`chessboard.md` §3.4). `nodes[0]` is the mainline and gets
  * {@link NEXT_MOVE_ARROW_COLOR}; the rest are side lines. A hovered
  * continuation takes {@link HOVERED_NEXT_MOVE_ARROW_COLOR} whichever it is.
+ * A `colors` palette (CTA-98) takes those three's places; absent, they stand.
  *
  * Only a node's `id`, `from` and `to` are read, so any list shaped like a
  * tree's continuations can draw through it. (The Library's opening-moves
@@ -67,14 +98,11 @@ export const REQUIRED_MOVE_ARROW_COLOR = "#9c27b0";
 export const nextMoveArrowsOf = (
   nodes: readonly Pick<VariationNode, "id" | "from" | "to">[],
   hoveredId: string | null = null,
+  colors: NextMoveArrowColors = NEXT_MOVE_ARROW_PALETTES.classic,
 ): Arrow[] =>
   nodes.map((node, index) => ({
     startSquare: node.from,
     endSquare: node.to,
     color:
-      node.id === hoveredId
-        ? HOVERED_NEXT_MOVE_ARROW_COLOR
-        : index === 0
-          ? NEXT_MOVE_ARROW_COLOR
-          : SIDELINE_NEXT_MOVE_ARROW_COLOR,
+      node.id === hoveredId ? colors.hovered : index === 0 ? colors.mainline : colors.sideline,
   }));

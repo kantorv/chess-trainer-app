@@ -42,6 +42,8 @@ describe("translation catalogs", () => {
       "savedAnalyses.newAnalysis.pgnFile",
       // A pairing, "White - Black": only the two names inside it translate.
       "playedGames.players",
+      // The arrow palette named after the site whose colours it takes — a brand.
+      "analysis.arrows.palettes.lichess",
     ]);
 
     const untranslated = leafKeys(en).filter(

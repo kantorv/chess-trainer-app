@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from "react";
 import type { Arrow } from "react-chessboard";
 import { useTranslation } from "react-i18next";
 
+import type { ArrowPaletteId, ArrowWidthSource } from "../../lib/arrowSettings";
 import type { Score } from "../../lib/engineAnalysis";
 import {
   commentsAt,
@@ -13,16 +14,19 @@ import {
   type VariationNode,
 } from "../../lib/gameTree";
 import { annotationsAt } from "../../lib/moveAnnotations";
+import { nextMoveWeights } from "../../lib/nextMoveWeights";
 import { maskNodeSan, type PieceMask } from "../../lib/pieceMask";
 import { playChances, playChanceOf } from "../../lib/playChance";
 import type { MapCoverage } from "../../lib/treeMap";
 import NextMovesBar from "../tools/analysis/NextMovesBar";
 import {
+  NEXT_MOVE_ARROW_PALETTES,
   nextMoveArrowsOf,
   REQUIRED_MOVE_ARROW_COLOR,
 } from "../tools/analysis/nextMoveArrows";
 import AnnotationsBar, { type CommentEditing } from "./AnnotationsBar";
 import ChanceArrows from "./ChanceArrows";
+import { UNTAGGED_ARROW_CHANCE, weightedArrowColors } from "./chanceArrows";
 import CommentDialog, { type CommentDraft } from "./CommentDialog";
 import TreeMap from "./TreeMap";
 import TreeMoveList from "./TreeMoveList";
@@ -54,6 +58,17 @@ type ExplorerArrowOptions = {
    * required moves).
    */
   required?: readonly VariationNode[];
+  /**
+   * **What sizes the continuations' arrows** while `show` is on (CTA-98, the
+   * Analysis Board's Arrows tab) — `nextMoveWeights`: a tag's moves sized on
+   * the play-chance scale, drawn by the overlay in the palette's colours, a
+   * move without the tag gray; a branch where no move carries it draws the
+   * ordinary arrows. Absent or `"none"`: the ordinary arrows everywhere. The
+   * screen passes `"none"` for a tag its tree does not carry.
+   */
+  widthSource?: ArrowWidthSource;
+  /** The colours of every next-move arrow (CTA-98); absent, the classic ones. */
+  palette?: ArrowPaletteId;
 };
 
 export type VariationsExplorerOptions = {
@@ -147,10 +162,23 @@ export function useVariationsExplorer({
     return playChances(continuations);
   }, [chanceArrows, continuations]);
 
+  // The width source's weights at the branch on screen (CTA-98) — only while
+  // the arrows are shown, and `undefined` where no move here carries its tag.
+  const widthSource = arrowOptions.widthSource ?? "none";
+  const weights = useMemo(
+    () =>
+      arrowOptions.show && widthSource !== "none"
+        ? nextMoveWeights(continuations, widthSource)
+        : undefined,
+    [arrowOptions.show, widthSource, continuations],
+  );
+  const palette = NEXT_MOVE_ARROW_PALETTES[arrowOptions.palette ?? "classic"];
+  const hoveredId = hovered?.id ?? null;
+
   // A required move is an instruction, so it is drawn whatever the switch
-  // says. Where the chances are on, the library arrows stand down entirely —
-  // colour is the only thing `options.arrows` can vary per arrow — and the
-  // overlay draws them instead, sized by their chances.
+  // says. Where the chances or a width source size the arrows, the library
+  // arrows stand down entirely — colour is the only thing `options.arrows`
+  // can vary per arrow — and the overlay draws them instead.
   const arrows: Arrow[] =
     arrowOptions.required !== undefined
       ? arrowOptions.required.map((node) => ({
@@ -158,26 +186,38 @@ export function useVariationsExplorer({
           endSquare: node.to,
           color: REQUIRED_MOVE_ARROW_COLOR,
         }))
-      : chances !== undefined
+      : chances !== undefined || weights !== undefined
         ? []
         : arrowOptions.show
-          ? nextMoveArrowsOf(continuations, hovered?.id ?? null)
+          ? nextMoveArrowsOf(continuations, hoveredId, palette)
           : hovered !== null
-            ? nextMoveArrowsOf([hovered], hovered.id)
+            ? nextMoveArrowsOf([hovered], hovered.id, palette)
             : [];
 
   // The play-chance arrows themselves, over the board: white with a magenta
-  // border, the wider the likelier the move (CTA-71).
+  // border, the wider the likelier the move (CTA-71). Or the width source's,
+  // in the palette's colours, an untagged move gray (CTA-98).
   const overlay =
-    chances === undefined ? null : (
+    chances !== undefined ? (
       <ChanceArrows
         testId={`${testId}-chance-arrows-overlay`}
         nodes={continuations}
         chances={chances}
-        hoveredId={hovered?.id ?? null}
+        hoveredId={hoveredId}
         orientation={source.orientation}
       />
-    );
+    ) : weights !== undefined ? (
+      <ChanceArrows
+        testId={`${testId}-width-arrows-overlay`}
+        nodes={continuations}
+        chances={weights.map((weight) => weight ?? UNTAGGED_ARROW_CHANCE)}
+        colors={weights.map((weight, index) =>
+          weightedArrowColors(weight, index, continuations[index].id === hoveredId, palette),
+        )}
+        hoveredId={hoveredId}
+        orientation={source.orientation}
+      />
+    ) : null;
 
   /*
     What the PGN says at the position on screen (CTA-69), and its editing:

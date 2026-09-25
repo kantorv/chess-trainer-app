@@ -104,7 +104,8 @@ both catalogs. Test ids: `settings-export-*`, `settings-import-*`.
   neighbours' indices account for it.
 - Each record carries everything its store keeps beside the PGN (ids, settings,
   the path the reader stood on, dates; a played game's `resigned` and `mask`;
-  an analysis' `showArrows`; a repertoire's `previewFen` and `stats`) — not a
+  an analysis' `showArrows`, `arrowWidthSource` and `arrowPalette`; a
+  repertoire's `previewFen` and `stats`) — not a
   played game's engine evals, and not a collection's `addedAt`, which an
   import sets to the moment it writes. An analysis' folder is `folderPath`
   (names from the top; `[]` is Unfiled, as is a folder that is gone); a

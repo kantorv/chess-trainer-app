@@ -39,6 +39,17 @@ describe("readComment", () => {
     });
   });
 
+  it("reads a games count as an attribute, never as prose (CTA-98)", () => {
+    expect(readComment("Most played. games:120")).toMatchObject({
+      paragraphs: ["Most played."],
+      attributes: [{ key: "games", value: "120" }],
+    });
+    expect(readComment("[%games 7] Rare.")).toMatchObject({
+      paragraphs: ["Rare."],
+      attributes: [{ key: "games", value: "7" }],
+    });
+  });
+
   it("reads an engine's trailing evaluation — a comment of nothing else", () => {
     expect(readComment("+/= +1.31 (21 ply)")).toMatchObject({
       paragraphs: [],

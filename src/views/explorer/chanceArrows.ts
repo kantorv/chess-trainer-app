@@ -1,4 +1,8 @@
-import { HOVERED_NEXT_MOVE_ARROW_COLOR } from "../tools/analysis/nextMoveArrows";
+import {
+  HOVERED_NEXT_MOVE_ARROW_COLOR,
+  UNTAGGED_NEXT_MOVE_ARROW_COLOR,
+  type NextMoveArrowColors,
+} from "../tools/analysis/nextMoveArrows";
 
 /**
  * **The play-chance arrows' geometry** (CTA-71) — pure data in a file of its
@@ -147,6 +151,37 @@ export const chanceArrowSpec = (
     // A hovered one is the move a click is about to play — full sharpness.
     opacity: hovered ? 1 : 0.6 + 0.4 * c,
   };
+};
+
+/**
+ * One arrow's own colours, in place of the white fill and magenta border
+ * (CTA-98) — and its opacity, in place of the spec's, when given.
+ */
+export type ChanceArrowColors = { fill: string; border: string; opacity?: number };
+
+/**
+ * The width an **untagged** continuation is drawn at, as a chance — a fixed,
+ * modest width beside the moves its branch sizes by their tag (CTA-98).
+ */
+export const UNTAGGED_ARROW_CHANCE = 0.3;
+
+/**
+ * The colours of a width-sized next-move arrow (CTA-98, the Analysis Board's
+ * width sources): the palette's mainline or side-line colour, fill and
+ * border, the sharper the wider (the spec's opacity); a move with no tag
+ * (`weight` `null`) gray and half-transparent; the hovered one the palette's
+ * hover colour, fully opaque, whichever it is.
+ */
+export const weightedArrowColors = (
+  weight: number | null,
+  index: number,
+  hovered: boolean,
+  palette: NextMoveArrowColors,
+): ChanceArrowColors => {
+  if (hovered) return { fill: palette.hovered, border: palette.hovered, opacity: 1 };
+  if (weight === null) return { fill: UNTAGGED_NEXT_MOVE_ARROW_COLOR, border: "none", opacity: 1 };
+  const color = index === 0 ? palette.mainline : palette.sideline;
+  return { fill: color, border: color };
 };
 
 /** The silhouette as one closed SVG path, its numbers rounded to keep it short. */

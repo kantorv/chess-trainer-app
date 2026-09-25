@@ -96,6 +96,8 @@ const analysis = (id: string, folderId: string | null): SavedAnalysis => ({
   orientation: "black",
   description: `notes on ${id}`,
   showArrows: false,
+  arrowWidthSource: "none",
+  arrowPalette: "classic",
   name: `Analysis ${id}`,
   folderId,
   savedAt: AT,

@@ -1,6 +1,7 @@
 import { strToU8, zipSync } from "fflate";
 
 import type { AnalysisSettings } from "./analysisSettings";
+import type { ArrowPaletteId, ArrowWidthSource } from "./arrowSettings";
 import type { EngineSettings } from "./engineSettings";
 import type { CollectionSummary } from "./libraryCollections";
 import { splitPgnGames } from "./pgn";
@@ -115,6 +116,8 @@ type AnalysisEntry = Placed & {
   description: string;
   orientation: "white" | "black";
   showArrows: boolean;
+  arrowWidthSource: ArrowWidthSource;
+  arrowPalette: ArrowPaletteId;
   settings: AnalysisSettings;
   path: readonly string[];
   /** Folder names from the top down; `[]` is Unfiled. */
@@ -336,6 +339,8 @@ export const buildExport = (
       description: analysis.description,
       orientation: analysis.orientation,
       showArrows: analysis.showArrows,
+      arrowWidthSource: analysis.arrowWidthSource,
+      arrowPalette: analysis.arrowPalette,
       settings: analysis.settings,
       path: analysis.path,
       folderPath:
