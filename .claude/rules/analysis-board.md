@@ -8,6 +8,8 @@ paths:
   - "src/lib/savedAnalysisDb*"
   - "src/lib/savedGameFolders*"
   - "src/lib/analysisSettings*"
+  - "src/lib/arrowSettings*"
+  - "src/lib/nextMoveWeights*"
   - "src/lib/gameReference*"
   - "src/lib/gameCatalog*"
   - "src/lib/pgnExport*"
@@ -38,6 +40,7 @@ explorer's hand-off). The board core, the engine protocol and testing are
 | `src/views/tools/analysis/useAnalysisLoad.ts` | **The Load route's state** (CTA-96): the pipeline behind `AnalysisLoad`, on its own so a host can place its pieces itself — the analyses Lobby's form puts the FEN field and the `.pgn` pick in its editor's row and the paste box below. |
 | `src/views/tools/analysis/AnalysisExport.tsx` | The Export tab: FEN, PGN with or without comments / NAGs / side lines, copy and download. |
 | `src/views/tools/analysis/AnalysisSettings.tsx` | The Engine tab (depth, move time, lines, the eval bar, Clear) — also the repertoire player's and the Openings explorer's. |
+| `src/views/tools/analysis/AnalysisArrows.tsx`, `ArrowSettingsFields.tsx` | The Arrows tab (CTA-98, §1.1): the next-move arrows switch, the width source and the palette. The two fields are shared with the settings screen. |
 | `src/views/tools/analysis/SaveAnalysisDialog.tsx` | A new board's name and folder. |
 | `src/views/tools/analysis/PlayToggleButton.tsx`, `EngineThinking.tsx` | Play's header button and status line, shared with every board that has Play. |
 | `src/views/tools/analysis/useTreeNavigation.ts` | The core's navigation (node id as state, the keys). |
@@ -51,9 +54,11 @@ explorer's hand-off). The board core, the engine protocol and testing are
 | `src/lib/savedAnalysisStore.ts` | **The store** (`chessapp.analyses`, object store `analyses`): `saveAnalysis`, `addAnalyses`, `fileSavedAnalysis`, `renameSavedAnalysis`, `updateSavedAnalysisSettings`, `removeSavedAnalyses`, `unfileAnalysesIn`, `findSavedAnalysisGame`; cap `MAX_SAVED_ANALYSES` (20,000). |
 | `src/lib/savedAnalysisFolders.ts` + `savedAnalysisFolderStore.ts` | The folders: an `AnalysisFolder` *is* a `GameFolder` (`lib/savedGameFolders.ts`, the nested model: cycles cut, dangling parents read as top level); create / rename / move (never into its own subtree) / delete (sub-folders re-parent, analyses become Unfiled); cap 100. |
 | `src/lib/analysisSettings.ts` | `AnalysisSettings`, the defaults, `ANALYSIS_UCI_OPTION`, `analysisSettingsFrom`. |
+| `src/lib/arrowSettings.ts` | The Arrows tab's ids (CTA-98): `ArrowWidthSource`, `ArrowPaletteId`, their defaults and readers (`arrowWidthSourceFrom`, `arrowPaletteFrom`). |
+| `src/lib/nextMoveWeights.ts` | Each width source's weights at a branch (`nextMoveWeights`), the `[%eval]` reader (`evalOf`), and which sources a tree offers (`arrowWidthSourcesIn`). Pure. The `games` tag's reader is `lib/gamesTag.ts`. |
 | `src/lib/gameReference.ts` + `gameCatalog.ts` | **The `?game=` carrier** (§3). |
 | `src/lib/pgnExport.ts` | `downloadPgn` — several stored PGN records joined with a blank line (`pgnFileOf`), saved as a file. Also Settings' Export's (`downloadBinaryFile`, [`import-export.md`](./import-export.md)). |
-| Tests | `AnalysisBoard.test.tsx` (every arrival, Save, Load, Export, Play, the hand-off), `useTreeNavigation.test.ts`, `EngineThinking.test.tsx`, `nextMoveArrows.test.ts`, `saved/SavedAnalyses.test.tsx` (the list and the panel's new-analysis form), `saved/AnalysisSettingsScreen.test.tsx`, `src/lib/savedAnalyses.test.ts`, `savedAnalysisStore.test.ts`, `savedAnalysisFolderStore.test.ts`, `savedGameFolders.test.ts`, `gameReference.test.ts`, and the propagation tests in `src/views/board/`. |
+| Tests | `AnalysisBoard.test.tsx` (every arrival, Save, Load, Export, Play, the hand-off, the Arrows tab), `useTreeNavigation.test.ts`, `EngineThinking.test.tsx`, `nextMoveArrows.test.ts`, `src/lib/nextMoveWeights.test.ts`, `saved/SavedAnalyses.test.tsx` (the list and the panel's new-analysis form), `saved/AnalysisSettingsScreen.test.tsx`, `src/lib/savedAnalyses.test.ts`, `savedAnalysisStore.test.ts`, `savedAnalysisFolderStore.test.ts`, `savedGameFolders.test.ts`, `gameReference.test.ts`, and the propagation tests in `src/views/board/`. |
 
 Routes and nav: the **Analysis** folder is `singleEntry` and renders as one
 row to `/tools/analysis/saved`; the board itself has no nav entry and is the
@@ -71,8 +76,8 @@ screen).
   moves a piece only while the header's **Play** is on (`usePlayToggle`, off
   at the start, disabled while the engine is off, paused by any step that is
   not one move forward), and then only for the side not at the bottom.
-- **Tabs: Moves · Map · Load · Export · Engine.** Moves and Map are kept
-  mounted. The footer holds the comment block, the changes strip, Play's
+- **Tabs: Moves · Map · Load · Export · Engine · Arrows.** Moves and Map are
+  kept mounted. The footer holds the comment block, the changes strip, Play's
   status line and the next-moves bar (on the Moves tab).
 - **The explorer**: editing on (the move menu and the comment block —
   `core.replaceTree`), *Play chances…* off, the moves added since the baseline
@@ -85,6 +90,42 @@ screen).
   A FEN is a position: it turns the board.
 - **Export** writes the FEN, and the PGN with or without comments, NAGs and
   side lines (`treeToPgn`'s `PgnExportOptions`).
+
+### 1.1 The Arrows tab (CTA-98)
+
+The next-move arrows, and only this board's — every other board keeps the
+classic, colour-only arrows. Three settings, all the **session's**, opened as
+the record says (a new board: on, None, Classic):
+
+- **Next move arrows** — the switch (moved here from the Engine tab, test id
+  `analysis-arrows`). Off: only a hovered move's arrow, as before.
+- **Width source** — one of five radios (`lib/arrowSettings.ts`), each
+  continuation's weight worked out by `nextMoveWeights` and drawn on the
+  play-chance arrows' absolute scale (`chanceArrowWidth` over 0–1) by the
+  explorer's overlay:
+
+  | Source | Read from | Width |
+  | --- | --- | --- |
+  | **None** | — | the library arrows, colour only |
+  | **Evaluation** | `[%eval X]` in the move's own comment, or the trailing `+1.31 (21 ply)` shape — White's view, turned to the mover's | loss vs the best tagged move: the best widest, a hairline at 300 cp (`EVAL_HAIRLINE_CP`) or worse; a mate for the mover best, against it a hairline |
+  | **Games** | `games:N` / `[%games N]` (`lib/gamesTag.ts`) | `N / Σ N` over the tagged moves |
+  | **Play chance** | `prc:N` / `[%prc N]` | the marks scaled to 100% over the tagged moves |
+  | **Lines ahead** | nothing (`linesWithin`, 8 plies) | each move's share — always offered |
+
+  **A tag radio is disabled while no move in the tree carries it**
+  (`arrowWidthSourcesIn`, recomputed on every new tree — a load, a comment
+  edited). A choice whose tag is gone is **kept**, shown checked and disabled
+  with a note, and the board **draws as None** until the tag is back. At a
+  branch where **some** moves carry the tag the untagged ones are drawn gray
+  and half-transparent at a fixed modest width (`UNTAGGED_ARROW_CHANCE`);
+  where **none** do, the ordinary palette arrows are drawn, so the board stays
+  readable past the tagged part of a game.
+- **Colours** — a palette (`NEXT_MOVE_ARROW_PALETTES` in `nextMoveArrows.ts`):
+  **Classic** (`#4caf50` / `#2196f3` / `#f44336`, every board's), **Lichess**
+  (its brushes, `#15781B` / `#003088` / `#882020`) and **Colour-blind safe**
+  (Okabe–Ito, `#0072B2` / `#E69F00` / `#CC79A7`) — mainline / side line /
+  hovered, each apart from the untagged gray. It colours the library arrows
+  and the width-sized ones alike.
 
 ---
 
@@ -117,10 +158,14 @@ there does not).
 
 The title (`name`), a `description` (shown under the title on the board), the
 side the board opens facing (`orientation`), whether it opens drawing the
-next-move arrows (`showArrows`) and the folder (`folderId`, `null` Unfiled) —
-one draft, written on Save in place (`updateSavedAnalysisSettings`). Linked
+next-move arrows (`showArrows`), what sizes them (`arrowWidthSource`,
+`"none"`) and their colours (`arrowPalette`, `"classic"`) — §1.1, CTA-98 —
+and the folder (`folderId`, `null` Unfiled) — one draft, written on Save in
+place (`updateSavedAnalysisSettings`). Every width source is offered on the
+screen; whether the tree carries its tag is the board's to say. A missing or
+unknown `arrowWidthSource` / `arrowPalette` reads as its default. Linked
 from the board's header (off while there are unsaved changes) and from every
-row and card. A flip or the arrows switch on the board is the session's:
+row and card. A flip or the Arrows tab on the board is the session's:
 Update keeps the stored settings, a copy takes the original's, a new board's
 first save takes what it shows.
 
