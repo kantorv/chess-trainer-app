@@ -39,8 +39,9 @@ import AnalysisLoad from "../AnalysisLoad";
  * several) opens the Analysis Board with the tree handed over as location
  * state — a new unsaved analysis, facing White, because a game does not turn
  * the board; a split saves one analysis per game into a new folder and lands
- * the reader in it. The editor's own PGN tab is unchanged: it keeps taking a
- * game's **final position** onto the board.
+ * the reader in it. So this form's editor shows no PGN tab of its own
+ * (`forms={["position", "fen"]}`) — one PGN input, and it loads games; the
+ * final-position-into-the-editor tab is unchanged everywhere else.
  */
 
 /** The widest the editor's board grows in the panel — a small board, beside the list. */
@@ -86,10 +87,17 @@ function NewAnalysisForm() {
 
       {/* The panel's one scrolling region: the aside scrolls nothing itself. */}
       <Box sx={{ flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden", pr: 0.5 }}>
+        {/*
+          No PGN tab here: in this form a PGN is a whole game, loaded below —
+          the final-position-into-the-editor path is the engine Lobby's. The
+          component is unchanged; `forms` just leaves the tab (and its `.pgn`
+          drop) out.
+        */}
         <PositionEditor
           editor={editor}
           testId="new-analysis-editor"
           boardMaxWidth={EDITOR_BOARD_MAX_PX}
+          forms={["position", "fen"]}
         />
         <Divider sx={{ my: 2 }} />
         {/*

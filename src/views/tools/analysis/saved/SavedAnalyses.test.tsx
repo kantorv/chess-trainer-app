@@ -639,11 +639,15 @@ describe("the new-analysis form (CTA-87)", () => {
       });
     };
 
-    it("offers the Load tab's PGN route by paste and by file — without its FEN form", async () => {
+    it("offers the Load tab's PGN route by paste and by file — the form's one PGN input", async () => {
       await renderScreen();
       expect(screen.getByTestId("analysis-load-paste")).toBeInTheDocument();
       expect(screen.getByTestId("analysis-load-pick")).toBeInTheDocument();
-      // A position is the editor's and Start's job here, so no FEN form.
+      // One PGN input, and it loads games: the editor's final-position PGN tab
+      // is left out of this form, and a position is the FEN tab's and Start's
+      // job, so the Load route has no FEN form either.
+      expect(screen.queryByTestId("new-analysis-editor-tab-pgn")).toBeNull();
+      expect(screen.getByTestId("new-analysis-editor-tab-fen")).toBeInTheDocument();
       expect(screen.queryByTestId("analysis-load-fen-input")).toBeNull();
     });
 

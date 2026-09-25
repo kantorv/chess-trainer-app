@@ -75,7 +75,7 @@ import type { PositionEditorState } from "./usePositionEditor";
  */
 
 const FORM_TAB_IDS = ["position", "fen", "pgn"] as const;
-type FormTabId = (typeof FORM_TAB_IDS)[number];
+export type FormTabId = (typeof FORM_TAB_IDS)[number];
 
 type PositionEditorProps = {
   /** The state, from `usePositionEditor` — the host's. */
@@ -87,11 +87,24 @@ type PositionEditorProps = {
   testId: string;
   /** The widest the board grows, in pixels; absent, the column's full width. */
   boardMaxWidth?: number;
+  /**
+   * Which forms the tab strip offers. Absent: all three — Position, FEN and
+   * PGN — today's behaviour everywhere. A host whose PGNs go elsewhere (the
+   * analyses Lobby's new-analysis form loads a PGN as a whole game instead,
+   * CTA-96) passes `["position", "fen"]`, and the `.pgn` drop goes with the
+   * tab.
+   */
+  forms?: readonly FormTabId[];
 };
 
-function PositionEditor({ editor, testId, boardMaxWidth }: PositionEditorProps) {
+function PositionEditor({ editor, testId, boardMaxWidth, forms }: PositionEditorProps) {
   const { t } = useTranslation();
+  const tabs = forms ?? FORM_TAB_IDS;
   const [tab, setTab] = useState<FormTabId>("position");
+  /** A `forms` without the current tab reads as its first — the host's list wins. */
+  const activeTab = tabs.includes(tab) ? tab : (tabs[0] ?? "position");
+  /** The PGN tab and the `.pgn` drop are one feature: a host either has both or neither. */
+  const pgnEnabled = tabs.includes("pgn");
 
   /*
     Ingestion state: what the reader has typed, what came out of the last
@@ -203,6 +216,8 @@ function PositionEditor({ editor, testId, boardMaxWidth }: PositionEditorProps) 
   const onDrop = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     setIsDragOver(false);
+    // The drop is the PGN form's shortcut; a host without it drops nothing.
+    if (!pgnEnabled) return;
     const file = event.dataTransfer?.files?.[0];
     if (file) loadFromFile(file);
   };
@@ -357,7 +372,7 @@ function PositionEditor({ editor, testId, boardMaxWidth }: PositionEditorProps) 
       </Typography>
 
       <Tabs
-        value={tab}
+        value={activeTab}
         onChange={(_event, next: FormTabId) => setTab(next)}
         variant="fullWidth"
         sx={{
@@ -372,7 +387,7 @@ function PositionEditor({ editor, testId, boardMaxWidth }: PositionEditorProps) 
           },
         }}
       >
-        {FORM_TAB_IDS.map((id) => (
+        {tabs.map((id) => (
           <Tab
             key={id}
             value={id}
@@ -382,8 +397,8 @@ function PositionEditor({ editor, testId, boardMaxWidth }: PositionEditorProps) 
         ))}
       </Tabs>
 
-      <Box role="tabpanel" data-testid={`${testId}-tab-content-${tab}`}>
-        {tab === "position" && (
+      <Box role="tabpanel" data-testid={`${testId}-tab-content-${activeTab}`}>
+        {activeTab === "position" && (
           <PositionFields
             testId={testId}
             fields={editor.fields}
@@ -392,7 +407,7 @@ function PositionEditor({ editor, testId, boardMaxWidth }: PositionEditorProps) 
             onEnPassantChange={editor.setEnPassant}
           />
         )}
-        {tab === "fen" && (
+        {activeTab === "fen" && (
           <FenSetup
             testId={testId}
             fenText={fenText}
@@ -403,7 +418,7 @@ function PositionEditor({ editor, testId, boardMaxWidth }: PositionEditorProps) 
             canCopy={editor.isValid}
           />
         )}
-        {tab === "pgn" && (
+        {activeTab === "pgn" && (
           <PgnSetup
             testId={testId}
             games={games}

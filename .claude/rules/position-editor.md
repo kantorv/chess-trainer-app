@@ -62,6 +62,7 @@ editor.isValid    // problems.length === 0
 | `editor` | `PositionEditorState` | The state from `usePositionEditor`. **The host's**: it lives above the component, so unmounting the editor (a tab switched away) loses no position, and the host can read and reset it from its own controls. |
 | `testId` | `string` | The root `data-testid`, the prefix of every id under it (`${testId}-tab-fen`, `${testId}-turn-b`, `${testId}-reset-start`, `${testId}-problem-noWhiteKing`, …) and of the board's `options.id` (`${testId}-board`). Unique on the page. |
 | `boardMaxWidth` | `number?` | The widest the board grows, in px. Absent, the column's full width. |
+| `forms` | `readonly ("position" \| "fen" \| "pgn")[]?` | Which forms the tab strip offers. Absent: all three. A host whose PGNs go elsewhere — the analyses Lobby loads a PGN as a whole game (CTA-96) — passes `["position", "fen"]`, and the `.pgn` drop goes with the tab. |
 
 `usePositionEditor(initialFen?)` — the first render's value only, already
 validated by the host (`parseFen`). Given: the board and fields start there,
@@ -155,9 +156,10 @@ plus `parseFen`: while the position cannot be analyzed, Start is a plain
 disabled button with a warning above it listing the problems.
 `boardMaxWidth` 360. Nothing in this folder changed for it. Under the editor
 the form also hosts **Load a game** (CTA-96) — the Analysis Board's Load
-tab's PGN route, handing a whole game to the board — which is the form's own
-and changed nothing here either; the editor's PGN tab still takes a game's
-final position.
+tab's PGN route, handing a whole game to the board — so *this* form's editor
+leaves its own PGN tab out (`forms={["position", "fen"]}`): one PGN input in
+the form, and it loads games. Everywhere else the editor's PGN tab still
+takes a game's final position, unchanged.
 
 ---
 

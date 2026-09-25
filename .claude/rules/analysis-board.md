@@ -191,7 +191,9 @@ validated, ignored when it does not resolve, taken as *initial* state.
   under it, **Load a game** (CTA-96): the Load tab's `AnalysisLoad` PGN route
   (no FEN form — `onLoadFen` omitted), one game or a merge handed to the
   board as `analysisHandOff` location state facing White (a game does not
-  turn the board), a split landing in its new folder here.
+  turn the board), a split landing in its new folder here. It is the form's
+  one PGN input: the editor's own final-position PGN tab is left out of this
+  form (`forms={["position", "fen"]}`, [`position-editor.md`](./position-editor.md)).
 - **A list or preview boards** at the saved lists' two card sizes
   (`views/shared/cardSize.ts`), each card showing the position and side the
   reader **was standing on** (`options.id` `saved-analyses-preview-<id>`).
