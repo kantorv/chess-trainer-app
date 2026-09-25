@@ -149,7 +149,7 @@ const appendUnique = <T>(
  * as PGN. A non-standard start position is stated in the tags, the way both
  * `Game` producers already state it, so move numbering survives the round trip.
  */
-const headersWithStart = (tree: GameTree): GameHeaders =>
+const headersWithStart = (tree: Pick<GameTree, "headers" | "startFen">): GameHeaders =>
   tree.startFen === DEFAULT_POSITION
     ? { ...tree.headers }
     : { SetUp: "1", FEN: tree.startFen, ...tree.headers };
@@ -780,13 +780,28 @@ export const plyLabel = (
 };
 
 /**
+ * What the PGN writer reads of a move: its SAN, its ply, its annotations and
+ * what follows it — a {@link VariationNode} is one. So is a move built from
+ * nothing but SAN (the Library's opening tree, `lib/openingTreePgn.ts`), which
+ * has no board to give it squares or a FEN and is written all the same.
+ */
+export type PgnMove = Pick<VariationNode, "san" | "ply" | "comments" | "preComments" | "nags"> & {
+  children: readonly PgnMove[];
+};
+
+/** A tree as the PGN writer reads it — a {@link GameTree} is one. */
+export type PgnMoveTree = Pick<GameTree, "headers" | "startFen" | "comments"> & {
+  moves: readonly PgnMove[];
+};
+
+/**
  * One move as PGN prints it: `"12. Nf3"`, `"Nc6"`, or `"12... Nc6"` when the
  * number has to be restated — at the head of a variation, and again on the
  * first move after one closes.
  */
 const writeMove = (
   startFen: string,
-  node: VariationNode,
+  node: PgnMove,
   forceNumber: boolean,
 ): string => {
   const { number, isWhiteMove } = plyLabel(startFen, node.ply);
@@ -818,7 +833,7 @@ const writeComments = (comments: readonly string[] | undefined): string =>
  */
 const writeNodes = (
   startFen: string,
-  nodes: readonly VariationNode[],
+  nodes: readonly PgnMove[],
   forceNumber: boolean,
 ): string => {
   const [main, ...alternatives] = nodes;
@@ -897,8 +912,17 @@ const exportedTree = (tree: GameTree, options: PgnExportOptions): GameTree => {
  * `options` narrows what is written — the Analysis Board's Export tab (CTA-73):
  * see {@link PgnExportOptions}. Absent, everything is.
  */
-export const treeToPgn = (tree: GameTree, options?: PgnExportOptions): string => {
-  if (options !== undefined) tree = exportedTree(tree, options);
+export const treeToPgn = (tree: GameTree, options?: PgnExportOptions): string =>
+  moveTreeToPgn(options === undefined ? tree : exportedTree(tree, options));
+
+/**
+ * {@link treeToPgn}'s writer, over the moves alone — for a tree of moves that
+ * never had a board (a {@link PgnMove} carries no squares and no FEN), so it is
+ * written by the same numbering, comment and variation rules rather than a copy
+ * of them. Every move must be legal from `startFen`: nothing checks it here,
+ * and `parsePgnTree` would refuse the file.
+ */
+export const moveTreeToPgn = (tree: PgnMoveTree): string => {
   const headers = headersWithStart(tree);
   const tags = Object.entries(headers)
     .map(([key, value]) => `[${key} "${value}"]`)

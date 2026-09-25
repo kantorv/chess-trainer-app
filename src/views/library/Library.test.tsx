@@ -937,6 +937,91 @@ describe("the opening-moves filter", () => {
     expect(screen.queryByTestId("library-filter-moves")).toBeNull();
     expect(rowNumbers()).toEqual(["1", "2", "3"]);
   });
+
+  describe("Save tree as PGN (CTA-99)", () => {
+    beforeEach(() => vi.mocked(downloadPgn).mockClear());
+    const dialog = () => within(screen.getByTestId("library-filter-moves-save-dialog"));
+    const openSave = () => {
+      fireEvent.click(moves().getByTestId("library-filter-moves-save"));
+      return dialog();
+    };
+    const closed = () =>
+      waitFor(() => expect(screen.queryByTestId("library-filter-moves-save-dialog")).toBeNull());
+
+    it("sits at the end of the caption row, before and after a move is played", async () => {
+      const rich = await keep("Rich", RICH);
+      await mountTable(`/library/${rich.id}`);
+      const row = () => moves().getByTestId("library-filter-moves-line").parentElement!;
+      expect(row()).toContainElement(moves().getByTestId("library-filter-moves-save"));
+      expect(row().lastElementChild).toBe(moves().getByTestId("library-filter-moves-save"));
+      expect(moves().getByTestId("library-filter-moves-save")).toHaveTextContent("Save tree as PGN");
+      fireEvent.click(moves().getByTestId("library-filter-move-e4"));
+      expect(row()).toHaveTextContent("1. e4");
+      expect(row().lastElementChild).toBe(moves().getByTestId("library-filter-moves-save"));
+    });
+
+    it("opens on Add tags with games ticked; No turns the boxes off; neither ticked turns Save off", async () => {
+      const rich = await keep("Rich", RICH);
+      await mountTable(`/library/${rich.id}`);
+      const open = openSave();
+      expect(open.getByText("Should we add games number as tag?")).toBeInTheDocument();
+      expect(open.getByTestId("library-filter-moves-save-tags")).toBeChecked();
+      expect(open.getByTestId("library-filter-moves-save-games")).toBeChecked();
+      expect(open.getByTestId("library-filter-moves-save-prc")).not.toBeChecked();
+      expect(open.getByTestId("library-filter-moves-save-confirm")).toBeEnabled();
+
+      fireEvent.click(open.getByTestId("library-filter-moves-save-no"));
+      expect(open.getByTestId("library-filter-moves-save-games")).toBeDisabled();
+      expect(open.getByTestId("library-filter-moves-save-prc")).toBeDisabled();
+      expect(open.getByTestId("library-filter-moves-save-confirm")).toBeEnabled();
+
+      fireEvent.click(open.getByTestId("library-filter-moves-save-tags"));
+      expect(open.getByTestId("library-filter-moves-save-games")).toBeEnabled();
+      fireEvent.click(open.getByTestId("library-filter-moves-save-games"));
+      expect(open.getByTestId("library-filter-moves-save-confirm")).toBeDisabled();
+      fireEvent.click(open.getByTestId("library-filter-moves-save-prc"));
+      expect(open.getByTestId("library-filter-moves-save-confirm")).toBeEnabled();
+    });
+
+    it("saves the whole tree with [%games N] by default, named after the collection", async () => {
+      const rich = await keep("Rich", RICH);
+      await mountTable(`/library/${rich.id}`);
+      fireEvent.click(openSave().getByTestId("library-filter-moves-save-confirm"));
+      expect(downloadPgn).toHaveBeenCalledTimes(1);
+      expect(downloadPgn).toHaveBeenLastCalledWith("rich-tree", [
+        '[Event "Rich"]\n[Result "*"]\n\n' +
+          "1. e4 { [%games 2] } (1. d4 { [%games 1] }) 1... e5 { [%games 1] } (1... c5 { [%games 1] }) *",
+      ]);
+      await closed();
+    });
+
+    it("writes both tags in one comment, games first, below the line played — which carries none", async () => {
+      const rich = await keep("Rich", RICH);
+      await mountTable(`/library/${rich.id}?line=e4`);
+      const open = openSave();
+      fireEvent.click(open.getByTestId("library-filter-moves-save-prc"));
+      fireEvent.click(open.getByTestId("library-filter-moves-save-confirm"));
+      expect(downloadPgn).toHaveBeenLastCalledWith("rich-tree", [
+        '[Event "Rich"]\n[Result "*"]\n\n' +
+          "1. e4 e5 { [%games 1] [%prc 50] } (1... c5 { [%games 1] [%prc 50] }) *",
+      ]);
+    });
+
+    it("writes the moves alone on No, and Cancel downloads nothing", async () => {
+      const rich = await keep("Rich", RICH);
+      await mountTable(`/library/${rich.id}`);
+      fireEvent.click(openSave().getByTestId("library-filter-moves-save-cancel"));
+      await closed();
+      expect(downloadPgn).not.toHaveBeenCalled();
+
+      const open = openSave();
+      fireEvent.click(open.getByTestId("library-filter-moves-save-no"));
+      fireEvent.click(open.getByTestId("library-filter-moves-save-confirm"));
+      expect(downloadPgn).toHaveBeenLastCalledWith("rich-tree", [
+        '[Event "Rich"]\n[Result "*"]\n\n1. e4 (1. d4) 1... e5 (1... c5) *',
+      ]);
+    });
+  });
 });
 
 describe("picking games to download", () => {
