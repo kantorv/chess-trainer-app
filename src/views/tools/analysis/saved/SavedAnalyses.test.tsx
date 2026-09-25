@@ -621,13 +621,20 @@ describe("the new-analysis form (CTA-87)", () => {
   });
 
   /*
-    Load a game (CTA-96): the Load tab's PGN route hosted in the form — a whole
-    game handed to the Analysis Board as location state, several games merged
-    or split exactly as on the board's own Load tab.
+    Load a game (CTA-96): the Load tab's route hosted in the form, its FEN
+    form beside its PGN one — the form's one load place, the editor offering
+    no tabs of its own. A whole game (several merged or split exactly as on
+    the board's own Load tab) is handed to the Analysis Board as location
+    state; a PGN that is really a position — a single move, or none — and a
+    pasted FEN set the editor up, which Start then carries.
   */
   describe("loads a PGN as a whole game (CTA-96)", () => {
     const ONE_GAME = '[Event "Solo"]\n\n1. e4 e5 (1... c5 {sicilian}) 2. Nf3 *\n';
     const TWO_GAMES = '[Event "One"]\n\n1. e4 e5 *\n\n[Event "Two"]\n\n1. d4 d5 *\n';
+    // The position after a real 1. e4 — Black to answer it, so a load of it
+    // turns the editor's board.
+    const AFTER_MOVE_E4 = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1";
+    const KINGS = "4k3/8/8/8/8/8/8/4K3 w - - 0 1";
 
     const pasteAndLoad = async (text: string) => {
       fireEvent.change(screen.getByTestId("analysis-load-paste"), {
@@ -639,16 +646,30 @@ describe("the new-analysis form (CTA-87)", () => {
       });
     };
 
-    it("offers the Load tab's PGN route by paste and by file — the form's one PGN input", async () => {
+    const loadFen = async (fen: string) => {
+      fireEvent.change(screen.getByTestId("analysis-load-fen-input"), {
+        target: { value: fen },
+      });
+      fireEvent.click(screen.getByTestId("analysis-load-fen"));
+      await act(async () => {
+        await Promise.resolve();
+      });
+    };
+
+    const editorPosition = () =>
+      screen.getByTestId("board-editor").getAttribute("data-position");
+
+    it("offers one load place — the PGN and the FEN of the Load route, no editor tabs", async () => {
       await renderScreen();
       expect(screen.getByTestId("analysis-load-paste")).toBeInTheDocument();
       expect(screen.getByTestId("analysis-load-pick")).toBeInTheDocument();
-      // One PGN input, and it loads games: the editor's final-position PGN tab
-      // is left out of this form, and a position is the FEN tab's and Start's
-      // job, so the Load route has no FEN form either.
+      // The FEN input lives here now: the Load section is the form's one load
+      // place, and the editor — its fields always shown — offers no tabs at all.
+      expect(screen.getByTestId("analysis-load-fen-input")).toBeInTheDocument();
+      expect(screen.queryByTestId("new-analysis-editor-tab-position")).toBeNull();
+      expect(screen.queryByTestId("new-analysis-editor-tab-fen")).toBeNull();
       expect(screen.queryByTestId("new-analysis-editor-tab-pgn")).toBeNull();
-      expect(screen.getByTestId("new-analysis-editor-tab-fen")).toBeInTheDocument();
-      expect(screen.queryByTestId("analysis-load-fen-input")).toBeNull();
+      expect(screen.getByTestId("new-analysis-editor-position-fields")).toBeInTheDocument();
     });
 
     it.each([{ how: "paste" as const }, { how: "file" as const }])(
@@ -677,6 +698,47 @@ describe("the new-analysis form (CTA-87)", () => {
         expect(treeToPgn(handOff!.tree)).toContain("sicilian");
       },
     );
+
+    it("a PGN of a single move sets the editor up from the position after it", async () => {
+      await renderScreen();
+      await pasteAndLoad("1. e4 *");
+
+      // Not a game: the editor takes the position after the move — turned to
+      // the side that has to answer it — and Start carries it. Nothing
+      // navigated, and there is no "loaded" line to say.
+      expect(editorPosition()).toBe(AFTER_MOVE_E4);
+      expect(screen.getByTestId("board-editor")).toHaveAttribute(
+        "data-orientation",
+        "black",
+      );
+      expect(startHref()).toBe(`/tools/analysis?fen=${encodeURIComponent(AFTER_MOVE_E4)}`);
+      expect(where.current?.pathname).toBe("/tools/analysis/saved");
+      expect(screen.queryByTestId("analysis-load-done")).toBeNull();
+    });
+
+    it("a PGN of a position and no moves sets the editor up from it", async () => {
+      await renderScreen();
+      await pasteAndLoad(`[SetUp "1"]\n[FEN "${KINGS}"]\n*`);
+
+      expect(editorPosition()).toBe(KINGS);
+      expect(startHref()).toBe(`/tools/analysis?fen=${encodeURIComponent(KINGS)}`);
+      expect(where.current?.pathname).toBe("/tools/analysis/saved");
+    });
+
+    it("the FEN field sets the editor up too, and a bad one says so and goes nowhere", async () => {
+      await renderScreen();
+      await loadFen("not a fen");
+
+      expect(screen.getByTestId("analysis-load-fen-problem")).toBeInTheDocument();
+      expect(editorPosition()).toBe(START);
+      expect(where.current?.pathname).toBe("/tools/analysis/saved");
+
+      await loadFen(AFTER_MOVE_E4);
+
+      expect(editorPosition()).toBe(AFTER_MOVE_E4);
+      expect(screen.queryByTestId("analysis-load-fen-problem")).toBeNull();
+      expect(startHref()).toBe(`/tools/analysis?fen=${encodeURIComponent(AFTER_MOVE_E4)}`);
+    });
 
     it("asks merge or split for several games, and a merge hands one tree to the board", async () => {
       await renderScreen();

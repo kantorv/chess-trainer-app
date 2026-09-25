@@ -34,7 +34,7 @@ explorer's hand-off). The board core, the engine protocol and testing are
 | `src/views/tools/analysis/AnalysisBoard.tsx` | **The screen**: the arrivals (`arrivalOf`), the slots, the header, the URL write-back. `AnalysisBoardRoute` waits for the stores a URL names. |
 | `src/views/tools/analysis/useAnalysisSession.ts` | **The shareable session**: core + engine + `usePlayToggle` + a **baseline** (the tree as it arrived or was last kept), `changed`, `extensionIds`. The Library's game board and the Openings explorer compose it too. |
 | `src/views/tools/analysis/useAnalysisBoard.ts` | That session plus **the saved record**: Save / Update / Save as copy / Discard, the Load tab's new boards, the arrival precedence. |
-| `src/views/tools/analysis/AnalysisLoad.tsx` | The Load tab: a PGN by file or paste (one game; several merged or split) or a FEN. `onSplit` and `choiceLabelKey` optional (the Openings explorer loads without a split). |
+| `src/views/tools/analysis/AnalysisLoad.tsx` | The Load tab: a PGN by file or paste (one game; several merged or split) or a FEN. `onSplit`, `choiceLabelKey`, `onLoadPosition` and `pgnHelpKey` optional — the Openings explorer loads without a split; the analyses Lobby's Load route takes positions and words its help line itself (CTA-96). |
 | `src/views/tools/analysis/AnalysisExport.tsx` | The Export tab: FEN, PGN with or without comments / NAGs / side lines, copy and download. |
 | `src/views/tools/analysis/AnalysisSettings.tsx` | The Engine tab (depth, move time, lines, the eval bar, Clear) — also the repertoire player's and the Openings explorer's. |
 | `src/views/tools/analysis/SaveAnalysisDialog.tsx` | A new board's name and folder. |
@@ -42,7 +42,7 @@ explorer's hand-off). The board core, the engine protocol and testing are
 | `src/views/tools/analysis/useTreeNavigation.ts` | The core's navigation (node id as state, the keys). |
 | `src/views/tools/analysis/nextMoveArrows.ts`, `NextMovesBar.tsx` | The next-move arrows and bar every board draws through ([`tree-views.md`](./tree-views.md)). |
 | `src/views/tools/analysis/saved/SavedAnalyses.tsx` | `/tools/analysis/saved`: the list and preview cards, the folders, the picks and bulk delete. |
-| `src/views/tools/analysis/saved/NewAnalysisForm.tsx` | The saved list's right-hand panel: the shared position editor and a **Start** that opens the Analysis Board on the edited position (CTA-87, [`position-editor.md`](./position-editor.md) §4), and **Load a game** (CTA-96): the Load tab's PGN route hosted in the form, handing a whole game to the board as `analysisHandOff` location state (no FEN form — a position is the editor's and Start's job). |
+| `src/views/tools/analysis/saved/NewAnalysisForm.tsx` | The saved list's right-hand panel: the shared position editor and a **Start** that opens the Analysis Board on the edited position (CTA-87, [`position-editor.md`](./position-editor.md) §4), and **Load a game** (CTA-96): the Load tab's `AnalysisLoad` with its FEN form beside its PGN one — the form's one load place — handing a whole game to the board as `analysisHandOff` location state, and setting the editor up from a position PGN or FEN (the editor offers no tabs: `forms={["position"]}`). |
 | `src/views/tools/analysis/saved/AnalysisSettingsScreen.tsx` | `/tools/analysis/saved/<id>/settings`. |
 | `src/views/tools/analysis/saved/useSavedAnalyses.ts`, `useAnalysisFolders.ts` | The store bindings (`undefined` until read). |
 | `src/views/shared/folders/` | The nested-folder components (rows, cards, breadcrumb, name / move / delete dialogs, picker), each taking a `labelKey` and a test-id prefix. |
@@ -188,12 +188,14 @@ validated, ignored when it does not resolve, taken as *initial* state.
   and a **Start** that opens the Analysis Board — the edited position riding
   along as `?fen=` when it is not the standard start, which turns the board
   to its side to move ([`position-editor.md`](./position-editor.md) §4) — and,
-  under it, **Load a game** (CTA-96): the Load tab's `AnalysisLoad` PGN route
-  (no FEN form — `onLoadFen` omitted), one game or a merge handed to the
-  board as `analysisHandOff` location state facing White (a game does not
-  turn the board), a split landing in its new folder here. It is the form's
-  one PGN input: the editor's own final-position PGN tab is left out of this
-  form (`forms={["position", "fen"]}`, [`position-editor.md`](./position-editor.md)).
+  under it, **Load a game** (CTA-96): the Load tab's `AnalysisLoad` with the
+  FEN form beside the PGN one, the form's **one load place**. A PGN of more
+  than one move (or a merge) is handed to the board as `analysisHandOff`
+  location state facing White (a game does not turn the board); a split lands
+  in its new folder here; a PGN of a single move or none, like a pasted FEN,
+  sets the editor up instead (`onLoadPosition` / `onLoadFen`). The editor
+  offers no tabs of its own (`forms={["position"]}`, the fields always shown
+  — [`position-editor.md`](./position-editor.md)).
 - **A list or preview boards** at the saved lists' two card sizes
   (`views/shared/cardSize.ts`), each card showing the position and side the
   reader **was standing on** (`options.id` `saved-analyses-preview-<id>`).

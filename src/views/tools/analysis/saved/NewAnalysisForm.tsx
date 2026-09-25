@@ -33,15 +33,18 @@ import AnalysisLoad from "../AnalysisLoad";
  * played from.
  *
  * Under the editor, **Load a game** (CTA-96) is the Analysis Board's Load
- * tab's PGN half — the same `AnalysisLoad`, without its FEN form (a position
- * here is the editor's and Start's job). A PGN, picked or pasted, is read as
- * a **whole game** (side lines, comments, NAGs kept): one game (or a merge of
- * several) opens the Analysis Board with the tree handed over as location
- * state — a new unsaved analysis, facing White, because a game does not turn
- * the board; a split saves one analysis per game into a new folder and lands
- * the reader in it. So this form's editor shows no PGN tab of its own
- * (`forms={["position", "fen"]}`) — one PGN input, and it loads games; the
- * final-position-into-the-editor tab is unchanged everywhere else.
+ * tab's `AnalysisLoad` with its FEN form beside its PGN one — the form's
+ * **one load place**, so the editor itself offers no tabs
+ * (`forms={["position"]}`; the fields are always shown). A PGN, picked or
+ * pasted, is read as a **whole game** (side lines, comments, NAGs kept): one
+ * game (or a merge of several) opens the Analysis Board with the tree handed
+ * over as location state — a new unsaved analysis, facing White, because a
+ * game does not turn the board; a split saves one analysis per game into a
+ * new folder and lands the reader in it. A PGN that is really a position —
+ * a single move, or none — sets the editor up from it instead, exactly as a
+ * pasted FEN does (`onLoadPosition` / `onLoadFen`): a position is the
+ * editor's and Start's job. Everywhere else the editor's own FEN and
+ * final-position PGN tabs are unchanged.
  */
 
 /** The widest the editor's board grows in the panel — a small board, beside the list. */
@@ -88,30 +91,33 @@ function NewAnalysisForm() {
       {/* The panel's one scrolling region: the aside scrolls nothing itself. */}
       <Box sx={{ flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden", pr: 0.5 }}>
         {/*
-          No PGN tab here: in this form a PGN is a whole game, loaded below —
-          the final-position-into-the-editor path is the engine Lobby's. The
-          component is unchanged; `forms` just leaves the tab (and its `.pgn`
-          drop) out.
+          No tabs here: this form's FEN and PGN ride its own Load route below,
+          so the editor shows just its fields (`forms={["position"]}` — one
+          form, no strip). The component is unchanged.
         */}
         <PositionEditor
           editor={editor}
           testId="new-analysis-editor"
           boardMaxWidth={EDITOR_BOARD_MAX_PX}
-          forms={["position", "fen"]}
+          forms={["position"]}
         />
         <Divider sx={{ my: 2 }} />
         {/*
-          Load a game (CTA-96): the Load tab's PGN route, hosted here. A whole
+          Load a game (CTA-96): the Load tab's route, hosted here, with the
+          FEN form beside the PGN one — the form's one load place. A whole
           game (or a merge) is handed to the Analysis Board as location state —
           a new unsaved analysis, facing White: a game does not turn the board.
-          A split is saved into a new folder, which the reader lands in. No FEN
-          form: a position is the editor's and Start's job.
+          A PGN of a single move or none, and a pasted FEN, set the editor up
+          instead: a position is the editor's and Start's job.
         */}
         <AnalysisLoad
           settings={DEFAULT_ANALYSIS_SETTINGS}
           onLoadTree={(tree) =>
             navigate("/tools/analysis", { state: analysisHandOffState(tree, "white") })
           }
+          onLoadFen={(fen) => editor.loadFen(fen)}
+          onLoadPosition={(position) => editor.loadPosition(position)}
+          pgnHelpKey="savedAnalyses.newAnalysis.loadHelp"
           onSplit={(folderId) =>
             navigate(`/tools/analysis/saved?folder=${encodeURIComponent(folderId)}`)
           }

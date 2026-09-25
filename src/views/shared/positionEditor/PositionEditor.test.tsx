@@ -576,7 +576,7 @@ describe("PositionEditor — PGN in", () => {
     expect(screen.getByTestId("editor-pgn-error")).toBeInTheDocument();
   });
 
-  it("a host can leave the PGN form out, drop and all (the analyses Lobby, CTA-96)", async () => {
+  it("a host can leave the PGN form out, drop and all", async () => {
     renderEditor(undefined, ["position", "fen"]);
 
     expect(screen.getByTestId("editor-tab-position")).toBeInTheDocument();
@@ -593,6 +593,22 @@ describe("PositionEditor — PGN in", () => {
       await Promise.resolve();
     });
     expect(placement()).toBe("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR");
+  });
+
+  it("a forms list of one is not a choice: no strip, the form always shown (the analyses Lobby, CTA-96)", () => {
+    renderEditor(undefined, ["position"]);
+
+    expect(screen.queryByTestId("editor-tab-position")).toBeNull();
+    expect(screen.queryByTestId("editor-tab-fen")).toBeNull();
+    expect(screen.getByTestId("editor-position-fields")).toBeInTheDocument();
+  });
+
+  it("a single form can be any of them — the FEN form alone, the fields gone", () => {
+    renderEditor(undefined, ["fen"]);
+
+    expect(screen.queryByTestId("editor-tab-fen")).toBeNull();
+    expect(screen.getByTestId("editor-fen-setup")).toBeInTheDocument();
+    expect(screen.queryByTestId("editor-position-fields")).toBeNull();
   });
 });
 

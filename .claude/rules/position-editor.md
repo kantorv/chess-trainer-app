@@ -62,7 +62,7 @@ editor.isValid    // problems.length === 0
 | `editor` | `PositionEditorState` | The state from `usePositionEditor`. **The host's**: it lives above the component, so unmounting the editor (a tab switched away) loses no position, and the host can read and reset it from its own controls. |
 | `testId` | `string` | The root `data-testid`, the prefix of every id under it (`${testId}-tab-fen`, `${testId}-turn-b`, `${testId}-reset-start`, `${testId}-problem-noWhiteKing`, …) and of the board's `options.id` (`${testId}-board`). Unique on the page. |
 | `boardMaxWidth` | `number?` | The widest the board grows, in px. Absent, the column's full width. |
-| `forms` | `readonly ("position" \| "fen" \| "pgn")[]?` | Which forms the tab strip offers. Absent: all three. A host whose PGNs go elsewhere — the analyses Lobby loads a PGN as a whole game (CTA-96) — passes `["position", "fen"]`, and the `.pgn` drop goes with the tab. |
+| `forms` | `readonly ("position" \| "fen" \| "pgn")[]?` | Which forms the tab strip offers. Absent: all three. A form left out is not offered, and the `.pgn` drop goes with the PGN tab. **One form is not a choice**: the strip goes and the form is always shown — the analyses Lobby's form passes `["position"]` (its FEN and PGN ride its own Load route, CTA-96). |
 
 `usePositionEditor(initialFen?)` — the first render's value only, already
 validated by the host (`parseFen`). Given: the board and fields start there,
@@ -156,10 +156,14 @@ plus `parseFen`: while the position cannot be analyzed, Start is a plain
 disabled button with a warning above it listing the problems.
 `boardMaxWidth` 360. Nothing in this folder changed for it. Under the editor
 the form also hosts **Load a game** (CTA-96) — the Analysis Board's Load
-tab's PGN route, handing a whole game to the board — so *this* form's editor
-leaves its own PGN tab out (`forms={["position", "fen"]}`): one PGN input in
-the form, and it loads games. Everywhere else the editor's PGN tab still
-takes a game's final position, unchanged.
+tab's `AnalysisLoad`, with its FEN form beside its PGN one, so the form has
+**one load place**: a PGN of more than one move (or a merge of several) is
+handed to the board as a whole game; a PGN of a single move or none, and a
+pasted FEN, set the editor up instead (`onLoadPosition` / `onLoadFen`) — a
+position is the editor's and Start's job. So *this* form's editor offers no
+tabs at all (`forms={["position"]}`, the fields always shown): its FEN and
+final-position-PGN forms ride the Load route. Everywhere else the editor's
+tabs are unchanged.
 
 ---
 
@@ -182,7 +186,10 @@ takes a game's final position, unchanged.
 - **The second host** — `SavedAnalyses.test.tsx`'s *new-analysis form* block:
   Start opening the plain board for the standard start, the edited position
   riding along as `?fen=`, and Start off with the problems listed while the
-  position cannot be analyzed, then back on at a reset. The screen stubs the
+  position cannot be analyzed, then back on at a reset; and the Load route
+  (CTA-96): one load place with the editor offering no tabs, a whole game
+  handed over, a single-move or move-less PGN and a pasted FEN setting the
+  editor up, merge-or-split, the error that goes nowhere. The screen stubs the
   spare-piece trio with the provider holding the options — a spare-piece board
   renders with no options of its own (`chessboard.md` §8), and the list's
   preview boards pass their own.

@@ -8,7 +8,8 @@ import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
 import { useTranslation } from "react-i18next";
 
 import type { AnalysisSettings } from "../../../lib/analysisSettings";
-import { mergeTrees, type GameTree } from "../../../lib/gameTree";
+import { finalFenOf } from "../../../lib/gameModel";
+import { mainlineGame, mergeTrees, type GameTree } from "../../../lib/gameTree";
 import { parsePgnTree } from "../../../lib/pgn";
 import { newSavedAnalysisId, splitAnalysesOf } from "../../../lib/savedAnalyses";
 import {
@@ -38,13 +39,22 @@ import MergeSplitChoice from "../../shared/MergeSplitChoice";
  * is taken there (`onSplit`). A PGN of a position and no moves loads as that
  * position. A **FEN** is a position: it turns the board to the side to move,
  * where a game does not.
+ *
+ * A host that takes positions another way — the analyses Lobby's form, whose
+ * editor a position is for (CTA-96) — passes `onLoadPosition`, and a PGN that
+ * is really a position (a single game of at most one move) sets that editor
+ * up from it instead of putting a one-move tree on the board. The merge of
+ * several games is always a merge: the reader chose a tree, side lines and
+ * all.
  */
 function AnalysisLoad({
   settings,
   onLoadTree,
   onLoadFen,
+  onLoadPosition,
   onSplit,
   choiceLabelKey = "analysis.load.choice",
+  pgnHelpKey = "analysis.load.pgnHelp",
 }: {
   /** The engine knobs a split's analyses are saved under — the board's own. */
   settings: AnalysisSettings;
@@ -56,12 +66,22 @@ function AnalysisLoad({
    */
   onLoadFen?: (fen: string) => void;
   /**
+   * A single-game PGN that is really a position — at most one move — loads
+   * as that position, already parsed and never throwing. Absent, it loads as
+   * a tree like any game: a host with no editor of its own (the Analysis
+   * Board, the Openings explorer) has nowhere for a position to go but the
+   * board.
+   */
+  onLoadPosition?: (position: string) => void;
+  /**
    * A split was saved into this folder. Absent, a text of several games can
    * only be merged — the Openings explorer keeps nothing (CTA-78).
    */
   onSplit?: (folderId: string) => void;
   /** The merge-or-split choice's locale block — a board without a split words it without one. */
   choiceLabelKey?: string;
+  /** The PGN form's help line — a host whose PGN route means something else words it itself. */
+  pgnHelpKey?: string;
 }) {
   const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -82,6 +102,19 @@ function AnalysisLoad({
     setChoice(null);
   };
 
+  /**
+   * One game off the text — a whole game, unless it is really a position (at
+   * most one move) and the host takes positions. Then it is that position, and
+   * the host's own board saying so is the whole of the feedback, so no
+   * "loaded" line here.
+   */
+  const singleGame = (tree: GameTree) => {
+    if (onLoadPosition === undefined) return load(tree);
+    const game = mainlineGame(tree);
+    if (game.moves.length > 1) return load(tree);
+    onLoadPosition(finalFenOf(game));
+  };
+
   /** The one route in, for a file and a paste alike. */
   const bringIn = (text: string) => {
     setProblem(null);
@@ -94,7 +127,7 @@ function AnalysisLoad({
       // an analysis does not.
       if (reading.problem === "unreadable") {
         try {
-          return load(parsePgnTree(normaliseRepertoireText(text)));
+          return singleGame(parsePgnTree(normaliseRepertoireText(text)));
         } catch {
           // The reading's own problem stands.
         }
@@ -106,7 +139,7 @@ function AnalysisLoad({
       );
       return;
     }
-    if (reading.games.length === 1) return load(reading.games[0].tree);
+    if (reading.games.length === 1) return singleGame(reading.games[0].tree);
     setChoice(reading);
   };
 
@@ -179,7 +212,7 @@ function AnalysisLoad({
         {t("analysis.load.pgnTitle")}
       </Typography>
       <Typography variant="caption" sx={{ color: "text.secondary", mt: -1 }}>
-        {t("analysis.load.pgnHelp")}
+        {t(pgnHelpKey)}
       </Typography>
       <Box>
         {/* A label wrapping a hidden input — the file dialog opens only from a

@@ -89,10 +89,11 @@ type PositionEditorProps = {
   boardMaxWidth?: number;
   /**
    * Which forms the tab strip offers. Absent: all three — Position, FEN and
-   * PGN — today's behaviour everywhere. A host whose PGNs go elsewhere (the
-   * analyses Lobby's new-analysis form loads a PGN as a whole game instead,
-   * CTA-96) passes `["position", "fen"]`, and the `.pgn` drop goes with the
-   * tab.
+   * PGN — today's behaviour everywhere. A form left out is not offered, and
+   * the `.pgn` drop goes with the PGN tab; the analyses Lobby's new-analysis
+   * form, whose PGN and FEN ride its own Load route instead (CTA-96), passes
+   * `["position"]`. **One form is not a choice**: the strip goes and the form
+   * is always shown.
    */
   forms?: readonly FormTabId[];
 };
@@ -105,6 +106,8 @@ function PositionEditor({ editor, testId, boardMaxWidth, forms }: PositionEditor
   const activeTab = tabs.includes(tab) ? tab : (tabs[0] ?? "position");
   /** The PGN tab and the `.pgn` drop are one feature: a host either has both or neither. */
   const pgnEnabled = tabs.includes("pgn");
+  /** One form is not a choice: no strip, and the form is always shown. */
+  const strip = tabs.length > 1;
 
   /*
     Ingestion state: what the reader has typed, what came out of the last
@@ -371,33 +374,40 @@ function PositionEditor({ editor, testId, boardMaxWidth, forms }: PositionEditor
         {t("positionEditor.palette.removeHint")}
       </Typography>
 
-      <Tabs
-        value={activeTab}
-        onChange={(_event, next: FormTabId) => setTab(next)}
-        variant="fullWidth"
-        sx={{
-          minHeight: 36,
-          borderBottom: "1px solid",
-          borderColor: "divider",
-          "& .MuiTab-root": {
+      {strip && (
+        <Tabs
+          value={activeTab}
+          onChange={(_event, next: FormTabId) => setTab(next)}
+          variant="fullWidth"
+          sx={{
             minHeight: 36,
-            textTransform: "none",
-            minWidth: 0,
-            px: 1,
-          },
-        }}
-      >
-        {tabs.map((id) => (
-          <Tab
-            key={id}
-            value={id}
-            label={t(`positionEditor.tabs.${id}`)}
-            data-testid={`${testId}-tab-${id}`}
-          />
-        ))}
-      </Tabs>
+            borderBottom: "1px solid",
+            borderColor: "divider",
+            "& .MuiTab-root": {
+              minHeight: 36,
+              textTransform: "none",
+              minWidth: 0,
+              px: 1,
+            },
+          }}
+        >
+          {tabs.map((id) => (
+            <Tab
+              key={id}
+              value={id}
+              label={t(`positionEditor.tabs.${id}`)}
+              data-testid={`${testId}-tab-${id}`}
+            />
+          ))}
+        </Tabs>
+      )}
 
-      <Box role="tabpanel" data-testid={`${testId}-tab-content-${activeTab}`}>
+      {/* No strip, no tabpanel: with one form there is nothing it would be a
+          panel *of*. The test id stays, so a host's tests read the same either way. */}
+      <Box
+        role={strip ? "tabpanel" : undefined}
+        data-testid={`${testId}-tab-content-${activeTab}`}
+      >
         {activeTab === "position" && (
           <PositionFields
             testId={testId}

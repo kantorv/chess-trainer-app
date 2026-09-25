@@ -485,6 +485,12 @@ const en = {
       start: "Start",
       /** Above Start while the position in the editor cannot be analyzed. */
       illegal: "Start is off until the position in the board editor can be analyzed.",
+      /**
+       * The Load section's help line — here a PGN can set the editor up, not
+       * only open a board (CTA-96).
+       */
+      loadHelp:
+        "A PGN of more than one move opens as a new analysis; save it to keep it. A single move or less sets the position up on the board above. A file of several games can be merged into one tree or split into a folder of analyses.",
     },
     /** Picking analyses and taking them out as one `.pgn`, side lines and all. */
     select: "Select this analysis",

@@ -340,6 +340,19 @@ describe("the Load tab", () => {
     expect(findSavedAnalysis("a1")?.pgn).not.toContain("e4");
   });
 
+  it("still loads a one-move PGN as a game — the Lobby's position rule is its own", () => {
+    mount();
+    paste("1. e4 *");
+
+    // `onLoadPosition` is opt-in: without it, a one-move game is a game,
+    // opened at its start rather than at the position after its move.
+    expect(boardOptions().position).toBe(START);
+    openTab("export");
+    expect(
+      (screen.getByTestId("analysis-export-pgn") as HTMLTextAreaElement).value,
+    ).toContain("1. e4");
+  });
+
   it("merges several games into one tree on the board", () => {
     mount();
     paste('[Event "A"]\n\n1. e4 e5 *\n\n[Event "B"]\n\n1. e4 c5 *');
