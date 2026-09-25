@@ -536,6 +536,34 @@ export const commentsAt = (
   (id === null ? tree.comments : findNode(tree, id)?.[kind]) ?? [];
 
 /**
+ * **Set a move's NAGs** (CTA-97) — the glyphs at `id` replaced by `next`, a
+ * repeated code kept once. An empty list removes the field, as
+ * {@link setComments} does. Pure and id-preserving — only the path to the
+ * move is copied — and the same reference back when the list comes out the
+ * same, or for an id the tree does not hold.
+ */
+export const setNags = (tree: GameTree, id: string, next: readonly number[]): GameTree => {
+  const nags = [...new Set(next)];
+  const path = pathTo(tree, id);
+  const target = path.at(-1);
+  if (target === undefined) return tree;
+  const current = target.nags ?? [];
+  if (current.length === nags.length && nags.every((nag, index) => current[index] === nag)) {
+    return tree;
+  }
+  const edited: VariationNode = { ...target };
+  if (nags.length === 0) delete edited.nags;
+  else edited.nags = nags;
+
+  const last = path.length - 1;
+  return rebuildAlong(tree, path, (siblings, node, depth) =>
+    depth === last
+      ? siblings.map((sibling) => (sibling.id === node.id ? edited : sibling))
+      : siblings,
+  );
+};
+
+/**
  * What {@link deleteFrom} would take away: the moves from `id` on (itself
  * included) and the lines among them — the leaves, each the end of one line.
  * Zeroes for an id the tree does not hold.
@@ -712,6 +740,9 @@ export const mainlineGame = (tree: GameTree): Game => ({
     fen: node.fen,
     ply: node.ply,
     captured: node.captured,
+    // The glyphs the list prints after the move (CTA-97) — only when it has
+    // some, so a tree without them walks to the value it always did.
+    ...(node.nags === undefined ? {} : { nags: node.nags }),
   })),
 });
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parsePgnGame, parsePgnTree, parsePgnTrees } from "./pgn";
+import { NAG_SECTIONS, toggleNag } from "./moveAnnotations";
 import {
   deleteFrom,
   gameToPgn,
@@ -10,7 +11,9 @@ import {
   nodeAtSanPath,
   promoteVariation,
   findNode,
+  mainlineGame,
   setComments,
+  setNags,
   treeToPgn,
   type GameTree,
 } from "./gameTree";
@@ -257,5 +260,57 @@ describe("the same comment wrapped two ways is one comment", () => {
   it("but different words are still two comments", () => {
     const tree = parsePgnTree("1. e4 {Good.} {Good!} *");
     expect(at(tree, "e4").comments).toEqual(["Good.", "Good!"]);
+  });
+});
+
+describe("setNags — editing a move's glyphs (CTA-97)", () => {
+  const tree = parsePgnTree(ANNOTATED);
+  const f4 = at(tree, "e4", "e5", "f4");
+
+  it("replaces the list, keeping every id, the comments, and every node off the path", () => {
+    const edited = setNags(tree, f4.id, [2, 17]);
+    expect(at(edited, "e4", "e5", "f4")).toMatchObject({
+      id: f4.id,
+      nags: [2, 17],
+      comments: ["The gambit.", "A second thought."],
+    });
+    // Only the path to the edit is copied: a sibling line and the moves
+    // after the edited one are the same objects.
+    expect(at(edited, "e4", "e5", "Nc3")).toBe(at(tree, "e4", "e5", "Nc3"));
+    expect(at(edited, "e4", "e5", "f4", "exf4")).toBe(at(tree, "e4", "e5", "f4", "exf4"));
+    expect(at(edited, "e4")).not.toBe(at(tree, "e4"));
+    // Immutable: the tree it was given is untouched.
+    expect(f4.nags).toEqual([6]);
+  });
+
+  it("keeps a repeated code once, and removes the field with the last glyph", () => {
+    expect(at(setNags(tree, f4.id, [1, 1, 14]), "e4", "e5", "f4").nags).toEqual([1, 14]);
+    const cleared = setNags(tree, f4.id, []);
+    expect("nags" in at(cleared, "e4", "e5", "f4")).toBe(false);
+    const nf3 = at(tree, "e4", "e5", "Nf3");
+    expect(at(setNags(tree, nf3.id, [3]), "e4", "e5", "Nf3").nags).toEqual([3]);
+  });
+
+  it("hands back the same tree when nothing changes", () => {
+    expect(setNags(tree, f4.id, [6])).toBe(tree);
+    expect(setNags(tree, at(tree, "e4", "e5", "Nf3").id, [])).toBe(tree);
+    expect(setNags(tree, "nope", [1])).toBe(tree);
+  });
+
+  it("round-trips an edited tree through PGN", () => {
+    const [features] = NAG_SECTIONS.filter(({ section }) => section === "features");
+    const attack = features.choices.find((entry) => entry.id === "attackWhite")!;
+    const edited = setNags(tree, f4.id, toggleNag(f4.nags ?? [], "features", attack));
+    const pgn = treeToPgn(edited);
+    expect(pgn).toContain("f4 $6 $40");
+    const reread = parsePgnTree(pgn);
+    expect(at(reread, "e4", "e5", "f4").nags).toEqual([6, 40]);
+    expect(at(reread, "e4").nags).toEqual([1, 14]);
+  });
+
+  it("carries the mainline's glyphs to the list's game, and nothing where there are none", () => {
+    const [e4, e5] = mainlineGame(tree).moves;
+    expect(e4.nags).toEqual([1, 14]);
+    expect("nags" in e5).toBe(false);
   });
 });
