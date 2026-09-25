@@ -17,7 +17,7 @@ This file is what every session needs. The rest is in `.claude/rules/`:
 | --- | --- | --- |
 | [`chessboard.md`](.claude/rules/chessboard.md) | always | the board: library conventions, the engine protocol, layout rules, testing, **the board core** (base hook, modules, shell and panel, adding a board) |
 | [`react-chessboard-options-api.md`](.claude/rules/react-chessboard-options-api.md), [`react-chessboard-types-and-helpers.md`](.claude/rules/react-chessboard-types-and-helpers.md) | always | the vendored `react-chessboard` reference |
-| the module files (table below), [`tree-views.md`](.claude/rules/tree-views.md), [`database.md`](.claude/rules/database.md) | when you work on their `paths:` | each module's whole reference |
+| the module files (table below), [`tree-views.md`](.claude/rules/tree-views.md), [`pgn-annotations.md`](.claude/rules/pgn-annotations.md), [`database.md`](.claude/rules/database.md) | when you work on their `paths:` | each module's whole reference |
 
 The full upstream `react-chessboard` docs and all 53 Storybook examples are
 vendored under [`docs/vendor/react-chessboard/`](docs/vendor/react-chessboard/).
@@ -70,6 +70,7 @@ uses can look unused — check `scripts/` before removing one.
 | **Import / Export** (the reader's data as one zip) | `/settings/export`, `/settings/import` | `lib/dataExport*.ts`, `lib/dataImport*.ts`, `lib/pgnExport.ts`, `views/settings/ExportTab.tsx`, `ImportTab.tsx`, `ImportDialog.tsx`, `IncompatibleImportDialog.tsx` | [`import-export.md`](.claude/rules/import-export.md) |
 | **Position editor** (a component, hosted by the Lobby) | — | `views/shared/positionEditor/`, `lib/positionEditor.ts` | [`position-editor.md`](.claude/rules/position-editor.md) |
 | **Tree views** (how a board shows its game tree) | — | `views/explorer/`, `lib/treeMap.ts` | [`tree-views.md`](.claude/rules/tree-views.md) |
+| **PGN annotations** (comments, `[%cmd]`s, the `prc` tag, NAG glyphs) | — | `lib/pgn.ts`, `lib/gameTree.ts`, `lib/moveAnnotations.ts`, `lib/playChance.ts` | [`pgn-annotations.md`](.claude/rules/pgn-annotations.md) |
 | **The board core** | — | `views/board/core/` | [`chessboard.md`](.claude/rules/chessboard.md) §9 |
 | **Stores** (every one IndexedDB) | — | `lib/idb.ts`, `lib/idbRecordStore.ts`, `lib/*Store.ts`, `lib/*Db.ts` | [`database.md`](.claude/rules/database.md) |
 

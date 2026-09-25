@@ -19,6 +19,10 @@ implements it, and every board that shows a game tree is built on it: the
 Analysis Board, Play with Engine and Masked Pieces, the Library's game board,
 the Openings explorer and the repertoire player with its games.
 
+What a move's annotations *are* — comments, `[%cmd]`s, the `prc` tag, NAG
+glyphs — and how they are read and written is
+[`pgn-annotations.md`](./pgn-annotations.md); this file only places them.
+
 [`chessboard.md`](./chessboard.md) §9 owns the board core a tree view reads
 from (`useBoardCore`) and the shell and panel its parts are placed into
 (`BoardShell`, `BoardPanel`). This file says only what a *tree view* is.
