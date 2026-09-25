@@ -48,6 +48,7 @@ for the Analysis Board and Saved analyses it hands games to.
 | `src/lib/collectionIndex.ts` | **The index**: `IndexedRow`, `indexedRowOf` (tags + a `parsePgnTree` pass), `indexGame` (one game, with the app's book), `buildCollectionIndex` / `buildCollectionIndexAsync`, `numberedRows`, `textHash`, `OpeningLookup` / `loadOpeningLookup`, and the file format: `encodeCollectionIndex` / `decodeCollectionIndex`, `COLLECTION_INDEX_FORMAT` / `COLLECTION_INDEX_VERSION`. |
 | `src/lib/collectionIndex.worker.ts` | The index pass for an upload, off the main thread. |
 | `src/lib/openingTree.ts` | **The opening tree**: `openingTreeOf` (rows' `line`s merged by SAN, **cut where the games stop branching**, CTA-92), `openingNodeAt` / `openingNodeOn`, `OPENING_LINE_PARAM` (`line`), `openingLineParamOf` / `openingLineOfParam`. Pure, with no `chess.js`. |
+| `src/lib/openingTreePgn.ts` | **The opening tree as PGN** (CTA-99): `openingTreeToPgn(line, node, tags, headers)` — the subtree below the board's position, the line played leading to it, each move's `[%games N]` / `[%prc P]` as asked (`OpeningTreePgnTags`). Written through `gameTree.ts`'s `moveTreeToPgn`, no `chess.js`. |
 | `src/lib/shippedCollections.ts` | **Shipped collections**: the manifest (a static import) and two lazy globs (`*.pgn`, `*.index.json`, `?raw`). `shippedCollectionsOf` (takes its inputs as parameters, for tests), `shippedCollections`, `findShippedCollection`, `peekShippedRows` / `peekShippedGames`, `subscribeShipped`. |
 | `src/lib/libraryDb.ts` | **The database**, `chessapp.library` (version 2): its four object store names, the channel, `openLibraryDb` and `deleteLibraryDb`. Both stores below open it. |
 | `src/lib/libraryCollectionStore.ts` | **Uploaded collections, in IndexedDB** (`chessapp.library`). Reads: `uploadedCollectionsSnapshot`, `subscribeUploadedCollections`, `loadUploadedCollections`, `peekUploadedRows` / `loadUploadedRows`, `peekUploadedGames` / `loadUploadedGames`. Writes: `addCollection` (into a folder, optionally), `removeCollection`, `moveCollection` (Move to…), `refileCollectionsIn` (a folder deleted), `replaceCollectionGame` (Update), `insertCollectionGame` (Save as copy), `appendCollectionGames` (Add games), `removeCollectionGames` (delete picked). Also `newCollectionId` and `resetLibraryCollectionStore` (for tests). |
@@ -61,13 +62,14 @@ for the Analysis Board and Saved analyses it hands games to.
 | `src/views/library/LibraryUpload.tsx` | `/library/new`: a new collection (file, paste, or empty), filed in a folder (`?folder=<id>`, the picker), and `?into=<id>` to add games to an existing one. |
 | `src/views/library/CollectionScreen.tsx` | `/library/<collection>`: the table, the picks, the export bar, Analyse, Add games, and deleting games. |
 | `src/views/library/CollectionFilters.tsx` | The table's right-hand panel: players (several names at once, OR'd — CTA-95) and side, the opening board, then opening, event, dates and result. |
-| `src/views/library/OpeningFilterBoard.tsx` | The opening-moves board (`options.id` `library-filter-board`). |
+| `src/views/library/OpeningFilterBoard.tsx` | The opening-moves board (`options.id` `library-filter-board`), and its *Save tree as PGN* link. |
+| `src/views/library/OpeningTreePgnDialog.tsx` | *Save tree as PGN*'s choice: No, or Add tags — `games`, `prc`, or both. |
 | `src/views/library/LibraryGameScreen.tsx` → `LibraryGameBoard.tsx` | `/library/<collection>/<n>`: resolve and parse the game, then the analysis board. |
 | `src/views/library/useLibraryCollections.ts` | The React bindings: `useUploadedCollections`, `useLibraryFolders`, `useCollectionSummary`, `useCollectionRows`, `useCollectionGames`, `loadCollectionGames`. |
 | `src/views/library/indexCollection.ts` | Runs the worker with progress and cancel, with a jsdom fallback. |
 | `src/views/library/LibraryMiss.tsx` | The "no such collection / game" screen. |
 | `src/views/library/*Main.tsx` | Layout-only wrappers that `App.tsx` routes to. |
-| Tests | `src/lib/libraryCollections.test.ts`, `collectionIndex.test.ts`, `openingTree.test.ts`, `shippedCollections.test.ts`, `libraryCollectionStore.test.ts`, `libraryFolderStore.test.ts` (folder CRUD, `folderId`, the v1 → v2 upgrade), `folderTreeRows.test.ts`, `wirepgn.test.ts`, `gameReference.test.ts` (the `library` key), `src/views/library/Library.test.tsx` (every screen), and `views/tools/analysis/AnalysisBoard.test.tsx` (a `?game=library/…` arrival). |
+| Tests | `src/lib/libraryCollections.test.ts`, `collectionIndex.test.ts`, `openingTree.test.ts`, `openingTreePgn.test.ts`, `shippedCollections.test.ts`, `libraryCollectionStore.test.ts`, `libraryFolderStore.test.ts` (folder CRUD, `folderId`, the v1 → v2 upgrade), `folderTreeRows.test.ts`, `wirepgn.test.ts`, `gameReference.test.ts` (the `library` key), `src/views/library/Library.test.tsx` (every screen), and `views/tools/analysis/AnalysisBoard.test.tsx` (a `?game=library/…` arrival). |
 
 Locale keys all live under `library.*` in `src/locales/en.ts` / `he.ts`
 (`he` is typed `typeof en`, so a missing key is a compile error). The only
@@ -573,6 +575,30 @@ carries the filter, not a hand-made selection.
 - No game has a `line` (an index from before the column) → no board.
 - The board's `chess.js` replay of the line runs up to a game's full length
   (once at most 30 plies), memoized on the line and the node.
+- **Save tree as PGN** (CTA-99, `library-filter-moves-save`) sits at the end
+  of the caption row under the board — beside the start prompt or the
+  numbered line, at the row's inline end (the row mirrors; the board and the
+  SAN do not). It asks first (`OpeningTreePgnDialog`,
+  `library-filter-moves-save-dialog`): **No** (the moves alone) or **Add
+  tags** (the default) with two boxes, **`games`** (ticked by default) and
+  **`prc`** — off while No is picked, and Save is off with neither ticked.
+  Save downloads one PGN (`downloadPgn`, `<collection slug>-tree-<date>.pgn`,
+  `[Event "<collection name>"]`, `[Result "*"]`) written by
+  `openingTreeToPgn`, only then — never per render:
+  - **the tree the board draws**: `openingTreeOf(narrowed)` below the node
+    on the board, so the other filters apply and the cut (CTA-92) stands; the
+    moves already played (`?line=`) lead to it, **untagged** — at the start,
+    the whole tree;
+  - **`children[0]` is the mainline**, i.e. the most played move, the rest
+    side lines;
+  - each move below the position carries, in **one comment, games first**,
+    `[%games N]` (`node.count`, the games that played it there) and/or
+    `[%prc P]` (`round(child.count / parent.count × 100)`, the arrow's share —
+    the play chance the repertoire trainer reads). The command form, not the
+    `prc:N` the play-chance dialog writes; both read back
+    ([`pgn-annotations.md`](./pgn-annotations.md) §3).
+  - The file opens on the Analysis Board through Load, and round-trips
+    through `parsePgnTree` / `treeToPgn` unchanged.
 
 ### 6.5 Picks, export, delete, Analyse
 

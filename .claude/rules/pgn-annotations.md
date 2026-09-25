@@ -141,6 +141,7 @@ from either convention reads the same.
 | **Set by** | The move menu's *Play chances…* (`PlayChanceDialog`, per branch, `setPlayChances`) — or typed into a comment. |
 | **Shown** | A *Play chance* chip, never as prose (`withoutPlayChance`). With `arrows.chances`, and **only where the branch carries a mark**, the board's arrows become the **chance overlay** (`ChanceArrows`: white, magenta border, width by chance) and the next-moves bar prints each move's percentage — the repertoire player. |
 | **Offered on** | Boards where a trainer plays by it; the Analysis Board turns the menu item off (`playChances: false`, CTA-73). |
+| **Also written by** | The Library opening board's *Save tree as PGN* (CTA-99), as `[%prc P]` — each move's share of its position's games, `round(child / parent × 100)`, in one comment after `[%games N]` when both are asked for. |
 
 ### The arrows these weigh — one overlay, two sources today
 
@@ -154,6 +155,17 @@ knows nothing of where it came from:
 
 That seam — a weight per move, the overlay drawing it — is where a second
 tag plugs in (§6).
+
+### Written today: the Library's `[%games N]` (CTA-99)
+
+The Library opening board's *Save tree as PGN*
+([`game-collections.md`](./game-collections.md) §6.4.1, `lib/openingTreePgn.ts`)
+already **writes** `[%games N]` — the games of the (filtered) collection that
+played the move from that position — on every move below the board's position,
+in the command form, first in the move's one comment
+(`{ [%games 12] [%prc 40] }` when `prc` is asked for too). Nothing **reads** it
+as a weight yet: it shows as a generic *games* chip (§2's "any other `%key`"),
+and §6 is still the plan for the rest.
 
 ---
 
@@ -224,7 +236,8 @@ touched by it:
 | Path | What lives there |
 | --- | --- |
 | `src/lib/pgn.ts` | The tokenizer and `parsePgnTree(s)`: comments, `;` comments, `$N`, suffixes onto the node. |
-| `src/lib/gameTree.ts` | The node fields; `setComments` / `commentsAt`, `setNags`; `mergeTrees`' joining; `treeToPgn` and `PgnExportOptions`. |
+| `src/lib/gameTree.ts` | The node fields; `setComments` / `commentsAt`, `setNags`; `mergeTrees`' joining; `treeToPgn` and `PgnExportOptions`; `moveTreeToPgn` — the same writer over moves with no board (`PgnMove`: SAN, ply, annotations). |
+| `src/lib/openingTreePgn.ts` | The Library's *Save tree as PGN*: an opening tree's counts written as `[%games N]` / `[%prc P]` (§3). |
 | `src/lib/moveAnnotations.ts` | `readComment` (commands, the eval shapes, `prc` → chips), `annotationsAt`; the NAG table and its rules. |
 | `src/lib/playChance.ts` | `prc`: reading, writing, the chance rules. |
 | `src/lib/pgnComments.ts` | `reflowComment` — hard-wrapped comment text back into paragraphs. |
@@ -254,7 +267,7 @@ source beside `prc`.
 | | |
 | --- | --- |
 | **Written** | `games:N` in the move's comment, `[%games N]` read too; `N` a whole number ≥ 1 — the games of the merge that played this move from this position. |
-| **Written by** | `mergeTrees`, on every node, as it folds the games. |
+| **Written by** | `mergeTrees`, on every node, as it folds the games — and already, as `[%games N]`, by the Library's *Save tree as PGN* (§3). |
 | **Read** | A `lib/` helper beside `playChanceOf` (`gamesOf(node)`), shown as a *Games* chip (`annotations.keys.games`), never as prose. |
 | **Arrows** | At a branch, `games` weights → shares (`N / Σ N` of the siblings) → `ChanceArrows`, exactly as the Library's opening board does with its row counts. Which weight a board draws becomes a parameter of the explorer's arrows (today `arrows.chances: boolean`, prc only) — e.g. `arrows.weights: "prc" \| "games"` — so the repertoire player keeps `prc` and a merged analysis draws `games`. |
 
