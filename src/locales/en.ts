@@ -1173,7 +1173,7 @@ const en = {
         filters: "Import only",
         minElo: "Min Elo",
         maxElo: "Max Elo",
-        eloHelp: "Both players' Elo; a game without one is left out.",
+        eloHelp: "Both players' Elo within the range. A thumb at its end sets no bound; while one is moved, a game without an Elo is left out.",
         dateHelp: "A game without a date is left out.",
         playerFilter: "Players",
         playersHelp: "Games of any of them — pick from the list or type part of a name.",

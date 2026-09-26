@@ -8,6 +8,7 @@ import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
 import LinearProgress from "@mui/material/LinearProgress";
+import Slider from "@mui/material/Slider";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { useTranslation } from "react-i18next";
@@ -29,8 +30,6 @@ import {
 import { formatBytes } from "../../lib/storageDiagnostics";
 import { indexCollection } from "./indexCollection";
 
-/** A non-negative whole number typed into an Elo box, else no bound. */
-const eloBound = (value: string): number | undefined => (/^\d+$/.test(value.trim()) ? Number(value) : undefined);
 
 /**
  * **The import-options popup** (CTA-103) — what `/library/new` opens once a
@@ -42,7 +41,9 @@ const eloBound = (value: string): number | undefined => (/^\d+$/.test(value.trim
  *   (`collectionMetadataOf`: players, the Elo span, the date span, events).
  * - **Filters, applied before the index pass**, each shown only where some game
  *   carries its field (as the table's, `collectionFacetsOf`): min / max Elo
- *   (both players within; a game missing an Elo is out while one is set), a
+ *   on one range slider over the games' own Elo span — a thumb at its end is
+ *   no bound, so the slider left whole filters nothing (both players within;
+ *   a game missing an Elo is out while a bound is set), a
  *   date range (`dateBounds`' partial dates; a game with no date is out while
  *   one is set) and players (several OR'd, typed free as chips — the table's
  *   filter, CTA-95). All go through `filteredRows`, so they cannot drift from
@@ -81,8 +82,8 @@ function ImportOptionsDialog({
   onDone: (path: string) => void;
 }) {
   const { t } = useTranslation();
-  const [minElo, setMinElo] = useState("");
-  const [maxElo, setMaxElo] = useState("");
+  /** The Elo slider's thumbs; `null` until moved, i.e. the whole span. */
+  const [eloRange, setEloRange] = useState<[number, number] | null>(null);
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [players, setPlayers] = useState<string[]>([]);
@@ -99,14 +100,21 @@ function ImportOptionsDialog({
   const allRows = useMemo(() => source.files.flatMap((file) => file.rows), [source]);
   const metadata = useMemo(() => collectionMetadataOf(allRows), [allRows]);
   const facets = useMemo(() => collectionFacetsOf(allRows), [allRows]);
+  /** The slider's ends: the games' own Elo span — none when there is no range to pick in. */
+  const eloSpan = metadata.elo !== undefined && metadata.elo.min < metadata.elo.max ? metadata.elo : undefined;
+  const eloValue: [number, number] | undefined =
+    eloSpan === undefined ? undefined : (eloRange ?? [eloSpan.min, eloSpan.max]);
+  // A thumb at its end of the span is no bound: the whole span keeps the games with no Elo too.
+  const minElo = eloSpan !== undefined && eloValue !== undefined && eloValue[0] > eloSpan.min ? eloValue[0] : undefined;
+  const maxElo = eloSpan !== undefined && eloValue !== undefined && eloValue[1] < eloSpan.max ? eloValue[1] : undefined;
 
   const filter = useMemo<RowFilter>(
     () => ({
       text: "",
       result: "",
       player: players,
-      minElo: eloBound(minElo),
-      maxElo: eloBound(maxElo),
+      minElo,
+      maxElo,
       from,
       to,
     }),
@@ -198,21 +206,6 @@ function ImportOptionsDialog({
     onClose();
   };
 
-  const eloField = (testId: string, label: string, value: string, onChange: (value: string) => void) => (
-    <TextField
-      type="number"
-      size="small"
-      label={label}
-      value={value}
-      disabled={busy}
-      onChange={(event) => onChange(event.target.value)}
-      slotProps={{
-        inputLabel: { shrink: true },
-        htmlInput: { min: 0, step: 50, "data-testid": testId },
-      }}
-    />
-  );
-
   const eventsShown = metadata.events.slice(0, 3).join(", ");
 
   return (
@@ -279,18 +272,40 @@ function ImportOptionsDialog({
           </Box>
         </Box>
 
-        {(facets.players.length > 0 || metadata.elo !== undefined || facets.dates !== undefined) && (
+        {(facets.players.length > 0 || eloSpan !== undefined || facets.dates !== undefined) && (
           <Box sx={{ display: "grid", gap: 1.5 }}>
             <Typography variant="subtitle2" component="h3" sx={{ fontWeight: 700 }}>
               {t("library.upload.options.filters")}
             </Typography>
-            {metadata.elo !== undefined && (
+            {eloSpan !== undefined && eloValue !== undefined && (
               <Box>
-                <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1 }}>
-                  {eloField("library-import-min-elo", t("library.upload.options.minElo"), minElo, setMinElo)}
-                  {eloField("library-import-max-elo", t("library.upload.options.maxElo"), maxElo, setMaxElo)}
+                <Typography variant="body2" component="div" id="library-import-elo-label">
+                  {t("library.upload.options.eloSpan")}{" "}
+                  <span dir="ltr" data-testid="library-import-elo-value">{`${eloValue[0]} – ${eloValue[1]}`}</span>
+                </Typography>
+                <Box sx={{ px: 1.5 }}>
+                  <Slider
+                    size="small"
+                    min={eloSpan.min}
+                    max={eloSpan.max}
+                    step={1}
+                    shiftStep={50}
+                    value={eloValue}
+                    onChange={(_event, value) => {
+                      if (Array.isArray(value)) setEloRange([value[0] ?? eloSpan.min, value[1] ?? eloSpan.max]);
+                    }}
+                    disableSwap
+                    disabled={busy}
+                    valueLabelDisplay="auto"
+                    marks={[
+                      { value: eloSpan.min, label: String(eloSpan.min) },
+                      { value: eloSpan.max, label: String(eloSpan.max) },
+                    ]}
+                    getAriaLabel={(index) => t(index === 0 ? "library.upload.options.minElo" : "library.upload.options.maxElo")}
+                    data-testid="library-import-elo"
+                  />
                 </Box>
-                <Typography variant="caption" sx={{ display: "block", color: "text.secondary", mt: 0.5 }}>
+                <Typography variant="caption" sx={{ display: "block", color: "text.secondary" }}>
                   {t("library.upload.options.eloHelp")}
                 </Typography>
               </Box>

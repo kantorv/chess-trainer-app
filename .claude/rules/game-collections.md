@@ -494,9 +494,12 @@ words box, **the table the one region that scrolls**, its header sticky.
     `collectionImportFileOf` — no `chess.js`): players, the Elo span, the
     date span as the games write it, the events.
   - **Filters, before the index pass** — each shown only where some game
-    carries its field, like the table's: **min / max Elo** (`RowFilter`'s
-    `minElo` / `maxElo`: **both** players within, inclusive; a game missing
-    either Elo is out while one is set), a **date range** (`dateBounds`' partial
+    carries its field, like the table's: **min / max Elo** on one range
+    slider (`library-import-elo`, two thumbs) over the games' own Elo span,
+    shown when that span is a range — a thumb at its end is no bound, so the
+    slider left whole filters nothing (`RowFilter`'s `minElo` / `maxElo`:
+    **both** players within, inclusive; a game missing either Elo is out while
+    a bound is set), a **date range** (`dateBounds`' partial
     dates; a game with no `Date` is out while one is set) and **players** (the
     table's chips, several OR'd, part of a name typed free — CTA-95). All go
     through `filteredRows`. A live "N of M games will be imported"; Import is

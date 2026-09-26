@@ -1351,6 +1351,11 @@ describe("the import-options popup (CTA-103)", () => {
   const count = () => screen.getByTestId("library-import-count").textContent;
   const setField = (testId: string, value: string) =>
     fireEvent.change(screen.getByTestId(testId), { target: { value } });
+  /** Move the Elo slider's min (0) or max (1) thumb. */
+  const setElo = (thumb: 0 | 1, value: number) =>
+    fireEvent.change(within(screen.getByTestId("library-import-elo")).getAllByRole("slider")[thumb], {
+      target: { value },
+    });
 
   it("opens for a picked .pgn before any game is checked, saying what came in", async () => {
     mount("/library/new");
@@ -1369,21 +1374,26 @@ describe("the import-options popup (CTA-103)", () => {
     expect(await loadUploadedCollections()).toEqual([]);
   });
 
-  it("narrows by Elo (both players, a missing Elo out), dates (no date out) and players, live", async () => {
+  it("narrows by an Elo range slider (both players, a missing Elo out), dates (no date out) and players, live", async () => {
     mount("/library/new");
     fireEvent.change(screen.getByTestId("library-upload-paste"), { target: { value: RATED.join("\n\n") } });
     fireEvent.click(screen.getByTestId("library-upload-save"));
     await screen.findByTestId("library-import");
 
-    setField("library-import-min-elo", "1900");
+    // The slider spans the games' own Elos; left whole it is no filter, the game with no Elo kept.
+    expect(screen.getByTestId("library-import-elo-value")).toHaveTextContent("1800 – 2300");
+    setElo(0, 1900);
+    expect(screen.getByTestId("library-import-elo-value")).toHaveTextContent("1900 – 2300");
     expect(count()).toBe("1 of 3 games will be imported");
-    setField("library-import-min-elo", "");
-    setField("library-import-max-elo", "2200");
+    setElo(0, 1800);
+    expect(count()).toBe("3 of 3 games will be imported");
+    setElo(1, 2200);
     expect(count()).toBe("2 of 3 games will be imported");
-    setField("library-import-max-elo", "1000");
+    setElo(1, 1850);
     expect(count()).toBe("0 of 3 games will be imported");
     expect(screen.getByTestId("library-import-confirm")).toBeDisabled();
-    setField("library-import-max-elo", "");
+    setElo(1, 2300);
+    expect(count()).toBe("3 of 3 games will be imported");
 
     setField("library-import-from", "2023-06-10");
     expect(count()).toBe("1 of 3 games will be imported");
@@ -1407,7 +1417,7 @@ describe("the import-options popup (CTA-103)", () => {
     fireEvent.change(screen.getByTestId("library-upload-paste"), { target: { value: RATED.join("\n\n") } });
     fireEvent.click(screen.getByTestId("library-upload-save"));
     await screen.findByTestId("library-import");
-    setField("library-import-min-elo", "2000");
+    setElo(0, 2000);
     await confirmImport();
     await waitFor(() => expect(where()).toMatch(/^\/library\/u/), { timeout: 4000 });
     const [kept] = await loadUploadedCollections();
@@ -1421,7 +1431,7 @@ describe("the import-options popup (CTA-103)", () => {
     await screen.findByTestId("library-upload-title");
     pickFile(zipOf({ "a.pgn": RATED.slice(0, 2).join("\n\n"), "b.pgn": RATED[2] }));
     expect(await screen.findByTestId("library-import-several")).toHaveTextContent(/added to this collection/);
-    setField("library-import-min-elo", "1700");
+    setElo(1, 2250);
     // The files' own counts say what each keeps while a filter is on.
     expect(screen.getByTestId("library-import-file-0")).toHaveTextContent("2 of 2 games kept");
     expect(screen.getByTestId("library-import-file-1")).toHaveTextContent("0 of 1 game kept");
