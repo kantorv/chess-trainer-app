@@ -486,10 +486,16 @@ const en = {
     unreadable: "This game could not be read.",
     continue: "Continue",
     analyse: "Analysis",
-    remove: "Delete this game",
+    /** The row's pick checkbox: tick it to mark the game for the header's delete. */
+    pick: "Pick {{title}}",
+    /** The header's delete of the ticked rows, saying how many are ticked. */
+    deletePicked: "Delete picked ({{count}})",
     confirmDelete: {
-      title: "Delete this game?",
-      body: "It is removed from this browser, side lines and all.",
+      /** Asking before the ticked rows go — one game or many. */
+      title_one: "Delete the picked game?",
+      title_other: "Delete {{count}} picked games?",
+      body_one: "It is removed from this browser, side lines and all.",
+      body_other: "They are removed from this browser, side lines and all.",
       cancel: "Cancel",
       confirm: "Delete",
     },

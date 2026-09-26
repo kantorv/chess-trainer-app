@@ -116,22 +116,31 @@ was begun on.
   the first page. The table opens **Date-descending, newest first** — the
   order the flat list opened in; a second click on a header turns it, a row
   missing the value sorts last either way, and ties break by date.
-- **Columns**, left to right: White, White Elo, Black, Black Elo, Result,
-  Opening, Moves (the side lines as secondary text), Masked, Date, then the
-  row's links. The names are the flat list's row titles kept — the reader's
-  side the localized "Human", the engine's "Stockfish level N", by
-  `settings.playAs`, with the engine's Elo the strength slider's own
+- **Columns**, left to right: the row's controls, then White, White Elo,
+  Black, Black Elo, Result, Opening, Moves (the side lines as secondary
+  text), Masked, Date. The names are the flat list's row titles kept — the
+  reader's side the localized "Human", the engine's "Stockfish level N",
+  by `settings.playAs`, with the engine's Elo the strength slider's own
   estimate (`approximateElo`, on the summary); the reader's side has none
   and says "unknown", which is also how any unreadable value reads. The
   book loads lazily: until it lands the Opening cell is empty and a sort by
   it applies to what is known. A record whose PGN no longer parses keeps
-  its row — it says so across the columns — and its delete.
-- **Links**: **Continue** (`?saved=<id>` — on `/engine/masked` for a masked
-  game, which carries a *Masked* chip in its own column; **only while the
-  game is still on** — a row whose result is decided, a resignation or the
+  its row — it says so across the columns — and can be picked like any
+  other.
+- **The row's controls** (CTA-100's follow-up): a **pick checkbox** first —
+  the collection table's own pattern — then the icon-only **Continue**
+  (the play arrow, `?saved=<id>` — on `/engine/masked` for a masked game,
+  which carries a *Masked* chip in its own column; **only while the game
+  is still on** — a row whose result is decided, a resignation or the
   mainline's final position through `playedGameResult`, shows none,
-  CTA-90), **Analysis** (`/tools/analysis?game=play/games/<id>`, the true
-  PGN, unmasked) and a delete that asks first.
+  CTA-90) and **Analysis** (the flask,
+  `/tools/analysis?game=play/games/<id>`, the true PGN, unmasked), both
+  with tooltips and `aria-label`s. **The delete is the picks**: tick rows,
+  and the header's **Delete picked (N)** asks first and removes them all —
+  there is no per-row delete, and with it the shared
+  `SavedListRemoveButton` went (the saved lists had already left it for
+  their own bulk delete). The picks are the screen's, not the URL's — a
+  link carries the filter, not a hand-made selection.
 - **Filters**, combined and in the URL: **colour** (`?color=`, the side the
   reader played) and **opening** (`?opening=`, the deepest eco.json match
   along each mainline — `openingOfLine`, the book loaded lazily).
@@ -203,8 +212,9 @@ was begun on.
   test `?saved=`; wait on a write with `waitFor` (or `settledPlayedGames` under
   fake timers — [`database.md`](./database.md) §7).
 - The Lobby and its form: `PlayedGames.test.tsx` (the table — its columns,
-  a sort click, the pagination, the links, an unreadable row — the filters,
-  Start's link from both tabs, Start off and why). The sort's own orders are
+  a sort click, the pagination, the picks and their batch delete, the
+  icon-only links, an unreadable row — the filters, Start's link from both
+  tabs, Start off and why). The sort's own orders are
   `src/lib/playedGames.test.ts`'s, with the summary's per-side derivations.
 
 ---

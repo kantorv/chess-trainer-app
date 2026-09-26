@@ -107,9 +107,16 @@ const mount = (entry = "/engine/games") =>
 const listed = () =>
   screen.queryAllByTestId(/^played-games-row-/).map((row) => row.dataset.testid?.slice(17));
 
-/** One row's cells, in the table's column order. */
+/**
+ * One readable row's data cells, in the table's column order — after the
+ * pick checkbox and the row's icon buttons.
+ */
 const cells = (id: string) =>
-  within(screen.getByTestId(`played-games-row-${id}`)).getAllByRole("cell");
+  within(screen.getByTestId(`played-games-row-${id}`)).getAllByRole("cell").slice(2);
+
+/** Tick a row's pick checkbox. */
+const tick = (id: string) =>
+  fireEvent.click(within(screen.getByTestId(`played-games-pick-${id}`)).getByRole("checkbox"));
 
 const store = (
   id: string,
@@ -175,10 +182,13 @@ describe("Lobby — the list", () => {
   it("continues a game on Play with Engine, and hands it to the Analysis Board", async () => {
     await store("a", "1. e4 *");
     mount();
+    // Icon-only buttons: the link is the icon, its name the label.
+    expect(screen.getByTestId("played-games-continue-a")).toHaveAttribute("aria-label", "Continue");
     expect(screen.getByTestId("played-games-continue-a")).toHaveAttribute(
       "href",
       "/engine/play?saved=a",
     );
+    expect(screen.getByTestId("played-games-analysis-a")).toHaveAttribute("aria-label", "Analysis");
     expect(screen.getByTestId("played-games-analysis-a")).toHaveAttribute(
       "href",
       `/tools/analysis?game=${encodeURIComponent("play/games/a")}`,
@@ -198,17 +208,30 @@ describe("Lobby — the list", () => {
     expect(screen.getByTestId("played-games-continue-live")).toBeInTheDocument();
     expect(screen.queryByTestId("played-games-continue-mated")).not.toBeInTheDocument();
     expect(screen.queryByTestId("played-games-continue-resigned")).not.toBeInTheDocument();
-    // Analysis and the delete stay on every row.
+    // Analysis and the pick stay on every row.
     expect(screen.getByTestId("played-games-analysis-mated")).toBeInTheDocument();
     expect(screen.getByTestId("played-games-analysis-resigned")).toBeInTheDocument();
-    expect(screen.getByTestId("played-games-remove-resigned")).toBeInTheDocument();
+    expect(screen.getByTestId("played-games-pick-resigned")).toBeInTheDocument();
   });
 
-  it("deletes a game only once asked", async () => {
+  it("deletes the ticked games only once asked", async () => {
     await store("a", "1. e4 *");
+    await store("b", "1. d4 *");
     mount();
-    fireEvent.click(screen.getByTestId("played-games-remove-a"));
-    expect(playedGamesSnapshot()).toHaveLength(1);
+    // Nothing is ticked: there is no delete to press.
+    expect(screen.queryByTestId("played-games-delete-picked")).not.toBeInTheDocument();
+
+    tick("a");
+    tick("b");
+    expect(screen.getByTestId("played-games-delete-picked")).toHaveTextContent(
+      "Delete picked (2)",
+    );
+    fireEvent.click(screen.getByTestId("played-games-delete-picked"));
+    expect(screen.getByTestId("played-games-delete-dialog")).toHaveTextContent(
+      "Delete 2 picked games?",
+    );
+    // Asking is not deleting.
+    expect(playedGamesSnapshot()).toHaveLength(2);
     fireEvent.click(screen.getByTestId("played-games-delete-confirm"));
     expect(await screen.findByTestId("played-games-empty")).toBeInTheDocument();
     expect(playedGamesSnapshot()).toHaveLength(0);
@@ -232,7 +255,20 @@ describe("Lobby — the table (CTA-100)", () => {
       within(screen.getByTestId("played-games-table"))
         .getAllByRole("columnheader")
         .map((head) => head.textContent),
-    ).toEqual(["White", "Elo", "Black", "Elo", "Result", "Opening", "Moves", "Masked", "Date", ""]);
+    ).toEqual([
+      // The picks' checkbox and the row's icon buttons, then the data columns.
+      "",
+      "",
+      "White",
+      "Elo",
+      "Black",
+      "Elo",
+      "Result",
+      "Opening",
+      "Moves",
+      "Masked",
+      "Date",
+    ]);
   });
 
   it("opens newest first; a click on a header sorts by it, and a second turns it", async () => {
@@ -296,7 +332,7 @@ describe("Lobby — the table (CTA-100)", () => {
     expect(screen.getAllByTestId(/^played-games-row-/)).toHaveLength(12);
   });
 
-  it("lists a record whose PGN will not parse, saying so, with only its delete", async () => {
+  it("lists a record whose PGN will not parse, saying so, with only its pick", async () => {
     await savePlayedGame({
       id: "bad",
       pgn: "1. e4 e5 2. Qxd5 *",
@@ -307,9 +343,10 @@ describe("Lobby — the table (CTA-100)", () => {
     });
     mount();
     const row = screen.getByTestId("played-games-row-bad");
-    expect(within(row).getAllByRole("cell")).toHaveLength(2);
+    // The pick, the buttons cell (empty: nothing opens), and the note across the columns.
+    expect(within(row).getAllByRole("cell")).toHaveLength(3);
     expect(row).toHaveTextContent("This game could not be read.");
-    expect(within(row).getByTestId("played-games-remove-bad")).toBeInTheDocument();
+    expect(within(row).getByTestId("played-games-pick-bad")).toBeInTheDocument();
     expect(within(row).queryByTestId("played-games-continue-bad")).not.toBeInTheDocument();
     expect(within(row).queryByTestId("played-games-analysis-bad")).not.toBeInTheDocument();
   });

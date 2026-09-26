@@ -1,12 +1,14 @@
 import { useMemo, useState } from "react";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import Checkbox from "@mui/material/Checkbox";
 import Chip from "@mui/material/Chip";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogContentText from "@mui/material/DialogContentText";
 import DialogTitle from "@mui/material/DialogTitle";
+import IconButton from "@mui/material/IconButton";
 import MenuItem from "@mui/material/MenuItem";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
@@ -19,7 +21,11 @@ import TableSortLabel from "@mui/material/TableSortLabel";
 import TextField from "@mui/material/TextField";
 import ToggleButton from "@mui/material/ToggleButton";
 import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
+import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
+import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
+import PlayArrowRoundedIcon from "@mui/icons-material/PlayArrowRounded";
+import ScienceOutlinedIcon from "@mui/icons-material/ScienceOutlined";
 import VisibilityOffRoundedIcon from "@mui/icons-material/VisibilityOffRounded";
 import { Link as RouterLink, useSearchParams } from "react-router";
 import { useTranslation } from "react-i18next";
@@ -39,7 +45,6 @@ import {
   type SortDirection,
 } from "../../../lib/playedGames";
 import { RightPanel } from "../../main/rightPanel";
-import SavedListRemoveButton from "../../shared/SavedListRemoveButton";
 import { savedListDate } from "../../shared/savedList";
 import { useOpeningBook } from "../../shared/useOpeningBook";
 import NewGameForm from "./NewGameForm";
@@ -64,25 +69,30 @@ import { usePlayedGames } from "./usePlayedGames";
  * last either way, and ties break by date. The rows per page are 10 / 25 /
  * 50, 25 the default.
  *
- * Columns, left to right: White, White Elo, Black, Black Elo, Result,
- * Opening, Moves, Masked, Date, then the row's links. The names are the flat
- * list's row titles kept — the reader's side the localized "Human", the
- * engine's "Stockfish level N", by `settings.playAs` — and the engine's Elo
- * is the strength slider's own estimate (`approximateElo`), an estimate and
- * never a setting; the reader's side has none and says "unknown", which is
- * also how any unreadable value reads. The side-lines count rides along as
- * secondary text in the Moves cell. The book loads lazily
- * (`useOpeningBook`): until it lands the Opening cell is empty and a sort
- * by it applies to what is known, missing values last.
- *
- * The links are the flat list's row behaviour kept: **Continue**
- * (`?saved=<id>` — on `/engine/play`, or `/engine/masked` for a masked
- * game, in the same disguise; only while the game is still on — a result
- * decided by `playedGameResult`, a resignation or the final position,
- * CTA-90), **Analysis** (`?game=play/games/<id>` on the Analysis Board,
+ * Columns, left to right: the row's controls, then White, White Elo, Black,
+ * Black Elo, Result, Opening, Moves, Masked, Date. The controls are the
+ * collection table's own pattern (CTA-100's follow-up): a **pick checkbox**
+ * first — tick rows to mark them for the header's **Delete picked (N)**,
+ * which asks first and removes them all; there is no per-row delete — then
+ * the icon-only **Continue** (the play arrow, `?saved=<id>` — on
+ * `/engine/play`, or `/engine/masked` for a masked game, in the same
+ * disguise; only while the game is still on — a result decided by
+ * `playedGameResult`, a resignation or the final position, CTA-90) and
+ * **Analysis** (the flask, `?game=play/games/<id>` on the Analysis Board,
  * side lines and all — a masked game unmasked, since its PGN is the true
- * game) and a delete that asks first. A record whose PGN no longer parses
- * keeps its row — it says so across the columns — and its delete.
+ * game), both with tooltips. The picks are the screen's, not the URL's —
+ * a link carries the filter, not a hand-made selection. A record whose PGN
+ * no longer parses keeps its row — it says so across the columns — and can
+ * be picked like any other.
+ *
+ * The names are the flat list's row titles kept — the reader's side the
+ * localized "Human", the engine's "Stockfish level N", by `settings.playAs`
+ * — and the engine's Elo is the strength slider's own estimate
+ * (`approximateElo`), an estimate and never a setting; the reader's side has
+ * none and says "unknown", which is also how any unreadable value reads.
+ * The side-lines count rides along as secondary text in the Moves cell. The
+ * book loads lazily (`useOpeningBook`): until it lands the Opening cell is
+ * empty and a sort by it applies to what is known, missing values last.
  *
  * **Filters** (CTA-82), combined, in the URL (`?color=white|black`,
  * `?opening=<name>`, history replace): the side the reader played
@@ -112,12 +122,68 @@ const defaultDirection = (column: PlayedGameColumn): SortDirection =>
 const isColumn = (value: string | null): value is PlayedGameColumn =>
   (PLAYED_GAME_COLUMNS as readonly string[]).includes(value ?? "");
 
-function PlayedGameRow({ row, onDelete }: { row: PlayedGameRow; onDelete: (id: string) => void }) {
+function PlayedGameRow({
+  row,
+  picked,
+  onTogglePicked,
+}: {
+  row: PlayedGameRow;
+  picked: boolean;
+  onTogglePicked: (id: string) => void;
+}) {
   const { t, i18n } = useTranslation();
   // The `?game=` reference `lib/gameReference.ts` resolves against the store's catalog.
   const reference = encodeURIComponent(`${PLAY_REFERENCE_KEY}/${PLAYED_GAMES_PATH}/${row.id}`);
+  // What the row is called — its checkbox's label, as the old row title named it.
+  const title = t("playedGames.players", { white: row.white, black: row.black });
   return (
     <TableRow data-testid={`played-games-row-${row.id}`}>
+      {/* The pick, the collection table's own checkbox column: tick rows to
+          mark them for the header's Delete picked. */}
+      <TableCell padding="checkbox">
+        <Checkbox
+          size="small"
+          checked={picked}
+          onChange={() => onTogglePicked(row.id)}
+          slotProps={{ input: { "aria-label": t("playedGames.pick", { title }) } }}
+          data-testid={`played-games-pick-${row.id}`}
+        />
+      </TableCell>
+      <TableCell sx={{ whiteSpace: "nowrap" }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+          {/*
+            Continue only while the game is on (CTA-90): the row's own
+            result says whether it can — anything but `*` (a resignation,
+            mate or a draw, `playedGameResult`) is a game that has ended.
+          */}
+          {row.readable && row.result === "*" && (
+            <Tooltip title={t("playedGames.continue")}>
+              <IconButton
+                size="small"
+                component={RouterLink}
+                to={`${row.masked ? "/engine/masked" : "/engine/play"}?saved=${encodeURIComponent(row.id)}`}
+                aria-label={t("playedGames.continue")}
+                data-testid={`played-games-continue-${row.id}`}
+              >
+                <PlayArrowRoundedIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+          {row.readable && (
+            <Tooltip title={t("playedGames.analyse")}>
+              <IconButton
+                size="small"
+                component={RouterLink}
+                to={`/tools/analysis?game=${reference}`}
+                aria-label={t("playedGames.analyse")}
+                data-testid={`played-games-analysis-${row.id}`}
+              >
+                <ScienceOutlinedIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+        </Box>
+      </TableCell>
       {row.readable ? (
         <>
           {/* The names are the old row titles: "Human" and "Stockfish level N", White first. */}
@@ -166,48 +232,11 @@ function PlayedGameRow({ row, onDelete }: { row: PlayedGameRow; onDelete: (id: s
         </>
       ) : (
         // A record whose PGN will not parse: the row says so across the columns,
-        // and only the delete is offered — it cannot be opened.
+        // and it can only be picked for deletion — it cannot be opened.
         <TableCell colSpan={PLAYED_GAME_COLUMNS.length} sx={{ color: "text.secondary" }}>
           {t("playedGames.unreadable")}
         </TableCell>
       )}
-      <TableCell sx={{ whiteSpace: "nowrap" }}>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          {/*
-            Continue only while the game is on (CTA-90): the row's own
-            result says whether it can — anything but `*` (a resignation,
-            mate or a draw, `playedGameResult`) is a game that has ended.
-          */}
-          {row.readable && row.result === "*" && (
-            <Button
-              component={RouterLink}
-              to={`${row.masked ? "/engine/masked" : "/engine/play"}?saved=${encodeURIComponent(row.id)}`}
-              size="small"
-              variant="contained"
-              data-testid={`played-games-continue-${row.id}`}
-            >
-              {t("playedGames.continue")}
-            </Button>
-          )}
-          {row.readable && (
-            <Button
-              component={RouterLink}
-              to={`/tools/analysis?game=${reference}`}
-              size="small"
-              variant="outlined"
-              data-testid={`played-games-analysis-${row.id}`}
-            >
-              {t("playedGames.analyse")}
-            </Button>
-          )}
-          <SavedListRemoveButton
-            id={row.id}
-            onRemove={onDelete}
-            labelKey="playedGames"
-            testIdPrefix="played-games"
-          />
-        </Box>
-      </TableCell>
     </TableRow>
   );
 }
@@ -215,7 +244,19 @@ function PlayedGameRow({ row, onDelete }: { row: PlayedGameRow; onDelete: (id: s
 function PlayedGames() {
   const { t } = useTranslation();
   const games = usePlayedGames();
-  const [deleting, setDeleting] = useState<string | null>(null);
+  /**
+   * The rows ticked for deletion, by id — the screen's, not the URL's: a
+   * link carries the filter, not a hand-made selection (the collection
+   * table's own rule).
+   */
+  const [picked, setPicked] = useState<ReadonlySet<string>>(() => new Set());
+  const [deleting, setDeleting] = useState(false);
+  const togglePicked = (id: string) =>
+    setPicked((before) => {
+      const next = new Set(before);
+      if (!next.delete(id)) next.add(id);
+      return next;
+    });
   const [searchParams, setSearchParams] = useSearchParams();
   const color = colorFilterOf(searchParams.get("color"));
   const openingParam = searchParams.get("opening");
@@ -354,20 +395,39 @@ function PlayedGames() {
             borderColor: "divider",
           }}
         >
-          <Typography variant="subtitle1" sx={{ fontWeight: 700, lineHeight: 1.3 }}>
-            {t("playedGames.title")}
-          </Typography>
-          <Typography
-            data-testid="played-games-count"
-            variant="caption"
-            sx={{ display: "block", color: "text.secondary" }}
-          >
-            {games === undefined
-              ? ""
-              : filtered
-                ? t("playedGames.countFiltered", { shown: shown.length, count: games.length })
-                : t("playedGames.count", { count: games.length })}
-          </Typography>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 700, lineHeight: 1.3 }}>
+                {t("playedGames.title")}
+              </Typography>
+              <Typography
+                data-testid="played-games-count"
+                variant="caption"
+                sx={{ display: "block", color: "text.secondary" }}
+              >
+                {games === undefined
+                  ? ""
+                  : filtered
+                    ? t("playedGames.countFiltered", { shown: shown.length, count: games.length })
+                    : t("playedGames.count", { count: games.length })}
+              </Typography>
+            </Box>
+            {/* The picked rows' delete, saying how many are ticked — the
+                collection table's own rule: the picks, then one delete. */}
+            {picked.size > 0 && (
+              <Button
+                size="small"
+                color="error"
+                variant="outlined"
+                startIcon={<DeleteOutlineRoundedIcon fontSize="small" />}
+                onClick={() => setDeleting(true)}
+                data-testid="played-games-delete-picked"
+                sx={{ flexShrink: 0 }}
+              >
+                {t("playedGames.deletePicked", { count: picked.size })}
+              </Button>
+            )}
+          </Box>
           <Box
             data-testid="played-games-filters"
             sx={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 1.5, mt: 1.25 }}
@@ -433,6 +493,9 @@ function PlayedGames() {
               <Table size="small" stickyHeader data-testid="played-games-table">
                 <TableHead>
                   <TableRow>
+                    {/* The picks' checkbox, and the row's Continue / Analysis icon buttons. */}
+                    <TableCell padding="checkbox" />
+                    <TableCell padding="checkbox" />
                     {PLAYED_GAME_COLUMNS.map((column) => (
                       <TableCell
                         key={column}
@@ -449,13 +512,16 @@ function PlayedGames() {
                         </TableSortLabel>
                       </TableCell>
                     ))}
-                    {/* The row's links: Continue, Analysis, delete. */}
-                    <TableCell padding="checkbox" />
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {pageRows.map((row) => (
-                    <PlayedGameRow key={row.id} row={row} onDelete={setDeleting} />
+                    <PlayedGameRow
+                      key={row.id}
+                      row={row}
+                      picked={picked.has(row.id)}
+                      onTogglePicked={togglePicked}
+                    />
                   ))}
                 </TableBody>
               </Table>
@@ -494,22 +560,26 @@ function PlayedGames() {
       </RightPanel>
 
       <Dialog
-        open={deleting !== null}
-        onClose={() => setDeleting(null)}
+        open={deleting}
+        onClose={() => setDeleting(false)}
         data-testid="played-games-delete-dialog"
       >
-        <DialogTitle>{t("playedGames.confirmDelete.title")}</DialogTitle>
+        <DialogTitle>{t("playedGames.confirmDelete.title", { count: picked.size })}</DialogTitle>
         <DialogContent>
-          <DialogContentText>{t("playedGames.confirmDelete.body")}</DialogContentText>
+          <DialogContentText>
+            {t("playedGames.confirmDelete.body", { count: picked.size })}
+          </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleting(null)}>{t("playedGames.confirmDelete.cancel")}</Button>
+          <Button onClick={() => setDeleting(false)}>{t("playedGames.confirmDelete.cancel")}</Button>
           <Button
             color="error"
             data-testid="played-games-delete-confirm"
             onClick={() => {
-              if (deleting !== null) void removePlayedGame(deleting);
-              setDeleting(null);
+              // The rows are gone, so the picks go with them.
+              for (const id of picked) void removePlayedGame(id);
+              setPicked(new Set());
+              setDeleting(false);
             }}
           >
             {t("playedGames.confirmDelete.confirm")}
