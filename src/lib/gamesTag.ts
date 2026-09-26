@@ -13,7 +13,8 @@ import type { VariationNode } from "./gameTree";
  * move's share of the tagged moves' games (`nextMoveWeights.ts`), the
  * Library's opening board's `child.count / node.count` carried in a PGN. The
  * comment block shows it as a *Games* chip, not as prose (`readComment`).
- * Nothing writes it yet — `.claude/rules/pgn-annotations.md` §3.
+ * Written by `mergeTrees`' counting (CTA-101) and the Library's *Save tree
+ * as PGN* (CTA-99) — `.claude/rules/pgn-annotations.md` §1 and §3.
  */
 
 const GAMES_TEXT = /(^|\s)games:\s*(\d+)(?=\s|$)/i;

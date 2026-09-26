@@ -6,6 +6,7 @@ import {
   type GameHeaders,
 } from "./gameModel";
 import { startNumbering } from "./gameNavigation";
+import { gamesOf, withoutGames } from "./gamesTag";
 import { TreeManager } from "./treeManager";
 
 /**
@@ -628,17 +629,59 @@ export const linePgn = (tree: GameTree, id: string | null): string => {
  * tree's; a later game's opens **its own line** — the comment before the
  * first move that game added, where its side line begins — or, when it adds
  * no move of its own, joins the tree's. Nothing a file says is lost.
+ *
+ * **Counting** (`options.countGames`, CTA-101) writes how many of the games
+ * went through each **branch candidate** — every move at a position where the
+ * merged games go on with two or more different moves — as `[%games N]`
+ * (`lib/gamesTag.ts`), first in the move's first comment. A position every game
+ * leaves by the same move writes nothing, so the shared trunk stays clean. A
+ * game counts once per node, its own side lines included; a move that already
+ * carries a `games` tag counts as that many games, an untagged one as 1, so a
+ * re-merge sums rather than joining two tags of which the first would win. The
+ * inputs' own `games` tags are taken out of what is joined (`withoutGames`),
+ * everywhere, and only the summed one is written. Absent, nothing is counted —
+ * the merge is exactly what it always was.
  */
 export const mergeTrees = (
   trees: readonly GameTree[],
   startFen: string,
   headers: GameHeaders = {},
+  options: { countGames?: boolean } = {},
 ): GameTree => {
+  const counting = options.countGames === true;
   const moves: VariationNode[] = [];
   let nextId = 1;
   let comments: string[] | undefined;
   /** The first node the tree being merged added — where its line begins. */
   const added: { first?: VariationNode } = {};
+  /**
+   * Counting: each merged node's games so far, and the tree last counted on
+   * it with what that tree counted as — so a tree reaching one node twice
+   * (through a side line of its own) counts once, at its larger value.
+   */
+  const tally = new Map<VariationNode, { total: number; tree: number; value: number }>();
+  let treeIndex = 0;
+
+  /** The comments as they are joined — without their `games` tags while counting. */
+  const cleaned = (list: readonly string[] | undefined): readonly string[] | undefined => {
+    if (!counting || list === undefined) return list;
+    const kept = list.map(withoutGames).filter((text) => text !== "");
+    return kept.length === 0 ? undefined : kept;
+  };
+
+  const count = (node: VariationNode, value: number) => {
+    const seen = tally.get(node);
+    if (seen === undefined) {
+      tally.set(node, { total: value, tree: treeIndex, value });
+    } else if (seen.tree !== treeIndex) {
+      seen.total += value;
+      seen.tree = treeIndex;
+      seen.value = value;
+    } else if (value > seen.value) {
+      seen.total += value - seen.value;
+      seen.value = value;
+    }
+  };
 
   const into = (target: VariationNode[], source: readonly VariationNode[], ply: number) => {
     for (const node of source) {
@@ -658,9 +701,10 @@ export const mergeTrees = (
         target.push(existing);
         added.first ??= existing;
       }
-      const joinedComments = appendUnique(existing.comments, node.comments, holdsComment);
+      if (counting) count(existing, gamesOf(node) ?? 1);
+      const joinedComments = appendUnique(existing.comments, cleaned(node.comments), holdsComment);
       if (joinedComments !== undefined) existing.comments = joinedComments;
-      const joinedPre = appendUnique(existing.preComments, node.preComments, holdsComment);
+      const joinedPre = appendUnique(existing.preComments, cleaned(node.preComments), holdsComment);
       if (joinedPre !== undefined) existing.preComments = joinedPre;
       const joinedNags = appendUnique(existing.nags, node.nags);
       if (joinedNags !== undefined) existing.nags = joinedNags;
@@ -671,21 +715,38 @@ export const mergeTrees = (
   let first = true;
   for (const tree of trees) {
     if (tree.startFen !== startFen) continue;
+    treeIndex += 1;
     added.first = undefined;
     into(moves, tree.moves, 1);
     const firstAdded = added.first as VariationNode | undefined;
+    const treeComments = cleaned(tree.comments);
     if (first || firstAdded === undefined) {
-      comments = appendUnique(comments, tree.comments, holdsComment);
+      comments = appendUnique(comments, treeComments, holdsComment);
     } else {
       // The game's own comment came first in its text, so it goes first.
       const opening = appendUnique(
-        appendUnique(undefined, tree.comments, holdsComment),
+        appendUnique(undefined, treeComments, holdsComment),
         firstAdded.preComments,
         holdsComment,
       );
       if (opening !== undefined) firstAdded.preComments = opening;
     }
     first = false;
+  }
+
+  if (counting) {
+    // Only where the games part: each move of a position left by two or more.
+    const stack: VariationNode[][] = [moves];
+    for (let siblings = stack.pop(); siblings !== undefined; siblings = stack.pop()) {
+      for (const node of siblings) {
+        if (siblings.length > 1) {
+          const tag = `[%games ${tally.get(node)?.total ?? 1}]`;
+          const [head, ...rest] = node.comments ?? [];
+          node.comments = head === undefined ? [tag] : [`${tag} ${head}`, ...rest];
+        }
+        stack.push(node.children);
+      }
+    }
   }
 
   return {

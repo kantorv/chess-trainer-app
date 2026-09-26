@@ -13,10 +13,15 @@ import {
   addMove,
   emptyTree,
   fenAtNode,
+  findNode,
   nodeAtSanPath,
   treeToPgn,
   type GameTree,
 } from "../../../../lib/gameTree";
+import {
+  loadUploadedCollections,
+  resetLibraryCollectionStore,
+} from "../../../../lib/libraryCollectionStore";
 import { savedAnalysisOf, type SavedAnalysis } from "../../../../lib/savedAnalyses";
 import {
   createAnalysisFolder,
@@ -625,8 +630,9 @@ describe("the new-analysis form (CTA-87)", () => {
     by hand — the quick loads (a FEN field and a `.pgn` pick) in the editor's
     controls row, the paste box in its own section below, and the editor's
     resets (New, Clear, Flip) up in the form's header. A whole game (several
-    merged or split exactly as on the board's own Load tab) is handed to the
-    Analysis Board as location state; a PGN that is really a position — a
+    merged in the popup exactly as on the board's own Load tab, CTA-101) is
+    handed to the Analysis Board as location state, or several kept as a
+    Library collection; a PGN that is really a position — a
     single move, or none — and a FEN set the editor up, which Start then
     carries.
   */
@@ -774,11 +780,12 @@ describe("the new-analysis form (CTA-87)", () => {
       expect(startHref()).toBe(`/tools/analysis?fen=${encodeURIComponent(AFTER_MOVE_E4)}`);
     });
 
-    it("asks merge or split for several games, and a merge hands one tree to the board", async () => {
+    it("opens the popup for several games, and a merge hands one counted tree to the board", async () => {
       await renderScreen();
       await pasteAndLoad(TWO_GAMES);
 
-      expect(screen.getByTestId("new-analysis-choice")).toBeInTheDocument();
+      expect(screen.getByTestId("new-analysis-choice")).toHaveTextContent("This PGN holds 2 games");
+      expect(screen.queryByTestId("new-analysis-choice-split")).toBeNull();
       expect(where.current?.pathname).toBe("/tools/analysis/saved"); // nothing navigated yet
 
       fireEvent.click(screen.getByTestId("new-analysis-choice-merge"));
@@ -788,24 +795,56 @@ describe("the new-analysis form (CTA-87)", () => {
 
       expect(where.current?.pathname).toBe("/tools/analysis");
       const handOff = analysisHandOffOf(where.current?.state);
-      // One merged tree: the first game's line is the mainline, the second a side line.
-      expect(nodeAtSanPath(handOff!.tree, ["e4", "e5"])).not.toBeNull();
+      // Facing White: a game does not turn the board.
+      expect(handOff?.orientation).toBe("white");
+      // One merged tree: the first game's line is the mainline, the second a
+      // side line — each tagged with its one game where they part.
+      const e4 = findNode(handOff!.tree, nodeAtSanPath(handOff!.tree, ["e4"]));
+      const d4 = findNode(handOff!.tree, nodeAtSanPath(handOff!.tree, ["d4"]));
+      expect(e4?.comments).toEqual(["[%games 1]"]);
+      expect(d4?.comments).toEqual(["[%games 1]"]);
       expect(nodeAtSanPath(handOff!.tree, ["d4", "d5"])).not.toBeNull();
     });
 
-    it("a split saves one analysis per game into a new folder and lands in it", async () => {
+    it("keeps several games as a Library collection named after the file, and goes to its table", async () => {
+      await resetLibraryCollectionStore();
+      await renderScreen();
+      await pickAndLoad(TWO_GAMES);
+      fireEvent.click(screen.getByTestId("new-analysis-choice-collection"));
+
+      // The index pass loads the opening book: slow on a busy machine.
+      await waitFor(() => expect(where.current?.pathname).toMatch(/^\/library\/u/), {
+        timeout: 10_000,
+      });
+      const [collection] = await loadUploadedCollections();
+      // The games' events differ, so the file's name says what it is.
+      expect(collection).toMatchObject({ name: "Game", count: 2, folderId: null });
+      expect(where.current?.pathname).toBe(`/library/${collection.id}`);
+      expect(savedAnalysesSnapshot() ?? []).toEqual([]);
+    });
+
+    it("names a pasted collection whose games share no event \"Pasted collection\"", async () => {
+      await resetLibraryCollectionStore();
       await renderScreen();
       await pasteAndLoad(TWO_GAMES);
-      fireEvent.click(screen.getByTestId("new-analysis-choice-split"));
+      fireEvent.click(screen.getByTestId("new-analysis-choice-collection"));
 
-      await waitFor(() => expect(where.current?.search).toMatch(/^\?folder=/));
-      const folderId = new URLSearchParams(where.current!.search).get("folder")!;
-      const folder = (analysisFoldersSnapshot() ?? []).find((f) => f.id === folderId);
-      // Named after the text, as the Load tab's split names it.
-      expect(folder?.name).toBe("One");
-      expect(
-        (savedAnalysesSnapshot() ?? []).filter((a) => a.folderId === folderId),
-      ).toHaveLength(2);
+      // The index pass loads the opening book: slow on a busy machine.
+      await waitFor(() => expect(where.current?.pathname).toMatch(/^\/library\/u/), {
+        timeout: 10_000,
+      });
+      const [collection] = await loadUploadedCollections();
+      expect(collection.name).toBe("Pasted collection");
+    });
+
+    it("cancelling the popup keeps nothing and stays", async () => {
+      await renderScreen();
+      await pasteAndLoad(TWO_GAMES);
+      fireEvent.click(screen.getByTestId("new-analysis-choice-cancel"));
+
+      await waitFor(() => expect(screen.queryByTestId("new-analysis-choice")).toBeNull());
+      expect(where.current?.pathname).toBe("/tools/analysis/saved");
+      expect(savedAnalysesSnapshot() ?? []).toEqual([]);
     });
 
     it("says so, and goes nowhere, for a PGN that will not read", async () => {

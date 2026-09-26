@@ -415,33 +415,13 @@ export const savedAnalysisCatalogOf = (
 };
 
 /**
- * **Split** (CTA-73): each game of a many-game text its own analysis, in file
- * order — named by the game (`readRepertoireText`'s names), opened at its
- * start facing White, worked under `settings`, and filed under `folderId`
- * (the folder the split makes, named after the text). `newId` is called once
- * per record.
- */
-export const splitAnalysesOf = (
-  newId: () => string,
-  games: readonly { name: string; tree: GameTree }[],
-  folderId: string | null,
-  settings: AnalysisSettings,
-  now: Date = new Date(),
-): SavedAnalysis[] =>
-  games.map((game) => ({
-    ...savedAnalysisOf(newId(), game.tree, [], settings, "white", now),
-    name: game.name,
-    folderId,
-  }));
-
-/**
  * **The Library's picked games as analyses** (CTA-77, the collection
  * table's Analyse): each game its own analysis, in the order given — named
- * as a split names a game (`repertoireGameNamesOf`'s names, passed in),
+ * as a repertoire split names a game (`repertoireGameNamesOf`'s names, passed in),
  * opened at its start facing White, worked under `settings`, and filed under
  * `folderId` (the folder the batch makes).
  *
- * Unlike {@link splitAnalysesOf}, the game is **not re-parsed**: its PGN is
+ * The game is **not re-parsed**: its PGN is
  * kept as the collection holds it. A collection's games were each parsed
  * with `parsePgnTree` when it came in — its index marks the ones that would
  * not, and the caller leaves those out — and a stored PGN keeps its side

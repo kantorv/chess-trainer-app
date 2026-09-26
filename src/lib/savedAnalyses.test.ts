@@ -22,7 +22,6 @@ import {
   savedAnalysisOf,
   savedAnalysisSummary,
   savedAnalysisToTree,
-  splitAnalysesOf,
   batchAnalysesOf,
   type SavedAnalysis,
 } from "./savedAnalyses";
@@ -328,24 +327,6 @@ describe("a saved analysis' name and folder (CTA-73)", () => {
       name: "Immortal",
     };
     expect(savedAnalysisCatalogOf([saved]).games[0].name).toBe("Immortal");
-  });
-
-  it("splits games into one record each, named by the game and filed together", () => {
-    let next = 0;
-    const records = splitAnalysesOf(
-      () => `id${(next += 1)}`,
-      [
-        { name: "Line 1", tree },
-        { name: "Line 2", tree: parsePgnTree("1. d4 d5 *") },
-      ],
-      "folder",
-      DEFAULT_ANALYSIS_SETTINGS,
-    );
-    expect(records.map((record) => [record.id, record.name, record.folderId])).toEqual([
-      ["id1", "Line 1", "folder"],
-      ["id2", "Line 2", "folder"],
-    ]);
-    expect(savedAnalysisToTree(records[1])?.moves[0].san).toBe("d4");
   });
 });
 

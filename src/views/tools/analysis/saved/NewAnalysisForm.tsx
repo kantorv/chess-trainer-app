@@ -11,12 +11,11 @@ import { Link as RouterLink, useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 
 import { analysisHandOffState } from "../../../../lib/analysisHandOff";
-import { DEFAULT_ANALYSIS_SETTINGS } from "../../../../lib/analysisSettings";
 import { parseFen } from "../../../../lib/fen";
 import { START_POSITION } from "../../../../lib/positionEditor";
-import MergeSplitChoice from "../../../shared/MergeSplitChoice";
 import PositionEditor from "../../../shared/positionEditor/PositionEditor";
 import { usePositionEditor } from "../../../shared/positionEditor/usePositionEditor";
+import MultiGameDialog from "../MultiGameDialog";
 import { useAnalysisLoad } from "../useAnalysisLoad";
 
 /**
@@ -32,9 +31,10 @@ import { useAnalysisLoad } from "../useAnalysisLoad";
  * the row under the board is free for the **quick loads**: a FEN field and a
  * `.pgn` pick, side by side (`PositionEditor`'s `controls` slot). Both feed
  * `useAnalysisLoad`, the Load route's one pipeline: a PGN of more than one
- * move (or a merge of several) opens the Analysis Board with the tree handed
- * over as location state — a new unsaved analysis, facing White, because a
- * game does not turn the board; a PGN of a single move or none sets the
+ * move (or a merge of several — the popup, `MultiGameDialog`, which can keep
+ * them as a Library collection instead, CTA-101) opens the Analysis Board with
+ * the tree handed over as location state — a new unsaved analysis, facing
+ * White, because a game does not turn the board; a PGN of a single move or none sets the
  * editor up from it instead, exactly as the FEN field does — a position is
  * the editor's and Start's job. The paste box below the editor is the same
  * pipeline's other door. So this form's editor offers no tabs
@@ -85,13 +85,12 @@ function NewAnalysisForm() {
     position PGN arrives already parsed (`onLoadPosition`).
   */
   const load = useAnalysisLoad({
-    settings: DEFAULT_ANALYSIS_SETTINGS,
     onLoadTree: (tree) =>
       navigate("/tools/analysis", { state: analysisHandOffState(tree, "white") }),
     onLoadFen: (fen) => editor.loadFen(fen),
     onLoadPosition: (position) => editor.loadPosition(position),
-    onSplit: (folderId) =>
-      navigate(`/tools/analysis/saved?folder=${encodeURIComponent(folderId)}`),
+    onCollectionSaved: (collectionId) =>
+      navigate(`/library/${encodeURIComponent(collectionId)}`),
   });
 
   return (
@@ -252,15 +251,12 @@ function NewAnalysisForm() {
             </Typography>
           )}
           {load.choice !== null && (
-            <MergeSplitChoice
-              labelKey="analysis.load.choice"
+            <MultiGameDialog
               testIdPrefix="new-analysis-choice"
-              count={load.choice.games.length}
-              skipped={load.choice.skipped}
-              mergeable={load.choice.mergeable}
+              choice={load.choice}
               onMerge={load.merge}
-              onSplit={() => void load.split()}
-              problem={load.choiceProblem}
+              onClose={load.dismiss}
+              onSaved={load.collectionSaved}
             />
           )}
         </Box>

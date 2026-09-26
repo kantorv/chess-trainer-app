@@ -672,33 +672,35 @@ const en = {
     /** The Load tab: a PGN (file or paste) or a FEN onto the board, unsaved. */
     load: {
       pgnTitle: "Load a game",
-      pgnHelp: "It opens as a new analysis; save it to keep it. A file of several games can be merged into one tree or split into a folder of analyses.",
+      pgnHelp: "It opens as a new analysis; save it to keep it. A file of several games can be merged into one tree or saved as a games collection in the Library.",
       loaded: "Loaded — a new analysis, not saved yet.",
-      /** A split's folder, when the text names nothing. */
-      splitFolder: "Imported analyses",
-      choice: {
+      /** The popup a PGN of several games opens (CTA-101). */
+      popup: {
         title_one: "This PGN holds {{count}} game",
         title_other: "This PGN holds {{count}} games",
-        explain: "Merge them into one tree on the board, or save each as an analysis of its own.",
-        skipped_one: "{{count}} game has no moves or could not be read, and is left out.",
-        skipped_other: "{{count}} games have no moves or could not be read, and are left out.",
-        merge: "Merge onto the board",
+        explain: "Merge them into one tree on the board, or keep them as a collection of games in the Library.",
+        skipped_one: "{{count}} game has no moves or could not be read, and is left out of a merge.",
+        skipped_other: "{{count}} games have no moves or could not be read, and are left out of a merge.",
+        merge: "Merge games",
         mergeHelp:
-          "One tree: the first game's line is the mainline, and wherever another game leaves it becomes a side line. Comments and move marks are kept. Not saved until you save it.",
+          "One tree: the first game's line is the mainline, and wherever another game leaves it becomes a side line, each move there tagged with how many games played it. Comments and move marks are kept. Not saved until you save it.",
         mergeUnavailable:
           "These games start from different positions, so they cannot share one tree.",
-        split_one: "Save as {{count}} analysis",
-        split_other: "Split into {{count}} analyses",
-        splitHelp:
-          "Each game is saved as an analysis of its own, named after the game, all in a new folder named after the file.",
+        collection: "Save as games collection",
+        collectionHelp:
+          "Every game is kept as it is, in a new collection at the top of the Library, named after the games' event or the file; you go to its table.",
+        indexing: "Checking games… {{done}} of {{total}}",
+        cancel: "Cancel",
+        problem: {
+          unreadable: "No game could be read in that.",
+          index: "The games could not be checked. Nothing was saved.",
+          storage: "It could not be saved — this browser's storage is full or unavailable.",
+        },
       },
       problem: {
         empty: "There is no PGN in that.",
         "too-large": "That is too large to load.",
         unreadable: "That could not be read as PGN.",
-        storage: "It could not be saved — this browser's storage is full or unavailable.",
-        folder: "Could not make a folder for them — the limit is {{max}} folders, or this browser's storage is full.",
-        tooMany: "That would pass the limit of {{max}} analyses in this browser.",
       },
     },
     /** The link to a saved analysis' settings — on the board's header and every list row. */

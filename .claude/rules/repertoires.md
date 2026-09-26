@@ -78,7 +78,9 @@ row to `/repertoires`, whose own *Add repertoire* link reaches
   - **merge** — one tree (`mergedRepertoireOf`, over `mergeTrees`): the first
     game's line is the mainline, each later divergence a side line; offered
     only when every game shares a start. The sampler becomes one 230-node tree
-    with 13 side lines.
+    with 13 side lines. The merge **counts** (CTA-101): every move where the
+    games part carries `[%games N]`, the games that played it
+    ([`pgn-annotations.md`](./pgn-annotations.md) §1).
   - **split** — one repertoire per game, each keeping its own text and named by
     the game, **all filed into a new folder** named after the text; the reader
     lands inside it.

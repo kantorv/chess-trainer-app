@@ -263,7 +263,6 @@ function OpeningsBoard() {
             label: t("openings.tabs.load"),
             content: (
               <AnalysisLoad
-                settings={session.settings}
                 onLoadTree={loadTree}
                 onLoadFen={(fen) => {
                   core.loadFen(fen);

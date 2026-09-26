@@ -7,7 +7,13 @@ import { analysisHandOffState } from "../../../lib/analysisHandOff";
 import { DEFAULT_ANALYSIS_SETTINGS } from "../../../lib/analysisSettings";
 import { parsePgnTree } from "../../../lib/pgn";
 import { savedAnalysisOf, type SavedAnalysis } from "../../../lib/savedAnalyses";
-import { analysisFoldersSnapshot, createAnalysisFolder } from "../../../lib/savedAnalysisFolderStore";
+import {
+  addCollection,
+  loadUploadedCollections,
+  loadUploadedGames,
+  resetLibraryCollectionStore,
+} from "../../../lib/libraryCollectionStore";
+import { createAnalysisFolder } from "../../../lib/savedAnalysisFolderStore";
 import {
   findSavedAnalysis,
   resetSavedAnalysisStore,
@@ -22,6 +28,12 @@ import { NEXT_MOVE_ARROW_PALETTES, UNTAGGED_NEXT_MOVE_ARROW_COLOR } from "./next
 vi.mock("../../../lib/engine", async () => ({
   default: (await import("../../board/boardTestHarness")).FakeEngine,
 }));
+
+// The Library's write, spied on so a test can make it fail (CTA-101).
+vi.mock("../../../lib/libraryCollectionStore", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../lib/libraryCollectionStore")>();
+  return { ...actual, addCollection: vi.fn(actual.addCollection) };
+});
 
 vi.mock("react-chessboard", async () => {
   const { reactChessboardMock } = await import("../../board/boardTestHarness");
@@ -40,7 +52,8 @@ import AnalysisBoard from "./AnalysisBoard";
 /*
   The Analysis Board, v2 (CTA-73): the arrivals, the explicit save (a new
   board's dialog, and Update / Save as copy / Discard over a record), the Load
-  tab's one game, merge and split, the Export tab's options and the `?at=`
+  tab's one game, the popup of several (merge, or a games collection —
+  CTA-101), the Export tab's options and the `?at=`
   link. The shared panel and square are asserted with the dev boards'
   (`boards.test.tsx`, `panelPropagation.test.tsx`), which include this
   screen.
@@ -354,29 +367,91 @@ describe("the Load tab", () => {
     ).toContain("1. e4");
   });
 
-  it("merges several games into one tree on the board", () => {
-    mount();
-    paste('[Event "A"]\n\n1. e4 e5 *\n\n[Event "B"]\n\n1. e4 c5 *');
-    expect(screen.getByTestId("analysis-choice")).toBeInTheDocument();
-    fireEvent.click(screen.getByTestId("analysis-choice-merge"));
+  describe("several games open the popup (CTA-101)", () => {
+    const TWO_LINES = '[Event "Two lines"]\n\n1. e4 e5 *\n\n[Event "Two lines"]\n\n1. e4 c5 *';
 
-    openTab("export");
-    expect((screen.getByTestId("analysis-export-pgn") as HTMLTextAreaElement).value).toContain(
-      "1. e4 e5 (1... c5)",
-    );
-    expect(listed()).toEqual([]);
-  });
+    beforeEach(async () => {
+      await resetLibraryCollectionStore();
+      vi.mocked(addCollection).mockClear();
+    });
 
-  it("splits several games into a new folder of saved analyses, and goes there", async () => {
-    mount();
-    paste('[Event "Two lines"]\n\n1. e4 e5 *\n\n[Event "Two lines"]\n\n1. d4 d5 *');
-    fireEvent.click(screen.getByTestId("analysis-choice-split"));
+    it("offers merge and a games collection, and no split", () => {
+      mount();
+      paste(TWO_LINES);
+      const popup = screen.getByTestId("analysis-choice");
+      expect(popup).toHaveTextContent("This PGN holds 2 games");
+      expect(screen.getByTestId("analysis-choice-merge")).toBeEnabled();
+      expect(screen.getByTestId("analysis-choice-collection")).toBeEnabled();
+      expect(screen.queryByTestId("analysis-choice-split")).toBeNull();
+    });
 
-    await waitFor(() => expect(where()).toContain("/tools/analysis/saved?folder="));
-    const [folder] = analysisFoldersSnapshot() ?? [];
-    expect(folder.name).toBe("Two lines");
-    expect(listed().map((row) => row.folderId)).toEqual([folder.id, folder.id]);
-    expect(where()).toBe(`/tools/analysis/saved?folder=${folder.id}`);
+    it("merges them into one tree on the board, the games counted at the branch", () => {
+      mount();
+      paste(TWO_LINES);
+      fireEvent.click(screen.getByTestId("analysis-choice-merge"));
+
+      expect(screen.queryByTestId("analysis-choice")).toBeNull();
+      openTab("export");
+      expect((screen.getByTestId("analysis-export-pgn") as HTMLTextAreaElement).value).toContain(
+        "1. e4 e5 { [%games 1] } (1... c5 { [%games 1] })",
+      );
+      expect(listed()).toEqual([]);
+    });
+
+    it("keeps Merge off, saying why, for games from different starts — the collection stays", () => {
+      mount();
+      paste(
+        '[Event "A"]\n\n1. e4 *\n\n[Event "B"]\n[SetUp "1"]\n[FEN "4k3/8/8/8/8/8/4P3/4K3 w - - 0 1"]\n\n1. Kd2 *',
+      );
+      expect(screen.getByTestId("analysis-choice-merge")).toBeDisabled();
+      expect(screen.getByTestId("analysis-choice")).toHaveTextContent("different positions");
+      expect(screen.getByTestId("analysis-choice-collection")).toBeEnabled();
+    });
+
+    it("saves them as a Library collection at the top level, and goes to its table", async () => {
+      mount();
+      paste(TWO_LINES);
+      fireEvent.click(screen.getByTestId("analysis-choice-collection"));
+
+      // The index pass loads the opening book: slow on a busy machine.
+      await waitFor(() => expect(where()).toMatch(/^\/library\/u/), { timeout: 10_000 });
+      const [collection] = await loadUploadedCollections();
+      expect(collection).toMatchObject({ name: "Two lines", count: 2, folderId: null });
+      expect(where()).toBe(`/library/${collection.id}`);
+      expect(await loadUploadedGames(collection.id)).toHaveLength(2);
+      expect(listed()).toEqual([]);
+    });
+
+    it("writes nothing when cancelled, even with the games being checked", async () => {
+      mount();
+      paste(TWO_LINES);
+      fireEvent.click(screen.getByTestId("analysis-choice-collection"));
+      expect(screen.getByTestId("analysis-choice-indexing")).toBeInTheDocument();
+      fireEvent.click(screen.getByTestId("analysis-choice-cancel"));
+
+      await waitFor(() => expect(screen.queryByTestId("analysis-choice")).toBeNull());
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      });
+      expect(addCollection).not.toHaveBeenCalled();
+      expect(await loadUploadedCollections()).toEqual([]);
+      expect(where()).toBe("/tools/analysis");
+    });
+
+    it("says so in the popup when the collection cannot be written", async () => {
+      vi.mocked(addCollection).mockResolvedValueOnce({ problem: "storage" });
+      mount();
+      paste(TWO_LINES);
+      fireEvent.click(screen.getByTestId("analysis-choice-collection"));
+
+      expect(
+        await screen.findByTestId("analysis-choice-problem", {}, { timeout: 10_000 }),
+      ).toHaveTextContent(
+        "could not be saved",
+      );
+      expect(screen.getByTestId("analysis-choice")).toBeInTheDocument();
+      expect(where()).toBe("/tools/analysis");
+    });
   });
 
   it("sets a FEN up, facing the side to move", () => {

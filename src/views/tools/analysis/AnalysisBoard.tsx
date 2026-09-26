@@ -406,7 +406,6 @@ function AnalysisBoard() {
               label: t("analysis.tabs.load"),
               content: (
                 <AnalysisLoad
-                  settings={state.settings}
                   onLoadTree={(tree) => {
                     state.loadNew(tree);
                     clearArrivalUrl();
@@ -415,8 +414,8 @@ function AnalysisBoard() {
                     state.loadFen(fen);
                     clearArrivalUrl();
                   }}
-                  onSplit={(folderId) =>
-                    navigate(`/tools/analysis/saved?folder=${encodeURIComponent(folderId)}`)
+                  onCollectionSaved={(collectionId) =>
+                    navigate(`/library/${encodeURIComponent(collectionId)}`)
                   }
                 />
               ),
