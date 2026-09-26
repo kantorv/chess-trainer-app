@@ -795,7 +795,7 @@ const en = {
     },
     /** The Load and Export tabs' shared words. */
     position: {
-      chooseFile: "Choose a .pgn file",
+      chooseFile: "Choose a .pgn or .zip file",
       pasteLabel: "Or paste PGN text",
       /** The paste box's button: the text onto the board. */
       loadText: "Load",
@@ -1144,7 +1144,7 @@ const en = {
       emptyName: "New collection",
       /** The same screen adding games to one of the reader's collections — `?into=<id>`. */
       intoTitle: "Add games to {{name}}",
-      intoIntro: "A .pgn file or pasted PGN text of one game or many. Every game is checked, then added at the end of the collection.",
+      intoIntro: "A .pgn file (or a .zip holding one) or pasted PGN text of one game or many. Every game is checked, then added at the end of the collection.",
       intoSave: "Add games",
       save: "Add collection",
       pastedName: "Pasted collection",
@@ -1160,6 +1160,9 @@ const en = {
         storage: "It could not be saved — this browser's storage is full or unavailable.",
         missing: "That collection is gone.",
         file: "Could not read that file.",
+        zip: "That zip could not be read.",
+        "zip-empty": "There is no .pgn file in that zip.",
+        "zip-many": "That zip holds more than one .pgn file — put the games in one file.",
       },
     },
     /** A path the Library does not have. */

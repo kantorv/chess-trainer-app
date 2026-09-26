@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { strToU8, zipSync } from "fflate";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router";
@@ -393,6 +394,32 @@ describe("the Library's folders (CTA-88)", () => {
     fireEvent.click(screen.getByTestId("library-upload-save"));
     await waitFor(() => expect(where()).toMatch(/^\/library\/u/), { timeout: 4000 });
     expect(await folderOf("Club")).toBe(box.id);
+  });
+
+  it("takes a zip of one .pgn like the .pgn itself, and refuses a zip of none or several", async () => {
+    const pick = (file: File) =>
+      fireEvent.change(screen.getByTestId("library-upload-input"), { target: { files: [file] } });
+    const zipOf = (files: Record<string, string>, name = "Club_Games.zip") =>
+      new File(
+        [zipSync(Object.fromEntries(Object.entries(files).map(([path, text]) => [path, strToU8(text)]))) as BlobPart],
+        name,
+        { type: "application/zip" },
+      );
+
+    mount("/library/new");
+    expect(screen.getByTestId("library-upload-input")).toHaveAttribute("accept", expect.stringContaining(".zip"));
+
+    pick(zipOf({ "a.pgn": GAMES[0], "b.pgn": GAMES[0] }));
+    expect(await screen.findByTestId("library-upload-problem")).toHaveTextContent(/more than one/i);
+    pick(zipOf({ "notes.txt": "hi" }));
+    await waitFor(() => expect(screen.getByTestId("library-upload-problem")).toHaveTextContent(/no \.pgn/i));
+    pick(new File(["not a zip"], "broken.zip", { type: "application/zip" }));
+    await waitFor(() => expect(screen.getByTestId("library-upload-problem")).toHaveTextContent(/could not be read/i));
+
+    // One .pgn (beside a resource fork): a new collection, named from the Event its games share.
+    pick(zipOf({ "games/x.pgn": GAMES[0], "__MACOSX/games/._x.pgn": "junk" }));
+    await waitFor(() => expect(where()).toMatch(/^\/library\/u/), { timeout: 4000 });
+    expect(await folderOf("Club")).toBeNull();
   });
 
   it("files an empty collection in the folder picked, and a folder that is not the reader's at the top level", async () => {

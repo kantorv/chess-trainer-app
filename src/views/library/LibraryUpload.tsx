@@ -10,6 +10,7 @@ import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
 import { useNavigate, useSearchParams } from "react-router";
 import { useTranslation } from "react-i18next";
 
+import { isZipFile, readCollectionZip } from "../../lib/collectionZip";
 import { addCollection, appendCollectionGames } from "../../lib/libraryCollectionStore";
 import {
   collectionNameOfStem,
@@ -26,6 +27,9 @@ import { useCollectionSummary, useLibraryFolders } from "./useLibraryCollections
  * **Add a collection** (`/library/new`, CTA-75) — a `.pgn` file picked, or
  * PGN text pasted, becomes a new collection of the Library holding its
  * games (`lib/libraryCollectionStore.ts`), and the reader lands on its table.
+ *
+ * A `.zip` holding exactly one `.pgn` is unzipped (`lib/collectionZip.ts`,
+ * CTA-102) and its text goes the same way; none or several is refused.
  *
  * A file and a paste go through the **same** reading (`readCollectionText`:
  * line endings normalised, cut into games, refused past
@@ -149,6 +153,23 @@ function LibraryUpload({ into, folder = null }: { into?: CollectionSummary; fold
     // Cleared at once, so picking the same file again still fires a change.
     if (inputRef.current !== null) inputRef.current.value = "";
     if (file === undefined) return;
+    if (isZipFile(file)) {
+      let bytes: Uint8Array;
+      try {
+        bytes = new Uint8Array(await file.arrayBuffer());
+      } catch {
+        setProblem("file");
+        return;
+      }
+      const zipped = readCollectionZip(bytes);
+      if (!zipped.ok) {
+        setProblem(zipped.problem);
+        return;
+      }
+      // The entry's name, else the zip's, is the fallback collection name.
+      void bringIn(zipped.text, zipped.stem || file.name.replace(/\.zip$/i, ""));
+      return;
+    }
     let text: string;
     try {
       text = await file.text();
@@ -261,7 +282,7 @@ function LibraryUpload({ into, folder = null }: { into?: CollectionSummary; fold
               ref={inputRef}
               hidden
               type="file"
-              accept=".pgn,application/x-chess-pgn,text/plain"
+              accept=".pgn,.zip,application/x-chess-pgn,text/plain,application/zip,application/x-zip-compressed"
               data-testid="library-upload-input"
               onChange={(event) => void onPicked(event.target.files)}
             />
