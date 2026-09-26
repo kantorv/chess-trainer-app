@@ -425,6 +425,28 @@ const en = {
       allOpenings: "All openings",
       openingLoading: "Reading the openings…",
     },
+    /**
+     * The games table (CTA-100): its sort headers, what a cell with nothing
+     * to say says, and its pagination — the Library table's own words.
+     */
+    table: {
+      /** The columns, left to right — every one a sort header. */
+      columns: {
+        white: "White",
+        whiteElo: "Elo",
+        black: "Black",
+        blackElo: "Elo",
+        result: "Result",
+        opening: "Opening",
+        moves: "Moves",
+        /** The Masked column — the chip's own word. */
+        masked: "Masked",
+        date: "Date",
+      },
+      /** The reader's side of an Elo cell — an estimate is the engine's alone. */
+      unknown: "Unknown",
+      rowsPerPage: "Rows per page",
+    },
     /** The right-hand panel: a new game's options, and the button that starts it. */
     newGame: {
       title: "New game",
@@ -464,10 +486,18 @@ const en = {
     unreadable: "This game could not be read.",
     continue: "Continue",
     analyse: "Analysis",
-    remove: "Delete this game",
+    /** The row's pick checkbox: tick it to mark the game for the header's delete. */
+    pick: "Pick {{title}}",
+    /** The pick column's select-all: the rows the table shows, on every page. */
+    selectAll: "Select all the games the table shows",
+    /** The header's delete of the ticked rows, saying how many are ticked. */
+    deletePicked: "Delete picked ({{count}})",
     confirmDelete: {
-      title: "Delete this game?",
-      body: "It is removed from this browser, side lines and all.",
+      /** Asking before the ticked rows go — one game or many. */
+      title_one: "Delete the picked game?",
+      title_other: "Delete {{count}} picked games?",
+      body_one: "It is removed from this browser, side lines and all.",
+      body_other: "They are removed from this browser, side lines and all.",
       cancel: "Cancel",
       confirm: "Delete",
     },

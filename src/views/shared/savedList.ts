@@ -9,8 +9,10 @@ import { cardSizeTrack, type CardSize } from "./cardSize";
  * components live here — for the reason [`cardSize.ts`](./cardSize.ts)
  * gives: a component file that also exports values loses fast refresh.
  *
- * The component half — the view toggle, the export bar and the remove button —
- * are the three `SavedList*.tsx` files beside this one.
+ * The component half — the view toggle and the export bar — are the
+ * `SavedList*.tsx` files beside this one. (The remove button that was the
+ * third joined the saved lists' bulk delete and the Lobby's pick checkboxes,
+ * and was deleted in CTA-100's follow-up.)
  */
 
 /** The list, or one of the two board sizes — what all three screens show. */

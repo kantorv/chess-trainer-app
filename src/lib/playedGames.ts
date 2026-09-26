@@ -1,7 +1,7 @@
 import { Chess } from "chess.js";
 
 import type { Score } from "./engineAnalysis";
-import { engineSettingsFrom, type EngineSettings } from "./engineSettings";
+import { approximateElo, engineSettingsFrom, type EngineSettings } from "./engineSettings";
 import { gameTag, type Game, type GameHeaders } from "./gameModel";
 import {
   countVariations,
@@ -338,6 +338,14 @@ export const playedGameFrom = (value: unknown): PlayedGame | undefined => {
   };
 };
 
+/**
+ * How a side is named in the Lobby's table (CTA-100): the reader — the
+ * localized "Human" — or the engine, "Stockfish level N". Which of the two
+ * each column shows is the summary's derivation; the words themselves are the
+ * table's, because they are localized.
+ */
+type PlayedGameSideName = "human" | "engine";
+
 /** What a row shows about a game without opening it. Pure, so it is testable. */
 export type PlayedGameSummary = {
   /** How many full moves the mainline runs to — half-moves rounded up. */
@@ -350,14 +358,29 @@ export type PlayedGameSummary = {
   playAs: EngineSettings["playAs"];
   /** `Skill Level` the engine is set to. */
   skillLevel: number;
-  /** Whether it was played on Masked Pieces — the list's marker, and where Continue goes. */
+  /** Whether it was played on Masked Pieces — the table's marker, and where Continue goes. */
   masked: boolean;
+  /** White as the table names it — the reader when they played White, else the engine. */
+  whiteName: PlayedGameSideName;
+  /** Black as the table names it — the engine when the reader played White, else the reader. */
+  blackName: PlayedGameSideName;
+  /**
+   * White's Elo: the engine's {@link approximateElo} when White is the engine.
+   * The reader's side has none — `undefined`, the table's "unknown".
+   */
+  whiteElo: number | undefined;
+  /** Black's Elo, as White's. */
+  blackElo: number | undefined;
 };
 
 export const playedGameSummary = (
   saved: PlayedGame,
   tree: GameTree | undefined,
 ): PlayedGameSummary => {
+  // The engine takes the side the reader does not play, and its name and its
+  // Elo estimate go on that side's cells.
+  const engineSide = saved.settings.playAs === "white" ? "black" : "white";
+  const elo = approximateElo(saved.settings.skillLevel);
   return {
     moves: tree === undefined ? 0 : Math.ceil(mainline(tree).length / 2),
     variations: tree === undefined ? 0 : countVariations(tree),
@@ -365,7 +388,140 @@ export const playedGameSummary = (
     playAs: saved.settings.playAs,
     skillLevel: saved.settings.skillLevel,
     masked: saved.mask !== undefined,
+    whiteName: engineSide === "white" ? "engine" : "human",
+    blackName: engineSide === "black" ? "engine" : "human",
+    whiteElo: engineSide === "white" ? elo : undefined,
+    blackElo: engineSide === "black" ? elo : undefined,
   };
+};
+
+/** The Lobby table's columns, left to right (CTA-100). */
+export const PLAYED_GAME_COLUMNS = [
+  "white",
+  "whiteElo",
+  "black",
+  "blackElo",
+  "result",
+  "opening",
+  "moves",
+  "masked",
+  "date",
+] as const;
+
+export type PlayedGameColumn = (typeof PLAYED_GAME_COLUMNS)[number];
+
+/** Which way a column sorts — the Library table's own word for it. */
+export type SortDirection = "asc" | "desc";
+
+/**
+ * One played game as the Lobby's table shows it (CTA-100) — the pure half of
+ * the table: every value a column sorts on, with the names the screen
+ * localized and the opening the book named, so the sort is testable without
+ * mounting it. Built by the screen from the summary; the date cell prints
+ * `savedAt` localized, and the sort reads the ISO itself.
+ */
+export type PlayedGameRow = {
+  id: string;
+  /** White's name — the summary's `whiteName` with its words on ("Human" / "Stockfish level N"). */
+  white: string;
+  whiteElo: number | undefined;
+  black: string;
+  blackElo: number | undefined;
+  /** As PGN writes it — `1-0`, `0-1`, `1/2-1/2`, `*` while it is on. */
+  result: string;
+  /** The opening the book named along the mainline — `undefined` until it lands, or for none. */
+  opening: string | undefined;
+  /** Full moves in the mainline. */
+  moves: number;
+  /** How many side lines branch off it — secondary text in the Moves cell. */
+  variations: number;
+  /** Whether it was played on Masked Pieces — the Masked chip, in a column of its own. */
+  masked: boolean;
+  /** When the game was begun, ISO 8601 — the Date column's sort key. */
+  savedAt: string;
+  /** The record's PGN would not parse: the row says so and offers only the delete. */
+  readable: boolean;
+};
+
+const playedGameCollator = new Intl.Collator("en", { numeric: true, sensitivity: "base" });
+
+/** The row's value for one column — what that column sorts on. */
+const playedGameCellOf = (
+  row: PlayedGameRow,
+  column: PlayedGameColumn,
+): string | number | boolean | undefined => {
+  switch (column) {
+    case "white":
+      return row.white;
+    case "whiteElo":
+      return row.whiteElo;
+    case "black":
+      return row.black;
+    case "blackElo":
+      return row.blackElo;
+    case "result":
+      return row.result;
+    case "opening":
+      return row.opening;
+    case "moves":
+      return row.moves;
+    case "masked":
+      return row.masked;
+    case "date": {
+      // The date sorts as the moment it names; an ISO that does not parse is missing.
+      const when = Date.parse(row.savedAt);
+      return Number.isNaN(when) ? undefined : when;
+    }
+  }
+};
+
+const comparePlayedGameValues = (
+  a: string | number | boolean,
+  b: string | number | boolean,
+): number =>
+  typeof a === "number" && typeof b === "number"
+    ? a - b
+    : typeof a === "boolean" && typeof b === "boolean"
+      ? a === b
+        ? 0
+        : a
+          ? 1
+          : -1
+      : playedGameCollator.compare(String(a), String(b));
+
+/**
+ * The rows sorted by one column (CTA-100), the Library table's rule
+ * (`sortedRows`): numbers numerically, text (an engine's "level 20" after its
+ * "level 3") with a numeric-aware collation, a row **missing the value last
+ * in either direction**, and ties by the date in the same direction —
+ * newest first reads one day's later games first.
+ */
+export const sortedPlayedGames = (
+  rows: readonly PlayedGameRow[],
+  column: PlayedGameColumn,
+  direction: SortDirection,
+): PlayedGameRow[] => {
+  const sign = direction === "asc" ? 1 : -1;
+  const byDate = (a: PlayedGameRow, b: PlayedGameRow): number => {
+    const left = playedGameCellOf(a, "date");
+    const right = playedGameCellOf(b, "date");
+    if (typeof left !== "number" || typeof right !== "number") {
+      if (typeof left === "number") return -1;
+      if (typeof right === "number") return 1;
+      return 0;
+    }
+    return sign * (left - right);
+  };
+  return [...rows].sort((a, b) => {
+    const left = playedGameCellOf(a, column);
+    const right = playedGameCellOf(b, column);
+    if (left === undefined || right === undefined) {
+      if (left === right) return byDate(a, b);
+      return left === undefined ? 1 : -1;
+    }
+    const primary = sign * comparePlayedGameValues(left, right);
+    return primary !== 0 ? primary : byDate(a, b);
+  });
 };
 
 /**

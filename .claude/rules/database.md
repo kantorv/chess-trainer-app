@@ -71,7 +71,7 @@ wrapper's main features would go unused. §10 says when that changes.
 
 | Module | Database | Object store | Store module | Row | Order | Cap |
 | --- | --- | --- | --- | --- | --- | --- |
-| **Engine** (Play with Engine, Masked Pieces) | `chessapp.engine` | `games` | `playedGameStore.ts` | `PlayedGame` | newest first | 100 (oldest dropped) |
+| **Engine** (Play with Engine, Masked Pieces) | `chessapp.engine` | `games` | `playedGameStore.ts` | `PlayedGame` | newest first | 500 (oldest dropped, CTA-100) |
 | **Analyses** | `chessapp.analyses` | `analyses` | `savedAnalysisStore.ts` | `SavedAnalysis` | newest first | 20,000 (a batch past it refused) |
 | | | `folders` | `savedAnalysisFolderStore.ts` | `AnalysisFolder` | oldest first | 100 |
 | **Repertoires** | `chessapp.repertoires` | `repertoires` | `savedRepertoireStore.ts` | `SavedRepertoire` | newest first | 500 (a split past it refused) |
@@ -261,7 +261,7 @@ ignore an answer that is no longer about the record on screen
 Measured under the tests' `fake-indexeddb` and jsdom (the Carlsen
 fixture's games as analyses): 7,818 records ≈ 8 MB, written in one batch in
 ~80 ms, read back in ~60 ms; 20,000 ≈ 20 MB, ~0.6 s and ~0.1 s. A real
-browser is faster. The engine games (100) and the repertoires (500, but a
+browser is faster. The engine games (500) and the repertoires (500, but a
 course can be most of a megabyte each) are far below that.
 
 ---

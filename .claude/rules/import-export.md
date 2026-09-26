@@ -284,7 +284,7 @@ that the import prefers when present — an added field, so no bump (§6).
 
 | Store | Cap | Past it |
 | --- | --- | --- |
-| Played games | 100 (`MAX_PLAYED_GAMES`) | **Imported anyway**: the store drops its oldest, and the dialog warns how many. |
+| Played games | 500 (`MAX_PLAYED_GAMES`, CTA-100) | **Imported anyway**: the store drops its oldest, and the dialog warns how many. |
 | Analyses | 20,000 | The category is **refused**. |
 | Repertoires | 500 | The category is **refused**. |
 | Folders (analyses', repertoires', the Library's) | 100 each | The category is **refused**. |

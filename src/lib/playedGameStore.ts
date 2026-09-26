@@ -49,11 +49,13 @@ const engineDb = idbDatabase(ENGINE_DB_NAME, DB_VERSION, [GAMES_STORE]);
 export const deleteEngineDb = engineDb.remove;
 
 /**
- * How many games are kept — a bound on a flat, unpaged list rather than on
- * the storage (it was the quota's while the games lived in `localStorage`).
- * The oldest falls off the end rather than the newest being refused.
+ * How many games are kept (CTA-100: 500, since the Lobby lists them as a
+ * paginated table) — a bound on the store and on the import, which warns
+ * past it, rather than on the storage (it was the quota's while the games
+ * lived in `localStorage`). The oldest falls off the end rather than the
+ * newest being refused.
  */
-export const MAX_PLAYED_GAMES = 100;
+export const MAX_PLAYED_GAMES = 500;
 
 /** What went wrong with a write. */
 export type PlayedGameProblem = "storage";
