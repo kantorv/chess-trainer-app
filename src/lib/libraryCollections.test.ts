@@ -6,16 +6,19 @@ import {
   activeFilterSummary,
   batchFolderNameOf,
   collectionIdOfStem,
+  collectionImportFileOf,
   collectionNameOfStem,
   collectionRowOf,
   collectionFacetsOf,
   collectionRowsOf,
+  collectionMetadataOf,
   dateBounds,
   openingLabelOf,
   filteredRows,
   mainlinePlies,
   MAX_COLLECTION_CHARS,
   readCollectionText,
+  sharedEventOf,
   sortedRows,
 } from "./libraryCollections";
 
@@ -180,6 +183,22 @@ describe("the side panel's filters", () => {
     expect(numbers({ from: "2023-07-31" })).toEqual([]);
   });
 
+  it("keeps a game only when both players' Elo is within the bounds, and drops one missing an Elo (CTA-103)", () => {
+    const D = GAME({ White: "Amy", Black: "Bob", WhiteElo: "2100", BlackElo: "1900", Result: "*" }, "1. e4 *");
+    const withD = collectionRowsOf({ games: [A, B, C, D] });
+    const elo = (filter: { minElo?: number; maxElo?: number }) =>
+      filteredRows(withD, { text: "", result: "", ...filter }).map((r) => r.number);
+    expect(elo({})).toEqual([1, 2, 3, 4]);
+    expect(elo({ minElo: 1900 })).toEqual([1, 4]);
+    expect(elo({ minElo: 2000 })).toEqual([1]);
+    expect(elo({ maxElo: 2100 })).toEqual([4]);
+    expect(elo({ minElo: 2780, maxElo: 2835 })).toEqual([1]);
+    expect(elo({ minElo: 2790 })).toEqual([]);
+    // Inclusive at both ends, and either bound alone.
+    expect(elo({ minElo: 1900, maxElo: 2100 })).toEqual([4]);
+    expect(elo({ maxElo: 3000 })).toEqual([1, 4]);
+  });
+
   it("reads a partial PGN date as the days it could be", () => {
     expect(dateBounds("2023.07.30")).toEqual(["2023-07-30", "2023-07-30"]);
     expect(dateBounds("1858.10")).toEqual(["1858-10-01", "1858-10-31"]);
@@ -225,6 +244,43 @@ describe("the side panel's filters", () => {
   });
 });
 
+describe("a text's metadata at a glance (CTA-103)", () => {
+  it("counts the games, players and events, and spans the Elos and the dates", () => {
+    expect(collectionMetadataOf(collectionRowsOf({ games: [A, B, C] }))).toEqual({
+      games: 3,
+      players: 5,
+      events: ["Test Open"],
+      elo: { min: 2780, max: 2835 },
+      dates: { first: "1848", last: "2023.07.30" },
+    });
+  });
+
+  it("orders the dates by the days they could be, and leaves out a span no game carries", () => {
+    const partial = collectionRowsOf({
+      games: [
+        GAME({ Date: "1858.10.??", Event: "B" }, "1. e4 *"),
+        GAME({ Date: "1858.10.05", Event: "A" }, "1. e4 *"),
+        GAME({ Date: "1858", Event: "A" }, "1. e4 *"),
+      ],
+    });
+    expect(collectionMetadataOf(partial)).toMatchObject({ events: ["A", "B"], dates: { first: "1858", last: "1858" } });
+    expect(collectionMetadataOf(collectionRowsOf({ games: ["1. e4 *"] }))).toEqual({
+      games: 1,
+      players: 0,
+      events: [],
+      elo: undefined,
+      dates: undefined,
+    });
+  });
+
+  it("names the Event every game shares, and none when they differ or one lacks it", () => {
+    expect(sharedEventOf([{ event: "Club" }, { event: "Club" }])).toBe("Club");
+    expect(sharedEventOf([{ event: "Club" }, { event: "Open" }])).toBeUndefined();
+    expect(sharedEventOf([{ event: "Club" }, {}])).toBeUndefined();
+    expect(sharedEventOf([])).toBeUndefined();
+  });
+});
+
 describe("naming a shipped file", () => {
   it.each([
     ["WorldCup2023", "World Cup 2023", "worldcup2023"],
@@ -256,6 +312,21 @@ describe("readCollectionText", () => {
       ok: false,
       problem: "too-large",
     });
+  });
+});
+
+describe("collectionImportFileOf — a text for the import popup (CTA-103)", () => {
+  it("cuts the text into games with their tag-only rows, numbered from 1", () => {
+    const { reading, file } = collectionImportFileOf(`${A}\n\n${B}`, 123, "x/Test.pgn", "Test");
+    expect(reading).toMatchObject({ ok: true, name: "Test Open" });
+    expect(file).toMatchObject({ name: "x/Test.pgn", stem: "Test", size: 123, games: [A, B] });
+    expect(file.rows).toEqual([collectionRowOf(A, 1), collectionRowOf(B, 2)]);
+  });
+
+  it("holds no game for a text that reads none, and says why", () => {
+    const { reading, file } = collectionImportFileOf("hello", 5);
+    expect(reading).toEqual({ ok: false, problem: "unreadable" });
+    expect(file).toEqual({ name: undefined, stem: undefined, size: 5, games: [], rows: [] });
   });
 });
 

@@ -2,11 +2,17 @@ import { strFromU8, unzipSync } from "fflate";
 
 import { MAX_COLLECTION_CHARS } from "./libraryCollections";
 
-/** Why a zip is not a collection: unreadable, no `.pgn` in it, several, or one too large. */
-export type CollectionZipProblem = "zip" | "zip-empty" | "zip-many" | "too-large";
+/** Why a zip is not a collection: unreadable, no `.pgn` in it, or too large. */
+export type CollectionZipProblem = "zip" | "zip-empty" | "too-large";
+
+/**
+ * One `.pgn` inside a zip: its path there, its name without folders and
+ * `.pgn`, its size in bytes (unpacked), and its text.
+ */
+export type CollectionZipEntry = { path: string; stem: string; size: number; text: string };
 
 export type CollectionZipReading =
-  | { ok: true; text: string; stem: string }
+  | { ok: true; entries: CollectionZipEntry[] }
   | { ok: false; problem: CollectionZipProblem };
 
 /** Whether a picked file is a zip — by its name, or the type the browser gave it. */
@@ -23,13 +29,15 @@ const isPgnEntry = (path: string): boolean => {
 };
 
 /**
- * A zip of exactly one `.pgn`, read as that file's text — what a picked `.pgn`
- * would have given `readCollectionText`. Directory entries and `__MACOSX/`
- * files are not counted; none, or several, is refused. `stem` is the entry's
- * name without its folders and `.pgn`.
+ * A zip's `.pgn` files, each read as its text — what each, picked on its own,
+ * would have given `readCollectionText` — in the zip's order. Directory
+ * entries, `__MACOSX/` files, dot-files and other files are not counted; a zip
+ * with none is refused. Several are one collection each (CTA-103, replacing
+ * CTA-102's one-file rule), so the screen decides what they become.
  *
  * Bounded: the directory is read first (`filter` never accepts, so nothing is
- * inflated), and the one entry is inflated only if its declared size is within
+ * inflated), and the entries are inflated only if every declared size — and
+ * their sum, since the texts are held together — is within
  * {@link MAX_COLLECTION_CHARS}. Never throws.
  */
 export const readCollectionZip = (bytes: Uint8Array): CollectionZipReading => {
@@ -45,18 +53,25 @@ export const readCollectionZip = (bytes: Uint8Array): CollectionZipReading => {
     return { ok: false, problem: "zip" };
   }
   if (entries.length === 0) return { ok: false, problem: "zip-empty" };
-  const [entry] = entries;
-  if (entries.length > 1 || entry === undefined) return { ok: false, problem: "zip-many" };
   // Bytes are at least characters, so a declared size past the cap is past it decoded too.
-  if (entry.size > MAX_COLLECTION_CHARS) return { ok: false, problem: "too-large" };
+  const total = entries.reduce((sum, entry) => sum + entry.size, 0);
+  if (entries.some((entry) => entry.size > MAX_COLLECTION_CHARS) || total > MAX_COLLECTION_CHARS) {
+    return { ok: false, problem: "too-large" };
+  }
 
-  let data: Uint8Array | undefined;
+  const wanted = new Set(entries.map((entry) => entry.name));
+  let data: Record<string, Uint8Array>;
   try {
-    data = unzipSync(bytes, { filter: (file) => file.name === entry.name })[entry.name];
+    data = unzipSync(bytes, { filter: (file) => wanted.has(file.name) });
   } catch {
     return { ok: false, problem: "zip" };
   }
-  if (data === undefined) return { ok: false, problem: "zip" };
-  const base = entry.name.split("/").pop() ?? entry.name;
-  return { ok: true, text: strFromU8(data), stem: base.replace(/\.pgn$/i, "") };
+  const read: CollectionZipEntry[] = [];
+  for (const { name, size } of entries) {
+    const inflated = data[name];
+    if (inflated === undefined) return { ok: false, problem: "zip" };
+    const base = name.split("/").pop() ?? name;
+    read.push({ path: name, stem: base.replace(/\.pgn$/i, ""), size, text: strFromU8(inflated) });
+  }
+  return { ok: true, entries: read };
 };
