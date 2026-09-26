@@ -127,20 +127,22 @@ was begun on.
   it applies to what is known. A record whose PGN no longer parses keeps
   its row — it says so across the columns — and can be picked like any
   other.
-- **The row's controls** (CTA-100's follow-up): a **pick checkbox** first —
-  the collection table's own pattern — then the icon-only **Continue**
-  (the play arrow, `?saved=<id>` — on `/engine/masked` for a masked game,
-  which carries a *Masked* chip in its own column; **only while the game
-  is still on** — a row whose result is decided, a resignation or the
-  mainline's final position through `playedGameResult`, shows none,
-  CTA-90) and **Analysis** (the flask,
-  `/tools/analysis?game=play/games/<id>`, the true PGN, unmasked), both
-  with tooltips and `aria-label`s. **The delete is the picks**: tick rows,
-  and the header's **Delete picked (N)** asks first and removes them all —
-  there is no per-row delete, and with it the shared
-  `SavedListRemoveButton` went (the saved lists had already left it for
-  their own bulk delete). The picks are the screen's, not the URL's — a
-  link carries the filter, not a hand-made selection.
+- **The row's controls** (CTA-100's follow-up), each in a column of its own:
+  a **pick checkbox** — the collection table's own pattern — then the
+  icon-only **Analysis** (the flask,
+  `/tools/analysis?game=play/games/<id>`, the true PGN, unmasked) and the
+  icon-only **Continue** (the play arrow, `?saved=<id>` — on
+  `/engine/masked` for a masked game, which carries a *Masked* chip in its
+  own column; **only while the game is still on** — a row whose result is
+  decided, a resignation or the mainline's final position through
+  `playedGameResult`, shows none, CTA-90), both with tooltips and
+  `aria-label`s. A column each means an ended game's missing Continue
+  leaves its own cell empty and moves nothing else. **The delete is the
+  picks**: tick rows, and the header's **Delete picked (N)** asks first
+  and removes them all — there is no per-row delete, and with it the
+  shared `SavedListRemoveButton` went (the saved lists had already left it
+  for their own bulk delete). The picks are the screen's, not the URL's —
+  a link carries the filter, not a hand-made selection.
 - **Filters**, combined and in the URL: **colour** (`?color=`, the side the
   reader played) and **opening** (`?opening=`, the deepest eco.json match
   along each mainline — `openingOfLine`, the book loaded lazily).

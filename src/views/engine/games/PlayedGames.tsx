@@ -71,19 +71,21 @@ import { usePlayedGames } from "./usePlayedGames";
  *
  * Columns, left to right: the row's controls, then White, White Elo, Black,
  * Black Elo, Result, Opening, Moves, Masked, Date. The controls are the
- * collection table's own pattern (CTA-100's follow-up): a **pick checkbox**
- * first — tick rows to mark them for the header's **Delete picked (N)**,
- * which asks first and removes them all; there is no per-row delete — then
- * the icon-only **Continue** (the play arrow, `?saved=<id>` — on
- * `/engine/play`, or `/engine/masked` for a masked game, in the same
- * disguise; only while the game is still on — a result decided by
- * `playedGameResult`, a resignation or the final position, CTA-90) and
- * **Analysis** (the flask, `?game=play/games/<id>` on the Analysis Board,
- * side lines and all — a masked game unmasked, since its PGN is the true
- * game), both with tooltips. The picks are the screen's, not the URL's —
- * a link carries the filter, not a hand-made selection. A record whose PGN
- * no longer parses keeps its row — it says so across the columns — and can
- * be picked like any other.
+ * collection table's own pattern (CTA-100's follow-up), each in a column
+ * of its own — a **pick checkbox** (tick rows to mark them for the
+ * header's **Delete picked (N)**, which asks first and removes them all;
+ * there is no per-row delete), the icon-only **Analysis** (the flask,
+ * `?game=play/games/<id>` on the Analysis Board, side lines and all — a
+ * masked game unmasked, since its PGN is the true game) and the icon-only
+ * **Continue** (the play arrow, `?saved=<id>` — on `/engine/play`, or
+ * `/engine/masked` for a masked game, in the same disguise; only while the
+ * game is still on — a result decided by `playedGameResult`, a
+ * resignation or the final position, CTA-90), both with tooltips — so an
+ * ended game's missing Continue leaves its own cell empty and moves
+ * nothing else. The picks are the screen's, not the URL's — a link carries
+ * the filter, not a hand-made selection. A record whose PGN no longer
+ * parses keeps its row — it says so across the columns — and can be picked
+ * like any other.
  *
  * The names are the flat list's row titles kept — the reader's side the
  * localized "Human", the engine's "Stockfish level N", by `settings.playAs`
@@ -149,40 +151,42 @@ function PlayedGameRow({
           data-testid={`played-games-pick-${row.id}`}
         />
       </TableCell>
-      <TableCell sx={{ whiteSpace: "nowrap" }}>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-          {/*
-            Continue only while the game is on (CTA-90): the row's own
-            result says whether it can — anything but `*` (a resignation,
-            mate or a draw, `playedGameResult`) is a game that has ended.
-          */}
-          {row.readable && row.result === "*" && (
-            <Tooltip title={t("playedGames.continue")}>
-              <IconButton
-                size="small"
-                component={RouterLink}
-                to={`${row.masked ? "/engine/masked" : "/engine/play"}?saved=${encodeURIComponent(row.id)}`}
-                aria-label={t("playedGames.continue")}
-                data-testid={`played-games-continue-${row.id}`}
-              >
-                <PlayArrowRoundedIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
-          )}
-          {row.readable && (
-            <Tooltip title={t("playedGames.analyse")}>
-              <IconButton
-                size="small"
-                component={RouterLink}
-                to={`/tools/analysis?game=${reference}`}
-                aria-label={t("playedGames.analyse")}
-                data-testid={`played-games-analysis-${row.id}`}
-              >
-                <ScienceOutlinedIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
-          )}
-        </Box>
+      {/* Each control a column of its own: an ended game's missing Continue
+          leaves its cell empty and moves nothing else. */}
+      <TableCell padding="checkbox">
+        {row.readable && (
+          <Tooltip title={t("playedGames.analyse")}>
+            <IconButton
+              size="small"
+              component={RouterLink}
+              to={`/tools/analysis?game=${reference}`}
+              aria-label={t("playedGames.analyse")}
+              data-testid={`played-games-analysis-${row.id}`}
+            >
+              <ScienceOutlinedIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        )}
+      </TableCell>
+      {/*
+        Continue only while the game is on (CTA-90): the row's own
+        result says whether it can — anything but `*` (a resignation,
+        mate or a draw, `playedGameResult`) is a game that has ended.
+      */}
+      <TableCell padding="checkbox">
+        {row.readable && row.result === "*" && (
+          <Tooltip title={t("playedGames.continue")}>
+            <IconButton
+              size="small"
+              component={RouterLink}
+              to={`${row.masked ? "/engine/masked" : "/engine/play"}?saved=${encodeURIComponent(row.id)}`}
+              aria-label={t("playedGames.continue")}
+              data-testid={`played-games-continue-${row.id}`}
+            >
+              <PlayArrowRoundedIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        )}
       </TableCell>
       {row.readable ? (
         <>
@@ -493,7 +497,8 @@ function PlayedGames() {
               <Table size="small" stickyHeader data-testid="played-games-table">
                 <TableHead>
                   <TableRow>
-                    {/* The picks' checkbox, and the row's Continue / Analysis icon buttons. */}
+                    {/* The pick, Analysis and Continue — a column each, then the data columns. */}
+                    <TableCell padding="checkbox" />
                     <TableCell padding="checkbox" />
                     <TableCell padding="checkbox" />
                     {PLAYED_GAME_COLUMNS.map((column) => (

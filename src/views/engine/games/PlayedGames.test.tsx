@@ -109,10 +109,10 @@ const listed = () =>
 
 /**
  * One readable row's data cells, in the table's column order — after the
- * pick checkbox and the row's icon buttons.
+ * pick checkbox and the Analysis and Continue columns.
  */
 const cells = (id: string) =>
-  within(screen.getByTestId(`played-games-row-${id}`)).getAllByRole("cell").slice(2);
+  within(screen.getByTestId(`played-games-row-${id}`)).getAllByRole("cell").slice(3);
 
 /** Tick a row's pick checkbox. */
 const tick = (id: string) =>
@@ -212,6 +212,14 @@ describe("Lobby — the list", () => {
     expect(screen.getByTestId("played-games-analysis-mated")).toBeInTheDocument();
     expect(screen.getByTestId("played-games-analysis-resigned")).toBeInTheDocument();
     expect(screen.getByTestId("played-games-pick-resigned")).toBeInTheDocument();
+    // A column each: a game without Continue keeps every other control where
+    // it is — the rows are the same shape, one cell of them just empty.
+    expect(
+      within(screen.getByTestId("played-games-row-live")).getAllByRole("cell"),
+    ).toHaveLength(12);
+    expect(
+      within(screen.getByTestId("played-games-row-mated")).getAllByRole("cell"),
+    ).toHaveLength(12);
   });
 
   it("deletes the ticked games only once asked", async () => {
@@ -256,7 +264,8 @@ describe("Lobby — the table (CTA-100)", () => {
         .getAllByRole("columnheader")
         .map((head) => head.textContent),
     ).toEqual([
-      // The picks' checkbox and the row's icon buttons, then the data columns.
+      // The pick, Analysis and Continue — a column each — then the data columns.
+      "",
       "",
       "",
       "White",
@@ -343,8 +352,8 @@ describe("Lobby — the table (CTA-100)", () => {
     });
     mount();
     const row = screen.getByTestId("played-games-row-bad");
-    // The pick, the buttons cell (empty: nothing opens), and the note across the columns.
-    expect(within(row).getAllByRole("cell")).toHaveLength(3);
+    // The three control cells (empty: nothing opens) and the note across the columns.
+    expect(within(row).getAllByRole("cell")).toHaveLength(4);
     expect(row).toHaveTextContent("This game could not be read.");
     expect(within(row).getByTestId("played-games-pick-bad")).toBeInTheDocument();
     expect(within(row).queryByTestId("played-games-continue-bad")).not.toBeInTheDocument();
