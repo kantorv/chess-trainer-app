@@ -16,6 +16,7 @@ import {
   openingLabelOf,
   filteredRows,
   mainlinePlies,
+  playersOf,
   MAX_COLLECTION_CHARS,
   readCollectionText,
   sharedEventOf,
@@ -271,6 +272,11 @@ describe("a text's metadata at a glance (CTA-103)", () => {
       elo: undefined,
       dates: undefined,
     });
+  });
+
+  it("lists the players of the rows, each once, sorted", () => {
+    expect(playersOf(collectionRowsOf({ games: [A, C] }))).toEqual(["Carlsen,M", "Nepo,I", "Zed"]);
+    expect(playersOf([{ white: "Amy" }, {}])).toEqual(["Amy"]);
   });
 
   it("names the Event every game shares, and none when they differ or one lacks it", () => {

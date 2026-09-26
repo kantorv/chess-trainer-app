@@ -539,6 +539,20 @@ export type CollectionFacets = {
   dates?: { min: string; max: string };
 };
 
+/**
+ * The players of these rows, White's and Black's, each once, sorted as
+ * {@link collectionFacetsOf}'s list — the import popup's player suggestions
+ * over the games its Elo range leaves (CTA-103).
+ */
+export const playersOf = (rows: readonly Pick<CollectionRow, "white" | "black">[]): string[] => {
+  const players = new Set<string>();
+  for (const row of rows) {
+    if (row.white !== undefined) players.add(row.white);
+    if (row.black !== undefined) players.add(row.black);
+  }
+  return [...players].sort(collator.compare);
+};
+
 export const collectionFacetsOf = (rows: readonly CollectionRow[]): CollectionFacets => {
   const players = new Set<string>();
   const openings = new Set<string>();

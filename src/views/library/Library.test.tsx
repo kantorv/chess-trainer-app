@@ -1411,6 +1411,26 @@ describe("the import-options popup (CTA-103)", () => {
     expect(count()).toBe("3 of 3 games will be imported");
   });
 
+  it("suggests only the players of the games the Elo range leaves, worked out when the list opens", async () => {
+    mount("/library/new");
+    fireEvent.change(screen.getByTestId("library-upload-paste"), { target: { value: RATED.join("\n\n") } });
+    fireEvent.click(screen.getByTestId("library-upload-save"));
+    await screen.findByTestId("library-import");
+    const box = within(screen.getByTestId("library-import-player")).getByRole("combobox");
+    const options = () => screen.getAllByRole("option").map((option) => option.textContent);
+
+    fireEvent.keyDown(box, { key: "ArrowDown" });
+    expect(options()).toEqual(["Kim", "Lee", "Max"]);
+    fireEvent.keyDown(box, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("listbox")).toBeNull());
+    expect(screen.getByTestId("library-import")).toBeInTheDocument();
+
+    // Only Kim – Lee (2100 / 2000) is left from 2000 up: Max's games are out of range or unrated.
+    setElo(0, 2000);
+    fireEvent.keyDown(box, { key: "ArrowDown" });
+    expect(options()).toEqual(["Kim", "Lee"]);
+  });
+
   it("checks and keeps only the games the filters leave, named as typed", async () => {
     mount("/library/new");
     fireEvent.change(screen.getByTestId("library-upload-name"), { target: { value: "Strong" } });

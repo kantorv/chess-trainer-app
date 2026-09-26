@@ -20,6 +20,7 @@ import {
   collectionMetadataOf,
   collectionNameOfStem,
   filteredRows,
+  playersOf,
   sharedEventOf,
   type CollectionImportFile,
   type CollectionImportSource,
@@ -46,7 +47,8 @@ import { indexCollection } from "./indexCollection";
  *   a game missing an Elo is out while a bound is set), a
  *   date range (`dateBounds`' partial dates; a game with no date is out while
  *   one is set) and players (several OR'd, typed free as chips — the table's
- *   filter, CTA-95). All go through `filteredRows`, so they cannot drift from
+ *   filter, CTA-95), suggested from the games the Elo range leaves — worked out
+ *   when the list opens, never on each move of the slider. All go through `filteredRows`, so they cannot drift from
  *   the table's. A live "N of M" count; Import is off at none.
  * - **Import** indexes the kept games only (`indexCollection`, one pass over
  *   every file, a progress bar), then writes: `?into=` appends every file's
@@ -107,6 +109,19 @@ function ImportOptionsDialog({
   // A thumb at its end of the span is no bound: the whole span keeps the games with no Elo too.
   const minElo = eloSpan !== undefined && eloValue !== undefined && eloValue[0] > eloSpan.min ? eloValue[0] : undefined;
   const maxElo = eloSpan !== undefined && eloValue !== undefined && eloValue[1] < eloSpan.max ? eloValue[1] : undefined;
+
+  /**
+   * The player list's names: the players of the games the Elo range leaves.
+   * Worked out when the list opens (`refreshPlayerOptions`) — the slider fires
+   * many changes a second, and nobody reads the list while dragging it.
+   */
+  const [playerOptions, setPlayerOptions] = useState<readonly string[]>(facets.players);
+  const refreshPlayerOptions = () =>
+    setPlayerOptions(
+      minElo === undefined && maxElo === undefined
+        ? facets.players
+        : playersOf(filteredRows(allRows, { text: "", result: "", minElo, maxElo })),
+    );
 
   const filter = useMemo<RowFilter>(
     () => ({
@@ -351,7 +366,8 @@ function ImportOptionsDialog({
                 size="small"
                 disableCloseOnSelect
                 disabled={busy}
-                options={facets.players}
+                options={playerOptions}
+                onOpen={refreshPlayerOptions}
                 value={players}
                 onChange={(_event, value) => setPlayers(value)}
                 data-testid="library-import-player"
