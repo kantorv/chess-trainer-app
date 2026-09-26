@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import Alert from "@mui/material/Alert";
-import LinearProgress from "@mui/material/LinearProgress";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
@@ -11,15 +10,16 @@ import { useNavigate, useSearchParams } from "react-router";
 import { useTranslation } from "react-i18next";
 
 import { isZipFile, readCollectionZip } from "../../lib/collectionZip";
-import { addCollection, appendCollectionGames } from "../../lib/libraryCollectionStore";
+import { addCollection } from "../../lib/libraryCollectionStore";
 import {
-  collectionNameOfStem,
+  collectionImportFileOf,
   readCollectionText,
+  type CollectionImportSource,
   type CollectionSummary,
 } from "../../lib/libraryCollections";
 import FolderPicker from "../shared/folders/FolderPicker";
 import { RightPanel } from "../main/rightPanel";
-import { indexCollection } from "./indexCollection";
+import ImportOptionsDialog from "./ImportOptionsDialog";
 import LibraryMiss from "./LibraryMiss";
 import { useCollectionSummary, useLibraryFolders } from "./useLibraryCollections";
 
@@ -28,28 +28,31 @@ import { useCollectionSummary, useLibraryFolders } from "./useLibraryCollections
  * PGN text pasted, becomes a new collection of the Library holding its
  * games (`lib/libraryCollectionStore.ts`), and the reader lands on its table.
  *
- * A `.zip` holding exactly one `.pgn` is unzipped (`lib/collectionZip.ts`,
- * CTA-102) and its text goes the same way; none or several is refused.
+ * A `.zip` is unzipped (`lib/collectionZip.ts`, CTA-102): each `.pgn` in it
+ * becomes a collection of its own (CTA-103); a zip with none is refused.
  *
  * A file and a paste go through the **same** reading (`readCollectionText`:
  * line endings normalised, cut into games, refused past
- * `MAX_COLLECTION_CHARS`). The name is the one typed, else the `Event` every
- * game shares (a tournament export), else the file's name, else "Pasted
- * collection".
+ * `MAX_COLLECTION_CHARS`), and then the **same popup** (`ImportOptionsDialog`,
+ * CTA-103): what came in — the file, its size, the games, a zip's files, the
+ * players, Elo, dates and events — and filters on Elo, dates and players
+ * applied **before** the index pass. The name is the one typed, else the
+ * `Event` every game shares (a tournament export), else the file's name,
+ * else "Pasted collection".
  *
- * **Every game is checked before the collection is kept**: its index
+ * **Every kept game is checked before the collection is kept**: its index
  * (`lib/collectionIndex.ts` — the tags, and a `chess.js` pass: the length,
  * unreadable games, the opening from the book) is built in a Web Worker
- * (`indexCollection.ts`) while a progress bar says how far it has got — about
- * 8 ms a game, so a minute and more for 10,000. Cancel, or leaving the
- * screen, stops it and keeps nothing.
+ * (`indexCollection.ts`) while the popup's progress bar says how far it has
+ * got — about 8 ms a game, so a minute and more for 10,000. Cancel, or
+ * leaving the screen, stops it and keeps nothing.
  *
  * **An empty collection** is made from the name alone (CTA-77) — a custom
- * collection the reader fills later. **Filling one** is this screen again,
- * at `/library/new?into=<collection>` (the table's *Add games*, uploaded
- * collections only): the same reading and the same check, and the games are
- * added at the end of that collection (`appendCollectionGames`) rather than
- * kept as a new one, and the reader goes back to its table.
+ * collection the reader fills later, with no popup. **Filling one** is this
+ * screen again, at `/library/new?into=<collection>` (the table's *Add games*,
+ * uploaded collections only): the same reading, popup and check, and the
+ * games are added at the end of that collection (`appendCollectionGames`)
+ * rather than kept as a new one, and the reader goes back to its table.
  *
  * **A new collection is filed in a folder** (CTA-88): the picker starts at the
  * top level, or at `?folder=<id>` — a folder row's *Add a collection here*.
@@ -63,65 +66,30 @@ function LibraryUpload({ into, folder = null }: { into?: CollectionSummary; fold
   const [name, setName] = useState("");
   const [pasted, setPasted] = useState("");
   const [problem, setProblem] = useState<string | null>(null);
-  /** The index pass under way: how far it has got. */
-  const [indexing, setIndexing] = useState<{ done: number; total: number } | null>(null);
+  /** What was read, open in the import popup. */
+  const [source, setSource] = useState<CollectionImportSource | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const abortRef = useRef<AbortController | null>(null);
 
-  // Leaving the screen stops the pass.
-  useEffect(() => () => abortRef.current?.abort(), []);
-
-  /** The one route in, for a file and a paste alike. */
-  const bringIn = async (text: string, fileStem?: string) => {
-    const reading = readCollectionText(text);
-    if (!reading.ok) {
-      setProblem(reading.problem);
+  /** The one route in, for a file, a zip's files and a paste alike: read, then the popup. */
+  const bringIn = (
+    texts: { text: string; size: number; name?: string; stem?: string }[],
+    picked?: { name: string; size: number; zip: boolean },
+  ) => {
+    const read = texts.map(({ text, size, name: fileName, stem }) => collectionImportFileOf(text, size, fileName, stem));
+    const readable = read.filter(({ reading }) => reading.ok);
+    if (readable.length === 0) {
+      const [first] = read;
+      setProblem(first !== undefined && !first.reading.ok ? first.reading.problem : "unreadable");
       return;
     }
-    const chosen =
-      into?.name ||
-      name.trim() ||
-      reading.name ||
-      (fileStem === undefined ? t("library.upload.pastedName") : collectionNameOfStem(fileStem));
-
-    const controller = new AbortController();
-    abortRef.current = controller;
     setProblem(null);
-    setIndexing({ done: 0, total: reading.games.length });
-    let rows;
-    try {
-      rows = await indexCollection(
-        reading.games,
-        (done, total) => setIndexing({ done, total }),
-        controller.signal,
-      );
-    } catch {
-      // Cancelled: `cancel` has already put the screen back. Anything else failed.
-      if (!controller.signal.aborted) {
-        setIndexing(null);
-        setProblem("index");
-      }
-      return;
-    } finally {
-      if (abortRef.current === controller) abortRef.current = null;
-    }
-    if (into !== undefined) {
-      const failed = await appendCollectionGames(into.id, reading.games, rows);
-      setIndexing(null);
-      if (failed !== undefined) {
-        setProblem(failed);
-        return;
-      }
-      navigate(`/library/${encodeURIComponent(into.id)}`);
-      return;
-    }
-    const added = await addCollection(chosen, reading.games, rows, undefined, undefined, folderId);
-    setIndexing(null);
-    if ("problem" in added) {
-      setProblem(added.problem);
-      return;
-    }
-    navigate(`/library/${encodeURIComponent(added.collection.id)}`);
+    setSource({
+      name: picked?.name,
+      size: picked?.size ?? texts.reduce((sum, text) => sum + text.size, 0),
+      zip: picked?.zip ?? false,
+      // A zip lists every .pgn in it, a file that read no game with none.
+      files: read.map(({ file }) => file),
+    });
   };
 
   /** A collection with no games yet — named as typed, else "New collection". */
@@ -142,12 +110,6 @@ function LibraryUpload({ into, folder = null }: { into?: CollectionSummary; fold
     navigate(`/library/${encodeURIComponent(added.collection.id)}`);
   };
 
-  const cancel = () => {
-    abortRef.current?.abort();
-    abortRef.current = null;
-    setIndexing(null);
-  };
-
   const onPicked = async (files: FileList | null) => {
     const file = files?.[0];
     // Cleared at once, so picking the same file again still fires a change.
@@ -166,8 +128,11 @@ function LibraryUpload({ into, folder = null }: { into?: CollectionSummary; fold
         setProblem(zipped.problem);
         return;
       }
-      // The entry's name, else the zip's, is the fallback collection name.
-      void bringIn(zipped.text, zipped.stem || file.name.replace(/\.zip$/i, ""));
+      // Each entry's name is its collection's fallback name.
+      bringIn(
+        zipped.entries.map((entry) => ({ text: entry.text, size: entry.size, name: entry.path, stem: entry.stem })),
+        { name: file.name, size: file.size, zip: true },
+      );
       return;
     }
     let text: string;
@@ -177,7 +142,11 @@ function LibraryUpload({ into, folder = null }: { into?: CollectionSummary; fold
       setProblem("file");
       return;
     }
-    void bringIn(text, file.name.replace(/\.pgn$/i, ""));
+    bringIn([{ text, size: file.size, name: file.name, stem: file.name.replace(/\.pgn$/i, "") }], {
+      name: file.name,
+      size: file.size,
+      zip: false,
+    });
   };
 
   const pastedReading = useMemo(
@@ -221,7 +190,7 @@ function LibraryUpload({ into, folder = null }: { into?: CollectionSummary; fold
               size="small"
               label={t("library.upload.name")}
               value={name}
-              disabled={indexing !== null}
+              disabled={source !== null}
               onChange={(event) => setName(event.target.value)}
               slotProps={{ htmlInput: { "data-testid": "library-upload-name" } }}
               sx={{ flex: 1, minWidth: 200 }}
@@ -229,7 +198,7 @@ function LibraryUpload({ into, folder = null }: { into?: CollectionSummary; fold
             <Button
               variant="outlined"
               startIcon={<CreateNewFolderRoundedIcon />}
-              disabled={indexing !== null}
+              disabled={source !== null}
               onClick={() => void createEmpty()}
               data-testid="library-upload-empty"
               sx={{ flexShrink: 0 }}
@@ -252,8 +221,8 @@ function LibraryUpload({ into, folder = null }: { into?: CollectionSummary; fold
                 borderColor: "divider",
                 borderRadius: 1,
                 p: 0.5,
-                opacity: indexing !== null ? 0.5 : 1,
-                pointerEvents: indexing !== null ? "none" : undefined,
+                opacity: source !== null ? 0.5 : 1,
+                pointerEvents: source !== null ? "none" : undefined,
               }}
             >
               <FolderPicker
@@ -274,7 +243,7 @@ function LibraryUpload({ into, folder = null }: { into?: CollectionSummary; fold
             component="label"
             variant="contained"
             startIcon={<UploadFileRoundedIcon />}
-            disabled={indexing !== null}
+            disabled={source !== null}
             data-testid="library-upload-pick"
           >
             {t("library.upload.chooseFile")}
@@ -295,7 +264,7 @@ function LibraryUpload({ into, folder = null }: { into?: CollectionSummary; fold
           maxRows={14}
           label={t("library.upload.pasteLabel")}
           value={pasted}
-          disabled={indexing !== null}
+          disabled={source !== null}
           onChange={(event) => {
             setPasted(event.target.value);
             setProblem(null);
@@ -311,30 +280,13 @@ function LibraryUpload({ into, folder = null }: { into?: CollectionSummary; fold
         <Box>
           <Button
             variant="outlined"
-            disabled={pasted.trim() === "" || indexing !== null}
-            onClick={() => void bringIn(pasted)}
+            disabled={pasted.trim() === "" || source !== null}
+            onClick={() => bringIn([{ text: pasted, size: new Blob([pasted]).size }])}
             data-testid="library-upload-save"
           >
             {t(into === undefined ? "library.upload.save" : "library.upload.intoSave")}
           </Button>
         </Box>
-
-        {indexing !== null && (
-          <Box data-testid="library-upload-indexing" sx={{ display: "grid", gap: 1 }}>
-            <Typography variant="body2" data-testid="library-upload-progress">
-              {t("library.upload.indexing", { done: indexing.done, total: indexing.total })}
-            </Typography>
-            <LinearProgress
-              variant="determinate"
-              value={indexing.total === 0 ? 0 : (100 * indexing.done) / indexing.total}
-            />
-            <Box>
-              <Button size="small" onClick={cancel} data-testid="library-upload-cancel">
-                {t("library.upload.cancel")}
-              </Button>
-            </Box>
-          </Box>
-        )}
 
         {problem !== null && (
           <Alert severity="error" data-testid="library-upload-problem">
@@ -342,6 +294,16 @@ function LibraryUpload({ into, folder = null }: { into?: CollectionSummary; fold
           </Alert>
         )}
       </Box>
+      {source !== null && (
+        <ImportOptionsDialog
+          source={source}
+          into={into}
+          typedName={name}
+          folderId={folderId}
+          onClose={() => setSource(null)}
+          onDone={(path) => navigate(path)}
+        />
+      )}
       <RightPanel>
         <Typography variant="body2" sx={{ color: "text.secondary" }}>
           {t("library.upload.storage")}

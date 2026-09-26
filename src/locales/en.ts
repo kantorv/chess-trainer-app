@@ -1135,7 +1135,7 @@ const en = {
       name: "Name",
       /** The folder the new collection is filed in (CTA-88). */
       folder: "Folder",
-      chooseFile: "Choose a .pgn file",
+      chooseFile: "Choose a .pgn or .zip file",
       pasteLabel: "Or paste PGN text",
       read_one: "{{count}} game found",
       read_other: "{{count}} games found",
@@ -1144,7 +1144,7 @@ const en = {
       emptyName: "New collection",
       /** The same screen adding games to one of the reader's collections — `?into=<id>`. */
       intoTitle: "Add games to {{name}}",
-      intoIntro: "A .pgn file (or a .zip holding one) or pasted PGN text of one game or many. Every game is checked, then added at the end of the collection.",
+      intoIntro: "A .pgn file (or a .zip of them) or pasted PGN text of one game or many. Every game is checked, then added at the end of the collection.",
       intoSave: "Add games",
       save: "Add collection",
       pastedName: "Pasted collection",
@@ -1152,6 +1152,37 @@ const en = {
       /** The index pass over an upload's games, before it is kept. */
       indexing: "Checking games… {{done}} of {{total}}",
       cancel: "Cancel",
+      /**
+       * The import-options popup (CTA-103): what was read, and the filters
+       * applied before the index pass.
+       */
+      options: {
+        title: "Import options",
+        intoTitle: "Add games to {{name}}",
+        pasted: "Pasted text",
+        games_one: "{{count}} game",
+        games_other: "{{count}} games",
+        fileKept_one: "{{kept}} of {{count}} game kept",
+        fileKept_other: "{{kept}} of {{count}} games kept",
+        players_one: "{{count}} player",
+        players_other: "{{count}} players",
+        eloSpan: "Elo",
+        dateSpan: "Dates",
+        events_one: "{{count}} event",
+        events_other: "{{count}} events",
+        filters: "Import only",
+        minElo: "Min Elo",
+        maxElo: "Max Elo",
+        eloHelp: "Both players' Elo; a game without one is left out.",
+        dateHelp: "A game without a date is left out.",
+        playerFilter: "Players",
+        playersHelp: "Games of any of them — pick from the list or type part of a name.",
+        several: "Each file becomes a collection of its own, named by the Event its games share, else by the file's name.",
+        severalInto: "Every file's games are added to this collection.",
+        count_one: "{{kept}} of {{count}} game will be imported",
+        count_other: "{{kept}} of {{count}} games will be imported",
+        import: "Import",
+      },
       problem: {
         empty: "There is no PGN in that.",
         unreadable: "No game could be read in that.",
@@ -1162,7 +1193,6 @@ const en = {
         file: "Could not read that file.",
         zip: "That zip could not be read.",
         "zip-empty": "There is no .pgn file in that zip.",
-        "zip-many": "That zip holds more than one .pgn file — put the games in one file.",
       },
     },
     /** A path the Library does not have. */
