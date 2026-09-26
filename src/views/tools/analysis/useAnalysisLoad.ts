@@ -1,17 +1,9 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { AnalysisSettings } from "../../../lib/analysisSettings";
 import { finalFenOf } from "../../../lib/gameModel";
 import { mainlineGame, mergeTrees, type GameTree } from "../../../lib/gameTree";
 import { parsePgnTree } from "../../../lib/pgn";
-import { newSavedAnalysisId, splitAnalysesOf } from "../../../lib/savedAnalyses";
-import {
-  createAnalysisFolder,
-  MAX_ANALYSIS_FOLDERS,
-  removeAnalysisFolder,
-} from "../../../lib/savedAnalysisFolderStore";
-import { addAnalyses, MAX_SAVED_ANALYSES } from "../../../lib/savedAnalysisStore";
 import {
   normaliseRepertoireText,
   readRepertoireText,
@@ -29,12 +21,14 @@ import {
  * A PGN — picked as a file or pasted, one route for both — is read the way a
  * repertoire is (`readRepertoireText`: the uploads' size and emptiness rules,
  * every game parsed as a tree, side lines and comments kept). **One game**
- * goes to `onLoadTree`. **Several** sit in `choice` until merged into one
- * tree (`merge`) or split into one saved analysis each, filed together in a
- * new folder named after the text (`split`, which takes the reader there
- * through `onSplit`). A PGN of a position and no moves loads as that
- * position. A **FEN** is a position: it goes to `onLoadFen`, which throws on
- * one that will not parse — the error line is `fenProblem`.
+ * goes to `onLoadTree`. **Several** sit in `choice` — with the text they came
+ * in, and the file's name — until the reader merges them into one tree
+ * (`merge`) or, where the host saves collections (`onCollectionSaved`, the
+ * Analysis module — CTA-101), keeps them as a games collection in the Library
+ * (`MultiGameDialog`, which does the saving), or `dismiss`es the choice. A
+ * PGN of a position and no moves loads as that position. A **FEN** is a
+ * position: it goes to `onLoadFen`, which throws on one that will not parse —
+ * the error line is `fenProblem`.
  *
  * A host that takes positions another way — the analyses Lobby's form, whose
  * editor a position is for (CTA-96) — passes `onLoadPosition`, and a PGN that
@@ -44,8 +38,6 @@ import {
  * all.
  */
 export type AnalysisLoadConfig = {
-  /** The engine knobs a split's analyses are saved under — the board's own. */
-  settings: AnalysisSettings;
   onLoadTree: (tree: GameTree) => void;
   /**
    * Throws on a FEN that will not parse. Absent, `applyFen` is a no-op — a
@@ -60,18 +52,29 @@ export type AnalysisLoadConfig = {
    */
   onLoadPosition?: (position: string) => void;
   /**
-   * A split was saved into this folder. Absent, a text of several games can
-   * only be merged — the Openings explorer keeps nothing (CTA-78).
+   * A text of several games was kept as this new Library collection. Present
+   * — the Analysis module (CTA-101) — the choice is the popup's, Merge or Save
+   * as games collection, and a merge writes `[%games N]` at its branches.
+   * Absent, a text of several games can only be merged, uncounted — the
+   * Openings explorer keeps nothing (CTA-78).
    */
-  onSplit?: (folderId: string) => void;
+  onCollectionSaved?: (collectionId: string) => void;
+};
+
+/** A text of several games, waiting for the reader's choice. */
+export type MultiGameChoice = {
+  reading: Extract<RepertoireReading, { ok: true }>;
+  /** The text as it came in — what a collection keeps, game by game. */
+  text: string;
+  /** The picked file's name without `.pgn`; absent for a paste. */
+  fileStem?: string;
 };
 
 export const useAnalysisLoad = ({
-  settings,
   onLoadTree,
   onLoadFen,
   onLoadPosition,
-  onSplit,
+  onCollectionSaved,
 }: AnalysisLoadConfig) => {
   const { t } = useTranslation();
   const [pasted, setPasted] = useState("");
@@ -79,11 +82,7 @@ export const useAnalysisLoad = ({
   const [problem, setProblem] = useState<string | null>(null);
   const [fenProblem, setFenProblem] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
-  /** A text of several games, waiting for merge or split. */
-  const [choice, setChoice] = useState<Extract<RepertoireReading, { ok: true }> | null>(
-    null,
-  );
-  const [choiceProblem, setChoiceProblem] = useState<string | null>(null);
+  const [choice, setChoice] = useState<MultiGameChoice | null>(null);
 
   const load = (tree: GameTree) => {
     onLoadTree(tree);
@@ -104,11 +103,10 @@ export const useAnalysisLoad = ({
     onLoadPosition(finalFenOf(game));
   };
 
-  /** The one route in, for a file and a paste alike. */
-  const bringIn = (text: string) => {
+  /** The one route in, for a file and a paste alike — a file with its name's stem. */
+  const bringIn = (text: string, fileStem?: string) => {
     setProblem(null);
     setChoice(null);
-    setChoiceProblem(null);
     setLoaded(false);
     const reading = readRepertoireText(text);
     if (!reading.ok) {
@@ -129,51 +127,37 @@ export const useAnalysisLoad = ({
       return;
     }
     if (reading.games.length === 1) return singleGame(reading.games[0].tree);
-    setChoice(reading);
+    setChoice({ reading, text, ...(fileStem !== undefined ? { fileStem } : {}) });
   };
 
   /** A file picked — its text read and brought in. The input clears itself. */
   const onPicked = async (files: FileList | null) => {
     const file = files?.[0];
     if (file === undefined) return;
-    bringIn(await file.text());
+    bringIn(await file.text(), file.name.replace(/\.pgn$/i, ""));
   };
 
+  /** Merge the choice's games onto the board — counted where the host keeps collections. */
   const merge = () => {
-    if (choice === null || !choice.mergeable) return;
+    if (choice === null || !choice.reading.mergeable) return;
+    const { reading } = choice;
     load(
       mergeTrees(
-        choice.games.map((game) => game.tree),
-        choice.games[0].tree.startFen,
-        { ...(choice.name !== undefined ? { Event: choice.name } : {}), Result: "*" },
+        reading.games.map((game) => game.tree),
+        reading.games[0].tree.startFen,
+        { ...(reading.name !== undefined ? { Event: reading.name } : {}), Result: "*" },
+        { countGames: onCollectionSaved !== undefined },
       ),
     );
   };
 
-  /*
-    The folder is made first, because the records name it; if the records then
-    cannot be written, it is taken back out rather than left empty.
-  */
-  const split = async () => {
-    if (choice === null || onSplit === undefined) return;
-    const folder = await createAnalysisFolder(choice.name ?? t("analysis.load.splitFolder"), null);
-    if (folder === undefined) {
-      setChoiceProblem(t("analysis.load.problem.folder", { max: MAX_ANALYSIS_FOLDERS }));
-      return;
-    }
-    const failed = await addAnalyses(
-      splitAnalysesOf(newSavedAnalysisId, choice.games, folder.id, settings),
-    );
-    if (failed !== undefined) {
-      await removeAnalysisFolder(folder.id);
-      setChoiceProblem(
-        failed === "too-many"
-          ? t("analysis.load.problem.tooMany", { max: MAX_SAVED_ANALYSES })
-          : t("analysis.load.problem.storage"),
-      );
-      return;
-    }
-    onSplit(folder.id);
+  /** The choice put away — the popup cancelled, or its collection kept. */
+  const dismiss = () => setChoice(null);
+
+  /** The popup kept the choice as a collection: the host takes the reader there. */
+  const collectionSaved = (collectionId: string) => {
+    setChoice(null);
+    onCollectionSaved?.(collectionId);
   };
 
   /** Apply the FEN form's text through `onLoadFen`; the error line is `fenProblem`. */
@@ -205,12 +189,13 @@ export const useAnalysisLoad = ({
     fenProblem,
     /** A game was handed over — a position is its own feedback. */
     loaded,
+    /** A text of several games, waiting for the reader's choice. */
     choice,
-    choiceProblem,
     bringIn,
     onPicked,
     merge,
-    split,
+    dismiss,
+    collectionSaved,
     applyFen,
   };
 };

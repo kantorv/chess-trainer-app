@@ -485,6 +485,12 @@ words box, **the table the one region that scrolls**, its header sticky.
 - **Empty** (`library-upload-empty`): `addCollection(name || "New collection",
   [], [])`, then its table. An empty table says "no games yet"
   (`library.table.noGames`).
+- **From the Analysis module** (CTA-101): a PGN of several games brought into
+  the Analysis Board's Load tab or the analyses Lobby's form opens a popup
+  whose **Save as games collection** does this screen's work in place — the
+  same reading, index pass (progress, Cancel) and naming rule, `addCollection`
+  at the top level — and lands on the new table
+  ([`analysis-board.md`](./analysis-board.md) §1, `MultiGameDialog.tsx`).
 - **`?into=<id>`** (the table's **Add games**, `library-table-add-games`): the
   same screen without the name field or the empty button, a title "Add games
   to ‹name›", the same reading and check, then `appendCollectionGames`, then

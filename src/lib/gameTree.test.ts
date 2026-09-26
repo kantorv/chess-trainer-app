@@ -442,6 +442,52 @@ describe("mergeTrees", () => {
     expect(mainline(merged).map((node) => node.san)).toEqual(["e4"]);
     expect(merged.nextId).toBe(2);
   });
+
+  describe("counting games (CTA-101)", () => {
+    const trees = [
+      parsePgnTree("1. e4 e5 2. Nf3 Nc6 *"),
+      parsePgnTree("1. e4 c5 2. Nf3 *"),
+      parsePgnTree("1. e4 e5 2. Bc4 *"),
+      parsePgnTree("1. e4 e5 2. Nf3 Nc6 3. Bb5 *"),
+    ];
+    const merged = mergeTrees(trees, DEFAULT_POSITION, {}, { countGames: true });
+    const at = (...sans: string[]) => findNode(merged, nodeAtSanPath(merged, sans))!;
+
+    it("tags each move where the games part, with the games that played it", () => {
+      expect(at("e4", "e5").comments).toEqual(["[%games 3]"]);
+      expect(at("e4", "c5").comments).toEqual(["[%games 1]"]);
+      expect(at("e4", "e5", "Nf3").comments).toEqual(["[%games 2]"]);
+      expect(at("e4", "e5", "Bc4").comments).toEqual(["[%games 1]"]);
+    });
+
+    it("leaves the trunk — a position every game leaves the same way — untagged", () => {
+      expect(at("e4").comments).toBeUndefined();
+      expect(at("e4", "e5", "Nf3", "Nc6").comments).toBeUndefined();
+      expect(at("e4", "c5", "Nf3").comments).toBeUndefined();
+    });
+
+    it("counts a game's own side lines, once per node", () => {
+      const own = mergeTrees(
+        [parsePgnTree("1. e4 e5 (1... c5 2. Nf3) (1... e5 2. Bc4) 2. Nf3 *"), parsePgnTree("1. d4 *")],
+        DEFAULT_POSITION,
+        {},
+        { countGames: true },
+      );
+      expect(own.moves.map((node) => [node.san, node.comments])).toEqual([
+        ["e4", ["[%games 1]"]],
+        ["d4", ["[%games 1]"]],
+      ]);
+      expect(own.moves[0].children.map((node) => [node.san, node.comments])).toEqual([
+        ["e5", ["[%games 1]"]],
+        ["c5", ["[%games 1]"]],
+      ]);
+    });
+
+    it("counts nothing without the option — the merge it always was", () => {
+      const plain = mergeTrees(trees, DEFAULT_POSITION);
+      expect(treeToPgn(plain)).not.toContain("{");
+    });
+  });
 });
 
 

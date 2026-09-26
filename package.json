@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "wirepgn": "node scripts/wirepgn.js",
     "test": "vitest",
-    "test:run": "vitest run"
+    "test:run": "vitest run --maxWorkers 5"
   },
   "dependencies": {
     "@emotion/cache": "^11.14.0",

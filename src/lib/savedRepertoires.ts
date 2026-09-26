@@ -355,6 +355,8 @@ export const mergedRepertoireOf = (
     reading.games.map((game) => game.tree),
     reading.games[0].tree.startFen,
     { ...(name !== "" ? { Event: name } : {}), Result: "*" },
+    // How many games went each way at a branch (CTA-101).
+    { countGames: true },
   );
   return recordOf(id, name, treeToPgn(tree), tree, now);
 };

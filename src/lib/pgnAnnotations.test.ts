@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parsePgnGame, parsePgnTree, parsePgnTrees } from "./pgn";
+import { gamesOf } from "./gamesTag";
 import { NAG_SECTIONS, toggleNag } from "./moveAnnotations";
 import {
   deleteFrom,
@@ -150,6 +151,62 @@ describe("mergeTrees carries annotations", () => {
     }
     expect(pgn.match(/\{/g)).toHaveLength(7);
     expect(treeToPgn(parsePgnTree(pgn))).toBe(pgn);
+  });
+});
+
+describe("mergeTrees writes the games tag (CTA-101)", () => {
+  const count = (trees: GameTree[]) =>
+    mergeTrees(trees, trees[0].startFen, {}, { countGames: true });
+  /** Movetexts as one many-game text — a game starts at its `[Event]`. */
+  const text = (...games: string[]) =>
+    games.map((movetext, index) => `[Event "${index + 1}"]\n\n${movetext}`).join("\n\n");
+  const games = (...movetexts: string[]) => parsePgnTrees(text(...movetexts));
+
+  it("sums the counts the games already carry, an untagged move counting 1", () => {
+    const merged = count(
+      games(
+        "1. e4 {[%games 5] King's pawn.} e5 *",
+        "1. e4 {games:2 King's pawn.} c5 *",
+        "1. d4 {Queen's pawn.} *",
+      ),
+    );
+    expect(at(merged, "e4").comments).toEqual(["[%games 7] King's pawn."]);
+    expect(at(merged, "d4").comments).toEqual(["[%games 1] Queen's pawn."]);
+    expect(gamesOf(at(merged, "e4"))).toBe(7);
+    expect(gamesOf(at(merged, "e4", "c5"))).toBe(1);
+  });
+
+  it("takes the old tags out of the joined comment, on the trunk too", () => {
+    const merged = count(
+      games("1. e4 {[%games 4]} e5 {Open.} *", "1. e4 {games:3 Solid.} e5 {[%games 9] Open.} *"),
+    );
+    // Every game played e4 and e5: nothing to tag, and nothing of the old tags left.
+    expect(at(merged, "e4").comments).toEqual(["Solid."]);
+    expect(at(merged, "e4", "e5").comments).toEqual(["Open."]);
+    expect(treeToPgn(merged)).not.toMatch(/games/);
+  });
+
+  it("re-merging a merged tree sums its counts rather than keeping the first", () => {
+    const first = count(games("1. e4 e5 *", "1. e4 c5 *", "1. e4 e5 2. Nf3 *"));
+    const again = count([parsePgnTree(treeToPgn(first)), ...games("1. e4 e5 *", "1. e4 e6 *")]);
+    expect(gamesOf(at(again, "e4", "e5"))).toBe(3);
+    expect(gamesOf(at(again, "e4", "c5"))).toBe(1);
+    expect(gamesOf(at(again, "e4", "e6"))).toBe(1);
+  });
+
+  it("writes it into the PGN, first in the move's comment, and reads back the same", () => {
+    const merged = count(games("1. e4 {Best.} {Also.} *", "1. d4 *"));
+    const pgn = treeToPgn(merged);
+    expect(pgn).toContain("1. e4 { [%games 1] Best. } { Also. } (1. d4 { [%games 1] })");
+    expect(treeToPgn(parsePgnTree(pgn))).toBe(pgn);
+  });
+
+  it("a repertoire merge writes it", () => {
+    const reading = readRepertoireText(text("1. e4 e5 *", "1. e4 c5 *", "1. e4 e5 2. Nf3 *"));
+    if (!reading.ok) throw new Error("unreadable");
+    const record = mergedRepertoireOf("m", reading, "", new Date("2026-09-26T00:00:00Z"))!;
+    expect(record.pgn).toContain("e5 { [%games 2] }");
+    expect(record.pgn).toContain("c5 { [%games 1] }");
   });
 });
 

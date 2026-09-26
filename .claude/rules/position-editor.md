@@ -191,7 +191,8 @@ Everywhere else the editor's resets and tabs are unchanged.
   position cannot be analyzed, then back on at a reset; and the Load route
   (CTA-96): the resets in the header and the quick loads in the editor's row,
   a whole game handed over by paste and by pick, a single-move or move-less
-  PGN and a FEN setting the editor up, merge-or-split, the error that goes
+  PGN and a FEN setting the editor up, the several-games popup (merge, or a
+  games collection — CTA-101), the error that goes
   nowhere. The screen stubs the
   spare-piece trio with the provider holding the options — a spare-piece board
   renders with no options of its own (`chessboard.md` §8), and the list's

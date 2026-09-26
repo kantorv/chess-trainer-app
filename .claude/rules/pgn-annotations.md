@@ -22,7 +22,7 @@ Everything a PGN says about a move beyond the move itself: **comments**, the
 **commands** written inside them (`[%eval 6.91]`, `[%clk 0:22:33]`), our own
 **tags** (`prc:40`), and **NAG glyphs** (`$1`, `!?`). This file is the
 reference for all of it — what is read, where it is kept, what is shown, what
-is written back — and the place to specify a new one before it is built (§6).
+is written back — and the place to specify a new one before it is built.
 
 How a board *shows* the tree these ride on is [`tree-views.md`](./tree-views.md);
 the tree itself is `lib/gameTree.ts` (the root `CLAUDE.md`, *One game model*).
@@ -81,11 +81,29 @@ annotations. Every board reads through `parsePgnTree` / `parsePgnTrees`
 ### Merging (`mergeTrees`)
 
 Several games folded into one tree (a many-game upload's *Merge*, in the
-Analysis Board's load and the Repertoires' import). Where games meet on a
-move, **comments are joined** (a shared one kept once) and **NAGs unioned**.
-Nothing is counted — which is what §6's `games` tag is for. Note what joining
-does to a tag: two games' `prc:` on the same move become two marks on it, and
-**the first one wins** (§3).
+Analysis module's popup, the Repertoires' import and the Openings explorer's
+Load tab). Where games meet on a move, **comments are joined** (a shared one
+kept once) and **NAGs unioned**. Note what joining does to a tag: two games'
+`prc:` on the same move become two marks on it, and **the first one wins**
+(§3).
+
+**Counting** (`mergeTrees`' `{ countGames: true }`, CTA-101) — passed by the
+Analysis merge (the Board's Load tab and the analyses Lobby) and the
+Repertoires' import merge; **not** by the Openings explorer, whose merge
+writes no tags. It writes the `games` tag (§3):
+
+- **Only on branch candidates**: at a position the merged games leave by two
+  or more different moves, each of those moves gets `[%games N]`. A position
+  every game leaves the same way writes nothing, so the shared trunk stays
+  clean.
+- **N** is how many of the merged games played that move from that position.
+  A game counts **once per node**, its own side lines included. A move that
+  already carries a `games` tag counts as **that many** games (summed); an
+  untagged one counts 1 — so a re-merge adds up rather than under-counting.
+- The inputs' own `games` tags are **taken out** of everything joined
+  (`withoutGames`, on the trunk too), and the one summed tag is written
+  **first in the move's first comment** (`{ [%games 3] Prose. }`).
+- Without the option nothing is counted and the merge is what it always was.
 
 ---
 
@@ -152,11 +170,13 @@ from either convention reads the same.
 
 | | |
 | --- | --- |
-| **Written** | `games:12` (whole token, case-insensitive, `games: 12` too) or `[%games 12]`. A whole number. Written as `[%games N]` by the Library opening board's *Save tree as PGN* (CTA-99, below); `mergeTrees` does not write it yet (§6). |
+| **Written** | `games:12` (whole token, case-insensitive, `games: 12` too) or `[%games 12]`. A whole number. Ours writes `[%games N]`. |
+| **Written by** | `mergeTrees` with `countGames` (CTA-101, §1 *Merging*) — the Analysis merge and the Repertoires' import merge, on branch candidates only, summing tags already there; and the Library opening board's *Save tree as PGN* (CTA-99, below), on every move below the board's position. |
 | **On which move** | The move it counts — the candidate at a branch — as `prc`. |
 | **Read** | `gamesOf(node)`: its `comments`, then `preComments`; **the first one wins**. |
 | **Shown** | A *Games* chip (`annotations.keys.games`), never as prose (`withoutGames`). |
-| **Means** | With the Analysis Board's width source on *Games*, each tagged move's arrow is its share of the tagged moves' games at the branch. |
+| **Means** | With the Analysis Board's width source on *Games*, each tagged move's arrow is its share of the tagged moves' games at the branch. The repertoire player still sizes by `prc` only (`arrows.chances`). |
+| **Export** | Comment text: the Export tab's *comments off* strips it with every other comment. |
 
 ### The arrows these weigh — one overlay, three kinds of source
 
@@ -179,7 +199,7 @@ in the command form, first in the move's one comment
 (`{ [%games 12] [%prc 40] }` when `prc` is asked for too). It is **read** by
 `gamesOf` (CTA-98): a *Games* chip in the comment block, and — opened on the
 Analysis Board with its width source on *Games* — each move's arrow sized by
-its share. §6 is still the plan for writing it at merge time.
+its share. `mergeTrees` writes it too (§1 *Merging*, CTA-101).
 
 ---
 
@@ -250,7 +270,7 @@ touched by it:
 | Path | What lives there |
 | --- | --- |
 | `src/lib/pgn.ts` | The tokenizer and `parsePgnTree(s)`: comments, `;` comments, `$N`, suffixes onto the node. |
-| `src/lib/gameTree.ts` | The node fields; `setComments` / `commentsAt`, `setNags`; `mergeTrees`' joining; `treeToPgn` and `PgnExportOptions`; `moveTreeToPgn` — the same writer over moves with no board (`PgnMove`: SAN, ply, annotations). |
+| `src/lib/gameTree.ts` | The node fields; `setComments` / `commentsAt`, `setNags`; `mergeTrees`' joining and its `games` counting; `treeToPgn` and `PgnExportOptions`; `moveTreeToPgn` — the same writer over moves with no board (`PgnMove`: SAN, ply, annotations). |
 | `src/lib/openingTreePgn.ts` | The Library's *Save tree as PGN*: an opening tree's counts written as `[%games N]` / `[%prc P]` (§3). |
 | `src/lib/moveAnnotations.ts` | `readComment` (commands, the eval shapes, `prc` and `games` → chips), `annotationsAt`; the NAG table and its rules. |
 | `src/lib/playChance.ts` | `prc`: reading, writing, the chance rules. |
@@ -262,48 +282,8 @@ touched by it:
 | `src/views/explorer/ChanceArrows.tsx` + `chanceArrows.ts` | The weight-per-move arrow overlay. |
 | `src/views/shared/NagGlyphs.tsx`, `nagToneSx.ts` | Glyphs after a SAN, and the move marks' colours. |
 
-Tests: `lib/pgnAnnotations.test.ts` (parse, write, merge, edits),
+Tests: `lib/pgnAnnotations.test.ts` (parse, write, merge, the merge's
+`games` counting, edits), `lib/gameTree.test.ts` (the counting's placement),
 `lib/moveAnnotations.test.ts`, `lib/playChance.test.ts`,
 `lib/nextMoveWeights.test.ts` (the `games` and `[%eval]` readers, the widths),
 `views/explorer/NagDialog.test.tsx`.
-
----
-
-## 6. Planned — writing the `games` tag at merge time (not built)
-
-The **reader** is built (§3, CTA-98), and the Analysis Board sizes its arrows
-by it. What follows — `mergeTrees` writing the counts, and the questions it
-raises — is still planned.
-
-**The need.** A merged tree (§1, *Merging*) forgets how many of its games went
-through each move. The Library's opening board knows those counts — but from
-the collection's rows, not from anything a PGN can carry — so a merged file
-opened on the Analysis Board or as a repertoire cannot draw the same
-"how often was this played" arrows. A `games` tag written at merge time makes
-the count part of the file, and the arrow overlay (§3) gains a second weight
-source beside `prc`.
-
-**The shape, following `prc`:**
-
-| | |
-| --- | --- |
-| **Written** | `games:N` in the move's comment, `[%games N]` read too; `N` a whole number ≥ 1 — the games of the merge that played this move from this position. |
-| **Written by** | `mergeTrees`, on every node, as it folds the games — and already, as `[%games N]`, by the Library's *Save tree as PGN* (§3, CTA-99). |
-| **Read** | *Built* — `gamesOf(node)` (`lib/gamesTag.ts`), a *Games* chip. |
-| **Arrows** | *Built on the Analysis Board* — `arrows.widthSource: "games"` (CTA-98). The repertoire player still sizes by `prc` only (`arrows.chances`). |
-
-**To decide before building:**
-
-1. **Re-merging** a tree that already carries `games:` — sum the counts (the
-   honest total) rather than join two marks, which the §1 comment join would
-   do today (first-wins would then under-count).
-2. **An unmerged move** added later by the reader has no `games` — shown with
-   no arrow width, or counted as 1?
-3. **Both tags on one branch** — which the board draws when it was not told.
-4. **Export** — `games:` is comment text, so *comments off* strips it; whether
-   it needs an option of its own.
-5. **The Library** — whether its opening board keeps counting rows (always
-   exact, filter-aware) or can also read `games` from a shipped merged PGN.
-
-When the writing is built, fold what is left of this section into §3 and add
-its tests to `lib/pgnAnnotations.test.ts`.

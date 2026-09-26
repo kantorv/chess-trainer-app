@@ -51,7 +51,7 @@ the receiving end of the hand-off is [`analysis-board.md`](./analysis-board.md).
 | `scripts/vendorOpenings.mjs` | Re-vendors the book from an eco.json checkout (§2.1). Manual, not part of the build. |
 | `src/views/tools/analysis/AnalysisBoard.tsx`, `useAnalysisBoard.ts` | The **receiving** end of the hand-off: `arrivalOf(params, location.state)` and the `handOff` start option (§5.3). |
 | `src/views/tools/analysis/useAnalysisSession.ts` | The session this screen composes (core + engine + Play + a baseline), shared with the Analysis Board and the Library's game board. |
-| `src/views/tools/analysis/AnalysisLoad.tsx`, `AnalysisExport.tsx`, `AnalysisSettings.tsx`, `PlayToggleButton.tsx`, `EngineThinking.tsx` | The Analysis Board's tabs and header pieces, reused as they are. `AnalysisLoad` takes an optional `onSplit` and a `choiceLabelKey` for this screen (§3.4). |
+| `src/views/tools/analysis/AnalysisLoad.tsx`, `AnalysisExport.tsx`, `AnalysisSettings.tsx`, `PlayToggleButton.tsx`, `EngineThinking.tsx` | The Analysis Board's tabs and header pieces, reused as they are. `AnalysisLoad` takes an optional `onCollectionSaved` (the Analysis module's popup, CTA-101) and a `choiceLabelKey` for this screen's inline choice (§3.4). |
 | Tests | `src/views/openings/OpeningsBoard.test.tsx` (the screen), `openingArrows.test.ts`, `src/lib/analysisHandOff.test.ts`, `src/lib/openings.test.ts`, `src/views/shared/CurrentOpening.test.tsx`, the hand-off arrivals in `src/views/tools/analysis/AnalysisBoard.test.tsx`, and the two propagation tests (`src/views/board/boards.test.tsx`, `panelPropagation.test.tsx`). |
 
 Routes and nav: `App.tsx` routes `/openings` to `views/openings/Main`. The
@@ -199,7 +199,7 @@ Three React entry points share that one promise. Pick by what you need:
 | **Book** (`book`) | `OpeningBookList` over `book.nextMoves` | A click is `core.playVariation([san])` under the node on screen. A known move is followed, and a new one from an earlier node branches. Hover sets `book.setHoveredMove`. |
 | **Moves** (`moves`) | the next-move arrows switch (`openings-arrows`), then `explorer.moves` | Kept mounted. The move menu edits (`onEditTree: core.replaceTree`); *Play chances…* is off. |
 | **Map** (`map`) | `explorer.map` (`linked: true`) | Kept mounted. |
-| **Load** (`load`) | `AnalysisLoad` **without `onSplit`**, `choiceLabelKey="openings.load.choice"` | One game or a merge replaces the tree (`core.loadTree` + `engine.clearAnalysis`); a FEN is `core.loadFen` (it turns the board). **No split**, because a split saves analyses. |
+| **Load** (`load`) | `AnalysisLoad` **without `onCollectionSaved`**, `choiceLabelKey="openings.load.choice"` | One game or a merge replaces the tree (`core.loadTree` + `engine.clearAnalysis`); a FEN is `core.loadFen` (it turns the board). Several games get the inline, merge-only choice — **no popup and no collection**, because this screen keeps nothing — and the merge writes **no `[%games]` tags** (CTA-101). |
 | **Export** (`export`) | `AnalysisExport` (`fileStem="opening"`) | FEN, and the PGN with or without comments, NAGs and side lines. |
 | **Engine** (`engine`) | `AnalysisSettings` with `onClear` | **Clear** is `core.reset()` + `engine.clearAnalysis()`: back to the tree's **own start** (`startFenRef`): the `?fen=` position, or a loaded game's start. It is not the standard position. |
 
@@ -243,8 +243,9 @@ still drawn: the book is the screen's point, and the switch is the tree's.
 
 No Save, no changes strip (`openings-changes` must never render), no
 `beforeunload` prompt (nothing is lost that a reader was promised to keep),
-no folders, no `?openings=<id>`, no `/openings/saved`, and no Load split
-(`MergeSplitChoice` hides Split when `onSplit` is absent).
+no folders, no `?openings=<id>`, no `/openings/saved`, and no Load popup or
+games collection (`AnalysisLoad` without `onCollectionSaved` keeps the inline
+merge-only `MergeSplitChoice`, and its merge counts nothing).
 
 ---
 

@@ -8,6 +8,7 @@ import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
 import { useTranslation } from "react-i18next";
 
 import MergeSplitChoice from "../../shared/MergeSplitChoice";
+import MultiGameDialog from "./MultiGameDialog";
 import { useAnalysisLoad, type AnalysisLoadConfig } from "./useAnalysisLoad";
 
 /**
@@ -20,28 +21,29 @@ import { useAnalysisLoad, type AnalysisLoadConfig } from "./useAnalysisLoad";
  * A PGN — picked as a file or pasted, one route for both — is read the way a
  * repertoire is (`readRepertoireText`: the uploads' size and emptiness rules,
  * every game parsed as a tree, side lines and comments kept). **One game**
- * goes onto the board. **Several** ask the repertoire question
- * (`MergeSplitChoice`): **merge** them into one tree, which goes onto the
- * board unsaved like one game; or **split** them into one saved analysis
- * each, filed together in a new folder named after the text — and the reader
- * is taken there (`onSplit`). A PGN of a position and no moves loads as that
- * position. A **FEN** is a position: it turns the board to the side to move,
- * where a game does not.
+ * goes onto the board. **Several**, on the Analysis Board (`onCollectionSaved`),
+ * open the popup (`MultiGameDialog`, CTA-101): **merge** them into one tree,
+ * which goes onto the board unsaved like one game, with `[%games N]` at its
+ * branches; or **save them as a games collection** in the Library, where the
+ * reader is taken. Without `onCollectionSaved` — the Openings explorer — the
+ * choice is inline and merge-only (`MergeSplitChoice` with no split), and
+ * counts nothing. A PGN of a position and no moves loads as that position. A
+ * **FEN** is a position: it turns the board to the side to move, where a game
+ * does not.
  */
 function AnalysisLoad({
-  settings,
   onLoadTree,
   onLoadFen,
   onLoadPosition,
-  onSplit,
-  choiceLabelKey = "analysis.load.choice",
+  onCollectionSaved,
+  choiceLabelKey = "openings.load.choice",
 }: AnalysisLoadConfig & {
-  /** The merge-or-split choice's locale block — a board without a split words it without one. */
+  /** The inline merge-only choice's locale block — a board with no popup. */
   choiceLabelKey?: string;
 }) {
   const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
-  const load = useAnalysisLoad({ settings, onLoadTree, onLoadFen, onLoadPosition, onSplit });
+  const load = useAnalysisLoad({ onLoadTree, onLoadFen, onLoadPosition, onCollectionSaved });
 
   return (
     <Box
@@ -115,18 +117,26 @@ function AnalysisLoad({
           {t("analysis.load.loaded")}
         </Typography>
       )}
-      {load.choice !== null && (
-        <MergeSplitChoice
-          labelKey={choiceLabelKey}
-          testIdPrefix="analysis-choice"
-          count={load.choice.games.length}
-          skipped={load.choice.skipped}
-          mergeable={load.choice.mergeable}
-          onMerge={load.merge}
-          onSplit={onSplit === undefined ? undefined : () => void load.split()}
-          problem={load.choiceProblem}
-        />
-      )}
+      {load.choice !== null &&
+        (onCollectionSaved === undefined ? (
+          <MergeSplitChoice
+            labelKey={choiceLabelKey}
+            testIdPrefix="analysis-choice"
+            count={load.choice.reading.games.length}
+            skipped={load.choice.reading.skipped}
+            mergeable={load.choice.reading.mergeable}
+            onMerge={load.merge}
+            problem={null}
+          />
+        ) : (
+          <MultiGameDialog
+            testIdPrefix="analysis-choice"
+            choice={load.choice}
+            onMerge={load.merge}
+            onClose={load.dismiss}
+            onSaved={load.collectionSaved}
+          />
+        ))}
 
       {onLoadFen !== undefined && (
         <>
