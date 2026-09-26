@@ -472,6 +472,15 @@ words box, **the table the one region that scrolls**, its header sticky.
   chunk with no tag and no SAN move is dropped), `unreadable` when no game is
   left. The file name is never read except to suggest a collection name. So
   the two routes cannot drift apart.
+- **A `.zip` is accepted beside a `.pgn`** (CTA-102): `lib/collectionZip.ts`
+  (`readCollectionZip`, pure, fflate) unzips a zip holding **exactly one**
+  `.pgn` — directory entries, `__MACOSX/` files and dot-files are not counted —
+  and its text goes through `readCollectionText` like a picked file's. None
+  (`zip-empty`), several (`zip-many`), unreadable bytes (`zip`) or an entry
+  declaring more than `MAX_COLLECTION_CHARS` (`too-large`) is a
+  `library.upload.problem.*` message; nothing throws. The zip's directory is
+  read first and only the one entry is inflated. The name fallback is the
+  entry's stem. Works for a new collection and for `?into=`.
 - **Checked before it is kept**: the worker's index pass under a progress bar
   (`library-upload-indexing`), with Cancel (`library-upload-cancel`). Leaving
   the screen cancels too. Nothing is written until the pass succeeds.
