@@ -304,6 +304,13 @@ export type RowFilter = {
   from?: string;
   to?: string;
   /**
+   * Inclusive Elo bounds (CTA-103, the import popup's filter): a game is kept
+   * only when **both** players' Elo is within them. Either may be absent; with
+   * either set, a game missing an Elo is out.
+   */
+  minElo?: number;
+  maxElo?: number;
+  /**
    * The opening moves played on the filter board, as SAN from the start
    * (CTA-76): a game is kept when its `line` begins with them. Empty or
    * absent narrows nothing; a game with no `line` is out once it is set.
@@ -477,7 +484,13 @@ export const filteredRows = (
   const from = filter.from ?? "";
   const to = filter.to ?? "";
   const line = filter.line ?? [];
+  const { minElo, maxElo } = filter;
+  const eloIn = (elo: number | undefined) =>
+    elo !== undefined && (minElo === undefined || elo >= minElo) && (maxElo === undefined || elo <= maxElo);
   return rows.filter((row) => {
+    if ((minElo !== undefined || maxElo !== undefined) && !(eloIn(row.whiteElo) && eloIn(row.blackElo))) {
+      return false;
+    }
     if (line.length > 0) {
       if (row.line === undefined || row.line.length < line.length) return false;
       if (line.some((san, index) => row.line?.[index] !== san)) return false;
@@ -526,6 +539,20 @@ export type CollectionFacets = {
   dates?: { min: string; max: string };
 };
 
+/**
+ * The players of these rows, White's and Black's, each once, sorted as
+ * {@link collectionFacetsOf}'s list — the import popup's player suggestions
+ * over the games its Elo range leaves (CTA-103).
+ */
+export const playersOf = (rows: readonly Pick<CollectionRow, "white" | "black">[]): string[] => {
+  const players = new Set<string>();
+  for (const row of rows) {
+    if (row.white !== undefined) players.add(row.white);
+    if (row.black !== undefined) players.add(row.black);
+  }
+  return [...players].sort(collator.compare);
+};
+
 export const collectionFacetsOf = (rows: readonly CollectionRow[]): CollectionFacets => {
   const players = new Set<string>();
   const openings = new Set<string>();
@@ -557,6 +584,62 @@ export const collectionFacetsOf = (rows: readonly CollectionRow[]): CollectionFa
     results: RESULTS.filter((result) => results.has(result)),
     dates: min === undefined || max === undefined ? undefined : { min, max },
   };
+};
+
+/**
+ * What a text's games are, at a glance (CTA-103, the import popup's file
+ * info), from their tag-only rows: how many games and distinct players, the
+ * events, the lowest and highest Elo either side had, and the earliest and
+ * latest `Date` as the games write it (`1848`, `2023.07.30`) — ordered by the
+ * days they could be ({@link dateBounds}). A span is absent when no game
+ * carries its tag.
+ */
+export type CollectionMetadata = {
+  games: number;
+  players: number;
+  events: string[];
+  elo?: { min: number; max: number };
+  dates?: { first: string; last: string };
+};
+
+export const collectionMetadataOf = (rows: readonly CollectionRow[]): CollectionMetadata => {
+  const players = new Set<string>();
+  const events = new Set<string>();
+  let elo: { min: number; max: number } | undefined;
+  let first: { date: string; day: string } | undefined;
+  let last: { date: string; day: string } | undefined;
+  for (const row of rows) {
+    if (row.white !== undefined) players.add(row.white);
+    if (row.black !== undefined) players.add(row.black);
+    if (row.event !== undefined) events.add(row.event);
+    for (const value of [row.whiteElo, row.blackElo]) {
+      if (value === undefined) continue;
+      elo = elo === undefined ? { min: value, max: value } : { min: Math.min(elo.min, value), max: Math.max(elo.max, value) };
+    }
+    const bounds = dateBounds(row.date);
+    if (bounds !== undefined && row.date !== undefined) {
+      if (first === undefined || bounds[0] < first.day) first = { date: row.date, day: bounds[0] };
+      if (last === undefined || bounds[1] > last.day) last = { date: row.date, day: bounds[1] };
+    }
+  }
+  return {
+    games: rows.length,
+    players: players.size,
+    events: [...events].sort(collator.compare),
+    elo,
+    dates: first === undefined || last === undefined ? undefined : { first: first.date, last: last.date },
+  };
+};
+
+/**
+ * The `Event` every one of these games shares, when they do — what a
+ * tournament export is called, and so a new collection's name
+ * ({@link readCollectionText}'s `name`, over rows: the games an import keeps).
+ */
+export const sharedEventOf = (rows: readonly Pick<CollectionRow, "event">[]): string | undefined => {
+  const events = new Set(rows.map((row) => row.event));
+  const [event] = events;
+  return events.size === 1 ? event : undefined;
 };
 
 /**
@@ -617,4 +700,47 @@ export const readCollectionText = (text: string): CollectionReading => {
   const events = new Set(games.map((pgn) => gameTag(readPgnParts(pgn).headers, "Event")));
   const [event] = events;
   return events.size === 1 && event !== undefined ? { ok: true, games, name: event } : { ok: true, games };
+};
+
+/**
+ * One text brought in to become a collection (CTA-103, `/library/new`'s
+ * import popup) — a picked `.pgn`, one `.pgn` of a zip, or a paste — cut into
+ * games, each with its tag-only row, so the popup can describe and filter
+ * them before any `chess.js` pass.
+ */
+export type CollectionImportFile = {
+  /** The file's name (a zip entry's path); absent for a paste. */
+  name?: string;
+  /** Its stem — the name fallback; absent for a paste. */
+  stem?: string;
+  /** In bytes. */
+  size: number;
+  games: readonly string[];
+  /** Each game's tag-only row (`collectionRowOf`, no `chess.js`), numbered from 1. */
+  rows: readonly CollectionRow[];
+};
+
+/** What was brought in: the file picked (or the paste) and the texts in it. */
+export type CollectionImportSource = {
+  /** The picked file's name; absent for a paste. */
+  name?: string;
+  size: number;
+  /** A zip's `.pgn` files, else the one text. */
+  zip: boolean;
+  files: readonly CollectionImportFile[];
+};
+
+/** A text read as one import file: its games and their tag-only rows, or why it is none. */
+export const collectionImportFileOf = (
+  text: string,
+  size: number,
+  name?: string,
+  stem?: string,
+): { file: CollectionImportFile; reading: CollectionReading } => {
+  const reading = readCollectionText(text);
+  const games = reading.ok ? reading.games : [];
+  return {
+    reading,
+    file: { name, stem, size, games, rows: games.map((pgn, index) => collectionRowOf(pgn, index + 1)) },
+  };
 };

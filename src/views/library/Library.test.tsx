@@ -130,6 +130,23 @@ const upload = () => keep("Club games", GAMES);
 const typeInto = (testId: string, value: string) =>
   fireEvent.change(within(screen.getByTestId(testId)).getByRole("combobox"), { target: { value } });
 
+/** Import from the popup a file or a paste opens (CTA-103), with no filter set. */
+const confirmImport = async () => {
+  fireEvent.click(await screen.findByTestId("library-import-confirm"));
+};
+
+/** Pick a file in `/library/new`'s file input. */
+const pickFile = (file: File) =>
+  fireEvent.change(screen.getByTestId("library-upload-input"), { target: { files: [file] } });
+
+/** A zip of these files, as a picked `File`. */
+const zipOf = (files: Record<string, string>, name = "Club_Games.zip") =>
+  new File(
+    [zipSync(Object.fromEntries(Object.entries(files).map(([path, text]) => [path, strToU8(text)]))) as BlobPart],
+    name,
+    { type: "application/zip" },
+  );
+
 /** The real 7,818-game fixture as an upload — its tags' rows (the chess.js pass would take a minute). */
 const keepCarlsen = async () => {
   const reading = readCollectionText(
@@ -392,34 +409,52 @@ describe("the Library's folders (CTA-88)", () => {
     // One game: the upload is a real index pass.
     fireEvent.change(screen.getByTestId("library-upload-paste"), { target: { value: GAMES[0] } });
     fireEvent.click(screen.getByTestId("library-upload-save"));
+    await confirmImport();
     await waitFor(() => expect(where()).toMatch(/^\/library\/u/), { timeout: 4000 });
     expect(await folderOf("Club")).toBe(box.id);
   });
 
-  it("takes a zip of one .pgn like the .pgn itself, and refuses a zip of none or several", async () => {
-    const pick = (file: File) =>
-      fireEvent.change(screen.getByTestId("library-upload-input"), { target: { files: [file] } });
-    const zipOf = (files: Record<string, string>, name = "Club_Games.zip") =>
-      new File(
-        [zipSync(Object.fromEntries(Object.entries(files).map(([path, text]) => [path, strToU8(text)]))) as BlobPart],
-        name,
-        { type: "application/zip" },
-      );
-
+  it("takes a zip of one .pgn like the .pgn itself, and refuses a zip of none or unreadable bytes", async () => {
     mount("/library/new");
     expect(screen.getByTestId("library-upload-input")).toHaveAttribute("accept", expect.stringContaining(".zip"));
 
-    pick(zipOf({ "a.pgn": GAMES[0], "b.pgn": GAMES[0] }));
-    expect(await screen.findByTestId("library-upload-problem")).toHaveTextContent(/more than one/i);
-    pick(zipOf({ "notes.txt": "hi" }));
-    await waitFor(() => expect(screen.getByTestId("library-upload-problem")).toHaveTextContent(/no \.pgn/i));
-    pick(new File(["not a zip"], "broken.zip", { type: "application/zip" }));
+    pickFile(zipOf({ "notes.txt": "hi" }));
+    expect(await screen.findByTestId("library-upload-problem")).toHaveTextContent(/no \.pgn/i);
+    pickFile(new File(["not a zip"], "broken.zip", { type: "application/zip" }));
     await waitFor(() => expect(screen.getByTestId("library-upload-problem")).toHaveTextContent(/could not be read/i));
 
     // One .pgn (beside a resource fork): a new collection, named from the Event its games share.
-    pick(zipOf({ "games/x.pgn": GAMES[0], "__MACOSX/games/._x.pgn": "junk" }));
+    pickFile(zipOf({ "games/x.pgn": GAMES[0], "__MACOSX/games/._x.pgn": "junk" }));
+    expect(await screen.findByTestId("library-import-file-0")).toHaveTextContent("games/x.pgn");
+    await confirmImport();
     await waitFor(() => expect(where()).toMatch(/^\/library\/u/), { timeout: 4000 });
     expect(await folderOf("Club")).toBeNull();
+  });
+
+  it("makes one collection per .pgn of a zip, each named by its Event or its file, all in the folder picked (CTA-103)", async () => {
+    const box = await made("Box");
+    mount(`/library/new?folder=${box.id}`);
+    await screen.findByTestId(`library-upload-folder-picker-${box.id}`);
+    // The typed name is a single text's; several files are named by the rule.
+    fireEvent.change(screen.getByTestId("library-upload-name"), { target: { value: "Ignored" } });
+    const mixed = GAMES[0].replace('[Event "Club"]', '[Event "Other"]');
+    pickFile(zipOf({ "one/Club.pgn": GAMES.slice(0, 2).join("\n\n"), "two/Mixed_Bag.pgn": `${GAMES[2]}\n\n${mixed}` }, "Two.zip"));
+
+    expect(await screen.findByTestId("library-import-source")).toHaveTextContent("Two.zip");
+    expect(screen.getByTestId("library-import-source")).toHaveTextContent("4 games");
+    expect(screen.getByTestId("library-import-file-0")).toHaveTextContent("one/Club.pgn");
+    expect(screen.getByTestId("library-import-file-0")).toHaveTextContent("2 games");
+    expect(screen.getByTestId("library-import-file-1")).toHaveTextContent("two/Mixed_Bag.pgn");
+    expect(screen.getByTestId("library-import-several")).toBeInTheDocument();
+    expect(screen.getByTestId("library-import-summary-events")).toHaveTextContent("2 events: Club, Other");
+
+    await confirmImport();
+    await waitFor(() => expect(where()).toBe("/library"), { timeout: 4000 });
+    const kept = await loadUploadedCollections();
+    expect(kept.map((row) => [row.name, row.count, row.folderId]).sort()).toEqual([
+      ["Club", 2, box.id],
+      ["Mixed Bag", 2, box.id],
+    ]);
   });
 
   it("files an empty collection in the folder picked, and a folder that is not the reader's at the top level", async () => {
@@ -1216,7 +1251,8 @@ describe("adding a collection", () => {
       target: { value: GAMES.join("\n\n") },
     });
     fireEvent.click(screen.getByTestId("library-upload-save"));
-    expect(screen.getByTestId("library-upload-indexing")).toBeInTheDocument();
+    await confirmImport();
+    expect(screen.getByTestId("library-import-indexing")).toBeInTheDocument();
 
     await waitFor(() => expect(where()).toMatch(/^\/library\/u/));
     const [added] = await loadUploadedCollections();
@@ -1232,11 +1268,12 @@ describe("adding a collection", () => {
       target: { value: Array.from({ length: 300 }, (_, index) => GAMES[index % 3]).join("\n\n") },
     });
     fireEvent.click(screen.getByTestId("library-upload-save"));
+    await confirmImport();
     await waitFor(() =>
-      expect(screen.getByTestId("library-upload-progress")).not.toHaveTextContent("Checking games… 0 of"),
+      expect(screen.getByTestId("library-import-progress")).not.toHaveTextContent("Checking games… 0 of"),
     );
-    fireEvent.click(screen.getByTestId("library-upload-cancel"));
-    expect(screen.queryByTestId("library-upload-indexing")).toBeNull();
+    fireEvent.click(screen.getByTestId("library-import-cancel"));
+    await waitFor(() => expect(screen.queryByTestId("library-import")).toBeNull());
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(await loadUploadedCollections()).toEqual([]);
     expect(where()).toBe("/library/new");
@@ -1261,6 +1298,8 @@ describe("adding a collection", () => {
     expect(screen.queryByTestId("library-upload-empty")).toBeNull();
     fireEvent.change(screen.getByTestId("library-upload-paste"), { target: { value: GAMES.slice(0, 2).join("\n\n") } });
     fireEvent.click(screen.getByTestId("library-upload-save"));
+    expect(await screen.findByTestId("library-import")).toHaveTextContent("Add games to My picks");
+    await confirmImport();
 
     await waitFor(() => expect(where()).toBe(`/library/${empty.id}`));
     expect(peekUploadedGames(empty.id)).toEqual(GAMES.slice(0, 2));
@@ -1270,6 +1309,7 @@ describe("adding a collection", () => {
     cleanupAndMount(`/library/new?into=${empty.id}`);
     fireEvent.change(await screen.findByTestId("library-upload-paste"), { target: { value: GAMES[2] } });
     fireEvent.click(screen.getByTestId("library-upload-save"));
+    await confirmImport();
     await waitFor(() => expect(peekUploadedGames(empty.id)).toEqual(GAMES));
     expect((await loadUploadedCollections())[0]).toMatchObject({ name: "My picks", count: 3 });
   });
@@ -1299,6 +1339,147 @@ describe("adding a collection", () => {
       i18n.t("library.upload.problem.unreadable"),
     );
     expect(await loadUploadedCollections()).toEqual([]);
+  });
+});
+
+describe("the import-options popup (CTA-103)", () => {
+  const RATED = [
+    '[Event "Rated"]\n[Date "2023.05.01"]\n[White "Kim"]\n[Black "Lee"]\n[WhiteElo "2100"]\n[BlackElo "2000"]\n[Result "1-0"]\n\n1. e4 e5 1-0',
+    '[Event "Rated"]\n[Date "2023.06.??"]\n[White "Lee"]\n[Black "Max"]\n[WhiteElo "1800"]\n[BlackElo "2200"]\n[Result "0-1"]\n\n1. d4 d5 0-1',
+    '[Event "Rated"]\n[White "Max"]\n[Black "Kim"]\n[WhiteElo "2300"]\n[Result "*"]\n\n1. c4 *',
+  ];
+  const count = () => screen.getByTestId("library-import-count").textContent;
+  const setField = (testId: string, value: string) =>
+    fireEvent.change(screen.getByTestId(testId), { target: { value } });
+  /** Move the Elo slider's min (0) or max (1) thumb. */
+  const setElo = (thumb: 0 | 1, value: number) =>
+    fireEvent.change(within(screen.getByTestId("library-import-elo")).getAllByRole("slider")[thumb], {
+      target: { value },
+    });
+
+  it("opens for a picked .pgn before any game is checked, saying what came in", async () => {
+    mount("/library/new");
+    pickFile(new File([RATED.join("\n\n")], "Rated_2023.pgn", { type: "application/x-chess-pgn" }));
+    expect(await screen.findByTestId("library-import")).toBeInTheDocument();
+    expect(screen.queryByTestId("library-import-indexing")).toBeNull();
+    expect(screen.getByTestId("library-import-source")).toHaveTextContent("Rated_2023.pgn");
+    expect(screen.getByTestId("library-import-source")).toHaveTextContent(/\d+ B/);
+    expect(screen.getByTestId("library-import-source")).toHaveTextContent("3 games");
+    expect(screen.queryByTestId("library-import-file-0")).toBeNull();
+    expect(screen.getByTestId("library-import-summary-players")).toHaveTextContent("3 players");
+    expect(screen.getByTestId("library-import-summary-elo")).toHaveTextContent("1800–2300");
+    expect(screen.getByTestId("library-import-summary-dates")).toHaveTextContent("2023.05.01 – 2023.06");
+    expect(screen.getByTestId("library-import-summary-events")).toHaveTextContent("1 event: Rated");
+    expect(count()).toBe("3 of 3 games will be imported");
+    expect(await loadUploadedCollections()).toEqual([]);
+  });
+
+  it("narrows by an Elo range slider (both players, a missing Elo out), dates (no date out) and players, live", async () => {
+    mount("/library/new");
+    fireEvent.change(screen.getByTestId("library-upload-paste"), { target: { value: RATED.join("\n\n") } });
+    fireEvent.click(screen.getByTestId("library-upload-save"));
+    await screen.findByTestId("library-import");
+
+    // The slider spans the games' own Elos; left whole it is no filter, the game with no Elo kept.
+    expect(screen.getByTestId("library-import-elo-value")).toHaveTextContent("1800 – 2300");
+    setElo(0, 1900);
+    expect(screen.getByTestId("library-import-elo-value")).toHaveTextContent("1900 – 2300");
+    expect(count()).toBe("1 of 3 games will be imported");
+    setElo(0, 1800);
+    expect(count()).toBe("3 of 3 games will be imported");
+    setElo(1, 2200);
+    expect(count()).toBe("2 of 3 games will be imported");
+    setElo(1, 1850);
+    expect(count()).toBe("0 of 3 games will be imported");
+    expect(screen.getByTestId("library-import-confirm")).toBeDisabled();
+    setElo(1, 2300);
+    expect(count()).toBe("3 of 3 games will be imported");
+
+    setField("library-import-from", "2023-06-10");
+    expect(count()).toBe("1 of 3 games will be imported");
+    setField("library-import-from", "");
+    setField("library-import-to", "2023-12-31");
+    expect(count()).toBe("2 of 3 games will be imported");
+    setField("library-import-to", "");
+
+    const box = within(screen.getByTestId("library-import-player")).getByRole("combobox");
+    fireEvent.change(box, { target: { value: "max" } });
+    fireEvent.keyDown(box, { key: "Enter" });
+    expect(count()).toBe("2 of 3 games will be imported");
+    fireEvent.change(box, { target: { value: "Kim" } });
+    fireEvent.keyDown(box, { key: "Enter" });
+    expect(count()).toBe("3 of 3 games will be imported");
+  });
+
+  it("suggests only the players of the games the Elo range leaves, worked out when the list opens", async () => {
+    mount("/library/new");
+    fireEvent.change(screen.getByTestId("library-upload-paste"), { target: { value: RATED.join("\n\n") } });
+    fireEvent.click(screen.getByTestId("library-upload-save"));
+    await screen.findByTestId("library-import");
+    const box = within(screen.getByTestId("library-import-player")).getByRole("combobox");
+    const options = () => screen.getAllByRole("option").map((option) => option.textContent);
+
+    fireEvent.keyDown(box, { key: "ArrowDown" });
+    expect(options()).toEqual(["Kim", "Lee", "Max"]);
+    fireEvent.keyDown(box, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("listbox")).toBeNull());
+    expect(screen.getByTestId("library-import")).toBeInTheDocument();
+
+    // Only Kim – Lee (2100 / 2000) is left from 2000 up: Max's games are out of range or unrated.
+    setElo(0, 2000);
+    fireEvent.keyDown(box, { key: "ArrowDown" });
+    expect(options()).toEqual(["Kim", "Lee"]);
+  });
+
+  it("checks and keeps only the games the filters leave, named as typed", async () => {
+    mount("/library/new");
+    fireEvent.change(screen.getByTestId("library-upload-name"), { target: { value: "Strong" } });
+    fireEvent.change(screen.getByTestId("library-upload-paste"), { target: { value: RATED.join("\n\n") } });
+    fireEvent.click(screen.getByTestId("library-upload-save"));
+    await screen.findByTestId("library-import");
+    setElo(0, 2000);
+    await confirmImport();
+    await waitFor(() => expect(where()).toMatch(/^\/library\/u/), { timeout: 4000 });
+    const [kept] = await loadUploadedCollections();
+    expect(kept).toMatchObject({ name: "Strong", count: 1 });
+    expect(peekUploadedGames(kept.id)).toEqual([RATED[0]]);
+  });
+
+  it("adds every file's kept games of a zip to the one collection (?into=)", async () => {
+    const mine = await keep("Mine", [GAMES[0]]);
+    mount(`/library/new?into=${mine.id}`);
+    await screen.findByTestId("library-upload-title");
+    pickFile(zipOf({ "a.pgn": RATED.slice(0, 2).join("\n\n"), "b.pgn": RATED[2] }));
+    expect(await screen.findByTestId("library-import-several")).toHaveTextContent(/added to this collection/);
+    setElo(1, 2250);
+    // The files' own counts say what each keeps while a filter is on.
+    expect(screen.getByTestId("library-import-file-0")).toHaveTextContent("2 of 2 games kept");
+    expect(screen.getByTestId("library-import-file-1")).toHaveTextContent("0 of 1 game kept");
+    await confirmImport();
+    await waitFor(() => expect(where()).toBe(`/library/${mine.id}`), { timeout: 4000 });
+    expect(peekUploadedGames(mine.id)).toEqual([GAMES[0], RATED[0], RATED[1]]);
+    expect(await loadUploadedCollections()).toHaveLength(1);
+  });
+
+  it("writes nothing when cancelled, or closed with Escape", async () => {
+    mount("/library/new");
+    fireEvent.change(screen.getByTestId("library-upload-paste"), { target: { value: RATED.join("\n\n") } });
+    fireEvent.click(screen.getByTestId("library-upload-save"));
+    fireEvent.click(await screen.findByTestId("library-import-cancel"));
+    await waitFor(() => expect(screen.queryByTestId("library-import")).toBeNull());
+
+    fireEvent.click(screen.getByTestId("library-upload-save"));
+    fireEvent.keyDown(await screen.findByTestId("library-import"), { key: "Escape" });
+    await waitFor(() => expect(screen.queryByTestId("library-import")).toBeNull());
+    expect(where()).toBe("/library/new");
+    expect(await loadUploadedCollections()).toEqual([]);
+  });
+
+  it("opens no popup for an empty collection", async () => {
+    mount("/library/new");
+    fireEvent.click(screen.getByTestId("library-upload-empty"));
+    await waitFor(() => expect(where()).toMatch(/^\/library\/u/));
+    expect(screen.queryByTestId("library-import")).toBeNull();
   });
 });
 

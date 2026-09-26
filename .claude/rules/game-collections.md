@@ -44,7 +44,8 @@ for the Analysis Board and Saved analyses it hands games to.
 
 | Path | What lives there |
 | --- | --- |
-| `src/lib/libraryCollections.ts` | **The model, pure**: `CollectionSource`, `CollectionSummary`, `LibraryCollection`, `CollectionRow`, `COLLECTION_COLUMNS`, `collectionRowOf` (the tag half of a row, no `chess.js`), `sortedRows`, `RowFilter` / `filteredRows`, `CollectionFilterValues` / `COLLECTION_FILTER_PARAMS`, `collectionFacetsOf`, `openingLabelOf`, `dateBounds`, `activeFilterSummary` / `batchFolderNameOf` (the Analyse folder name), `collectionNameOfStem` / `collectionIdOfStem`, `collectionGamesOf` (**the one rule for cutting a text into games**), `readCollectionText` (a file or a paste), `MAX_COLLECTION_CHARS`. |
+| `src/lib/libraryCollections.ts` | **The model, pure**: `CollectionSource`, `CollectionSummary`, `LibraryCollection`, `CollectionRow`, `COLLECTION_COLUMNS`, `collectionRowOf` (the tag half of a row, no `chess.js`), `sortedRows`, `RowFilter` / `filteredRows` (with the import popup's `minElo` / `maxElo`, CTA-103), `CollectionFilterValues` / `COLLECTION_FILTER_PARAMS`, `collectionFacetsOf`, `openingLabelOf`, `dateBounds`, `activeFilterSummary` / `batchFolderNameOf` (the Analyse folder name), `collectionNameOfStem` / `collectionIdOfStem`, `collectionGamesOf` (**the one rule for cutting a text into games**), `readCollectionText` (a file or a paste), `MAX_COLLECTION_CHARS`, and the import popup's pieces (CTA-103): `collectionImportFileOf` / `CollectionImportFile` / `CollectionImportSource` (a text's games with tag-only rows), `collectionMetadataOf` (games, players, events, the Elo and date spans), `playersOf`, `sharedEventOf`. |
+| `src/lib/collectionZip.ts` | **A picked `.zip`** (CTA-102, CTA-103): `readCollectionZip` (every `.pgn` in it, bounded, non-throwing), `isZipFile`. |
 | `src/lib/collectionIndex.ts` | **The index**: `IndexedRow`, `indexedRowOf` (tags + a `parsePgnTree` pass), `indexGame` (one game, with the app's book), `buildCollectionIndex` / `buildCollectionIndexAsync`, `numberedRows`, `textHash`, `OpeningLookup` / `loadOpeningLookup`, and the file format: `encodeCollectionIndex` / `decodeCollectionIndex`, `COLLECTION_INDEX_FORMAT` / `COLLECTION_INDEX_VERSION`. |
 | `src/lib/collectionIndex.worker.ts` | The index pass for an upload, off the main thread. |
 | `src/lib/openingTree.ts` | **The opening tree**: `openingTreeOf` (rows' `line`s merged by SAN, **cut where the games stop branching**, CTA-92), `openingNodeAt` / `openingNodeOn`, `OPENING_LINE_PARAM` (`line`), `openingLineParamOf` / `openingLineOfParam`. Pure, with no `chess.js`. |
@@ -60,6 +61,7 @@ for the Analysis Board and Saved analyses it hands games to.
 | `src/views/library/LibraryHome.tsx` | `/library`: the folder tree table (Built-in and the reader's folders), the name filter, the sort, each row's actions and the folder dialogs. |
 | `src/views/shared/folders/FolderTreeTable.tsx` | The details view itself — sticky header, sortable columns, indented rows with chevrons, hover actions. Presentational and reusable; the Library is its one consumer. |
 | `src/views/library/LibraryUpload.tsx` | `/library/new`: a new collection (file, paste, or empty), filed in a folder (`?folder=<id>`, the picker), and `?into=<id>` to add games to an existing one. |
+| `src/views/library/ImportOptionsDialog.tsx` | The import-options popup every file, zip and paste opens on `/library/new` (CTA-103): what came in, the Elo / date / player filters, the index pass over the kept games and the writes. |
 | `src/views/library/CollectionScreen.tsx` | `/library/<collection>`: the table, the picks, the export bar, Analyse, Add games, and deleting games. |
 | `src/views/library/CollectionFilters.tsx` | The table's right-hand panel: players (several names at once, OR'd — CTA-95) and side, the opening board, then opening, event, dates and result. |
 | `src/views/library/OpeningFilterBoard.tsx` | The opening-moves board (`options.id` `library-filter-board`), and its *Save tree as PGN* link. |
@@ -69,7 +71,7 @@ for the Analysis Board and Saved analyses it hands games to.
 | `src/views/library/indexCollection.ts` | Runs the worker with progress and cancel, with a jsdom fallback. |
 | `src/views/library/LibraryMiss.tsx` | The "no such collection / game" screen. |
 | `src/views/library/*Main.tsx` | Layout-only wrappers that `App.tsx` routes to. |
-| Tests | `src/lib/libraryCollections.test.ts`, `collectionIndex.test.ts`, `openingTree.test.ts`, `openingTreePgn.test.ts`, `shippedCollections.test.ts`, `libraryCollectionStore.test.ts`, `libraryFolderStore.test.ts` (folder CRUD, `folderId`, the v1 → v2 upgrade), `folderTreeRows.test.ts`, `wirepgn.test.ts`, `gameReference.test.ts` (the `library` key), `src/views/library/Library.test.tsx` (every screen), and `views/tools/analysis/AnalysisBoard.test.tsx` (a `?game=library/…` arrival). |
+| Tests | `src/lib/libraryCollections.test.ts`, `collectionZip.test.ts`, `collectionIndex.test.ts`, `openingTree.test.ts`, `openingTreePgn.test.ts`, `shippedCollections.test.ts`, `libraryCollectionStore.test.ts`, `libraryFolderStore.test.ts` (folder CRUD, `folderId`, the v1 → v2 upgrade), `folderTreeRows.test.ts`, `wirepgn.test.ts`, `gameReference.test.ts` (the `library` key), `src/views/library/Library.test.tsx` (every screen), and `views/tools/analysis/AnalysisBoard.test.tsx` (a `?game=library/…` arrival). |
 
 Locale keys all live under `library.*` in `src/locales/en.ts` / `he.ts`
 (`he` is typed `typeof en`, so a missing key is a compile error). The only
@@ -377,7 +379,7 @@ is viewed**.
 | Caller | Function |
 | --- | --- |
 | `wirepgn` | `buildCollectionIndex` (sync), book shards from disk |
-| upload / Add games | `indexCollection` → `collectionIndex.worker.ts` (a **module** worker, `worker: { format: 'es' }` in `vite.config.ts`, because it loads the book's chunks with dynamic `import()`), with progress about 10 times a second and cancel by `terminate()`. Under jsdom (no `Worker`) it falls back to `buildCollectionIndexAsync` in yielding batches. |
+| upload / Add games (the import popup) | `indexCollection` → `collectionIndex.worker.ts` (a **module** worker, `worker: { format: 'es' }` in `vite.config.ts`, because it loads the book's chunks with dynamic `import()`), with progress about 10 times a second and cancel by `terminate()`. Under jsdom (no `Worker`) it falls back to `buildCollectionIndexAsync` in yielding batches. |
 | Update / Save as copy on a game | `indexGame(pgn)` (one row, with the app's book) |
 
 **The file format** (`<Stem>.index.json`): a JSON head
@@ -473,19 +475,52 @@ words box, **the table the one region that scrolls**, its header sticky.
   left. The file name is never read except to suggest a collection name. So
   the two routes cannot drift apart.
 - **A `.zip` is accepted beside a `.pgn`** (CTA-102): `lib/collectionZip.ts`
-  (`readCollectionZip`, pure, fflate) unzips a zip holding **exactly one**
-  `.pgn` — directory entries, `__MACOSX/` files and dot-files are not counted —
-  and its text goes through `readCollectionText` like a picked file's. None
-  (`zip-empty`), several (`zip-many`), unreadable bytes (`zip`) or an entry
-  declaring more than `MAX_COLLECTION_CHARS` (`too-large`) is a
+  (`readCollectionZip`, pure, fflate) unzips **every** `.pgn` in it
+  (CTA-103; CTA-102 took exactly one) — directory entries, `__MACOSX/` files
+  and dot-files are not counted — and each text goes through
+  `readCollectionText` like a picked file's. None (`zip-empty`), unreadable
+  bytes (`zip`), or an entry — or all of them together, since they are held
+  at once — declaring more than `MAX_COLLECTION_CHARS` (`too-large`) is a
   `library.upload.problem.*` message; nothing throws. The zip's directory is
-  read first and only the one entry is inflated. The name fallback is the
-  entry's stem. Works for a new collection and for `?into=`.
-- **Checked before it is kept**: the worker's index pass under a progress bar
-  (`library-upload-indexing`), with Cancel (`library-upload-cancel`). Leaving
-  the screen cancels too. Nothing is written until the pass succeeds.
-- **The name**: as typed, else the `Event` every game shares, else the file
-  name's words, else "Pasted collection".
+  read first and only the `.pgn` entries are inflated.
+- **The import-options popup** (CTA-103, `ImportOptionsDialog`,
+  `library-import`): a picked `.pgn`, a picked `.zip`, a paste and Add games
+  all open it once the text is read — **before** anything is indexed. *Create
+  empty collection* does not.
+  - **What came in**: the file's name, size and games read (a paste is
+    "Pasted text"); for a zip, each `.pgn` in it with its size and count
+    (`library-import-file-<i>`, "k of n kept" while a filter is on); then the
+    metadata (`collectionMetadataOf` over the tag-only rows,
+    `collectionImportFileOf` — no `chess.js`): players, the Elo span, the
+    date span as the games write it, the events.
+  - **Filters, before the index pass** — each shown only where some game
+    carries its field, like the table's: **min / max Elo** on one range
+    slider (`library-import-elo`, two thumbs) over the games' own Elo span,
+    shown when that span is a range — a thumb at its end is no bound, so the
+    slider left whole filters nothing (`RowFilter`'s `minElo` / `maxElo`:
+    **both** players within, inclusive; a game missing either Elo is out while
+    a bound is set), a **date range** (`dateBounds`' partial
+    dates; a game with no `Date` is out while one is set) and **players** (the
+    table's chips, several OR'd, part of a name typed free — CTA-95), the list
+    suggesting only the players of the games the Elo range leaves
+    (`playersOf`) — worked out **when the list opens**, never on each of the
+    slider's many changes a second. All go
+    through `filteredRows`. A live "N of M games will be imported"; Import is
+    off at none. Event / result / opening filters are not offered (yet).
+  - **Import** runs **one** index pass over the kept games of every file
+    (`library-import-indexing`, the progress bar, Cancel), then writes. A
+    file keeping no game makes nothing.
+  - **Cancel**, Escape, the backdrop or leaving the screen stop the pass and
+    write nothing; the popup does not close during the write itself.
+- **Checked before it is kept**: the worker's index pass, in the popup. Nothing
+  is written until the pass succeeds.
+- **The name**: a single text (a `.pgn`, a one-entry zip, a paste) — as typed,
+  else the `Event` every kept game shares, else the file name's words, else
+  "Pasted collection". **A zip of several `.pgn`s is one collection per
+  file**, each named by the `Event` its kept games share, else its entry's
+  words (the typed name is a single text's), all filed in the chosen folder;
+  the reader lands on `/library` (one collection: its table). A failed write
+  removes the collections that import had already added — all or nothing.
 - **The folder** (CTA-88): a `FolderPicker` (`library-upload-folder-picker`,
   shown once the reader has a folder) files the new collection — the top
   level by default, or the `?folder=<id>` the upload was started from. The
@@ -502,8 +537,9 @@ words box, **the table the one region that scrolls**, its header sticky.
   ([`analysis-board.md`](./analysis-board.md) §1, `MultiGameDialog.tsx`).
 - **`?into=<id>`** (the table's **Add games**, `library-table-add-games`): the
   same screen without the name field or the empty button, a title "Add games
-  to ‹name›", the same reading and check, then `appendCollectionGames`, then
-  back to the table. A shipped or missing `into` is `LibraryMiss`.
+  to ‹name›", the same reading, popup and check, then `appendCollectionGames` —
+  every file's kept games of a zip, in file order, in one write — then back to
+  the table. A shipped or missing `into` is `LibraryMiss`.
 
 ### 6.4 `/library/<collection>` — the table
 
