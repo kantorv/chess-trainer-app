@@ -34,12 +34,21 @@ Node comes from `fnm`, so run these from a shell where it is on `PATH`.
 | Type-check + production build | `yarn build` |
 | Type-check only | `npx tsc -b` (add `--force` to bypass the incremental cache) |
 | Lint | `yarn lint` |
-| **Run the full test suite** | `yarn test:run` |
+| **Run the full test suite** | `yarn test:run` (at most 5 files at once — see below) |
 | **Run a single test file** | `npx vitest run <path>` — e.g. `npx vitest run src/theme/AppThemeWithLang.test.tsx` |
 | Run tests matching a name | `npx vitest run -t "<substring of the test name>"` |
 | Watch mode | `yarn test` |
 | **Wire a PGN collection into the Library** | `node scripts/wirepgn.js path/to/file.pgn` (or `yarn wirepgn …`; `--list`, `--check`, `--rebuild`, `--remove <id>` — [`game-collections.md`](.claude/rules/game-collections.md) §3) |
 | Coverage | `npx vitest run --coverage` |
+
+**Limit the workers to the machine.** At full parallelism the heavier screen
+suites (the boards, the Library, the repertoires) starve each other of CPU:
+the suite seems stuck, and tests fail on timeouts — a different set on every
+run, each passing when re-run alone. That is scheduling, not a broken test. So
+`test:run` is `vitest run --maxWorkers 5`, tuned for our machine; on another
+system, inspect a full run and set the cap to suit it
+(`npx vitest run --maxWorkers <n>`; `--fileParallelism=false` runs one file at a
+time). Re-run a failure on its own before treating it as real.
 
 Tests are Vitest + Testing Library on jsdom. `src/test/setup.ts` stubs
 `matchMedia` (MUI's colour-scheme provider reads it), gives jsdom an IndexedDB
