@@ -362,6 +362,7 @@ const he: typeof en = {
     continue: "המשך",
     analyse: "ניתוח",
     pick: "בחירת {{title}}",
+    selectAll: "בחירת כל המשחקים שהטבלה מציגה",
     deletePicked: "מחיקת הנבחרים ({{count}})",
     confirmDelete: {
       title_one: "למחוק את המשחק הנבחר?",

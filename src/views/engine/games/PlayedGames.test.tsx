@@ -341,6 +341,30 @@ describe("Lobby — the table (CTA-100)", () => {
     expect(screen.getAllByTestId(/^played-games-row-/)).toHaveLength(12);
   });
 
+  it("selects all over the rows the table shows, and unticks without losing other picks", async () => {
+    await seed(3);
+    mount();
+
+    // One row ticked of three: select-all is neither ticked nor plain.
+    tick("g01");
+    const all = within(screen.getByTestId("played-games-select-all")).getByRole("checkbox");
+    expect(all).not.toBeChecked();
+    expect(all).toHaveAttribute("data-indeterminate", "true");
+
+    // Ticked: every row the table shows joins the picks.
+    fireEvent.click(all);
+    expect(screen.getByTestId("played-games-delete-picked")).toHaveTextContent(
+      "Delete picked (3)",
+    );
+    expect(within(screen.getByTestId("played-games-pick-g00")).getByRole("checkbox")).toBeChecked();
+    expect(within(screen.getByTestId("played-games-pick-g02")).getByRole("checkbox")).toBeChecked();
+    expect(within(screen.getByTestId("played-games-select-all")).getByRole("checkbox")).toBeChecked();
+
+    // Unticked: only the rows the table shows leave the picks.
+    fireEvent.click(within(screen.getByTestId("played-games-select-all")).getByRole("checkbox"));
+    expect(screen.queryByTestId("played-games-delete-picked")).not.toBeInTheDocument();
+  });
+
   it("lists a record whose PGN will not parse, saying so, with only its pick", async () => {
     await savePlayedGame({
       id: "bad",

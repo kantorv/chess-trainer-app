@@ -137,7 +137,10 @@ was begun on.
   decided, a resignation or the mainline's final position through
   `playedGameResult`, shows none, CTA-90), both with tooltips and
   `aria-label`s. A column each means an ended game's missing Continue
-  leaves its own cell empty and moves nothing else. **The delete is the
+  leaves its own cell empty and moves nothing else. **The pick column's
+  header is select-all** — over the rows the filters leave, on every page;
+  ticked it adds them all to the picks, unticked it removes just those
+  rows. **The delete is the
   picks**: tick rows, and the header's **Delete picked (N)** asks first
   and removes them all — there is no per-row delete, and with it the
   shared `SavedListRemoveButton` went (the saved lists had already left it
@@ -214,7 +217,8 @@ was begun on.
   test `?saved=`; wait on a write with `waitFor` (or `settledPlayedGames` under
   fake timers — [`database.md`](./database.md) §7).
 - The Lobby and its form: `PlayedGames.test.tsx` (the table — its columns,
-  a sort click, the pagination, the picks and their batch delete, the
+  a sort click, the pagination, the picks with their select-all and batch
+  delete, the
   icon-only links, an unreadable row — the filters, Start's link from both
   tabs, Start off and why). The sort's own orders are
   `src/lib/playedGames.test.ts`'s, with the summary's per-side derivations.

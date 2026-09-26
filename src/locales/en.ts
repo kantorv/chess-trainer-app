@@ -488,6 +488,8 @@ const en = {
     analyse: "Analysis",
     /** The row's pick checkbox: tick it to mark the game for the header's delete. */
     pick: "Pick {{title}}",
+    /** The pick column's select-all: the rows the table shows, on every page. */
+    selectAll: "Select all the games the table shows",
     /** The header's delete of the ticked rows, saying how many are ticked. */
     deletePicked: "Delete picked ({{count}})",
     confirmDelete: {

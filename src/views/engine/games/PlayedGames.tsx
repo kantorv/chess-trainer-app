@@ -82,7 +82,10 @@ import { usePlayedGames } from "./usePlayedGames";
  * game is still on — a result decided by `playedGameResult`, a
  * resignation or the final position, CTA-90), both with tooltips — so an
  * ended game's missing Continue leaves its own cell empty and moves
- * nothing else. The picks are the screen's, not the URL's — a link carries
+ * nothing else. The pick column's header is **select-all** over the rows
+ * the filters leave, on every page — ticked it adds them all to the picks,
+ * unticked it removes just those rows — the collection table's own rule.
+ * The picks are the screen's, not the URL's — a link carries
  * the filter, not a hand-made selection. A record whose PGN no longer
  * parses keeps its row — it says so across the columns — and can be picked
  * like any other.
@@ -355,6 +358,27 @@ function PlayedGames() {
   const page = Math.min(Math.max(0, Number(searchParams.get("page")) || 0), lastPage);
   const pageRows = shown.slice(page * rowsPerPage, (page + 1) * rowsPerPage);
 
+  /** How many of the rows the filters leave are ticked. */
+  const pickedShown = useMemo(
+    () => shown.filter((row) => picked.has(row.id)).length,
+    [shown, picked],
+  );
+  const allShownPicked = shown.length > 0 && pickedShown === shown.length;
+  /**
+   * Select-all over the rows the filters leave, on every page — the
+   * collection table's own rule: ticked, it adds them all to the picks;
+   * unticked, it removes just those rows, leaving any other picks alone.
+   */
+  const toggleAllShown = () =>
+    setPicked((before) => {
+      const next = new Set(before);
+      for (const row of shown) {
+        if (allShownPicked) next.delete(row.id);
+        else next.add(row.id);
+      }
+      return next;
+    });
+
   /**
    * Change the table's URL state (history replace); a new sort or filter
    * starts at the first page. `null` removes whatever the key holds, so the
@@ -497,8 +521,19 @@ function PlayedGames() {
               <Table size="small" stickyHeader data-testid="played-games-table">
                 <TableHead>
                   <TableRow>
-                    {/* The pick, Analysis and Continue — a column each, then the data columns. */}
-                    <TableCell padding="checkbox" />
+                    {/* The pick column's select-all — over the rows the
+                        filters leave, on every page — then the Analysis and
+                        Continue columns, each its own. */}
+                    <TableCell padding="checkbox">
+                      <Checkbox
+                        size="small"
+                        checked={allShownPicked}
+                        indeterminate={pickedShown > 0 && !allShownPicked}
+                        onChange={toggleAllShown}
+                        slotProps={{ input: { "aria-label": t("playedGames.selectAll") } }}
+                        data-testid="played-games-select-all"
+                      />
+                    </TableCell>
                     <TableCell padding="checkbox" />
                     <TableCell padding="checkbox" />
                     {PLAYED_GAME_COLUMNS.map((column) => (
