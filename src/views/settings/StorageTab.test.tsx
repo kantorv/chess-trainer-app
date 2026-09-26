@@ -121,6 +121,14 @@ const landed = async (id: string, records: string) => {
   await waitFor(() => expect(screen.getByTestId(`settings-storage-${id}-records`)).toHaveTextContent(records));
 };
 
+/**
+ * A browser figure, once the estimate has landed — the cell is there from the
+ * first render, showing "…", so waiting for the cell alone races the estimate.
+ */
+const browserSaid = async (testId: string, text: string) => {
+  await waitFor(() => expect(screen.getByTestId(testId)).toHaveTextContent(text));
+};
+
 beforeEach(async () => {
   await resetLibraryCollectionStore();
   stubEstimate({ usage: 25_000_000, quota: 2_000_000_000, usageDetails: { indexedDB: 23_000_000 } });
@@ -137,7 +145,7 @@ describe("the Storage tab", () => {
 
     expect(await screen.findByText("Origin usage (estimate)")).toBeInTheDocument();
     expect(screen.getByText("IndexedDB usage (estimate)")).toBeInTheDocument();
-    expect(await screen.findByTestId("settings-storage-usage")).toHaveTextContent(formatBytes(25_000_000));
+    await browserSaid("settings-storage-usage", formatBytes(25_000_000));
     expect(screen.getByTestId("settings-storage-indexeddb")).toHaveTextContent(formatBytes(23_000_000));
     // The quota is the developer tools' business, said beside the numbers.
     expect(screen.getByText(/developer tools/)).toBeInTheDocument();
@@ -148,7 +156,7 @@ describe("the Storage tab", () => {
     stubEstimate({ usage: 1000 });
     renderAt("/settings/storage");
 
-    expect(await screen.findByTestId("settings-storage-indexeddb")).toHaveTextContent("Not available");
+    await browserSaid("settings-storage-indexeddb", "Not available");
     expect(screen.getByTestId("settings-storage-usage")).toHaveTextContent("1000 B");
   });
 
@@ -156,7 +164,7 @@ describe("the Storage tab", () => {
     stubEstimate(undefined);
     renderAt("/settings/storage");
 
-    expect(await screen.findByTestId("settings-storage-usage")).toHaveTextContent("Not available");
+    await browserSaid("settings-storage-usage", "Not available");
     expect(screen.getByTestId("settings-storage-indexeddb")).toHaveTextContent("Not available");
   });
 
